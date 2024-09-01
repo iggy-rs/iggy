@@ -7,6 +7,7 @@ use iggy::utils::checksum;
 use iggy::{messages::send_messages::Message, models::messages::MessageState};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+use std::ops::Deref;
 use std::sync::Arc;
 
 // It's the same as PolledMessages from Iggy models, but with the Arc<Message> instead of Message.
@@ -28,21 +29,20 @@ pub struct RetainedMessage {
     pub payload: Bytes,
 }
 
-impl TryFrom<RetainedMessage> for PolledMessage {
-    type Error = IggyError;
-    fn try_from(value: RetainedMessage) -> Result<Self, Self::Error> {
-        let headers = value.headers.map(HashMap::from_bytes).transpose()?;
-        let messages = PolledMessage {
-            offset: value.offset,
-            state: value.message_state,
-            timestamp: value.timestamp,
-            id: value.id,
-            checksum: value.checksum,
+impl RetainedMessage {
+    pub fn to_polled_message(&self) -> Result<PolledMessage, IggyError> {
+        let headers = self.headers.clone().map(HashMap::from_bytes).transpose()?;
+        let message = PolledMessage {
+            offset: self.offset,
+            state: self.message_state,
+            timestamp: self.timestamp,
+            id: self.id,
+            checksum: self.checksum,
             headers,
-            length: value.payload.len() as u32,
-            payload: value.payload,
+            length: self.payload.len() as u32,
+            payload: self.payload.clone(),
         };
-        Ok(messages)
+        Ok(message)
     }
 }
 
@@ -113,6 +113,20 @@ impl RetainedMessage {
 }
 
 impl Sizeable for RetainedMessage {
+    fn get_size_bytes(&self) -> u32 {
+        let headers_len = self
+            .headers
+            .as_ref()
+            .map(|h| 4 + h.len() as u32)
+            .unwrap_or(4);
+        16 + 8 + 8 + 4 + 1 + headers_len + self.payload.len() as u32
+    }
+}
+
+impl<T> Sizeable for T
+where
+    T: Deref<Target = RetainedMessage>,
+{
     fn get_size_bytes(&self) -> u32 {
         let headers_len = self
             .headers

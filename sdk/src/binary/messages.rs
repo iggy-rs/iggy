@@ -5,6 +5,7 @@ use crate::command::{POLL_MESSAGES_CODE, SEND_MESSAGES_CODE};
 use crate::consumer::Consumer;
 use crate::error::IggyError;
 use crate::identifier::Identifier;
+use crate::messages::flush_unsaved_buffer::FlushUnsavedBuffer;
 use crate::messages::poll_messages::PollingStrategy;
 use crate::messages::send_messages::{Message, Partitioning};
 use crate::messages::{poll_messages, send_messages};
@@ -52,6 +53,24 @@ impl<B: BinaryClient> MessageClient for B {
             SEND_MESSAGES_CODE,
             send_messages::as_bytes(stream_id, topic_id, partitioning, messages),
         )
+        .await?;
+        Ok(())
+    }
+
+    async fn flush_unsaved_buffer(
+        &self,
+        stream_id: &Identifier,
+        topic_id: &Identifier,
+        partition_id: u32,
+        fsync: bool,
+    ) -> Result<(), IggyError> {
+        fail_if_not_authenticated(self).await?;
+        self.send_with_response(&FlushUnsavedBuffer {
+            stream_id: stream_id.clone(),
+            topic_id: topic_id.clone(),
+            partition_id,
+            fsync,
+        })
         .await?;
         Ok(())
     }

@@ -1,11 +1,11 @@
+use crate::streaming::batching::batch_accumulator::BatchAccumulator;
 use crate::streaming::batching::batch_filter::BatchItemizer;
-use crate::streaming::batching::message_batch::RetainedMessageBatch;
+use crate::streaming::batching::message_batch::{RetainedMessageBatch, RETAINED_BATCH_OVERHEAD};
 use crate::streaming::models::messages::RetainedMessage;
 use crate::streaming::segments::index::{Index, IndexRange};
 use crate::streaming::segments::segment::Segment;
 use crate::streaming::segments::time_index::TimeIndex;
 use crate::streaming::sizeable::Sizeable;
-use bytes::BufMut;
 use iggy::error::IggyError;
 use std::sync::atomic::Ordering;
 use std::sync::Arc;
@@ -26,9 +26,9 @@ impl Segment {
         &self,
         mut offset: u64,
         count: u32,
-    ) -> Result<Vec<RetainedMessage>, IggyError> {
+    ) -> Result<Vec<Arc<RetainedMessage>>, IggyError> {
         if count == 0 {
-            return Ok(EMPTY_MESSAGES);
+            return Ok(EMPTY_MESSAGES.into_iter().map(Arc::new).collect());
         }
 
         if offset < self.start_offset {
@@ -37,21 +37,21 @@ impl Segment {
 
         let end_offset = offset + (count - 1) as u64;
         // In case that the partition messages buffer is disabled, we need to check the unsaved messages buffer
-        if self.unsaved_batches.is_none() {
+        if self.unsaved_messages.is_none() {
             return self.load_messages_from_disk(offset, end_offset).await;
         }
 
-        let unsaved_batches = self.unsaved_batches.as_ref().unwrap();
-        if unsaved_batches.is_empty() {
+        let batch_accumulator = self.unsaved_messages.as_ref().unwrap();
+        if batch_accumulator.is_empty() {
             return self.load_messages_from_disk(offset, end_offset).await;
         }
 
-        let first_offset = unsaved_batches[0].base_offset;
+        let first_offset = batch_accumulator.batch_base_offset();
         if end_offset < first_offset {
             return self.load_messages_from_disk(offset, end_offset).await;
         }
 
-        let last_offset = unsaved_batches[unsaved_batches.len() - 1].get_last_offset();
+        let last_offset = batch_accumulator.batch_max_offset();
         if offset >= first_offset && end_offset <= last_offset {
             return Ok(self.load_messages_from_unsaved_buffer(offset, end_offset));
         }
@@ -64,7 +64,7 @@ impl Segment {
         Ok(messages)
     }
 
-    pub async fn get_all_messages(&self) -> Result<Vec<RetainedMessage>, IggyError> {
+    pub async fn get_all_messages(&self) -> Result<Vec<Arc<RetainedMessage>>, IggyError> {
         self.get_messages(self.start_offset, self.get_messages_count() as u32)
             .await
     }
@@ -93,31 +93,16 @@ impl Segment {
         &self,
         start_offset: u64,
         end_offset: u64,
-    ) -> Vec<RetainedMessage> {
-        let unsaved_batches = self.unsaved_batches.as_ref().unwrap();
-        let slice_start = unsaved_batches
-            .iter()
-            .rposition(|batch| batch.base_offset <= start_offset)
-            .unwrap_or(0);
-
-        // Take only the batch when last_offset >= relative_end_offset and it's base_offset is <= relative_end_offset
-        // otherwise take batches until the last_offset >= relative_end_offset and base_offset <= relative_start_offset
-        let messages_count = (start_offset + end_offset) as usize;
-        unsaved_batches[slice_start..]
-            .iter()
-            .filter(|batch| {
-                batch.is_contained_or_overlapping_within_offset_range(start_offset, end_offset)
-            })
-            .to_messages_with_filter(messages_count, &|msg| {
-                msg.offset >= start_offset && msg.offset <= end_offset
-            })
+    ) -> Vec<Arc<RetainedMessage>> {
+        let batch_accumulator = self.unsaved_messages.as_ref().unwrap();
+        batch_accumulator.get_messages_by_offset(start_offset, end_offset)
     }
 
     async fn load_messages_from_disk(
         &self,
         start_offset: u64,
         end_offset: u64,
-    ) -> Result<Vec<RetainedMessage>, IggyError> {
+    ) -> Result<Vec<Arc<RetainedMessage>>, IggyError> {
         trace!(
             "Loading messages from disk, segment start offset: {}, end offset: {}, current offset: {}...",
             start_offset,
@@ -130,7 +115,7 @@ impl Segment {
                 "Cannot load messages from disk, invalid offset range: {} - {}.",
                 start_offset, end_offset
             );
-            return Ok(EMPTY_MESSAGES);
+            return Ok(EMPTY_MESSAGES.into_iter().map(Arc::new).collect());
         }
 
         if let Some(indices) = &self.indexes {
@@ -148,7 +133,7 @@ impl Segment {
                         start_offset,
                         end_offset
                     );
-                    return Ok(EMPTY_MESSAGES);
+                    return Ok(EMPTY_MESSAGES.into_iter().map(Arc::new).collect());
                 }
             };
 
@@ -167,7 +152,7 @@ impl Segment {
                 self.load_messages_from_segment_file(&index_range, start_offset, end_offset)
                     .await
             }
-            None => Ok(EMPTY_MESSAGES),
+            None => Ok(EMPTY_MESSAGES.into_iter().map(Arc::new).collect()),
         }
     }
 
@@ -176,7 +161,7 @@ impl Segment {
         index_range: &IndexRange,
         start_offset: u64,
         end_offset: u64,
-    ) -> Result<Vec<RetainedMessage>, IggyError> {
+    ) -> Result<Vec<Arc<RetainedMessage>>, IggyError> {
         let messages_count = (start_offset + end_offset) as usize;
         let messages = self
             .storage
@@ -195,12 +180,14 @@ impl Segment {
             self.current_offset
         );
 
-        Ok(messages)
+        Ok(messages.into_iter().map(Arc::new).collect())
     }
 
     pub async fn append_batch(
         &mut self,
-        batch: Arc<RetainedMessageBatch>,
+        batch_size: u64,
+        messages_count: u32,
+        batch: &[Arc<RetainedMessage>],
     ) -> Result<(), IggyError> {
         if self.is_closed {
             return Err(IggyError::SegmentClosed(
@@ -208,34 +195,22 @@ impl Segment {
                 self.partition_id,
             ));
         }
+        let messages_cap = self.config.partition.messages_required_to_save as usize;
+        let batch_base_offset = batch.first().unwrap().offset;
+        let batch_accumulator = self
+            .unsaved_messages
+            .get_or_insert_with(|| BatchAccumulator::new(batch_base_offset, messages_cap));
+        batch_accumulator.append(batch_size, batch);
+        let curr_offset = batch_accumulator.batch_max_offset();
 
-        if let Some(indexes) = &mut self.indexes {
-            indexes.reserve(1);
-        }
-
-        if let Some(time_indexes) = &mut self.time_indexes {
-            time_indexes.reserve(1);
-        }
-
-        let last_offset = batch.base_offset + batch.last_offset_delta as u64;
-        self.current_offset = last_offset;
-        self.end_offset = last_offset;
-
-        self.store_offset_and_timestamp_index_for_batch(last_offset, batch.max_timestamp);
-
-        let messages_size = batch.get_size_bytes();
-        let messages_count = batch.last_offset_delta + 1;
-
-        let unsaved_batches = self.unsaved_batches.get_or_insert_with(Vec::new);
-        unsaved_batches.push(batch);
-        self.size_bytes += messages_size;
-
+        self.current_offset = curr_offset;
+        self.size_bytes += batch_size as u32;
         self.size_of_parent_stream
-            .fetch_add(messages_size as u64, Ordering::SeqCst);
+            .fetch_add(batch_size, Ordering::AcqRel);
         self.size_of_parent_topic
-            .fetch_add(messages_size as u64, Ordering::SeqCst);
+            .fetch_add(batch_size, Ordering::AcqRel);
         self.size_of_parent_partition
-            .fetch_add(messages_size as u64, Ordering::SeqCst);
+            .fetch_add(batch_size, Ordering::AcqRel);
         self.messages_count_of_parent_stream
             .fetch_add(messages_count as u64, Ordering::SeqCst);
         self.messages_count_of_parent_topic
@@ -250,57 +225,49 @@ impl Segment {
         &mut self,
         batch_last_offset: u64,
         batch_max_timestamp: u64,
-    ) {
+    ) -> (Index, TimeIndex) {
         let relative_offset = (batch_last_offset - self.start_offset) as u32;
         trace!("Storing index for relative_offset: {relative_offset}");
+        let index = Index {
+            relative_offset,
+            position: self.last_index_position,
+        };
+        let time_index = TimeIndex {
+            relative_offset,
+            timestamp: batch_max_timestamp,
+        };
         match (&mut self.indexes, &mut self.time_indexes) {
             (Some(indexes), Some(time_indexes)) => {
-                indexes.push(Index {
-                    relative_offset,
-                    position: self.size_bytes,
-                });
-                time_indexes.push(TimeIndex {
-                    relative_offset,
-                    timestamp: batch_max_timestamp,
-                });
+                indexes.push(index);
+                time_indexes.push(time_index);
             }
             (Some(indexes), None) => {
-                indexes.push(Index {
-                    relative_offset,
-                    position: self.size_bytes,
-                });
+                indexes.push(index);
             }
             (None, Some(time_indexes)) => {
-                time_indexes.push(TimeIndex {
-                    relative_offset,
-                    timestamp: batch_max_timestamp,
-                });
+                time_indexes.push(time_index);
             }
             (None, None) => {}
         };
-
-        // Regardless of whether caching of indexes and time_indexes is on
-        // store them in the unsaved buffer
-        self.unsaved_indexes.put_u32_le(relative_offset);
-        self.unsaved_indexes.put_u32_le(self.size_bytes);
-        self.unsaved_timestamps.put_u32_le(relative_offset);
-        self.unsaved_timestamps.put_u64_le(batch_max_timestamp);
+        (index, time_index)
     }
 
     pub async fn persist_messages(&mut self) -> Result<usize, IggyError> {
         let storage = self.storage.segment.clone();
-        if self.unsaved_batches.is_none() {
+        if self.unsaved_messages.is_none() {
             return Ok(0);
         }
 
-        let unsaved_batches = self.unsaved_batches.as_ref().unwrap();
-        if unsaved_batches.is_empty() {
+        let mut batch_accumulator = self.unsaved_messages.take().unwrap();
+        if batch_accumulator.is_empty() {
             return Ok(0);
         }
+        let batch_max_offset = batch_accumulator.batch_max_offset();
+        let batch_max_timestamp = batch_accumulator.batch_max_timestamp();
+        let (index, time_index) =
+            self.store_offset_and_timestamp_index_for_batch(batch_max_offset, batch_max_timestamp);
 
-        let unsaved_messages_number = (unsaved_batches.last().unwrap().get_last_offset() + 1)
-            - unsaved_batches.first().unwrap().base_offset;
-
+        let unsaved_messages_number = batch_accumulator.unsaved_messages_count();
         trace!(
             "Saving {} messages on disk in segment with start offset: {} for partition with ID: {}...",
             unsaved_messages_number,
@@ -308,11 +275,24 @@ impl Segment {
             self.partition_id
         );
 
-        let saved_bytes = storage.save_batches(self, unsaved_batches).await?;
-        storage.save_index(self).await?;
-        self.unsaved_indexes.clear();
-        storage.save_time_index(self).await?;
-        self.unsaved_timestamps.clear();
+        let (has_remainder, batch) = batch_accumulator.materialize_batch_and_maybe_update_state();
+        let batch_size = batch.get_size_bytes();
+        if has_remainder {
+            self.unsaved_messages = Some(batch_accumulator);
+        }
+        let saved_bytes = storage.save_batches(self, batch).await?;
+        storage.save_index(&self.index_path, index).await?;
+        storage
+            .save_time_index(&self.time_index_path, time_index)
+            .await?;
+        self.last_index_position += batch_size;
+        self.size_bytes += RETAINED_BATCH_OVERHEAD;
+        self.size_of_parent_stream
+            .fetch_add(RETAINED_BATCH_OVERHEAD as u64, Ordering::AcqRel);
+        self.size_of_parent_topic
+            .fetch_add(RETAINED_BATCH_OVERHEAD as u64, Ordering::AcqRel);
+        self.size_of_parent_partition
+            .fetch_add(RETAINED_BATCH_OVERHEAD as u64, Ordering::AcqRel);
 
         trace!(
             "Saved {} messages on disk in segment with start offset: {} for partition with ID: {}, total bytes written: {}.",
@@ -325,15 +305,12 @@ impl Segment {
         if self.is_full().await {
             self.end_offset = self.current_offset;
             self.is_closed = true;
-            self.unsaved_batches = None;
+            self.unsaved_messages = None;
             info!(
                 "Closed segment with start offset: {} for partition with ID: {}.",
                 self.start_offset, self.partition_id
             );
-        } else {
-            self.unsaved_batches.as_mut().unwrap().clear();
         }
-
-        Ok(unsaved_messages_number as usize)
+        Ok(unsaved_messages_number)
     }
 }

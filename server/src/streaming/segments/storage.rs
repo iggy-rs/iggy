@@ -248,14 +248,11 @@ impl SegmentStorage for FileSegmentStorage {
     async fn save_batches(
         &self,
         segment: &Segment,
-        batches: &[Arc<RetainedMessageBatch>],
+        batch: RetainedMessageBatch,
     ) -> Result<u32, IggyError> {
-        let messages_size = batches.iter().map(|batch| batch.get_size_bytes()).sum();
-
-        let mut bytes = BytesMut::with_capacity(messages_size as usize);
-        for batch in batches {
-            batch.extend(&mut bytes);
-        }
+        let batch_size = batch.get_size_bytes();
+        let mut bytes = BytesMut::with_capacity(batch_size as usize);
+        batch.extend(&mut bytes);
 
         if let Err(err) = self
             .persister
@@ -266,7 +263,7 @@ impl SegmentStorage for FileSegmentStorage {
             return Err(IggyError::CannotSaveMessagesToSegment(err));
         }
 
-        Ok(messages_size)
+        Ok(batch_size)
     }
 
     async fn load_message_ids(&self, segment: &Segment) -> Result<Vec<u128>, IggyError> {
@@ -428,12 +425,15 @@ impl SegmentStorage for FileSegmentStorage {
         Ok(Some(index_range))
     }
 
-    async fn save_index(&self, segment: &Segment) -> Result<(), IggyError> {
+    async fn save_index(&self, index_path: &str, index: Index) -> Result<(), IggyError> {
+        let mut bytes = BytesMut::with_capacity(INDEX_SIZE as usize);
+        bytes.put_u32_le(index.relative_offset);
+        bytes.put_u32_le(index.position);
         if let Err(err) = self
             .persister
-            .append(&segment.index_path, &segment.unsaved_indexes)
+            .append(index_path, &bytes)
             .await
-            .with_context(|| format!("Failed to save index to segment: {}", segment.index_path))
+            .with_context(|| format!("Failed to save index to segment: {}", index_path))
         {
             return Err(IggyError::CannotSaveIndexToSegment(err));
         }
@@ -546,17 +546,15 @@ impl SegmentStorage for FileSegmentStorage {
         Ok(Some(index))
     }
 
-    async fn save_time_index(&self, segment: &Segment) -> Result<(), IggyError> {
+    async fn save_time_index(&self, index_path: &str, index: TimeIndex) -> Result<(), IggyError> {
+        let mut bytes = BytesMut::with_capacity(TIME_INDEX_SIZE as usize);
+        bytes.put_u32_le(index.relative_offset);
+        bytes.put_u64_le(index.timestamp);
         if let Err(err) = self
             .persister
-            .append(&segment.time_index_path, &segment.unsaved_timestamps)
+            .append(index_path, &bytes)
             .await
-            .with_context(|| {
-                format!(
-                    "Failed to save TimeIndex to segment: {}",
-                    segment.time_index_path
-                )
-            })
+            .with_context(|| format!("Failed to save TimeIndex to segment: {}", index_path))
         {
             return Err(IggyError::CannotSaveTimeIndexToSegment(err));
         }

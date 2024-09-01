@@ -74,7 +74,7 @@ pub trait SegmentStorage: Send + Sync {
     async fn save_batches(
         &self,
         segment: &Segment,
-        batches: &[Arc<RetainedMessageBatch>],
+        batch: RetainedMessageBatch,
     ) -> Result<u32, IggyError>;
     async fn load_message_ids(&self, segment: &Segment) -> Result<Vec<u128>, IggyError>;
     async fn load_checksums(&self, segment: &Segment) -> Result<(), IggyError>;
@@ -85,7 +85,7 @@ pub trait SegmentStorage: Send + Sync {
         index_start_offset: u64,
         index_end_offset: u64,
     ) -> Result<Option<IndexRange>, IggyError>;
-    async fn save_index(&self, segment: &Segment) -> Result<(), IggyError>;
+    async fn save_index(&self, index_path: &str, index: Index) -> Result<(), IggyError>;
     async fn try_load_time_index_for_timestamp(
         &self,
         segment: &Segment,
@@ -94,7 +94,7 @@ pub trait SegmentStorage: Send + Sync {
     async fn load_all_time_indexes(&self, segment: &Segment) -> Result<Vec<TimeIndex>, IggyError>;
     async fn load_last_time_index(&self, segment: &Segment)
         -> Result<Option<TimeIndex>, IggyError>;
-    async fn save_time_index(&self, segment: &Segment) -> Result<(), IggyError>;
+    async fn save_time_index(&self, index_path: &str, index: TimeIndex) -> Result<(), IggyError>;
 }
 
 #[derive(Debug)]
@@ -300,7 +300,7 @@ pub(crate) mod tests {
         async fn save_batches(
             &self,
             _segment: &Segment,
-            _batches: &[Arc<RetainedMessageBatch>],
+            _batch: RetainedMessageBatch,
         ) -> Result<u32, IggyError> {
             Ok(0)
         }
@@ -326,7 +326,7 @@ pub(crate) mod tests {
             Ok(None)
         }
 
-        async fn save_index(&self, _segment: &Segment) -> Result<(), IggyError> {
+        async fn save_index(&self, _index_path: &str, _index: Index) -> Result<(), IggyError> {
             Ok(())
         }
 
@@ -352,7 +352,11 @@ pub(crate) mod tests {
             Ok(None)
         }
 
-        async fn save_time_index(&self, _segment: &Segment) -> Result<(), IggyError> {
+        async fn save_time_index(
+            &self,
+            _index_path: &str,
+            _index: TimeIndex,
+        ) -> Result<(), IggyError> {
             Ok(())
         }
     }

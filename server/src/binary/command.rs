@@ -174,5 +174,8 @@ async fn try_handle(
         ServerCommand::LeaveConsumerGroup(command) => {
             leave_consumer_group_handler::handle(command, sender, session, system).await
         }
+        ServerCommand::FlushUnsavedBuffer(command) => {
+            flush_unsaved_buffer_handler::handle(command, sender, session, system).await
+        }
     }
 }

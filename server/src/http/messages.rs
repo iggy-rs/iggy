@@ -22,6 +22,10 @@ pub fn router(state: Arc<AppState>) -> Router {
             "/streams/:stream_id/topics/:topic_id/messages",
             get(poll_messages).post(send_messages),
         )
+        .route(
+            "/streams/:stream_id/topics/:topic_id/messages/flush/:partition_id/:fsync",
+            get(flush_unsaved_buffer),
+        )
         .with_state(state)
 }
 
@@ -81,4 +85,24 @@ async fn send_messages(
         )
         .await?;
     Ok(StatusCode::CREATED)
+}
+
+async fn flush_unsaved_buffer(
+    State(state): State<Arc<AppState>>,
+    Extension(identity): Extension<Identity>,
+    Path((stream_id, topic_id, partition_id, fsync)): Path<(String, String, u32, bool)>,
+) -> Result<StatusCode, CustomError> {
+    let stream_id = Identifier::from_str_value(&stream_id)?;
+    let topic_id = Identifier::from_str_value(&topic_id)?;
+    let system = state.system.read().await;
+    system
+        .flush_unsaved_buffer(
+            &Session::stateless(identity.user_id, identity.ip_address),
+            stream_id,
+            topic_id,
+            partition_id,
+            fsync,
+        )
+        .await?;
+    Ok(StatusCode::OK)
 }

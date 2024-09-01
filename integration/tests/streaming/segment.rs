@@ -1,13 +1,13 @@
 use crate::streaming::common::test_setup::TestSetup;
-use bytes::{Bytes, BytesMut};
+use bytes::Bytes;
 use iggy::bytes_serializable::BytesSerializable;
 use iggy::models::messages::{MessageState, PolledMessage};
 use iggy::utils::expiry::IggyExpiry;
 use iggy::utils::{checksum, timestamp::IggyTimestamp};
-use server::streaming::batching::message_batch::RetainedMessageBatch;
 use server::streaming::models::messages::RetainedMessage;
 use server::streaming::segments::segment;
 use server::streaming::segments::segment::{INDEX_EXTENSION, LOG_EXTENSION, TIME_INDEX_EXTENSION};
+use server::streaming::sizeable::Sizeable;
 use std::sync::atomic::AtomicU64;
 use std::sync::Arc;
 use tokio::fs;
@@ -151,19 +151,12 @@ async fn should_persist_and_load_segment_with_messages() {
     )
     .await;
     let messages_count = 10;
-    let mut base_offset = 0;
-    let mut last_timestamp = IggyTimestamp::zero().as_micros();
-    let mut batch_buffer = BytesMut::new();
+    let mut messages = Vec::new();
+    let mut batch_size = 0u64;
     for i in 0..messages_count {
         let message = create_message(i, "test", IggyTimestamp::now());
-        if i == 0 {
-            base_offset = message.offset;
-        }
-        if i == messages_count - 1 {
-            last_timestamp = message.timestamp;
-        }
 
-        let retained_message = RetainedMessage {
+        let retained_message = Arc::new(RetainedMessage {
             id: message.id,
             offset: message.offset,
             timestamp: message.timestamp,
@@ -171,20 +164,16 @@ async fn should_persist_and_load_segment_with_messages() {
             message_state: message.state,
             headers: message.headers.map(|headers| headers.to_bytes()),
             payload: message.payload.clone(),
-        };
-        retained_message.extend(&mut batch_buffer);
+        });
+        batch_size += retained_message.get_size_bytes() as u64;
+        messages.push(retained_message);
     }
-    let batch = Arc::new(RetainedMessageBatch::new(
-        base_offset,
-        messages_count as u32 - 1,
-        last_timestamp,
-        batch_buffer.len() as u32,
-        batch_buffer.freeze(),
-    ));
-    segment.append_batch(batch).await.unwrap();
 
+    segment
+        .append_batch(batch_size, messages_count as u32, &messages)
+        .await
+        .unwrap();
     segment.persist_messages().await.unwrap();
-
     let mut loaded_segment = segment::Segment::create(
         stream_id,
         topic_id,
@@ -247,20 +236,13 @@ async fn given_all_expired_messages_segment_should_be_expired() {
     let messages_count = 10;
     let now = IggyTimestamp::now();
     let mut expired_timestamp = (now.as_micros() - 2 * message_expiry_ms).into();
-    let mut base_offset = 0;
-    let mut last_timestamp = 0;
-    let mut batch_buffer = BytesMut::new();
+    let mut batch_size = 0u64;
+    let mut messages = Vec::new();
     for i in 0..messages_count {
         let message = create_message(i, "test", expired_timestamp);
         expired_timestamp = (expired_timestamp.as_micros() + 1).into();
-        if i == 0 {
-            base_offset = message.offset;
-        }
-        if i == messages_count - 1 {
-            last_timestamp = message.timestamp;
-        }
 
-        let retained_message = RetainedMessage {
+        let retained_message = Arc::new(RetainedMessage {
             id: message.id,
             offset: message.offset,
             timestamp: message.timestamp,
@@ -268,19 +250,14 @@ async fn given_all_expired_messages_segment_should_be_expired() {
             message_state: message.state,
             headers: message.headers.map(|headers| headers.to_bytes()),
             payload: message.payload.clone(),
-        };
-        retained_message.extend(&mut batch_buffer);
+        });
+        batch_size += retained_message.get_size_bytes() as u64;
+        messages.push(retained_message);
     }
-    let batch = Arc::new(RetainedMessageBatch::new(
-        base_offset,
-        messages_count as u32 - 1,
-        last_timestamp,
-        batch_buffer.len() as u32,
-        batch_buffer.freeze(),
-    ));
-
-    segment.append_batch(batch).await.unwrap();
-
+    segment
+        .append_batch(batch_size, messages_count as u32, &messages)
+        .await
+        .unwrap();
     segment.persist_messages().await.unwrap();
 
     segment.is_closed = true;
@@ -330,8 +307,7 @@ async fn given_at_least_one_not_expired_message_segment_should_not_be_expired() 
     let expired_message = create_message(0, "test", expired_timestamp.into());
     let not_expired_message = create_message(1, "test", not_expired_timestamp.into());
 
-    let mut expired_batch_buffer = BytesMut::new();
-    let expired_retained_message = RetainedMessage {
+    let expired_retained_message = Arc::new(RetainedMessage {
         id: expired_message.id,
         offset: expired_message.offset,
         timestamp: expired_message.timestamp,
@@ -339,18 +315,13 @@ async fn given_at_least_one_not_expired_message_segment_should_not_be_expired() 
         message_state: expired_message.state,
         headers: expired_message.headers.map(|headers| headers.to_bytes()),
         payload: expired_message.payload.clone(),
-    };
-    expired_retained_message.extend(&mut expired_batch_buffer);
-    let expired_batch = Arc::new(RetainedMessageBatch::new(
-        0,
-        1,
-        expired_timestamp,
-        expired_batch_buffer.len() as u32,
-        expired_batch_buffer.freeze(),
-    ));
+    });
+    let mut expired_messages = Vec::new();
+    let expired_message_size = expired_retained_message.get_size_bytes() as u64;
+    expired_messages.push(expired_retained_message);
 
-    let mut not_expired_batch_buffer = BytesMut::new();
-    let not_expired_retained_message = RetainedMessage {
+    let mut not_expired_messages = Vec::new();
+    let not_expired_retained_message = Arc::new(RetainedMessage {
         id: not_expired_message.id,
         offset: not_expired_message.offset,
         timestamp: not_expired_message.timestamp,
@@ -360,18 +331,18 @@ async fn given_at_least_one_not_expired_message_segment_should_not_be_expired() 
             .headers
             .map(|headers| headers.to_bytes()),
         payload: not_expired_message.payload.clone(),
-    };
-    not_expired_retained_message.extend(&mut not_expired_batch_buffer);
-    let not_expired_batch = Arc::new(RetainedMessageBatch::new(
-        1,
-        1,
-        expired_timestamp,
-        not_expired_batch_buffer.len() as u32,
-        not_expired_batch_buffer.freeze(),
-    ));
+    });
+    let not_expired_message_size = not_expired_retained_message.get_size_bytes() as u64;
+    not_expired_messages.push(not_expired_retained_message);
 
-    segment.append_batch(expired_batch).await.unwrap();
-    segment.append_batch(not_expired_batch).await.unwrap();
+    segment
+        .append_batch(expired_message_size, 1, &expired_messages)
+        .await
+        .unwrap();
+    segment
+        .append_batch(not_expired_message_size, 1, &not_expired_messages)
+        .await
+        .unwrap();
     segment.persist_messages().await.unwrap();
 
     let is_expired = segment.is_expired(now).await;

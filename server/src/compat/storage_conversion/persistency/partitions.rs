@@ -1,4 +1,5 @@
 use crate::configs::system::SystemConfig;
+use crate::streaming::batching::batch_accumulator::BatchAccumulator;
 use crate::streaming::partitions::partition::{ConsumerOffset, Partition};
 use crate::streaming::segments::segment::{Segment, LOG_EXTENSION};
 use anyhow::Context;
@@ -189,8 +190,12 @@ pub async fn load(
         );
 
         segment.load().await?;
+        let capacity = partition.config.partition.messages_required_to_save;
         if !segment.is_closed {
-            segment.unsaved_batches = Some(Vec::new())
+            segment.unsaved_messages = Some(BatchAccumulator::new(
+                segment.current_offset,
+                capacity as usize,
+            ))
         }
 
         // If the first segment has at least a single message, we should increment the offset.

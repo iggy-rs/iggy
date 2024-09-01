@@ -12,7 +12,7 @@ use crate::{
 };
 
 /// `FlushUnsavedBuffer` command is used to force a flush of `unsaved_buffer` to disk for specific stream -> topic -> partition.
-///  - `stream_id` - stream identifier
+/// - `stream_id` - stream identifier
 /// - `topic_id` - topic identifier
 /// - `partition_id` - partition identifier
 /// - `fsync` - if `true` then the data is flushed to disk and fsynced, if `false` then the data is only flushed to disk.

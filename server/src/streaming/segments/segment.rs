@@ -22,7 +22,7 @@ use iggy::utils::timestamp::IggyTimestamp;
 use std::sync::atomic::AtomicU64;
 use std::sync::Arc;
 use tokio::io::AsyncWriteExt;
-use tracing::{info, trace, warn};
+use tracing::{info, trace};
 
 pub const LOG_EXTENSION: &str = "log";
 pub const INDEX_EXTENSION: &str = "index";

@@ -72,9 +72,9 @@ impl BytesSerializable for FlushUnsavedBuffer {
     {
         let mut position = 0;
         let stream_id = Identifier::from_bytes(bytes.clone())?;
-        position += stream_id.to_bytes().len() as usize;
+        position += stream_id.to_bytes().len();
         let topic_id = Identifier::from_bytes(bytes.slice(position..))?;
-        position += topic_id.to_bytes().len() as usize;
+        position += topic_id.to_bytes().len();
         let partition_id = u32::from_le_bytes(bytes[position..position + 4].try_into()?);
         position += 4;
         let fsync = bytes[position] == 1;

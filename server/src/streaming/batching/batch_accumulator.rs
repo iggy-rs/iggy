@@ -25,12 +25,12 @@ impl BatchAccumulator {
         }
     }
 
-    pub fn append<'msg>(&mut self, batch_size: u64, items: &'msg [Arc<RetainedMessage>]) {
+    pub fn append(&mut self, batch_size: u64, items: &[Arc<RetainedMessage>]) {
         assert!(!items.is_empty());
         self.current_size += batch_size;
         self.current_offset = items.last().unwrap().offset;
         self.current_timestamp = items.last().unwrap().timestamp;
-        self.messages.extend(items.iter().map(|msg| msg.clone()));
+        self.messages.extend(items.iter().cloned());
     }
 
     pub fn get_messages_by_offset(
@@ -80,6 +80,7 @@ impl BatchAccumulator {
             message.extend(&mut bytes);
         }
 
+        let mut remaining_messages = Vec::with_capacity(remainder.len());
         let has_remainder = !remainder.is_empty();
         if has_remainder {
             self.base_offset = remainder.first().unwrap().offset;
@@ -89,7 +90,10 @@ impl BatchAccumulator {
                 .sum();
             self.current_offset = remainder.last().unwrap().offset;
             self.current_timestamp = remainder.last().unwrap().timestamp;
-            self.messages = remainder.iter().map(|msg| msg.clone()).collect();
+            for message in remainder {
+                remaining_messages.push(message.clone());
+            }
+            self.messages = remaining_messages;
         }
         let batch_payload = bytes.freeze();
         let batch_payload_len = batch_payload.len() as u32;

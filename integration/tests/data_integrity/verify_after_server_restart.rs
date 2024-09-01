@@ -58,7 +58,10 @@ async fn should_fill_data_and_verify_after_restart() {
     login_root(&client).await;
     let topic_id = Identifier::numeric(1).unwrap();
     for stream_id in default_bench_stream_identifiers {
-        client.flush_unsaved_buffer(&stream_id, &topic_id, 1, false).await.unwrap();
+        client
+            .flush_unsaved_buffer(&stream_id, &topic_id, 1, false)
+            .await
+            .unwrap();
     }
 
     // 5. Save stats from the first server

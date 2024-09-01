@@ -494,6 +494,7 @@ impl Partition {
     }
 
     pub async fn flush_unsaved_buffer(&mut self, fsync: bool) -> Result<(), IggyError> {
+        let _fsync = fsync;
         if self.unsaved_messages_count == 0 {
             return Ok(());
         }
@@ -507,7 +508,7 @@ impl Partition {
 
         // Make sure all of the messages from the accumulator are persisted
         // no leftover from one round trip.
-        while let Some(_) = last_segment.unsaved_messages {
+        while last_segment.unsaved_messages.is_some() {
             last_segment.persist_messages().await.unwrap();
         }
         self.unsaved_messages_count = 0;

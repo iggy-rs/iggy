@@ -3,7 +3,7 @@ mod quic;
 mod tcp;
 
 use assert_cmd::prelude::CommandCargoExt;
-use iggy::{identifier::Identifier, utils::byte_size::IggyByteSize};
+use iggy::utils::byte_size::IggyByteSize;
 use integration::test_server::{Transport, TEST_VERBOSITY_ENV_VAR};
 use std::{
     fs::{self, File, OpenOptions},

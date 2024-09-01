@@ -1,5 +1,5 @@
 use crate::streaming::common::test_setup::TestSetup;
-use bytes::{Bytes, BytesMut};
+use bytes::Bytes;
 use iggy::bytes_serializable::BytesSerializable;
 use iggy::models::messages::{MessageState, PolledMessage};
 use iggy::utils::expiry::IggyExpiry;
@@ -151,18 +151,10 @@ async fn should_persist_and_load_segment_with_messages() {
     )
     .await;
     let messages_count = 10;
-    let mut base_offset = 0;
-    let mut last_timestamp = IggyTimestamp::zero().as_micros();
     let mut messages = Vec::new();
     let mut batch_size = 0u64;
     for i in 0..messages_count {
         let message = create_message(i, "test", IggyTimestamp::now());
-        if i == 0 {
-            base_offset = message.offset;
-        }
-        if i == messages_count - 1 {
-            last_timestamp = message.timestamp;
-        }
 
         let retained_message = Arc::new(RetainedMessage {
             id: message.id,
@@ -244,19 +236,11 @@ async fn given_all_expired_messages_segment_should_be_expired() {
     let messages_count = 10;
     let now = IggyTimestamp::now();
     let mut expired_timestamp = (now.as_micros() - 2 * message_expiry_ms).into();
-    let mut base_offset = 0;
-    let mut last_timestamp = 0;
     let mut batch_size = 0u64;
     let mut messages = Vec::new();
     for i in 0..messages_count {
         let message = create_message(i, "test", expired_timestamp);
         expired_timestamp = (expired_timestamp.as_micros() + 1).into();
-        if i == 0 {
-            base_offset = message.offset;
-        }
-        if i == messages_count - 1 {
-            last_timestamp = message.timestamp;
-        }
 
         let retained_message = Arc::new(RetainedMessage {
             id: message.id,
@@ -323,7 +307,6 @@ async fn given_at_least_one_not_expired_message_segment_should_not_be_expired() 
     let expired_message = create_message(0, "test", expired_timestamp.into());
     let not_expired_message = create_message(1, "test", not_expired_timestamp.into());
 
-    let mut expired_batch_buffer = BytesMut::new();
     let expired_retained_message = Arc::new(RetainedMessage {
         id: expired_message.id,
         offset: expired_message.offset,

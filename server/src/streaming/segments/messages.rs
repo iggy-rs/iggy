@@ -285,7 +285,7 @@ impl Segment {
         storage
             .save_time_index(&self.time_index_path, time_index)
             .await?;
-        self.last_index_position += batch_size as u32;
+        self.last_index_position += batch_size;
         self.size_bytes += RETAINED_BATCH_OVERHEAD;
         self.size_of_parent_stream
             .fetch_add(RETAINED_BATCH_OVERHEAD as u64, Ordering::AcqRel);
@@ -311,6 +311,6 @@ impl Segment {
                 self.start_offset, self.partition_id
             );
         }
-        Ok(unsaved_messages_number as usize)
+        Ok(unsaved_messages_number)
     }
 }

@@ -263,7 +263,7 @@ impl SegmentStorage for FileSegmentStorage {
             return Err(IggyError::CannotSaveMessagesToSegment(err));
         }
 
-        Ok(batch_size as u32)
+        Ok(batch_size)
     }
 
     async fn load_message_ids(&self, segment: &Segment) -> Result<Vec<u128>, IggyError> {

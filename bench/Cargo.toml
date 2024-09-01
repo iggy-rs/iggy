@@ -7,15 +7,15 @@ edition = "2021"
 async-trait = "0.1.80"
 clap = { version = "4.5.4", features = ["derive"] }
 colored = "2.0.4"
-derive_more = "0.99.18"
+derive_more = "1.0.0"
 figlet-rs = "0.1.5"
 futures = "0.3.30"
 human_format = "1.1.0"
 iggy = { path = "../sdk" }
 integration = { path = "../integration" }
 nonzero_lit = "0.1.2"
-serde = { version = "1.0.203", features = ["derive"] }
-tokio = { version = "1.38.0", features = ["full"] }
+serde = { version = "1.0.209", features = ["derive"] }
+tokio = { version = "1.40.0", features = ["full"] }
 toml = "0.8.14"
 tracing = { version = "0.1.37" }
 tracing-subscriber = { version = "0.3.16" }

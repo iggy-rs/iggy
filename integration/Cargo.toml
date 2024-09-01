@@ -8,18 +8,18 @@ ahash = { version = "0.8.11", features = ["serde"] }
 assert_cmd = "2.0.14"
 async-trait = "0.1.80"
 bytes = "1.6.0"
-derive_more = "0.99.18"
+derive_more = "1.0.0"
 futures = "0.3.30"
 humantime = "2.1.0"
 iggy = { path = "../sdk", features = ["iggy-cli"] }
 keyring = "2.3.3"
-libc = "0.2.155"
+libc = "0.2.158"
 predicates = "3.1.0"
 regex = "1.10.4"
 serial_test = "3.1.1"
 server = { path = "../server" }
 tempfile = "3.10.1"
-tokio = { version = "1.38.0", features = ["full"] }
+tokio = { version = "1.40.0", features = ["full"] }
 tracing-subscriber = "0.3.18"
 uuid = { version = "1.1.0", features = ["v7", "fast-rng", "zerocopy"] }
 xxhash-rust = { version = "0.8.12", features = ["xxh32"] }

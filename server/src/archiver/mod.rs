@@ -12,9 +12,9 @@ use std::str::FromStr;
 #[serde(rename_all = "lowercase")]
 pub enum ArchiverKind {
     #[default]
-    #[display(fmt = "disk")]
+    #[display("disk")]
     Disk,
-    #[display(fmt = "s3")]
+    #[display("s3")]
     S3,
 }
 

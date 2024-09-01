@@ -18,7 +18,7 @@ login-session = ["dep:keyring"]
 ahash = { version = "0.8.11", features = ["serde"] }
 anyhow = "1.0.86"
 clap = { version = "4.5.4", features = ["derive"] }
-clap_complete = "4.5.16"
+clap_complete = "4.5.24"
 figlet-rs = "0.1.5"
 iggy = { path = "../sdk", features = ["iggy-cli"], version = "0.6.12" }
 keyring = { version = "3.2.0", features = ["sync-secret-service", "vendored"], optional = true }

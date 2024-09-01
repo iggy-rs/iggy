@@ -97,5 +97,5 @@ fn get_path_flush_unsaved_buffer(
     partition_id: u32,
     fsync: bool,
 ) -> String {
-    format!("streams/{stream_id}/topics/{topic_id}/messages/flush/{partition_id}?fsync={fsync}")
+    format!("streams/{stream_id}/topics/{topic_id}/messages/flush/{partition_id}/fsync={fsync}")
 }

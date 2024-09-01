@@ -493,6 +493,27 @@ impl Partition {
         Ok(())
     }
 
+    pub async fn flush_unsaved_buffer(&mut self, fsync: bool) -> Result<(), IggyError> {
+        if self.unsaved_messages_count == 0 {
+            return Ok(());
+        }
+
+        let last_segment = self.segments.last_mut().ok_or(IggyError::SegmentNotFound)?;
+        trace!(
+            "Segment with start offset: {} for partition with ID: {} will be forcefully persisted on disk...",
+            last_segment.start_offset,
+            self.partition_id
+        );
+
+        // Make sure all of the messages from the accumulator are persisted
+        // no leftover from one round trip.
+        while let Some(_) = last_segment.unsaved_messages {
+            last_segment.persist_messages().await.unwrap();
+        }
+        self.unsaved_messages_count = 0;
+        Ok(())
+    }
+
     fn update_avg_timestamp_delta(
         &mut self,
         avg_timestamp_delta: IggyDuration,

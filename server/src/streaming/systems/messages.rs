@@ -133,6 +133,26 @@ impl System {
         self.metrics.increment_messages(messages_count);
         Ok(())
     }
+
+    pub async fn flush_unsaved_buffer(
+        &self,
+        session: &Session,
+        stream_id: Identifier,
+        topic_id: Identifier,
+        partition_id: u32,
+        fsync: bool,
+    ) -> Result<(), IggyError> {
+        self.ensure_authenticated(session)?;
+        let topic = self.find_topic(session, &stream_id, &topic_id)?;
+        // Reuse those permissions as if you can append messages you can flush them
+        self.permissioner.append_messages(
+            session.get_user_id(),
+            topic.stream_id,
+            topic.topic_id,
+        )?;
+        topic.flush_unsaved_buffer(partition_id, fsync).await?;
+        Ok(())
+    }
 }
 
 #[derive(Debug)]

@@ -47,6 +47,8 @@ pub const POLL_MESSAGES: &str = "message.poll";
 pub const POLL_MESSAGES_CODE: u32 = 100;
 pub const SEND_MESSAGES: &str = "message.send";
 pub const SEND_MESSAGES_CODE: u32 = 101;
+pub const FLUSH_UNSAVED_BUFFER: &str = "message.flush_unsaved_buffer";
+pub const FLUSH_UNSAVED_BUFFER_CODE: u32 = 102;
 pub const GET_CONSUMER_OFFSET: &str = "consumer_offset.get";
 pub const GET_CONSUMER_OFFSET_CODE: u32 = 120;
 pub const STORE_CONSUMER_OFFSET: &str = "consumer_offset.store";
@@ -114,6 +116,7 @@ pub fn get_name_from_code(code: u32) -> Result<&'static str, IggyError> {
         LOGIN_WITH_PERSONAL_ACCESS_TOKEN_CODE => Ok(LOGIN_WITH_PERSONAL_ACCESS_TOKEN),
         SEND_MESSAGES_CODE => Ok(SEND_MESSAGES),
         POLL_MESSAGES_CODE => Ok(POLL_MESSAGES),
+        FLUSH_UNSAVED_BUFFER_CODE => Ok(FLUSH_UNSAVED_BUFFER),
         STORE_CONSUMER_OFFSET_CODE => Ok(STORE_CONSUMER_OFFSET),
         GET_CONSUMER_OFFSET_CODE => Ok(GET_CONSUMER_OFFSET),
         GET_STREAM_CODE => Ok(GET_STREAM),

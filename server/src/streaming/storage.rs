@@ -352,7 +352,11 @@ pub(crate) mod tests {
             Ok(None)
         }
 
-        async fn save_time_index(&self, _index_path: &str, _index: TimeIndex) -> Result<(), IggyError> {
+        async fn save_time_index(
+            &self,
+            _index_path: &str,
+            _index: TimeIndex,
+        ) -> Result<(), IggyError> {
             Ok(())
         }
     }

@@ -7,10 +7,10 @@ use iggy::utils::{checksum, timestamp::IggyTimestamp};
 use server::streaming::models::messages::RetainedMessage;
 use server::streaming::segments::segment;
 use server::streaming::segments::segment::{INDEX_EXTENSION, LOG_EXTENSION, TIME_INDEX_EXTENSION};
+use server::streaming::sizeable::Sizeable;
 use std::sync::atomic::AtomicU64;
 use std::sync::Arc;
 use tokio::fs;
-use server::streaming::sizeable::Sizeable;
 
 #[tokio::test]
 async fn should_persist_segment() {
@@ -177,7 +177,10 @@ async fn should_persist_and_load_segment_with_messages() {
         messages.push(retained_message);
     }
 
-    segment.append_batch(batch_size, messages_count as u32, &messages).await.unwrap();
+    segment
+        .append_batch(batch_size, messages_count as u32, &messages)
+        .await
+        .unwrap();
     segment.persist_messages().await.unwrap();
     let mut loaded_segment = segment::Segment::create(
         stream_id,
@@ -267,7 +270,10 @@ async fn given_all_expired_messages_segment_should_be_expired() {
         batch_size += retained_message.get_size_bytes() as u64;
         messages.push(retained_message);
     }
-    segment.append_batch(batch_size, messages_count as u32, &messages).await.unwrap();
+    segment
+        .append_batch(batch_size, messages_count as u32, &messages)
+        .await
+        .unwrap();
     segment.persist_messages().await.unwrap();
 
     segment.is_closed = true;
@@ -346,8 +352,14 @@ async fn given_at_least_one_not_expired_message_segment_should_not_be_expired() 
     let not_expired_message_size = not_expired_retained_message.get_size_bytes() as u64;
     not_expired_messages.push(not_expired_retained_message);
 
-    segment.append_batch(expired_message_size, 1, &expired_messages).await.unwrap();
-    segment.append_batch(not_expired_message_size, 1, &not_expired_messages).await.unwrap();
+    segment
+        .append_batch(expired_message_size, 1, &expired_messages)
+        .await
+        .unwrap();
+    segment
+        .append_batch(not_expired_message_size, 1, &not_expired_messages)
+        .await
+        .unwrap();
     segment.persist_messages().await.unwrap();
 
     let is_expired = segment.is_expired(now).await;

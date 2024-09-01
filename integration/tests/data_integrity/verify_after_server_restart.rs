@@ -1,6 +1,7 @@
 use crate::bench::run_bench_and_wait_for_finish;
-use iggy::client::SystemClient;
+use iggy::client::{MessageClient, SystemClient};
 use iggy::clients::client::IggyClient;
+use iggy::identifier::Identifier;
 use iggy::utils::byte_size::IggyByteSize;
 use integration::{
     tcp_client::TcpClientFactory,
@@ -11,6 +12,7 @@ use integration::{
 use serial_test::parallel;
 use std::{collections::HashMap, str::FromStr};
 
+// TODO(numminex) - Move the message generation method from benchmark run to a special method.
 #[tokio::test]
 #[parallel]
 async fn should_fill_data_and_verify_after_restart() {
@@ -37,10 +39,27 @@ async fn should_fill_data_and_verify_after_restart() {
         amount_of_data_to_process,
     );
 
+    let default_bench_stream_identifiers: [Identifier; 10] = [
+        Identifier::numeric(3000001).unwrap(),
+        Identifier::numeric(3000002).unwrap(),
+        Identifier::numeric(3000003).unwrap(),
+        Identifier::numeric(3000004).unwrap(),
+        Identifier::numeric(3000005).unwrap(),
+        Identifier::numeric(3000006).unwrap(),
+        Identifier::numeric(3000007).unwrap(),
+        Identifier::numeric(3000008).unwrap(),
+        Identifier::numeric(3000009).unwrap(),
+        Identifier::numeric(3000010).unwrap(),
+    ];
+
     // 4. Connect and login to newly started server
     let client = TcpClientFactory { server_addr }.create_client().await;
     let client = IggyClient::create(client, None, None);
     login_root(&client).await;
+    let topic_id = Identifier::numeric(1).unwrap();
+    for stream_id in default_bench_stream_identifiers {
+        client.flush_unsaved_buffer(&stream_id, &topic_id, 1, false).await.unwrap();
+    }
 
     // 5. Save stats from the first server
     let stats = client.get_stats().await.unwrap();

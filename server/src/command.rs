@@ -1,5 +1,4 @@
 use bytes::{BufMut, Bytes, BytesMut};
-use iggy::bytes_serializable::BytesSerializable;
 use iggy::command::*;
 use iggy::consumer_groups::create_consumer_group::CreateConsumerGroup;
 use iggy::consumer_groups::delete_consumer_group::DeleteConsumerGroup;
@@ -45,6 +44,9 @@ use iggy::users::logout_user::LogoutUser;
 use iggy::users::update_permissions::UpdatePermissions;
 use iggy::users::update_user::UpdateUser;
 use iggy::validatable::Validatable;
+use iggy::{
+    bytes_serializable::BytesSerializable, messages::flush_unsaved_buffer::FlushUnsavedBuffer,
+};
 use std::fmt::{Display, Formatter};
 use strum::EnumString;
 
@@ -70,6 +72,7 @@ pub enum ServerCommand {
     LoginWithPersonalAccessToken(LoginWithPersonalAccessToken),
     SendMessages(SendMessages),
     PollMessages(PollMessages),
+    FlushUnsavedBuffer(FlushUnsavedBuffer),
     GetConsumerOffset(GetConsumerOffset),
     StoreConsumerOffset(StoreConsumerOffset),
     GetStream(GetStream),
@@ -139,6 +142,7 @@ impl BytesSerializable for ServerCommand {
             ServerCommand::DeleteConsumerGroup(payload) => as_bytes(payload),
             ServerCommand::JoinConsumerGroup(payload) => as_bytes(payload),
             ServerCommand::LeaveConsumerGroup(payload) => as_bytes(payload),
+            ServerCommand::FlushUnsavedBuffer(payload) => as_bytes(payload),
         }
     }
 
@@ -184,6 +188,9 @@ impl BytesSerializable for ServerCommand {
             POLL_MESSAGES_CODE => Ok(ServerCommand::PollMessages(PollMessages::from_bytes(
                 payload,
             )?)),
+            FLUSH_UNSAVED_BUFFER_CODE => Ok(ServerCommand::FlushUnsavedBuffer(
+                FlushUnsavedBuffer::from_bytes(payload)?,
+            )),
             STORE_CONSUMER_OFFSET_CODE => Ok(ServerCommand::StoreConsumerOffset(
                 StoreConsumerOffset::from_bytes(payload)?,
             )),
@@ -298,6 +305,7 @@ impl Validatable<IggyError> for ServerCommand {
             ServerCommand::DeleteConsumerGroup(command) => command.validate(),
             ServerCommand::JoinConsumerGroup(command) => command.validate(),
             ServerCommand::LeaveConsumerGroup(command) => command.validate(),
+            ServerCommand::FlushUnsavedBuffer(command) => command.validate(),
         }
     }
 }
@@ -378,6 +386,9 @@ impl Display for ServerCommand {
             }
             ServerCommand::LeaveConsumerGroup(payload) => {
                 write!(formatter, "{LEAVE_CONSUMER_GROUP}|{payload}")
+            }
+            ServerCommand::FlushUnsavedBuffer(payload) => {
+                write!(formatter, "{FLUSH_UNSAVED_BUFFER}|{payload}")
             }
         }
     }
@@ -598,6 +609,11 @@ mod tests {
             &ServerCommand::LeaveConsumerGroup(LeaveConsumerGroup::default()),
             LEAVE_CONSUMER_GROUP_CODE,
             &LeaveConsumerGroup::default(),
+        );
+        assert_serialized_as_bytes_and_deserialized_from_bytes(
+            &ServerCommand::FlushUnsavedBuffer(FlushUnsavedBuffer::default()),
+            FLUSH_UNSAVED_BUFFER_CODE,
+            &FlushUnsavedBuffer::default(),
         );
     }
 

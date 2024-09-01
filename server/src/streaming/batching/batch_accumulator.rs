@@ -1,7 +1,7 @@
+use super::message_batch::{RetainedMessageBatch, RETAINED_BATCH_OVERHEAD};
+use crate::streaming::{models::messages::RetainedMessage, sizeable::Sizeable};
 use bytes::BytesMut;
 use std::sync::Arc;
-use crate::streaming::{models::messages::RetainedMessage, sizeable::Sizeable};
-use super::message_batch::{RetainedMessageBatch, RETAINED_BATCH_OVERHEAD};
 
 #[derive(Debug)]
 pub struct BatchAccumulator {

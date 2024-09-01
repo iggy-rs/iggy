@@ -101,6 +101,22 @@ impl Topic {
             .await
     }
 
+    pub async fn flush_unsaved_buffer(
+        &self,
+        partition_id: u32,
+        fsync: bool,
+    ) -> Result<(), IggyError> {
+        let partition = self.partitions.get(&partition_id);
+        partition
+            .ok_or_else(|| {
+                IggyError::PartitionNotFound(partition_id, self.stream_id, self.stream_id)
+            })?
+            .write()
+            .await
+            .flush_unsaved_buffer(fsync)
+            .await
+    }
+
     async fn append_messages_to_partition(
         &self,
         appendable_batch_info: AppendableBatchInfo,

@@ -17,7 +17,7 @@ ahash = { version = "0.8.11", features = ["serde"] }
 anyhow = "1.0.86"
 async-broadcast = { version = "0.7.1" }
 async-dropper = { version = "0.3.1", features = ["tokio", "simple"] }
-async-trait = "0.1.80"
+async-trait = "0.1.82"
 base64 = "0.22.1"
 byte-unit = { version = "5.1.4", default-features = false, features = [
     "serde",

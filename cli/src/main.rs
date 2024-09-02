@@ -32,7 +32,10 @@ use iggy::cli::{
         get_consumer_offset::GetConsumerOffsetCmd, set_consumer_offset::SetConsumerOffsetCmd,
     },
     context::get_contexts::GetContextsCmd,
-    message::{poll_messages::PollMessagesCmd, send_messages::SendMessagesCmd},
+    message::{
+        flush_messages::FlushMessagesCmd, poll_messages::PollMessagesCmd,
+        send_messages::SendMessagesCmd,
+    },
     partitions::{create_partitions::CreatePartitionsCmd, delete_partitions::DeletePartitionsCmd},
     personal_access_tokens::{
         create_personal_access_token::CreatePersonalAccessTokenCmd,
@@ -255,6 +258,12 @@ fn get_command(
                 poll_args.next,
                 poll_args.consumer.clone(),
                 poll_args.show_headers,
+            )),
+            MessageAction::Flush(flush_args) => Box::new(FlushMessagesCmd::new(
+                flush_args.stream_id.clone(),
+                flush_args.topic_id.clone(),
+                flush_args.partition_id,
+                flush_args.fsync,
             )),
         },
         Command::ConsumerOffset(command) => match command {

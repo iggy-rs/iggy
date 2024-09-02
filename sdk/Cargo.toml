@@ -1,6 +1,6 @@
 [package]
 name = "iggy"
-version = "0.6.14"
+version = "0.6.15"
 description = "Iggy is the persistent message streaming platform written in Rust, supporting QUIC, TCP and HTTP transport protocols, capable of processing millions of messages per second."
 edition = "2021"
 license = "MIT"

@@ -6,7 +6,7 @@ edition = "2021"
 [dependencies]
 ahash = { version = "0.8.11", features = ["serde"] }
 assert_cmd = "2.0.14"
-async-trait = "0.1.80"
+async-trait = "0.1.82"
 bytes = "1.6.0"
 derive_more = "1.0.0"
 futures = "0.3.30"

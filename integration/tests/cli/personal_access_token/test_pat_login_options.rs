@@ -93,7 +93,7 @@ impl IggyCmdTestCase for TestLoginOptions {
         let token = client.delete_personal_access_token(&self.token_name).await;
         assert!(token.is_ok());
 
-        if let Err(e) = self.keyring.delete_password() {
+        if let Err(e) = self.keyring.delete_credential() {
             panic!("Failed to delete token from keyring due to {}", e);
         };
     }

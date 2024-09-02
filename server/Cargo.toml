@@ -71,12 +71,10 @@ tikv-jemallocator = { version = "0.6", optional = true }
 [build-dependencies]
 figment = { version = "0.10.18", features = ["json", "toml", "env"] }
 serde_json = "1.0.127"
-vergen = { version = "8.3.1", features = [
-    "build",
+vergen-git2 = { version = "1.0.0", features = ["build",
     "cargo",
-    "git",
-    "gitcl",
     "rustc",
+    "si"
 ] }
 
 [[bin]]

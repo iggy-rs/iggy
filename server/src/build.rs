@@ -3,18 +3,19 @@ use figment::Figment;
 use serde_json::Value;
 use std::error;
 use std::path::PathBuf;
-use vergen::EmitBuilder;
+use vergen_git2::{BuildBuilder, CargoBuilder, Emitter, Git2Builder, RustcBuilder, SysinfoBuilder};
 
 const JSON_CONFIG_FILENAME: &str = "server.json";
 const TOML_CONFIG_FILENAME: &str = "server.toml";
 
 fn main() -> Result<(), Box<dyn error::Error>> {
     if option_env!("IGGY_CI_BUILD") == Some("true") {
-        EmitBuilder::builder()
-            .all_build()
-            .all_cargo()
-            .all_git()
-            .all_rustc()
+        Emitter::default()
+            .add_instructions(&BuildBuilder::all_build()?)?
+            .add_instructions(&CargoBuilder::all_cargo()?)?
+            .add_instructions(&Git2Builder::all_git()?)?
+            .add_instructions(&RustcBuilder::all_rustc()?)?
+            .add_instructions(&SysinfoBuilder::all_sysinfo()?)?
             .emit()?;
 
         let workspace_root = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("..");

@@ -1,6 +1,6 @@
 [package]
 name = "iggy-cli"
-version = "0.5.14"
+version = "0.6.0"
 edition = "2021"
 authors = ["bartosz.ciesla@gmail.com"]
 repository = "https://github.com/iggy-rs/iggy"
@@ -20,7 +20,7 @@ anyhow = "1.0.86"
 clap = { version = "4.5.4", features = ["derive"] }
 clap_complete = "4.5.24"
 figlet-rs = "0.1.5"
-iggy = { path = "../sdk", features = ["iggy-cli"], version = "0.6.12" }
+iggy = { path = "../sdk", features = ["iggy-cli"], version = "0.6.15" }
 keyring = { version = "3.2.0", features = ["sync-secret-service", "vendored"], optional = true }
 passterm = "2.0.1"
 thiserror = "1.0.61"

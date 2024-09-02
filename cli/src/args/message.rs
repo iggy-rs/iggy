@@ -31,6 +31,23 @@ pub(crate) enum MessageAction {
     ///  iggy message poll --offset 0 stream topic 1
     #[clap(verbatim_doc_comment, visible_alias = "p")]
     Poll(PollMessagesArgs),
+    /// Flush messages from given topic ID and given stream ID
+    ///
+    /// Command is used to force a flush of unsaved_buffer to disk
+    /// for specific stream, topic and partition. If fsync is enabled
+    /// then the data is flushed to disk and fsynced, otherwise the
+    /// data is only flushed to disk.
+    ///
+    /// Stream ID can be specified as a stream name or ID
+    /// Topic ID can be specified as a topic name or ID
+    ///
+    /// Examples:
+    ///  iggy message flush 1 2 1
+    ///  iggy message flush stream 2 1
+    ///  iggy message flush 1 topic 1
+    ///  iggy message flush stream topic 1
+    #[clap(verbatim_doc_comment, visible_alias = "f")]
+    Flush(FlushMessagesArgs),
 }
 
 #[derive(Debug, Clone, Args)]
@@ -150,6 +167,30 @@ pub(crate) struct PollMessagesArgs {
     #[clap(verbatim_doc_comment)]
     #[clap(short, long, default_value_t = false)]
     pub(crate) show_headers: bool,
+}
+
+#[derive(Debug, Clone, Args)]
+pub(crate) struct FlushMessagesArgs {
+    /// ID of the stream for which messages will be flushed
+    ///
+    /// Stream ID can be specified as a stream name or ID
+    #[arg(value_parser = clap::value_parser!(Identifier))]
+    pub(crate) stream_id: Identifier,
+    /// ID of the topic for which messages will be flushed
+    ///
+    /// Topic ID can be specified as a topic name or ID
+    #[arg(value_parser = clap::value_parser!(Identifier))]
+    pub(crate) topic_id: Identifier,
+    /// Partition ID for which messages will be flushed
+    #[arg(value_parser = clap::value_parser!(u32).range(1..))]
+    pub(crate) partition_id: u32,
+    /// fsync flushed data to disk
+    ///
+    /// If option is enabled then the data is flushed to disk and fsynced,
+    /// otherwise the data is only flushed to disk. Default is false.
+    #[clap(verbatim_doc_comment)]
+    #[clap(short, long, default_value_t = false)]
+    pub(crate) fsync: bool,
 }
 
 #[cfg(test)]

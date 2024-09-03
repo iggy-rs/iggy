@@ -94,6 +94,8 @@ async fn create_topic(
                 command.replication_factor,
             )
             .await?;
+        command.message_expiry = topic.message_expiry;
+        command.max_topic_size = topic.max_topic_size;
         response = Json(mapper::map_topic(topic).await);
     }
 
@@ -116,7 +118,7 @@ async fn update_topic(
     command.validate()?;
     {
         let mut system = state.system.write().await;
-        system
+        let topic = system
             .update_topic(
                 &Session::stateless(identity.user_id, identity.ip_address),
                 &command.stream_id,
@@ -128,6 +130,8 @@ async fn update_topic(
                 command.replication_factor,
             )
             .await?;
+        command.message_expiry = topic.message_expiry;
+        command.max_topic_size = topic.max_topic_size;
     }
 
     let system = state.system.read().await;

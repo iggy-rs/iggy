@@ -91,7 +91,7 @@ impl System {
         compression_algorithm: CompressionAlgorithm,
         max_topic_size: MaxTopicSize,
         replication_factor: Option<u8>,
-    ) -> Result<(), IggyError> {
+    ) -> Result<&Topic, IggyError> {
         self.ensure_authenticated(session)?;
         {
             let topic = self.find_topic(session, stream_id, topic_id)?;
@@ -116,7 +116,7 @@ impl System {
         // TODO: if message_expiry is changed, we need to check if we need to purge messages based on the new expiry
         // TODO: if max_size_bytes is changed, we need to check if we need to purge messages based on the new size
         // TODO: if replication_factor is changed, we need to do `something`
-        Ok(())
+        self.get_stream(stream_id)?.get_topic(topic_id)
     }
 
     pub async fn delete_topic(

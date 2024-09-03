@@ -38,10 +38,12 @@ impl TopicStorage for FileTopicStorage {
             return Err(IggyError::TopicIdNotFound(topic.topic_id, topic.stream_id));
         }
 
+        let message_expiry = Topic::get_message_expiry(state.message_expiry, &topic.config);
+        let max_topic_size = Topic::get_max_topic_size(state.max_topic_size, &topic.config)?;
         topic.created_at = state.created_at;
-        topic.message_expiry = state.message_expiry;
+        topic.message_expiry = message_expiry;
+        topic.max_topic_size = max_topic_size;
         topic.compression_algorithm = state.compression_algorithm;
-        topic.max_topic_size = state.max_topic_size;
         topic.replication_factor = state.replication_factor.unwrap_or(1);
 
         let dir_entries = fs::read_dir(&topic.partitions_path).await
@@ -88,7 +90,7 @@ impl TopicStorage for FileTopicStorage {
                 false,
                 topic.config.clone(),
                 topic.storage.clone(),
-                topic.message_expiry,
+                message_expiry,
                 topic.messages_count_of_parent_stream.clone(),
                 topic.messages_count.clone(),
                 topic.size_of_parent_stream.clone(),

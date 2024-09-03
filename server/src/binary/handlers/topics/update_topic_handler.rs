@@ -8,7 +8,7 @@ use iggy::topics::update_topic::UpdateTopic;
 use tracing::debug;
 
 pub async fn handle(
-    command: UpdateTopic,
+    mut command: UpdateTopic,
     sender: &mut dyn Sender,
     session: &Session,
     system: &SharedSystem,
@@ -16,7 +16,7 @@ pub async fn handle(
     debug!("session: {session}, command: {command}");
     {
         let mut system = system.write().await;
-        system
+        let topic = system
             .update_topic(
                 session,
                 &command.stream_id,
@@ -28,6 +28,8 @@ pub async fn handle(
                 command.replication_factor,
             )
             .await?;
+        command.message_expiry = topic.message_expiry;
+        command.max_topic_size = topic.max_topic_size;
     }
 
     let system = system.read().await;

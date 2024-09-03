@@ -9,7 +9,7 @@ use iggy::topics::create_topic::CreateTopic;
 use tracing::debug;
 
 pub async fn handle(
-    command: CreateTopic,
+    mut command: CreateTopic,
     sender: &mut dyn Sender,
     session: &Session,
     system: &SharedSystem,
@@ -31,6 +31,8 @@ pub async fn handle(
                 command.replication_factor,
             )
             .await?;
+        command.message_expiry = topic.message_expiry;
+        command.max_topic_size = topic.max_topic_size;
         response = mapper::map_topic(topic).await;
     }
 

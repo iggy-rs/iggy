@@ -1,4 +1,3 @@
-use crate::configs::system::SystemConfig;
 use crate::streaming::streams::stream::Stream;
 use crate::streaming::topics::topic::Topic;
 use iggy::compression::compression_algorithm::CompressionAlgorithm;
@@ -27,7 +26,7 @@ impl Stream {
         max_topic_size: MaxTopicSize,
         replication_factor: u8,
     ) -> Result<u32, IggyError> {
-        let max_topic_size = get_max_topic_size(max_topic_size, &self.config)?;
+        let max_topic_size = Topic::get_max_topic_size(max_topic_size, &self.config)?;
         let name = text::to_lowercase_non_whitespace(name);
         if self.topics_ids.contains_key(&name) {
             return Err(IggyError::TopicNameAlreadyExists(name, self.stream_id));
@@ -85,7 +84,8 @@ impl Stream {
         max_topic_size: MaxTopicSize,
         replication_factor: u8,
     ) -> Result<(), IggyError> {
-        let max_topic_size = get_max_topic_size(max_topic_size, &self.config)?;
+        let message_expiry = Topic::get_message_expiry(message_expiry, &self.config);
+        let max_topic_size = Topic::get_max_topic_size(max_topic_size, &self.config)?;
         let topic_id;
         {
             let topic = self.get_topic(id)?;
@@ -114,11 +114,6 @@ impl Stream {
             self.topics_ids.remove(&old_topic_name.clone());
             self.topics_ids.insert(updated_name.clone(), topic_id);
             let topic = self.get_topic_mut(id)?;
-
-            let message_expiry = match message_expiry {
-                IggyExpiry::ServerDefault => topic.config.segment.message_expiry,
-                _ => message_expiry,
-            };
 
             topic.name = updated_name;
             topic.message_expiry = message_expiry;
@@ -226,25 +221,6 @@ impl Stream {
             IggyError::CannotDeleteTopic(topic.topic_id, self.stream_id)
         })?;
         Ok(topic)
-    }
-}
-
-fn get_max_topic_size(
-    max_topic_size: MaxTopicSize,
-    config: &SystemConfig,
-) -> Result<MaxTopicSize, IggyError> {
-    match max_topic_size {
-        MaxTopicSize::ServerDefault => Ok(config.topic.max_size),
-        _ => {
-            if max_topic_size.as_bytes_u64() >= config.segment.size.as_bytes_u64() {
-                Ok(max_topic_size)
-            } else {
-                Err(IggyError::InvalidTopicSize(
-                    max_topic_size,
-                    config.segment.size,
-                ))
-            }
-        }
     }
 }
 

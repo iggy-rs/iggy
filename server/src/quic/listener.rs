@@ -1,6 +1,3 @@
-use std::net::SocketAddr;
-use std::sync::Arc;
-
 use crate::binary::command;
 use crate::command::ServerCommand;
 use crate::quic::quic_sender::QuicSender;
@@ -13,6 +10,7 @@ use bytes::Bytes;
 use iggy::validatable::Validatable;
 use iggy::{bytes_serializable::BytesSerializable, messages::MAX_PAYLOAD_SIZE};
 use quinn::{Connection, Endpoint, RecvStream, SendStream};
+use std::sync::Arc;
 use tracing::{debug, error, info};
 
 const LISTENERS_COUNT: u32 = 10;
@@ -62,7 +60,7 @@ async fn handle_connection(
         .await;
     let session = Arc::new(Session::from_client_id(client_id, address));
 
-    while let Some(stream) = accept_stream(&connection, &system, &address).await? {
+    while let Some(stream) = accept_stream(&connection, &system, client_id).await? {
         let system = system.clone();
         let session = session.clone();
 
@@ -81,17 +79,17 @@ type BiStream = (SendStream, RecvStream);
 async fn accept_stream(
     connection: &Connection,
     system: &SharedSystem,
-    address: &SocketAddr,
+    client_id: u32,
 ) -> Result<Option<BiStream>, ServerError> {
     match connection.accept_bi().await {
         Err(quinn::ConnectionError::ApplicationClosed { .. }) => {
             info!("Connection closed");
-            system.read().await.delete_client(address).await;
+            system.read().await.delete_client(client_id).await;
             Ok(None)
         }
         Err(error) => {
             error!("Error when handling QUIC stream: {:?}", error);
-            system.read().await.delete_client(address).await;
+            system.read().await.delete_client(client_id).await;
             Err(error.into())
         }
         Ok(stream) => Ok(Some(stream)),

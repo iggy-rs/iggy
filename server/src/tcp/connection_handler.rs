@@ -2,7 +2,6 @@ use crate::binary::command;
 use crate::binary::sender::Sender;
 use crate::command::ServerCommand;
 use crate::server_error::ServerError;
-use crate::streaming::clients::client_manager::Transport;
 use crate::streaming::session::Session;
 use crate::streaming::systems::system::SharedSystem;
 use bytes::{BufMut, BytesMut};
@@ -10,23 +9,15 @@ use iggy::bytes_serializable::BytesSerializable;
 use iggy::error::IggyError;
 use iggy::validatable::Validatable;
 use std::io::ErrorKind;
-use std::net::SocketAddr;
 use tracing::{debug, error, info};
 
 const INITIAL_BYTES_LENGTH: usize = 4;
 
 pub(crate) async fn handle_connection(
-    address: SocketAddr,
+    session: Session,
     sender: &mut dyn Sender,
     system: SharedSystem,
 ) -> Result<(), ServerError> {
-    let client_id = system
-        .read()
-        .await
-        .add_client(&address, Transport::Tcp)
-        .await;
-
-    let session = Session::from_client_id(client_id, address);
     let mut initial_buffer = [0u8; INITIAL_BYTES_LENGTH];
     loop {
         let read_length = match sender.read(&mut initial_buffer).await {

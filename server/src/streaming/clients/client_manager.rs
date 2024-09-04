@@ -80,15 +80,7 @@ impl ClientManager {
         Ok(())
     }
 
-    pub fn get_client_by_address(
-        &self,
-        address: &SocketAddr,
-    ) -> Result<IggySharedMut<Client>, IggyError> {
-        let id = hash::calculate_32(address.to_string().as_bytes());
-        self.get_client_by_id(id)
-    }
-
-    pub fn get_client_by_id(&self, client_id: u32) -> Result<IggySharedMut<Client>, IggyError> {
+    pub fn get_client(&self, client_id: u32) -> Result<IggySharedMut<Client>, IggyError> {
         let client = self.clients.get(&client_id);
         if client.is_none() {
             return Err(IggyError::ClientNotFound(client_id));
@@ -119,9 +111,8 @@ impl ClientManager {
         Ok(())
     }
 
-    pub fn delete_client(&mut self, address: &SocketAddr) -> Option<IggySharedMut<Client>> {
-        let id = hash::calculate_32(address.to_string().as_bytes());
-        self.clients.remove(&id)
+    pub fn delete_client(&mut self, client_id: u32) -> Option<IggySharedMut<Client>> {
+        self.clients.remove(&client_id)
     }
 
     pub async fn join_consumer_group(

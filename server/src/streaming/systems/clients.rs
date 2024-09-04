@@ -17,60 +17,41 @@ impl System {
         client_id
     }
 
-    pub async fn delete_client(&self, address: &SocketAddr) {
+    pub async fn delete_client(&self, client_id: u32) {
         let consumer_groups: Vec<(u32, u32, u32)>;
-        let client_id;
-
-        {
-            let client_manager = self.client_manager.read().await;
-            let client = client_manager.get_client_by_address(address);
-            if client.is_err() {
-                return;
-            }
-
-            let client = client.unwrap();
-            let client = client.read().await;
-            client_id = client.client_id;
-
-            consumer_groups = client
-                .consumer_groups
-                .iter()
-                .map(|c| (c.stream_id, c.topic_id, c.group_id))
-                .collect();
-        }
-
-        for (stream_id, topic_id, consumer_group_id) in consumer_groups.iter() {
-            if let Err(error) = self
-                .leave_consumer_group_by_client(
-                    &Identifier::numeric(*stream_id).unwrap(),
-                    &Identifier::numeric(*topic_id).unwrap(),
-                    &Identifier::numeric(*consumer_group_id).unwrap(),
-                    client_id,
-                )
-                .await
-            {
-                error!(
-                    "Failed to leave consumer group with ID: {} by client with ID: {}. Error: {}",
-                    consumer_group_id, client_id, error
-                );
-            }
-        }
 
         {
             let mut client_manager = self.client_manager.write().await;
-            let client = client_manager.delete_client(address);
+            let client = client_manager.delete_client(client_id);
             if client.is_none() {
+                error!("Client with ID: {client_id} was not found in the client manager.",);
                 return;
             }
 
             self.metrics.decrement_clients(1);
             let client = client.unwrap();
             let client = client.read().await;
+            consumer_groups = client
+                .consumer_groups
+                .iter()
+                .map(|c| (c.stream_id, c.topic_id, c.group_id))
+                .collect();
 
             info!(
                 "Deleted {} client with ID: {} for IP address: {}",
                 client.transport, client.client_id, client.address
             );
+        }
+
+        for (stream_id, topic_id, consumer_group_id) in consumer_groups.into_iter() {
+            _ = self
+                .leave_consumer_group_by_client(
+                    &Identifier::numeric(stream_id).unwrap(),
+                    &Identifier::numeric(topic_id).unwrap(),
+                    &Identifier::numeric(consumer_group_id).unwrap(),
+                    client_id,
+                )
+                .await
         }
     }
 
@@ -82,7 +63,7 @@ impl System {
         self.ensure_authenticated(session)?;
         self.permissioner.get_client(session.get_user_id())?;
         let client_manager = self.client_manager.read().await;
-        client_manager.get_client_by_id(client_id)
+        client_manager.get_client(client_id)
     }
 
     pub async fn get_clients(

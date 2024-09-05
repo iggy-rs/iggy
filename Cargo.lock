@@ -1988,7 +1988,7 @@ dependencies = [
 
 [[package]]
 name = "iggy"
-version = "0.6.15"
+version = "0.6.16"
 dependencies = [
  "aes-gcm",
  "ahash 0.8.11",
@@ -2014,7 +2014,6 @@ dependencies = [
  "humantime",
  "keyring",
  "lazy_static",
- "openssl",
  "passterm",
  "quinn",
  "regex",

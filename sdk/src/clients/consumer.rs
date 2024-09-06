@@ -409,7 +409,7 @@ impl IggyConsumer {
                         )
                         .await
                         {
-                            error!("Failed to join consumer group: {consumer_name}. {error}");
+                            error!("Failed to join consumer group: {consumer_name} for stream: {stream_id}, topic: {topic_id}. {error}");
                             continue;
                         }
                         info!("Rejoined consumer group: {consumer_name} for stream: {stream_id}, topic: {topic_id}");

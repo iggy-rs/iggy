@@ -3863,6 +3863,7 @@ dependencies = [
  "jsonwebtoken",
  "log",
  "moka",
+ "openssl",
  "prometheus-client",
  "quinn",
  "rcgen",

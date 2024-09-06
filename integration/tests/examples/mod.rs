@@ -64,12 +64,10 @@ pub(crate) trait IggyExampleTestCase {
     ) {
         let server_addr = server.get_raw_tcp_addr().unwrap();
         for stdout in [producer_stdout, consumer_stdout] {
-            assert!(stdout.contains(
-                format!("Iggy client is connecting to server: {}...", &server_addr).as_str()
-            ));
-            assert!(stdout.contains(
-                format!("Iggy client has connected to server: {}", &server_addr).as_str()
-            ));
+            assert!(
+                stdout.contains(format!("is connecting to server: {}...", &server_addr).as_str())
+            );
+            assert!(stdout.contains(format!("has connected to server: {}", &server_addr).as_str()));
         }
     }
     fn protocol(&self, server: &TestServer) -> Vec<String> {

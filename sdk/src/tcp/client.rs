@@ -13,6 +13,7 @@ use async_broadcast::{broadcast, Receiver, Sender};
 use async_trait::async_trait;
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 use std::fmt::Debug;
+use std::net::SocketAddr;
 use std::str::FromStr;
 use std::sync::Arc;
 use tokio::io::{AsyncReadExt, AsyncWriteExt, BufReader, BufWriter};
@@ -35,6 +36,7 @@ pub struct TcpClient {
     pub(crate) stream: Mutex<Option<Box<dyn ConnectionStream>>>,
     pub(crate) config: Arc<TcpClientConfig>,
     pub(crate) state: Mutex<ClientState>,
+    client_address: Mutex<Option<SocketAddr>>,
     events: (Sender<DiagnosticEvent>, Receiver<DiagnosticEvent>),
     connected_at: Mutex<Option<IggyTimestamp>>,
 }
@@ -51,14 +53,16 @@ pub(crate) trait ConnectionStream: Debug + Sync + Send {
 
 #[derive(Debug)]
 struct TcpConnectionStream {
+    client_address: SocketAddr,
     reader: BufReader<OwnedReadHalf>,
     writer: BufWriter<OwnedWriteHalf>,
 }
 
 impl TcpConnectionStream {
-    pub fn new(stream: TcpStream) -> Self {
+    pub fn new(client_address: SocketAddr, stream: TcpStream) -> Self {
         let (reader, writer) = stream.into_split();
         Self {
+            client_address,
             reader: BufReader::new(reader),
             writer: BufWriter::new(writer),
         }
@@ -67,7 +71,17 @@ impl TcpConnectionStream {
 
 #[derive(Debug)]
 pub(crate) struct TcpTlsConnectionStream {
+    client_address: SocketAddr,
     stream: TlsStream<TcpStream>,
+}
+
+impl TcpTlsConnectionStream {
+    pub fn new(client_address: SocketAddr, stream: TlsStream<TcpStream>) -> Self {
+        Self {
+            client_address,
+            stream,
+        }
+    }
 }
 
 unsafe impl Send for TcpConnectionStream {}
@@ -80,35 +94,65 @@ unsafe impl Sync for TcpTlsConnectionStream {}
 impl ConnectionStream for TcpConnectionStream {
     async fn read(&mut self, buf: &mut [u8]) -> Result<usize, IggyError> {
         self.reader.read_exact(buf).await.map_err(|error| {
-            error!("Failed to read data from the TCP connection: {error}");
+            error!(
+                "Failed to read data by client: {} from the TCP connection: {error}",
+                self.client_address
+            );
             IggyError::from(error)
         })
     }
 
     async fn write(&mut self, buf: &[u8]) -> Result<(), IggyError> {
-        Ok(self.writer.write_all(buf).await?)
+        self.writer.write_all(buf).await.map_err(|error| {
+            error!(
+                "Failed to write data by client: {} to the TCP connection: {error}",
+                self.client_address
+            );
+            IggyError::from(error)
+        })
     }
 
     async fn flush(&mut self) -> Result<(), IggyError> {
-        Ok(self.writer.flush().await?)
+        self.writer.flush().await.map_err(|error| {
+            error!(
+                "Failed to flush data by client: {} to the TCP connection: {error}",
+                self.client_address
+            );
+            IggyError::from(error)
+        })
     }
 }
 
 #[async_trait]
 impl ConnectionStream for TcpTlsConnectionStream {
     async fn read(&mut self, buf: &mut [u8]) -> Result<usize, IggyError> {
-        self.stream.read_exact(buf).await.map_err(|error| {
-            error!("Failed to read data from the TCP connection: {error}");
+        self.stream.read(buf).await.map_err(|error| {
+            error!(
+                "Failed to read data by client: {} from the TCP TLS connection: {error}",
+                self.client_address
+            );
             IggyError::from(error)
         })
     }
 
     async fn write(&mut self, buf: &[u8]) -> Result<(), IggyError> {
-        Ok(self.stream.write_all(buf).await?)
+        self.stream.write_all(buf).await.map_err(|error| {
+            error!(
+                "Failed to write data by client: {} to the TCP TLS connection: {error}",
+                self.client_address
+            );
+            IggyError::from(error)
+        })
     }
 
     async fn flush(&mut self) -> Result<(), IggyError> {
-        Ok(())
+        self.stream.flush().await.map_err(|error| {
+            error!(
+                "Failed to flush data by client: {} to the TCP TLS connection: {error}",
+                self.client_address
+            );
+            IggyError::from(error)
+        })
     }
 }
 
@@ -168,7 +212,15 @@ impl BinaryTransport for TcpClient {
         }
 
         self.disconnect().await?;
-        info!("Reconnecting to the server...");
+
+        {
+            let client_address = self.get_client_address_value().await;
+            info!(
+                "Reconnecting to the server: {} by client: {client_address}...",
+                self.config.server_address
+            );
+        }
+
         self.connect().await?;
         self.send_raw(code, payload).await
     }
@@ -217,6 +269,7 @@ impl TcpClient {
     pub fn create(config: Arc<TcpClientConfig>) -> Result<Self, IggyError> {
         Ok(Self {
             config,
+            client_address: Mutex::new(None),
             stream: Mutex::new(None),
             state: Mutex::new(ClientState::Disconnected),
             events: broadcast(1000),
@@ -282,7 +335,8 @@ impl TcpClient {
     async fn connect(&self) -> Result<(), IggyError> {
         match self.get_state().await {
             ClientState::Connected | ClientState::Authenticating | ClientState::Authenticated => {
-                trace!("Client is already connected.");
+                let client_address = self.get_client_address_value().await;
+                trace!("Client: {client_address} is already connected.");
                 return Ok(());
             }
             ClientState::Connecting => {
@@ -312,6 +366,7 @@ impl TcpClient {
         let mut retry_count = 0;
         let connection_stream: Box<dyn ConnectionStream>;
         let remote_address;
+        let client_address;
         loop {
             info!(
                 "{NAME} client is connecting to server: {}...",
@@ -354,11 +409,13 @@ impl TcpClient {
                 return Err(IggyError::CannotEstablishConnection);
             }
 
-            let stream = connection.unwrap();
+            let stream = connection?;
+            client_address = stream.local_addr()?;
             remote_address = stream.peer_addr()?;
+            self.client_address.lock().await.replace(client_address);
 
             if !tls_enabled {
-                connection_stream = Box::new(TcpConnectionStream::new(stream));
+                connection_stream = Box::new(TcpConnectionStream::new(client_address, stream));
                 break;
             }
 
@@ -379,12 +436,14 @@ impl TcpClient {
                 IggyError::CannotEstablishConnection
             })?;
 
-            connection_stream = Box::new(TcpTlsConnectionStream { stream });
+            connection_stream = Box::new(TcpTlsConnectionStream::new(client_address, stream));
             break;
         }
 
         let now = IggyTimestamp::now();
-        info!("{NAME} client has connected to server: {remote_address} at: {now}",);
+        info!(
+            "{NAME} client: {client_address} has connected to server: {remote_address} at: {now}",
+        );
         self.stream.lock().await.replace(connection_stream);
         self.set_state(ClientState::Connected).await;
         self.connected_at.lock().await.replace(now);
@@ -395,17 +454,17 @@ impl TcpClient {
                 Ok(())
             }
             AutoLogin::Enabled(credentials) => {
-                info!("{NAME} client is signing in...");
+                info!("{NAME} client: {client_address} is signing in...");
                 self.set_state(ClientState::Authenticating).await;
                 match credentials {
                     Credentials::UsernamePassword(username, password) => {
                         self.login_user(username, password).await?;
-                        info!("{NAME} client has signed in with the user credentials, username: {username}",);
+                        info!("{NAME} client: {client_address} has signed in with the user credentials, username: {username}",);
                         Ok(())
                     }
                     Credentials::PersonalAccessToken(token) => {
                         self.login_with_personal_access_token(token).await?;
-                        info!("{NAME} client has signed in with a personal access token.",);
+                        info!("{NAME} client: {client_address} has signed in with a personal access token.",);
                         Ok(())
                     }
                 }
@@ -418,12 +477,13 @@ impl TcpClient {
             return Ok(());
         }
 
-        info!("{NAME} client is disconnecting from server...");
+        let client_address = self.get_client_address_value().await;
+        info!("{NAME} client: {client_address} is disconnecting from server...");
         self.set_state(ClientState::Disconnected).await;
         self.stream.lock().await.take();
         self.publish_event(DiagnosticEvent::Disconnected).await;
         let now = IggyTimestamp::now();
-        info!("{NAME} client has disconnected from server at: {now}.");
+        info!("{NAME} client: {client_address} has disconnected from server at: {now}.");
         Ok(())
     }
 
@@ -472,5 +532,14 @@ impl TcpClient {
 
         error!("Cannot send data. Client is not connected.");
         Err(IggyError::NotConnected)
+    }
+
+    async fn get_client_address_value(&self) -> String {
+        let client_address = self.client_address.lock().await;
+        if let Some(client_address) = &*client_address {
+            client_address.to_string()
+        } else {
+            "unknown".to_string()
+        }
     }
 }

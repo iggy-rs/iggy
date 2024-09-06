@@ -397,7 +397,7 @@ impl IggyConsumer {
                             continue;
                         }
 
-                        info!("Rejoining consumer group: {consumer_name}...");
+                        info!("Rejoining consumer group: {consumer_name} for stream: {stream_id}, topic: {topic_id}...");
                         if let Err(error) = Self::initialize_consumer_group(
                             client.clone(),
                             create_consumer_group_if_not_exists,
@@ -412,7 +412,7 @@ impl IggyConsumer {
                             error!("Failed to join consumer group: {consumer_name}. {error}");
                             continue;
                         }
-                        info!("Rejoined consumer group: {consumer_name}");
+                        info!("Rejoined consumer group: {consumer_name} for stream: {stream_id}, topic: {topic_id}");
                         can_poll.store(true, ORDERING);
                     }
                     DiagnosticEvent::SignedOut => {

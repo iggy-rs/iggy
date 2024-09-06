@@ -33,6 +33,7 @@ iggy = { path = "../sdk" }
 jsonwebtoken = "9.3.0"
 log = "0.4.20"
 moka = { version = "0.12.5", features = ["future"] }
+openssl = { version = "0.10.66", features = ["vendored"] }
 prometheus-client = "0.22.2"
 quinn = { version = "0.11.5" }
 rcgen = "0.13.1"

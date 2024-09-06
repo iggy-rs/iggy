@@ -318,19 +318,17 @@ impl SegmentStorage for FileSegmentStorage {
         let mut indexes = Vec::with_capacity(indexes_count);
         let mut reader = BufReader::with_capacity(BUF_READER_CAPACITY_BYTES, file);
         for idx_num in 0..indexes_count {
-            let offset = reader.read_u32_le().await.map_err(|error| {
+            let offset = reader.read_u32_le().await.inspect_err(|error| {
                 error!(
                     "Cannot read offset from index file for index number: {}. Error: {}",
                     idx_num, &error
-                );
-                error
+                )
             })?;
-            let position = reader.read_u32_le().await.map_err(|error| {
+            let position = reader.read_u32_le().await.inspect_err(|error| {
                 error!(
                     "Cannot read position from index file for offset: {}. Error: {}",
                     offset, &error
-                );
-                error
+                )
             })?;
             indexes.push(Index {
                 relative_offset: offset,
@@ -488,19 +486,17 @@ impl SegmentStorage for FileSegmentStorage {
         let mut indexes = Vec::with_capacity(indexes_count);
         let mut reader = BufReader::with_capacity(BUF_READER_CAPACITY_BYTES, file);
         for idx_num in 0..indexes_count {
-            let offset = reader.read_u32_le().await.map_err(|error| {
+            let offset = reader.read_u32_le().await.inspect_err(|error| {
                 error!(
                     "Cannot read offset from index file for offset: {}. Error: {}",
                     idx_num, &error
-                );
-                error
+                )
             })?;
-            let timestamp = reader.read_u64().await.map_err(|error| {
+            let timestamp = reader.read_u64().await.inspect_err(|error| {
                 error!(
                     "Cannot read timestamp from index file for offset: {}. Error: {}",
                     offset, &error
-                );
-                error
+                )
             })?;
             indexes.push(TimeIndex {
                 relative_offset: offset,

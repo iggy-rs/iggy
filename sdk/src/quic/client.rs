@@ -98,7 +98,10 @@ impl BinaryTransport for QuicClient {
         }
 
         self.disconnect().await?;
-        info!("Reconnecting to the server...");
+        info!(
+            "Reconnecting to the server: {}, by client: {}",
+            self.config.server_address, self.config.client_address
+        );
         self.connect().await?;
         self.send_raw(code, payload).await
     }
@@ -281,7 +284,7 @@ impl QuicClient {
                 return Err(IggyError::CannotEstablishConnection);
             }
 
-            connection = connection_result.unwrap();
+            connection = connection_result?;
             remote_address = connection.remote_address();
             break;
         }
@@ -299,19 +302,25 @@ impl QuicClient {
                 Ok(())
             }
             AutoLogin::Enabled(credentials) => {
-                info!("{NAME} client is signing in...");
+                info!(
+                    "{NAME} client: {} is signing in...",
+                    self.config.client_address
+                );
                 self.set_state(ClientState::Authenticating).await;
                 match credentials {
                     Credentials::UsernamePassword(username, password) => {
                         self.login_user(username, password).await?;
                         self.publish_event(DiagnosticEvent::SignedIn).await;
-                        info!("{NAME} client has signed in with the user credentials, username: {username}",);
+                        info!("{NAME} client: {} has signed in with the user credentials, username: {username}", self.config.client_address);
                         Ok(())
                     }
                     Credentials::PersonalAccessToken(token) => {
                         self.login_with_personal_access_token(token).await?;
                         self.publish_event(DiagnosticEvent::SignedIn).await;
-                        info!("{NAME} client has signed in with a personal access token.",);
+                        info!(
+                            "{NAME} client: {} has signed in with a personal access token.",
+                            self.config.client_address
+                        );
                         Ok(())
                     }
                 }
@@ -324,24 +333,36 @@ impl QuicClient {
             return Ok(());
         }
 
-        info!("{NAME} client is disconnecting from server...");
+        info!(
+            "{NAME} client: {} is disconnecting from server...",
+            self.config.client_address
+        );
         self.set_state(ClientState::Disconnected).await;
         self.connection.lock().await.take();
         self.endpoint.wait_idle().await;
         self.publish_event(DiagnosticEvent::Disconnected).await;
         let now = IggyTimestamp::now();
-        info!("{NAME} client has disconnected from server at: {now}.");
+        info!(
+            "{NAME} client: {} has disconnected from server at: {now}.",
+            self.config.client_address
+        );
         Ok(())
     }
 
     async fn send_raw(&self, code: u32, payload: Bytes) -> Result<Bytes, IggyError> {
         match self.get_state().await {
             ClientState::Disconnected => {
-                trace!("Cannot send data. Client is not connected.");
+                trace!(
+                    "Cannot send data. Client: {} is not connected.",
+                    self.config.client_address
+                );
                 return Err(IggyError::NotConnected);
             }
             ClientState::Connecting => {
-                trace!("Cannot send data. Client is still connecting.");
+                trace!(
+                    "Cannot send data. Client: {} is still connecting.",
+                    self.config.client_address
+                );
                 return Err(IggyError::NotConnected);
             }
             _ => {}

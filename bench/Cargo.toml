@@ -14,7 +14,7 @@ human_format = "1.1.0"
 iggy = { path = "../sdk" }
 integration = { path = "../integration" }
 nonzero_lit = "0.1.2"
-serde = { version = "1.0.209", features = ["derive"] }
+serde = { version = "1.0.210", features = ["derive"] }
 tokio = { version = "1.40.0", features = ["full"] }
 toml = "0.8.14"
 tracing = { version = "0.1.37" }

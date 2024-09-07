@@ -29,7 +29,7 @@ impl System {
             return Err(IggyError::CannotReadStreams);
         }
 
-        let mut dir_entries = dir_entries.unwrap();
+        let mut dir_entries = dir_entries?;
         while let Some(dir_entry) = dir_entries.next_entry().await.unwrap_or(None) {
             let name = dir_entry.file_name().into_string().unwrap();
             let stream_id = name.parse::<u32>();
@@ -38,7 +38,7 @@ impl System {
                 continue;
             }
 
-            let stream_id = stream_id.unwrap();
+            let stream_id = stream_id?;
             let stream_state = streams.iter().find(|s| s.id == stream_id);
             if stream_state.is_none() {
                 error!("Stream with ID: '{stream_id}' was not found in state, but exists on disk and will be removed.");
@@ -77,7 +77,27 @@ impl System {
             info!("All streams found on disk were found in state.");
         } else {
             error!("Streams with IDs: '{missing_ids:?}' were not found on disk.");
-            return Err(IggyError::MissingStreams);
+            if !self.config.recovery.recreate_missing_state {
+                warn!("Recreating missing state in recovery config is disabled, missing streams will not be created.");
+                return Err(IggyError::MissingStreams);
+            }
+
+            info!("Recreating missing state in recovery config is enabled, missing streams will be created.");
+            for stream_id in missing_ids {
+                let stream_state = streams.iter().find(|s| s.id == stream_id).unwrap();
+                let stream = Stream::create(
+                    stream_id,
+                    &stream_state.name,
+                    self.config.clone(),
+                    self.storage.clone(),
+                );
+                stream.persist().await?;
+                unloaded_streams.push(stream);
+                info!(
+                    "Missing stream with ID: '{stream_id}', name: {} was recreated.",
+                    stream_state.name
+                );
+            }
         }
 
         let mut streams_states = streams

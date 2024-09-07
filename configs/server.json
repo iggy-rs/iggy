@@ -176,6 +176,9 @@
       "enabled": false,
       "max_entries": 1000,
       "expiry": "1 m"
+    },
+    "recovery": {
+      "recreate_missing_state": true
     }
   }
 }

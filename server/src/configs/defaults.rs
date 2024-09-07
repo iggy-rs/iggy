@@ -9,8 +9,8 @@ use crate::configs::server::{
 };
 use crate::configs::system::{
     BackupConfig, CacheConfig, CompatibilityConfig, CompressionConfig, EncryptionConfig,
-    LoggingConfig, MessageDeduplicationConfig, PartitionConfig, RuntimeConfig, SegmentConfig,
-    StateConfig, StreamConfig, SystemConfig, TopicConfig,
+    LoggingConfig, MessageDeduplicationConfig, PartitionConfig, RecoveryConfig, RuntimeConfig,
+    SegmentConfig, StateConfig, StreamConfig, SystemConfig, TopicConfig,
 };
 use crate::configs::tcp::{TcpConfig, TcpTlsConfig};
 use std::sync::Arc;
@@ -282,6 +282,7 @@ impl Default for SystemConfig {
             state: StateConfig::default(),
             compression: CompressionConfig::default(),
             message_deduplication: MessageDeduplicationConfig::default(),
+            recovery: RecoveryConfig::default(),
         }
     }
 }
@@ -427,6 +428,14 @@ impl Default for MessageDeduplicationConfig {
                 .expiry
                 .parse()
                 .unwrap(),
+        }
+    }
+}
+
+impl Default for RecoveryConfig {
+    fn default() -> RecoveryConfig {
+        RecoveryConfig {
+            recreate_missing_state: SERVER_CONFIG.system.recovery.recreate_missing_state,
         }
     }
 }

@@ -392,7 +392,7 @@ validate_checksum = false
 # The threshold of buffered messages before triggering a save to disk (integer).
 # Specifies how many messages accumulate before persisting to storage.
 # Adjusting this can balance between write performance and data durability.
-messages_required_to_save = 5_000
+messages_required_to_save = 5000
 
 # Segment configuration
 [system.segment]
@@ -429,3 +429,9 @@ enabled = false
 max_entries = 1000
 # Maximum age of ID entries in the deduplication cache in human-readable format.
 expiry = "1 m"
+
+
+# Recovery configuration in case of lost data
+[system.recovery]
+# Controls whether streams/topics/partitions should be recreated if the expected data for existing state is missing (boolean).
+recreate_missing_state = true

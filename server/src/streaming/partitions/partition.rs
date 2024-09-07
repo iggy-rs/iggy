@@ -168,7 +168,7 @@ impl Partition {
     }
 
     pub fn get_size_bytes(&self) -> u64 {
-        self.size_bytes.load(std::sync::atomic::Ordering::SeqCst)
+        self.size_bytes.load(Ordering::SeqCst)
     }
 }
 

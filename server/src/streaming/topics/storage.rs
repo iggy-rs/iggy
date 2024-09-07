@@ -120,10 +120,45 @@ impl TopicStorage for FileTopicStorage {
                 "Partitions with IDs: '{missing_ids:?}' for topic with ID: '{topic_id}' for stream with ID: '{stream_id}' were not found on disk.",
                 topic_id = topic.topic_id, stream_id = topic.stream_id
             );
-            return Err(IggyError::MissingPartitions(
-                topic.topic_id,
-                topic.stream_id,
-            ));
+            if !topic.config.recovery.recreate_missing_state {
+                warn!(
+                    "Recreating missing state in recovery config is disabled, missing partitions will not be created for topic with ID: '{}' for stream with ID: '{}'.", topic.topic_id, topic.stream_id);
+                return Err(IggyError::MissingPartitions(
+                    topic.topic_id,
+                    topic.stream_id,
+                ));
+            }
+
+            info!(
+                "Recreating missing state in recovery config is enabled, missing partitions will be created for topic with ID: '{}' for stream with ID: '{}'.",
+                topic.topic_id, topic.stream_id
+            );
+
+            for partition_id in missing_ids {
+                let partition_state = state.partitions.get(&partition_id).unwrap();
+                let mut partition = Partition::create(
+                    topic.stream_id,
+                    topic.topic_id,
+                    partition_id,
+                    true,
+                    topic.config.clone(),
+                    topic.storage.clone(),
+                    message_expiry,
+                    topic.messages_count_of_parent_stream.clone(),
+                    topic.messages_count.clone(),
+                    topic.size_of_parent_stream.clone(),
+                    topic.size_bytes.clone(),
+                    topic.segments_count_of_parent_stream.clone(),
+                    partition_state.created_at,
+                );
+                partition.persist().await?;
+                partition.segments.clear();
+                unloaded_partitions.push(partition);
+                info!(
+                    "Created missing partition with ID: '{partition_id}', for topic with ID: '{}' for stream with ID: '{}'.",
+                    topic.topic_id, topic.stream_id
+                );
+            }
         }
 
         let stream_id = topic.stream_id;
@@ -171,7 +206,6 @@ impl TopicStorage for FileTopicStorage {
         }
 
         topic.load_messages_from_disk_to_cache().await?;
-
         info!("Loaded topic {topic}");
 
         Ok(())

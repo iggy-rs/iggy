@@ -25,6 +25,7 @@ pub struct SystemConfig {
     pub encryption: EncryptionConfig,
     pub compression: CompressionConfig,
     pub message_deduplication: MessageDeduplicationConfig,
+    pub recovery: RecoveryConfig,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -107,6 +108,11 @@ pub struct MessageDeduplicationConfig {
     pub max_entries: u64,
     #[serde_as(as = "DisplayFromStr")]
     pub expiry: IggyDuration,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+pub struct RecoveryConfig {
+    pub recreate_missing_state: bool,
 }
 
 #[serde_as]

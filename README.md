@@ -64,7 +64,7 @@ The name is an abbreviation for the Italian Greyhound - small yet extremely fast
 - **Consumer groups** providing the message ordering and horizontal scaling across the connected clients
 - **Message expiry** with auto deletion based on the configurable **retention policy**
 - Additional features such as **server side message deduplication**
-- **Multi-tenant** support thanks to the concept of **streams** grouping the **topics**
+- **Multi-tenant** support via abstraction of **streams** whch group **topics**
 - **TLS** support for all transport protocols (TCP, QUIC, HTTPS)
 - Optional server-side as well as client-side **data encryption** using AES-256-GCM
 - Optional metadata support in the form of **message headers**

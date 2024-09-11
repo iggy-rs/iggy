@@ -49,6 +49,7 @@ pub(crate) trait ConnectionStream: Debug + Sync + Send {
     async fn read(&mut self, buf: &mut [u8]) -> Result<usize, IggyError>;
     async fn write(&mut self, buf: &[u8]) -> Result<(), IggyError>;
     async fn flush(&mut self) -> Result<(), IggyError>;
+    async fn shutdown(&mut self) -> Result<(), IggyError>;
 }
 
 #[derive(Debug)]
@@ -121,6 +122,16 @@ impl ConnectionStream for TcpConnectionStream {
             IggyError::from(error)
         })
     }
+
+    async fn shutdown(&mut self) -> Result<(), IggyError> {
+        self.writer.shutdown().await.map_err(|error| {
+            error!(
+                "Failed to shutdown the TCP connection by client: {} to the TCP connection: {error}",
+                self.client_address
+            );
+            IggyError::from(error)
+        })
+    }
 }
 
 #[async_trait]
@@ -154,6 +165,16 @@ impl ConnectionStream for TcpTlsConnectionStream {
             IggyError::from(error)
         })
     }
+
+    async fn shutdown(&mut self) -> Result<(), IggyError> {
+        self.stream.shutdown().await.map_err(|error| {
+            error!(
+                "Failed to shutdown the TCP TLS connection by client: {} to the TCP TLS connection: {error}",
+                self.client_address
+            );
+            IggyError::from(error)
+        })
+    }
 }
 
 impl Default for TcpClient {
@@ -170,6 +191,10 @@ impl Client for TcpClient {
 
     async fn disconnect(&self) -> Result<(), IggyError> {
         TcpClient::disconnect(self).await
+    }
+
+    async fn shutdown(&self) -> Result<(), IggyError> {
+        TcpClient::shutdown(self).await
     }
 
     async fn subscribe_events(&self) -> Receiver<DiagnosticEvent> {
@@ -334,6 +359,10 @@ impl TcpClient {
 
     async fn connect(&self) -> Result<(), IggyError> {
         match self.get_state().await {
+            ClientState::Shutdown => {
+                trace!("Cannot connect. Client is shutdown.");
+                return Err(IggyError::ClientShutdown);
+            }
             ClientState::Connected | ClientState::Authenticating | ClientState::Authenticated => {
                 let client_address = self.get_client_address_value().await;
                 trace!("Client: {client_address} is already connected.");
@@ -487,8 +516,29 @@ impl TcpClient {
         Ok(())
     }
 
+    async fn shutdown(&self) -> Result<(), IggyError> {
+        if self.get_state().await == ClientState::Shutdown {
+            return Ok(());
+        }
+
+        let client_address = self.get_client_address_value().await;
+        info!("Shutting down the {NAME} TCP client: {client_address}");
+        let stream = self.stream.lock().await.take();
+        if let Some(mut stream) = stream {
+            stream.shutdown().await?;
+        }
+        self.set_state(ClientState::Shutdown).await;
+        self.publish_event(DiagnosticEvent::Shutdown).await;
+        info!("{NAME} TCP client: {client_address} has been shutdown.");
+        Ok(())
+    }
+
     async fn send_raw(&self, code: u32, payload: Bytes) -> Result<Bytes, IggyError> {
         match self.get_state().await {
+            ClientState::Shutdown => {
+                trace!("Cannot send data. Client is shutdown.");
+                return Err(IggyError::ClientShutdown);
+            }
             ClientState::Disconnected => {
                 trace!("Cannot send data. Client is not connected.");
                 return Err(IggyError::NotConnected);

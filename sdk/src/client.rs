@@ -73,6 +73,9 @@ pub trait Client:
     /// Disconnect from the server. If the client is not connected, it will do nothing.
     async fn disconnect(&self) -> Result<(), IggyError>;
 
+    // Shutdown the client and release all the resources.
+    async fn shutdown(&self) -> Result<(), IggyError>;
+
     /// Subscribe to diagnostic events.
     async fn subscribe_events(&self) -> Receiver<DiagnosticEvent>;
 }

@@ -184,6 +184,10 @@ impl IggyProducer {
             while let Some(event) = receiver.next().await {
                 trace!("Received diagnostic event: {event}");
                 match event {
+                    DiagnosticEvent::Shutdown => {
+                        can_send.store(false, ORDERING);
+                        warn!("Client has been shutdown");
+                    }
                     DiagnosticEvent::Connected => {
                         can_send.store(false, ORDERING);
                         trace!("Connected to the server");

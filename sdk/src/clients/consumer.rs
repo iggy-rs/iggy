@@ -360,6 +360,13 @@ impl IggyConsumer {
             while let Some(event) = receiver.next().await {
                 trace!("Received diagnostic event: {event}");
                 match event {
+                    DiagnosticEvent::Shutdown => {
+                        warn!("Consumer has been shutdown");
+                        joined_consumer_group.store(false, ORDERING);
+                        can_poll.store(false, ORDERING);
+                        break;
+                    }
+
                     DiagnosticEvent::Connected => {
                         trace!("Connected to the server");
                         joined_consumer_group.store(false, ORDERING);

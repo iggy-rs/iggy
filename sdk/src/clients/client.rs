@@ -175,6 +175,10 @@ impl Client for IggyClient {
         self.client.read().await.disconnect().await
     }
 
+    async fn shutdown(&self) -> Result<(), IggyError> {
+        self.client.read().await.shutdown().await
+    }
+
     async fn subscribe_events(&self) -> Receiver<DiagnosticEvent> {
         self.client.read().await.subscribe_events().await
     }

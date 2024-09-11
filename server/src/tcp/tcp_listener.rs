@@ -14,7 +14,7 @@ pub async fn start(address: &str, system: SharedSystem) -> SocketAddr {
     tokio::spawn(async move {
         let listener = TcpListener::bind(&address)
             .await
-            .expect("Unable to start TCP TLS server.");
+            .expect("Unable to start TCP server.");
 
         let local_addr = listener
             .local_addr()

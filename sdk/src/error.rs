@@ -94,6 +94,8 @@ pub enum IggyError {
     NotConnected = 61,
     #[error("Request error")]
     RequestError(#[from] reqwest::Error) = 62,
+    #[error("Client shutdown")]
+    ClientShutdown = 63,
     #[error("Invalid encryption key")]
     InvalidEncryptionKey = 70,
     #[error("Cannot encrypt data")]

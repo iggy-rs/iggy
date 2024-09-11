@@ -30,6 +30,9 @@ pub mod users;
 /// The state of the client.
 #[derive(Debug, Copy, Clone, PartialEq, Display)]
 pub enum ClientState {
+    /// The client is shutdown.
+    #[display("shutdown")]
+    Shutdown,
     /// The client is disconnected.
     #[display("disconnected")]
     Disconnected,
@@ -61,6 +64,7 @@ pub trait BinaryTransport {
 
 async fn fail_if_not_authenticated<T: BinaryTransport>(transport: &T) -> Result<(), IggyError> {
     match transport.get_state().await {
+        ClientState::Shutdown => Err(IggyError::ClientShutdown),
         ClientState::Disconnected | ClientState::Connecting | ClientState::Authenticating => {
             Err(IggyError::Disconnected)
         }

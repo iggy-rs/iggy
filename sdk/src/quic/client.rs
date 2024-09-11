@@ -58,6 +58,10 @@ impl Client for QuicClient {
         QuicClient::disconnect(self).await
     }
 
+    async fn shutdown(&self) -> Result<(), IggyError> {
+        QuicClient::shutdown(self).await
+    }
+
     async fn subscribe_events(&self) -> Receiver<DiagnosticEvent> {
         self.events.1.clone()
     }
@@ -208,6 +212,10 @@ impl QuicClient {
 
     async fn connect(&self) -> Result<(), IggyError> {
         match self.get_state().await {
+            ClientState::Shutdown => {
+                trace!("Cannot connect. Client is shutdown.");
+                return Err(IggyError::ClientShutdown);
+            }
             ClientState::Connected | ClientState::Authenticating | ClientState::Authenticated => {
                 trace!("Client is already connected.");
                 return Ok(());
@@ -328,6 +336,24 @@ impl QuicClient {
         }
     }
 
+    async fn shutdown(&self) -> Result<(), IggyError> {
+        if self.get_state().await == ClientState::Shutdown {
+            return Ok(());
+        }
+
+        info!("Shutting down the {NAME} QUIC client.");
+        let connection = self.connection.lock().await.take();
+        if let Some(connection) = connection {
+            connection.close(0u32.into(), b"");
+        }
+
+        self.endpoint.wait_idle().await;
+        self.set_state(ClientState::Shutdown).await;
+        self.publish_event(DiagnosticEvent::Shutdown).await;
+        info!("{NAME} QUIC client has been shutdown.");
+        Ok(())
+    }
+
     async fn disconnect(&self) -> Result<(), IggyError> {
         if self.get_state().await == ClientState::Disconnected {
             return Ok(());
@@ -351,6 +377,10 @@ impl QuicClient {
 
     async fn send_raw(&self, code: u32, payload: Bytes) -> Result<Bytes, IggyError> {
         match self.get_state().await {
+            ClientState::Shutdown => {
+                trace!("Cannot send data. Client is shutdown.");
+                return Err(IggyError::ClientShutdown);
+            }
             ClientState::Disconnected => {
                 trace!(
                     "Cannot send data. Client: {} is not connected.",

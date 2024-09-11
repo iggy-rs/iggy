@@ -131,9 +131,18 @@ impl ConsumerGroupMember {
 
     pub fn calculate_partition_id(&mut self) -> u32 {
         let partition_index = self.current_partition_index;
-        let partition_id = *self.partitions.get(&partition_index).unwrap();
+        let partition_id = if let Some(partition_id) = self.partitions.get(&partition_index) {
+            *partition_id
+        } else {
+            trace!(
+                "No partition ID found for index: {} for member with ID: {}.",
+                partition_index,
+                self.id
+            );
+            return 1;
+        };
         self.current_partition_id = partition_id;
-        if self.partitions.len() == (partition_index + 1) as usize {
+        if self.partitions.len() <= (partition_index + 1) as usize {
             self.current_partition_index = 0;
         } else {
             self.current_partition_index += 1;

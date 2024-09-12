@@ -421,6 +421,16 @@ Options:
           Kind can be one of the following: raw, string, bool, int8, int16, int32, int64,
           int128, uint8, uint16, uint32, uint64, uint128, float32, float64
 
+      --input-file <INPUT_FILE>
+          Input file with messages to be sent
+{CLAP_INDENT}
+          File should contain messages stored in binary format. If the file does
+          not exist, the command will fail. If the file is not specified, the command
+          will read the messages from the standard input and each line will
+          be sent as a separate message. If the file is specified, the messages
+          will be read from the file and sent as is. Option cannot be used
+          with the messages option (messages given as command line arguments).
+
   -h, --help
           Print help (see a summary with '-h')
 "#,
@@ -451,6 +461,7 @@ Options:
   -p, --partition-id <PARTITION_ID>  ID of the partition to which the message will be sent
   -m, --message-key <MESSAGE_KEY>    Messages key which will be used to partition the messages
   -H, --headers <HEADERS>            Comma separated list of key:kind:value, sent as header with the message
+      --input-file <INPUT_FILE>      Input file with messages to be sent
   -h, --help                         Print help (see more with '--help')
 "#,
             ),

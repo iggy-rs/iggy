@@ -245,6 +245,7 @@ fn get_command(
                 send_args.message_key.clone(),
                 send_args.messages.clone(),
                 send_args.headers.clone(),
+                send_args.input_file.clone(),
             )),
             MessageAction::Poll(poll_args) => Box::new(PollMessagesCmd::new(
                 poll_args.stream_id.clone(),

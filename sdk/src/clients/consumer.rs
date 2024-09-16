@@ -161,12 +161,24 @@ impl IggyConsumer {
         }
     }
 
+    /// Returns the name of the consumer.
+    pub fn name(&self) -> &str {
+        &self.consumer_name
+    }
+
+    /// Returns the topic ID of the consumer.
+    pub fn topic(&self) -> &Identifier {
+        &self.topic_id
+    }
+
+    /// Returns the stream ID of the consumer.
     pub fn stream(&self) -> &Identifier {
         &self.stream_id
     }
 
-    pub fn topic(&self) -> &Identifier {
-        &self.topic_id
+    /// Returns the current partition ID of the consumer.
+    pub fn partition_id(&self) -> u32 {
+        self.current_partition_id.load(ORDERING)
     }
 
     /// Stores the consumer offset on the server either for the current partition or the provided partition ID.

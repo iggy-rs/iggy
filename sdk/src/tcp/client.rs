@@ -227,7 +227,10 @@ impl BinaryTransport for TcpClient {
         let error = result.unwrap_err();
         if !matches!(
             error,
-            IggyError::Disconnected | IggyError::EmptyResponse | IggyError::Unauthenticated
+            IggyError::Disconnected
+                | IggyError::EmptyResponse
+                | IggyError::Unauthenticated
+                | IggyError::StaleClient
         ) {
             return Err(error);
         }

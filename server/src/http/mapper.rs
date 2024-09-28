@@ -143,10 +143,10 @@ pub fn map_personal_access_tokens(
 
 pub fn map_client(client: &Client) -> iggy::models::client_info::ClientInfoDetails {
     let client = iggy::models::client_info::ClientInfoDetails {
-        client_id: client.client_id,
+        client_id: client.session.client_id,
         user_id: client.user_id,
         transport: client.transport.to_string(),
-        address: client.address.to_string(),
+        address: client.session.ip_address.to_string(),
         consumer_groups_count: client.consumer_groups.len() as u32,
         consumer_groups: client
             .consumer_groups
@@ -168,10 +168,10 @@ pub async fn map_clients(
     for client in clients {
         let client = client.read().await;
         let client = iggy::models::client_info::ClientInfo {
-            client_id: client.client_id,
+            client_id: client.session.client_id,
             user_id: client.user_id,
             transport: client.transport.to_string(),
-            address: client.address.to_string(),
+            address: client.session.ip_address.to_string(),
             consumer_groups_count: client.consumer_groups.len() as u32,
         };
         all_clients.push(client);

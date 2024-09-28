@@ -58,6 +58,8 @@ pub enum IggyError {
     CannotSerializeResource(#[source] anyhow::Error) = 24,
     #[error("Cannot deserialize resource. Reason: {0:#}")]
     CannotDeserializeResource(#[source] anyhow::Error) = 25,
+    #[error("Stale client")]
+    StaleClient = 30,
     #[error("Unauthenticated")]
     Unauthenticated = 40,
     #[error("Unauthorized")]

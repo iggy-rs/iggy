@@ -7,7 +7,9 @@ use iggy::locking::IggySharedMutFn;
 use iggy::utils::duration::IggyDuration;
 use iggy::utils::timestamp::IggyTimestamp;
 use tokio::time;
-use tracing::{debug, error, info};
+use tracing::{debug, error, info, warn};
+
+const MAX_THRESHOLD: f64 = 1.2;
 
 pub struct VerifyHeartbeats {
     interval: IggyDuration,
@@ -15,7 +17,9 @@ pub struct VerifyHeartbeats {
 }
 
 #[derive(Debug, Default, Clone)]
-pub struct VerifyHeartbeatsCommand;
+pub struct VerifyHeartbeatsCommand {
+    interval: IggyDuration,
+}
 
 #[derive(Debug, Default, Clone)]
 pub struct VerifyHeartbeatsExecutor;
@@ -30,15 +34,20 @@ impl VerifyHeartbeats {
 
     pub fn start(&self) {
         let interval = self.interval;
+        let max_interval = IggyDuration::from((MAX_THRESHOLD * interval.as_micros() as f64) as u64);
         let sender = self.sender.clone();
-        info!("Heartbeats will be verified every: {interval}.");
+        info!(
+            "Heartbeats will be verified every: {interval}. Max allowed interval: {max_interval}."
+        );
         tokio::spawn(async move {
             let mut interval_timer = time::interval(interval.get_duration());
             loop {
                 interval_timer.tick().await;
                 debug!("Verifying heartbeats...");
                 sender
-                    .send(VerifyHeartbeatsCommand)
+                    .send(VerifyHeartbeatsCommand {
+                        interval: max_interval,
+                    })
                     .unwrap_or_else(|error| {
                         error!("Failed to send VerifyHeartbeats. Error: {}", error);
                     });
@@ -49,11 +58,47 @@ impl VerifyHeartbeats {
 
 #[async_trait]
 impl ServerCommand<VerifyHeartbeatsCommand> for VerifyHeartbeatsExecutor {
-    async fn execute(&mut self, system: &SharedSystem, _command: VerifyHeartbeatsCommand) {
+    async fn execute(&mut self, system: &SharedSystem, command: VerifyHeartbeatsCommand) {
         let system = system.read().await;
+        let clients;
+        {
+            let client_manager = system.client_manager.read().await;
+            clients = client_manager.get_clients();
+        }
+
         let now = IggyTimestamp::now();
-        let client_manager = system.client_manager.read().await;
-        // TODO: Verify heartbeats
+        let heartbeat_to = IggyTimestamp::from(now.as_micros() - command.interval.as_micros());
+        debug!("Verifying heartbeats at: {now}, max allowed timestamp: {heartbeat_to}");
+        let mut stale_clients = Vec::new();
+        for client in clients {
+            let client = client.read().await;
+            if client.last_heartbeat.as_micros() < heartbeat_to.as_micros() {
+                warn!(
+                    "Stale client session: {}, last heartbeat at: {}, max allowed timestamp: {heartbeat_to}",
+                    client.session,
+                    client.last_heartbeat,
+                );
+                client.session.set_stale();
+                stale_clients.push(client.session.client_id);
+            } else {
+                debug!(
+                    "Valid heartbeat at: {} for client session: {}, max allowed timestamp: {heartbeat_to}",
+                    client.last_heartbeat,
+                    client.session,
+                );
+            }
+        }
+
+        if stale_clients.is_empty() {
+            return;
+        }
+
+        let count = stale_clients.len();
+        info!("Removing {count} stale clients...");
+        for client_id in stale_clients {
+            system.delete_client(client_id).await;
+        }
+        info!("Removed {count} stale clients.");
     }
 
     fn start_command_sender(

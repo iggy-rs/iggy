@@ -6,15 +6,16 @@ use iggy::identifier::Identifier;
 use iggy::locking::IggySharedMut;
 use iggy::locking::IggySharedMutFn;
 use std::net::SocketAddr;
+use std::sync::Arc;
 use tracing::{error, info};
 
 impl System {
-    pub async fn add_client(&self, address: &SocketAddr, transport: Transport) -> u32 {
+    pub async fn add_client(&self, address: &SocketAddr, transport: Transport) -> Arc<Session> {
         let mut client_manager = self.client_manager.write().await;
-        let client_id = client_manager.add_client(address, transport);
-        info!("Added {transport} client with ID: {client_id} for IP address: {address}");
+        let session = client_manager.add_client(address, transport);
+        info!("Added {transport} client with session: {session} for IP address: {address}");
         self.metrics.increment_clients(1);
-        client_id
+        session
     }
 
     pub async fn delete_client(&self, client_id: u32) {
@@ -22,7 +23,7 @@ impl System {
 
         {
             let mut client_manager = self.client_manager.write().await;
-            let client = client_manager.delete_client(client_id);
+            let client = client_manager.delete_client(client_id).await;
             if client.is_none() {
                 error!("Client with ID: {client_id} was not found in the client manager.",);
                 return;
@@ -39,7 +40,7 @@ impl System {
 
             info!(
                 "Deleted {} client with ID: {} for IP address: {}",
-                client.transport, client.client_id, client.address
+                client.transport, client.session.client_id, client.session.ip_address
             );
         }
 

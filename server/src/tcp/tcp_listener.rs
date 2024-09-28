@@ -1,5 +1,4 @@
 use crate::streaming::clients::client_manager::Transport;
-use crate::streaming::session::Session;
 use crate::streaming::systems::system::SharedSystem;
 use crate::tcp::connection_handler::{handle_connection, handle_error};
 use crate::tcp::tcp_sender::TcpSender;
@@ -32,13 +31,13 @@ pub async fn start(address: &str, system: SharedSystem) -> SocketAddr {
             match listener.accept().await {
                 Ok((stream, address)) => {
                     info!("Accepted new TCP connection: {address}");
-                    let client_id = system
+                    let session = system
                         .read()
                         .await
                         .add_client(&address, Transport::Tcp)
                         .await;
 
-                    let session = Session::from_client_id(client_id, address);
+                    let client_id = session.client_id;
                     info!("Created new session: {session}");
                     let system = system.clone();
                     let mut sender = TcpSender { stream };

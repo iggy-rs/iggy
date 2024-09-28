@@ -1,11 +1,14 @@
+use crate::streaming::session::Session;
 use crate::streaming::utils::hash;
 use iggy::error::IggyError;
 use iggy::locking::IggySharedMut;
 use iggy::locking::IggySharedMutFn;
 use iggy::models::user_info::UserId;
+use iggy::utils::timestamp::IggyTimestamp;
 use std::collections::HashMap;
 use std::fmt::{Display, Formatter};
 use std::net::SocketAddr;
+use std::sync::Arc;
 
 #[derive(Debug, Default)]
 pub struct ClientManager {
@@ -14,11 +17,11 @@ pub struct ClientManager {
 
 #[derive(Debug)]
 pub struct Client {
-    pub client_id: u32,
     pub user_id: Option<u32>,
-    pub address: SocketAddr,
+    pub session: Arc<Session>,
     pub transport: Transport,
     pub consumer_groups: Vec<ConsumerGroup>,
+    pub last_heartbeat: IggyTimestamp,
 }
 
 #[derive(Debug)]
@@ -44,18 +47,18 @@ impl Display for Transport {
 }
 
 impl ClientManager {
-    pub fn add_client(&mut self, address: &SocketAddr, transport: Transport) -> u32 {
-        let id = hash::calculate_32(address.to_string().as_bytes());
+    pub fn add_client(&mut self, address: &SocketAddr, transport: Transport) -> Arc<Session> {
+        let client_id = hash::calculate_32(address.to_string().as_bytes());
+        let session = Arc::new(Session::from_client_id(client_id, *address));
         let client = Client {
-            client_id: id,
             user_id: None,
-            address: *address,
+            session: session.clone(),
             transport,
             consumer_groups: Vec::new(),
+            last_heartbeat: IggyTimestamp::now(),
         };
-        self.clients
-            .insert(client.client_id, IggySharedMut::new(client));
-        id
+        self.clients.insert(client_id, IggySharedMut::new(client));
+        session
     }
 
     pub async fn set_user_id(&mut self, client_id: u32, user_id: UserId) -> Result<(), IggyError> {
@@ -99,7 +102,7 @@ impl ClientManager {
             let client = client.read().await;
             if let Some(client_user_id) = client.user_id {
                 if client_user_id == user_id {
-                    clients_to_remove.push(client.client_id);
+                    clients_to_remove.push(client.session.client_id);
                 }
             }
         }
@@ -111,8 +114,13 @@ impl ClientManager {
         Ok(())
     }
 
-    pub fn delete_client(&mut self, client_id: u32) -> Option<IggySharedMut<Client>> {
-        self.clients.remove(&client_id)
+    pub async fn delete_client(&mut self, client_id: u32) -> Option<IggySharedMut<Client>> {
+        let client = self.clients.remove(&client_id);
+        if let Some(client) = client.as_ref() {
+            let client = client.read().await;
+            client.session.clear_user_id();
+        }
+        client
     }
 
     pub async fn join_consumer_group(

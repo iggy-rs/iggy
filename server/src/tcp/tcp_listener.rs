@@ -4,6 +4,7 @@ use crate::streaming::systems::system::SharedSystem;
 use crate::tcp::connection_handler::{handle_connection, handle_error};
 use crate::tcp::tcp_sender::TcpSender;
 use std::net::SocketAddr;
+use tokio::io::AsyncWriteExt;
 use tokio::net::TcpListener;
 use tokio::sync::oneshot;
 use tracing::{error, info};
@@ -47,15 +48,20 @@ pub async fn start(address: &str, system: SharedSystem) -> SocketAddr {
                         {
                             handle_error(error);
                             system.read().await.delete_client(client_id).await;
+                            if let Err(error) = sender.stream.shutdown().await {
+                                error!("Failed to shutdown TCP stream for client: {client_id}, address: {address}. {error}");
+                            } else {
+                                info!("Successfully closed TCP stream for client: {client_id}, address: {address}.");
+                            }
                         }
                     });
                 }
-                Err(error) => error!("Unable to accept TCP socket, error: {error}"),
+                Err(error) => error!("Unable to accept TCP socket. {error}"),
             }
         }
     });
     match rx.await {
         Ok(addr) => addr,
-        Err(_) => panic!("Failed to get the local address for TCP listener"),
+        Err(_) => panic!("Failed to get the local address for TCP listener."),
     }
 }

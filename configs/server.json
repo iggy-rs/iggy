@@ -118,6 +118,9 @@
       "interval": "1 m"
     }
   },
+  "heartbeat": {
+    "interval": "5 s"
+  },
   "system": {
     "path": "local_data",
     "backup": {
@@ -131,9 +134,6 @@
     },
     "runtime": {
       "path": "runtime"
-    },
-    "heartbeat": {
-      "interval": "5 s"
     },
     "logging": {
       "path": "logs",

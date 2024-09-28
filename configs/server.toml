@@ -265,6 +265,11 @@ enabled = true
 # Interval for running the token cleaner.
 interval = "1 m"
 
+# Heartbeat configuration
+[heartbeat]
+# Interval for expected client heartbeats
+interval = "5 s"
+
 # System configuration.
 [system]
 # Base path for system data storage.
@@ -297,11 +302,6 @@ enforce_fsync = false
 # Path for storing runtime data.
 # Specifies the directory where any runtime data is stored, relative to `system.path`.
 path = "runtime"
-
-# Heartbeat configuration
-[system.heartbeat]
-# Interval for expected client heartbeats
-interval = "5 s"
 
 # Logging configuration.
 [system.logging]

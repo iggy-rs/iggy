@@ -3,14 +3,14 @@ use crate::configs::http::{
 };
 use crate::configs::quic::{QuicCertificateConfig, QuicConfig};
 use crate::configs::server::{
-    ArchiverConfig, DataMaintenanceConfig, MessageSaverConfig, MessagesMaintenanceConfig,
-    PersonalAccessTokenCleanerConfig, PersonalAccessTokenConfig, ServerConfig,
-    StateMaintenanceConfig,
+    ArchiverConfig, DataMaintenanceConfig, HeartbeatConfig, MessageSaverConfig,
+    MessagesMaintenanceConfig, PersonalAccessTokenCleanerConfig, PersonalAccessTokenConfig,
+    ServerConfig, StateMaintenanceConfig,
 };
 use crate::configs::system::{
     BackupConfig, CacheConfig, CompatibilityConfig, CompressionConfig, EncryptionConfig,
-    HeartbeatConfig, LoggingConfig, MessageDeduplicationConfig, PartitionConfig, RecoveryConfig,
-    RuntimeConfig, SegmentConfig, StateConfig, StreamConfig, SystemConfig, TopicConfig,
+    LoggingConfig, MessageDeduplicationConfig, PartitionConfig, RecoveryConfig, RuntimeConfig,
+    SegmentConfig, StateConfig, StreamConfig, SystemConfig, TopicConfig,
 };
 use crate::configs::tcp::{TcpConfig, TcpTlsConfig};
 use std::sync::Arc;
@@ -24,6 +24,7 @@ impl Default for ServerConfig {
     fn default() -> ServerConfig {
         ServerConfig {
             data_maintenance: DataMaintenanceConfig::default(),
+            heartbeat: HeartbeatConfig::default(),
             message_saver: MessageSaverConfig::default(),
             personal_access_token: PersonalAccessTokenConfig::default(),
             system: Arc::new(SystemConfig::default()),
@@ -271,7 +272,6 @@ impl Default for SystemConfig {
             path: SERVER_CONFIG.system.path.parse().unwrap(),
             backup: BackupConfig::default(),
             database: None,
-            heartbeat: HeartbeatConfig::default(),
             runtime: RuntimeConfig::default(),
             logging: LoggingConfig::default(),
             cache: CacheConfig::default(),
@@ -314,7 +314,7 @@ impl Default for CompatibilityConfig {
 impl Default for HeartbeatConfig {
     fn default() -> HeartbeatConfig {
         HeartbeatConfig {
-            interval: SERVER_CONFIG.system.heartbeat.interval.parse().unwrap(),
+            interval: SERVER_CONFIG.heartbeat.interval.parse().unwrap(),
         }
     }
 }

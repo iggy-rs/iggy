@@ -50,7 +50,9 @@ async fn try_handle(
 ) -> Result<(), IggyError> {
     debug!("Handling command '{command}', session: {session}...");
     match command {
-        ServerCommand::Ping(command) => ping_handler::handle(command, sender, session).await,
+        ServerCommand::Ping(command) => {
+            ping_handler::handle(command, sender, session, system).await
+        }
         ServerCommand::GetStats(command) => {
             get_stats_handler::handle(command, sender, session, system).await
         }

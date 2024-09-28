@@ -18,7 +18,6 @@ pub struct SystemConfig {
     pub runtime: RuntimeConfig,
     pub logging: LoggingConfig,
     pub cache: CacheConfig,
-    pub heartbeat: HeartbeatConfig,
     pub stream: StreamConfig,
     pub topic: TopicConfig,
     pub partition: PartitionConfig,
@@ -43,13 +42,6 @@ pub struct CompatibilityConfig {
 #[derive(Debug, Deserialize, Serialize)]
 pub struct DatabaseConfig {
     pub path: String,
-}
-
-#[serde_as]
-#[derive(Debug, Deserialize, Serialize)]
-pub struct HeartbeatConfig {
-    #[serde_as(as = "DisplayFromStr")]
-    pub interval: IggyDuration,
 }
 
 #[derive(Debug, Deserialize, Serialize)]

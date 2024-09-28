@@ -1,9 +1,9 @@
 use crate::configs::quic::{QuicCertificateConfig, QuicConfig};
 use crate::configs::server::{
-    ArchiverConfig, DataMaintenanceConfig, DiskArchiverConfig, MessagesMaintenanceConfig,
-    S3ArchiverConfig, StateMaintenanceConfig,
+    ArchiverConfig, DataMaintenanceConfig, DiskArchiverConfig, HeartbeatConfig,
+    MessagesMaintenanceConfig, S3ArchiverConfig, StateMaintenanceConfig,
 };
-use crate::configs::system::{HeartbeatConfig, MessageDeduplicationConfig};
+use crate::configs::system::MessageDeduplicationConfig;
 use crate::configs::{
     http::{HttpConfig, HttpCorsConfig, HttpJwtConfig, HttpMetricsConfig, HttpTlsConfig},
     resource_quota::MemoryResourceQuota,
@@ -185,8 +185,8 @@ impl Display for ServerConfig {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
-            "{{ data_maintenance: {}, message_saver: {}, system: {}, quic: {}, tcp: {}, http: {} }}",
-            self.data_maintenance, self.message_saver, self.system, self.quic, self.tcp, self.http
+            "{{ data_maintenance: {}, message_saver: {}, heartbeat: {}, system: {}, quic: {}, tcp: {}, http: {} }}",
+            self.data_maintenance, self.message_saver, self.heartbeat, self.system, self.quic, self.tcp, self.http
         )
     }
 }
@@ -305,11 +305,10 @@ impl Display for SystemConfig {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(
           f,
-          "{{ path: {}, logging: {}, cache: {}, heartbeat: {}, stream: {}, topic: {}, partition: {}, segment: {}, encryption: {} }}",
+          "{{ path: {}, logging: {}, cache: {}, stream: {}, topic: {}, partition: {}, segment: {}, encryption: {} }}",
           self.path,
           self.logging,
           self.cache,
-          self.heartbeat,
           self.stream,
           self.topic,
           self.partition,

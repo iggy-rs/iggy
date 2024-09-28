@@ -10,7 +10,6 @@ use bytes::Bytes;
 use iggy::validatable::Validatable;
 use iggy::{bytes_serializable::BytesSerializable, messages::MAX_PAYLOAD_SIZE};
 use quinn::{Connection, Endpoint, RecvStream, SendStream};
-use std::sync::Arc;
 use tracing::{debug, error, info};
 
 const LISTENERS_COUNT: u32 = 10;
@@ -53,13 +52,13 @@ async fn handle_connection(
     let connection = incoming_connection.await?;
     let address = connection.remote_address();
     info!("Client has connected: {address}");
-    let client_id = system
+    let session = system
         .read()
         .await
         .add_client(&address, Transport::Quic)
         .await;
-    let session = Arc::new(Session::from_client_id(client_id, address));
 
+    let client_id = session.client_id;
     while let Some(stream) = accept_stream(&connection, &system, client_id).await? {
         let system = system.clone();
         let session = session.clone();

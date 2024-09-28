@@ -3,9 +3,9 @@ use crate::configs::http::{
 };
 use crate::configs::quic::{QuicCertificateConfig, QuicConfig};
 use crate::configs::server::{
-    ArchiverConfig, DataMaintenanceConfig, MessageSaverConfig, MessagesMaintenanceConfig,
-    PersonalAccessTokenCleanerConfig, PersonalAccessTokenConfig, ServerConfig,
-    StateMaintenanceConfig,
+    ArchiverConfig, DataMaintenanceConfig, HeartbeatConfig, MessageSaverConfig,
+    MessagesMaintenanceConfig, PersonalAccessTokenCleanerConfig, PersonalAccessTokenConfig,
+    ServerConfig, StateMaintenanceConfig,
 };
 use crate::configs::system::{
     BackupConfig, CacheConfig, CompatibilityConfig, CompressionConfig, EncryptionConfig,
@@ -24,6 +24,7 @@ impl Default for ServerConfig {
     fn default() -> ServerConfig {
         ServerConfig {
             data_maintenance: DataMaintenanceConfig::default(),
+            heartbeat: HeartbeatConfig::default(),
             message_saver: MessageSaverConfig::default(),
             personal_access_token: PersonalAccessTokenConfig::default(),
             system: Arc::new(SystemConfig::default()),
@@ -306,6 +307,15 @@ impl Default for CompatibilityConfig {
                 .path
                 .parse()
                 .unwrap(),
+        }
+    }
+}
+
+impl Default for HeartbeatConfig {
+    fn default() -> HeartbeatConfig {
+        HeartbeatConfig {
+            enabled: SERVER_CONFIG.heartbeat.enabled,
+            interval: SERVER_CONFIG.heartbeat.interval.parse().unwrap(),
         }
     }
 }

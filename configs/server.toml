@@ -265,6 +265,13 @@ enabled = true
 # Interval for running the token cleaner.
 interval = "1 m"
 
+# Heartbeat configuration
+[heartbeat]
+# Enables or disables the client heartbeat verification process.
+enabled = false
+# Interval for expected client heartbeats
+interval = "5 s"
+
 # System configuration.
 [system]
 # Base path for system data storage.

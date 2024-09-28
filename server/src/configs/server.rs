@@ -17,6 +17,7 @@ pub struct ServerConfig {
     pub data_maintenance: DataMaintenanceConfig,
     pub message_saver: MessageSaverConfig,
     pub personal_access_token: PersonalAccessTokenConfig,
+    pub heartbeat: HeartbeatConfig,
     pub system: Arc<SystemConfig>,
     pub quic: QuicConfig,
     pub tcp: TcpConfig,
@@ -90,6 +91,14 @@ pub struct PersonalAccessTokenConfig {
 #[serde_as]
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct PersonalAccessTokenCleanerConfig {
+    pub enabled: bool,
+    #[serde_as(as = "DisplayFromStr")]
+    pub interval: IggyDuration,
+}
+
+#[serde_as]
+#[derive(Debug, Deserialize, Serialize, Clone)]
+pub struct HeartbeatConfig {
     pub enabled: bool,
     #[serde_as(as = "DisplayFromStr")]
     pub interval: IggyDuration,

@@ -1,9 +1,9 @@
 use crate::streaming::clients::client_manager::Transport;
-use crate::streaming::session::Session;
 use crate::streaming::systems::system::SharedSystem;
 use crate::tcp::connection_handler::{handle_connection, handle_error};
 use crate::tcp::tcp_sender::TcpSender;
 use std::net::SocketAddr;
+use tokio::io::AsyncWriteExt;
 use tokio::net::TcpListener;
 use tokio::sync::oneshot;
 use tracing::{error, info};
@@ -31,13 +31,13 @@ pub async fn start(address: &str, system: SharedSystem) -> SocketAddr {
             match listener.accept().await {
                 Ok((stream, address)) => {
                     info!("Accepted new TCP connection: {address}");
-                    let client_id = system
+                    let session = system
                         .read()
                         .await
                         .add_client(&address, Transport::Tcp)
                         .await;
 
-                    let session = Session::from_client_id(client_id, address);
+                    let client_id = session.client_id;
                     info!("Created new session: {session}");
                     let system = system.clone();
                     let mut sender = TcpSender { stream };
@@ -47,15 +47,20 @@ pub async fn start(address: &str, system: SharedSystem) -> SocketAddr {
                         {
                             handle_error(error);
                             system.read().await.delete_client(client_id).await;
+                            if let Err(error) = sender.stream.shutdown().await {
+                                error!("Failed to shutdown TCP stream for client: {client_id}, address: {address}. {error}");
+                            } else {
+                                info!("Successfully closed TCP stream for client: {client_id}, address: {address}.");
+                            }
                         }
                     });
                 }
-                Err(error) => error!("Unable to accept TCP socket, error: {error}"),
+                Err(error) => error!("Unable to accept TCP socket. {error}"),
             }
         }
     });
     match rx.await {
         Ok(addr) => addr,
-        Err(_) => panic!("Failed to get the local address for TCP listener"),
+        Err(_) => panic!("Failed to get the local address for TCP listener."),
     }
 }

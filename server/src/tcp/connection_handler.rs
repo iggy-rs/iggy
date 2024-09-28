@@ -9,12 +9,13 @@ use iggy::bytes_serializable::BytesSerializable;
 use iggy::error::IggyError;
 use iggy::validatable::Validatable;
 use std::io::ErrorKind;
+use std::sync::Arc;
 use tracing::{debug, error, info};
 
 const INITIAL_BYTES_LENGTH: usize = 4;
 
 pub(crate) async fn handle_connection(
-    session: Session,
+    session: Arc<Session>,
     sender: &mut dyn Sender,
     system: SharedSystem,
 ) -> Result<(), ServerError> {
@@ -52,7 +53,7 @@ pub(crate) async fn handle_connection(
                 .await?;
             continue;
         }
-        let command = command.unwrap();
+        let command = command?;
         if let Err(error) = command.validate() {
             error!("Command validation failed: {error}");
             sender.send_error_response(error).await?;
@@ -61,7 +62,6 @@ pub(crate) async fn handle_connection(
 
         debug!("Received a TCP command: {command}, payload size: {length}");
         command::handle(command, sender, &session, system.clone()).await?;
-        debug!("Sent a TCP response.");
     }
 }
 

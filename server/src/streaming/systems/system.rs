@@ -247,6 +247,10 @@ impl System {
     }
 
     pub fn ensure_authenticated(&self, session: &Session) -> Result<(), IggyError> {
+        if !session.is_active() {
+            return Err(IggyError::StaleClient);
+        }
+
         match session.is_authenticated() {
             true => Ok(()),
             false => Err(IggyError::Unauthenticated),

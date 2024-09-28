@@ -4,6 +4,7 @@ use crate::http::client::HttpClient;
 use crate::http::HttpTransport;
 use crate::models::client_info::{ClientInfo, ClientInfoDetails};
 use crate::models::stats::Stats;
+use crate::utils::duration::IggyDuration;
 use async_trait::async_trait;
 
 const PING: &str = "/ping";
@@ -41,5 +42,9 @@ impl SystemClient for HttpClient {
     async fn ping(&self) -> Result<(), IggyError> {
         self.get(PING).await?;
         Ok(())
+    }
+
+    async fn heartbeat_interval(&self) -> IggyDuration {
+        self.heartbeat_interval
     }
 }

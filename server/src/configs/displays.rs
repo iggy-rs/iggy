@@ -1,7 +1,7 @@
 use crate::configs::quic::{QuicCertificateConfig, QuicConfig};
 use crate::configs::server::{
-    ArchiverConfig, DataMaintenanceConfig, DiskArchiverConfig, MessagesMaintenanceConfig,
-    S3ArchiverConfig, StateMaintenanceConfig,
+    ArchiverConfig, DataMaintenanceConfig, DiskArchiverConfig, HeartbeatConfig,
+    MessagesMaintenanceConfig, S3ArchiverConfig, StateMaintenanceConfig,
 };
 use crate::configs::system::MessageDeduplicationConfig;
 use crate::configs::{
@@ -185,8 +185,8 @@ impl Display for ServerConfig {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
-            "{{ data_maintenance: {}, message_saver: {}, system: {}, quic: {}, tcp: {}, http: {} }}",
-            self.data_maintenance, self.message_saver, self.system, self.quic, self.tcp, self.http
+            "{{ data_maintenance: {}, message_saver: {}, heartbeat: {}, system: {}, quic: {}, tcp: {}, http: {} }}",
+            self.data_maintenance, self.message_saver, self.heartbeat, self.system, self.quic, self.tcp, self.http
         )
     }
 }
@@ -204,6 +204,16 @@ impl Display for MessageSaverConfig {
 impl Display for CacheConfig {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{{ enabled: {}, size: {} }}", self.enabled, self.size)
+    }
+}
+
+impl Display for HeartbeatConfig {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "{{ enabled: {}, interval: {} }}",
+            self.enabled, self.interval
+        )
     }
 }
 

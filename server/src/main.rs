@@ -7,6 +7,7 @@ use server::channels::commands::clean_personal_access_tokens::CleanPersonalAcces
 use server::channels::commands::maintain_messages::MaintainMessagesExecutor;
 use server::channels::commands::print_sysinfo::SysInfoPrintExecutor;
 use server::channels::commands::save_messages::SaveMessagesExecutor;
+use server::channels::commands::verify_heartbeats::VerifyHeartbeatsExecutor;
 use server::channels::handler::ServerCommandHandler;
 use server::configs::config_provider;
 use server::configs::server::ServerConfig;
@@ -58,7 +59,8 @@ async fn main() -> Result<(), ServerError> {
         .install_handler(MaintainMessagesExecutor)
         .install_handler(ArchiveStateExecutor)
         .install_handler(CleanPersonalAccessTokensExecutor)
-        .install_handler(SysInfoPrintExecutor);
+        .install_handler(SysInfoPrintExecutor)
+        .install_handler(VerifyHeartbeatsExecutor);
 
     #[cfg(unix)]
     let (mut ctrl_c, mut sigterm) = {

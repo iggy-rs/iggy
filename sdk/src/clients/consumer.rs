@@ -585,7 +585,10 @@ impl IggyConsumer {
 
             let error = polled_messages.unwrap_err();
             error!("Failed to poll messages: {error}");
-            if matches!(error, IggyError::Disconnected | IggyError::Unauthenticated) {
+            if matches!(
+                error,
+                IggyError::Disconnected | IggyError::Unauthenticated | IggyError::StaleClient
+            ) {
                 trace!("Retrying to poll messages in {retry_interval}...");
                 sleep(retry_interval.get_duration()).await;
             }

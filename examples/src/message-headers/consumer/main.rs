@@ -1,5 +1,6 @@
 use anyhow::Result;
 use clap::Parser;
+use iggy::client::Client;
 use iggy::client_provider;
 use iggy::client_provider::ClientProviderConfig;
 use iggy::clients::client::IggyClient;
@@ -21,8 +22,9 @@ async fn main() -> Result<(), Box<dyn Error>> {
         args.transport
     );
     let client_provider_config = Arc::new(ClientProviderConfig::from_args(args.to_sdk_args())?);
-    let client = client_provider::get_raw_connected_client(client_provider_config).await?;
+    let client = client_provider::get_raw_client(client_provider_config, false).await?;
     let client = IggyClient::new(client);
+    client.connect().await?;
     system::init_by_consumer(&args, &client).await;
     system::consume_messages(&args, &client, &handle_message).await
 }

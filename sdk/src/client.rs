@@ -101,6 +101,7 @@ pub trait SystemClient {
     async fn get_clients(&self) -> Result<Vec<ClientInfo>, IggyError>;
     /// Ping the server to check if it's alive.
     async fn ping(&self) -> Result<(), IggyError>;
+    async fn heartbeat_interval(&self) -> IggyDuration;
 }
 
 /// This trait defines the methods to interact with the user module.
@@ -506,7 +507,8 @@ impl ConnectionString {
         let mut tls_domain = "localhost".to_string();
         let mut reconnection_retries = "unlimited".to_owned();
         let mut reconnection_interval = "1s".to_owned();
-        let mut re_establish_after = "5s".to_owned();
+        let mut reestablish_after = "5s".to_owned();
+        let mut heartbeat_interval = "5s".to_owned();
 
         for option in options {
             let option_parts = option.split("=").collect::<Vec<&str>>();
@@ -526,8 +528,11 @@ impl ConnectionString {
                 "reconnection_interval" => {
                     reconnection_interval = option_parts[1].to_string();
                 }
-                "re_establish_after" => {
-                    re_establish_after = option_parts[1].to_string();
+                "reestablish_after" => {
+                    reestablish_after = option_parts[1].to_string();
+                }
+                "heartbeat_interval" => {
+                    heartbeat_interval = option_parts[1].to_string();
                 }
                 _ => {
                     return Err(IggyError::InvalidConnectionString);
@@ -537,26 +542,40 @@ impl ConnectionString {
         Ok(ConnectionStringOptions {
             tls_enabled,
             tls_domain,
+            heartbeat_interval: IggyDuration::from_str(heartbeat_interval.as_str())
+                .map_err(|_| IggyError::InvalidConnectionString)?,
             reconnection: TcpClientReconnectionConfig {
                 enabled: true,
                 max_retries: match reconnection_retries.as_str() {
                     "unlimited" => None,
-                    _ => Some(reconnection_retries.parse().unwrap()),
+                    _ => Some(reconnection_retries.parse()?),
                 },
                 interval: IggyDuration::from_str(reconnection_interval.as_str())
                     .map_err(|_| IggyError::InvalidConnectionString)?,
-                re_establish_after: IggyDuration::from_str(re_establish_after.as_str())
+                reestablish_after: IggyDuration::from_str(reestablish_after.as_str())
                     .map_err(|_| IggyError::InvalidConnectionString)?,
             },
         })
     }
 }
 
-#[derive(Debug, Default)]
+#[derive(Debug)]
 struct ConnectionStringOptions {
     tls_enabled: bool,
     tls_domain: String,
     reconnection: TcpClientReconnectionConfig,
+    heartbeat_interval: IggyDuration,
+}
+
+impl Default for ConnectionStringOptions {
+    fn default() -> Self {
+        ConnectionStringOptions {
+            tls_enabled: false,
+            tls_domain: "".to_string(),
+            reconnection: Default::default(),
+            heartbeat_interval: IggyDuration::from_str("5s").unwrap(),
+        }
+    }
 }
 
 impl From<ConnectionString> for TcpClientConfig {
@@ -567,6 +586,7 @@ impl From<ConnectionString> for TcpClientConfig {
             tls_enabled: connection_string.options.tls_enabled,
             tls_domain: connection_string.options.tls_domain,
             reconnection: connection_string.options.reconnection,
+            heartbeat_interval: connection_string.options.heartbeat_interval,
         }
     }
 }
@@ -640,8 +660,9 @@ mod tests {
         let tls_domain = "test.com";
         let reconnection_retries = 5;
         let reconnection_interval = "5s";
-        let re_establish_after = "10s";
-        let value = format!("{CONNECTION_STRING_PREFIX}{username}:{password}@{server_address}?tls=true&tls_domain={tls_domain}&reconnection_retries={reconnection_retries}&reconnection_interval={reconnection_interval}&re_establish_after={re_establish_after}");
+        let reestablish_after = "10s";
+        let heartbeat_interval = "3s";
+        let value = format!("{CONNECTION_STRING_PREFIX}{username}:{password}@{server_address}?tls=true&tls_domain={tls_domain}&reconnection_retries={reconnection_retries}&reconnection_interval={reconnection_interval}&reestablish_after={reestablish_after}&heartbeat_interval={heartbeat_interval}");
         let connection_string = ConnectionString::new(&value);
         assert!(connection_string.is_ok());
         let connection_string = connection_string.unwrap();
@@ -665,8 +686,12 @@ mod tests {
             IggyDuration::from_str(reconnection_interval).unwrap()
         );
         assert_eq!(
-            connection_string.options.reconnection.re_establish_after,
-            IggyDuration::from_str(re_establish_after).unwrap()
+            connection_string.options.reconnection.reestablish_after,
+            IggyDuration::from_str(reestablish_after).unwrap()
+        );
+        assert_eq!(
+            connection_string.options.heartbeat_interval,
+            IggyDuration::from_str(heartbeat_interval).unwrap()
         );
     }
 }

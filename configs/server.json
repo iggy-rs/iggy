@@ -118,6 +118,10 @@
       "interval": "1 m"
     }
   },
+  "heartbeat": {
+    "enabled": false,
+    "interval": "5 s"
+  },
   "system": {
     "path": "local_data",
     "backup": {

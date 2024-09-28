@@ -115,6 +115,10 @@ impl BinaryTransport for QuicClient {
             error!("Failed to send a QUIC diagnostic event: {error}");
         }
     }
+
+    fn get_heartbeat_interval(&self) -> IggyDuration {
+        self.config.heartbeat_interval
+    }
 }
 
 impl BinaryClient for QuicClient {}
@@ -231,7 +235,7 @@ impl QuicClient {
         if let Some(connected_at) = self.connected_at.lock().await.as_ref() {
             let now = IggyTimestamp::now();
             let elapsed = now.as_micros() - connected_at.as_micros();
-            let interval = self.config.reconnection.re_establish_after.as_micros();
+            let interval = self.config.reconnection.reestablish_after.as_micros();
             trace!(
                 "Elapsed time since last connection: {}",
                 IggyDuration::from(elapsed)

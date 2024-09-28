@@ -13,8 +13,10 @@ pub struct TcpClientConfig {
     pub tls_domain: String,
     /// Whether to automatically login user after establishing connection.
     pub auto_login: AutoLogin,
-    // Whether to automatically reconnect when disconnected.
+    /// Whether to automatically reconnect when disconnected.
     pub reconnection: TcpClientReconnectionConfig,
+    /// Interval of heartbeats sent by the client
+    pub heartbeat_interval: IggyDuration,
 }
 
 #[derive(Debug, Clone)]
@@ -22,7 +24,7 @@ pub struct TcpClientReconnectionConfig {
     pub enabled: bool,
     pub max_retries: Option<u32>,
     pub interval: IggyDuration,
-    pub re_establish_after: IggyDuration,
+    pub reestablish_after: IggyDuration,
 }
 
 impl Default for TcpClientConfig {
@@ -31,6 +33,7 @@ impl Default for TcpClientConfig {
             server_address: "127.0.0.1:8090".to_string(),
             tls_enabled: false,
             tls_domain: "localhost".to_string(),
+            heartbeat_interval: IggyDuration::from_str("5s").unwrap(),
             auto_login: AutoLogin::Disabled,
             reconnection: TcpClientReconnectionConfig::default(),
         }
@@ -43,7 +46,7 @@ impl Default for TcpClientReconnectionConfig {
             enabled: true,
             max_retries: None,
             interval: IggyDuration::from_str("1s").unwrap(),
-            re_establish_after: IggyDuration::from_str("5s").unwrap(),
+            reestablish_after: IggyDuration::from_str("5s").unwrap(),
         }
     }
 }

@@ -27,7 +27,9 @@ use async_trait::async_trait;
 use bytes::Bytes;
 use std::fmt::Debug;
 use std::sync::Arc;
-use tracing::info;
+use tokio::spawn;
+use tokio::time::sleep;
+use tracing::{debug, error, info};
 
 use crate::clients::builder::IggyClientBuilder;
 use crate::clients::consumer::IggyConsumerBuilder;
@@ -37,6 +39,7 @@ use crate::diagnostic::DiagnosticEvent;
 use crate::messages::poll_messages::PollingStrategy;
 use crate::models::permissions::Permissions;
 use crate::models::user_status::UserStatus;
+use crate::utils::duration::IggyDuration;
 use crate::utils::expiry::IggyExpiry;
 use crate::utils::personal_access_token_expiry::PersonalAccessTokenExpiry;
 use crate::utils::topic_size::MaxTopicSize;
@@ -168,7 +171,26 @@ impl IggyClient {
 #[async_trait]
 impl Client for IggyClient {
     async fn connect(&self) -> Result<(), IggyError> {
-        self.client.read().await.connect().await
+        let heartbeat_interval;
+        {
+            let client = self.client.read().await;
+            client.connect().await?;
+            heartbeat_interval = client.heartbeat_interval().await;
+        }
+
+        let client = self.client.clone();
+        spawn(async move {
+            loop {
+                debug!("Sending the heartbeat...");
+                if let Err(error) = client.read().await.ping().await {
+                    error!("There was an error when sending a heartbeat. {error}");
+                } else {
+                    debug!("Heartbeat was sent successfully.");
+                }
+                sleep(heartbeat_interval.get_duration()).await
+            }
+        });
+        Ok(())
     }
 
     async fn disconnect(&self) -> Result<(), IggyError> {
@@ -321,6 +343,10 @@ impl SystemClient for IggyClient {
 
     async fn ping(&self) -> Result<(), IggyError> {
         self.client.read().await.ping().await
+    }
+
+    async fn heartbeat_interval(&self) -> IggyDuration {
+        self.client.read().await.heartbeat_interval().await
     }
 }
 

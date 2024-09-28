@@ -1,6 +1,7 @@
 use crate::command::Command;
 use crate::diagnostic::DiagnosticEvent;
 use crate::error::IggyError;
+use crate::utils::duration::IggyDuration;
 use async_trait::async_trait;
 use bytes::Bytes;
 use derive_more::Display;
@@ -60,6 +61,7 @@ pub trait BinaryTransport {
     /// Sends a command and returns the response.
     async fn send_with_response<T: Command>(&self, command: &T) -> Result<Bytes, IggyError>;
     async fn send_raw_with_response(&self, code: u32, payload: Bytes) -> Result<Bytes, IggyError>;
+    fn get_heartbeat_interval(&self) -> IggyDuration;
 }
 
 async fn fail_if_not_authenticated<T: BinaryTransport>(transport: &T) -> Result<(), IggyError> {

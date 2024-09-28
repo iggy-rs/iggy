@@ -2,6 +2,7 @@ use clap::Parser;
 use iggy::client::Client;
 use iggy::client_provider;
 use iggy::client_provider::ClientProviderConfig;
+use iggy::clients::client::IggyClient;
 use iggy::messages::send_messages::{Message, Partitioning};
 use iggy_examples::shared::args::Args;
 use iggy_examples::shared::system;
@@ -19,10 +20,11 @@ async fn main() -> Result<(), Box<dyn Error>> {
         args.transport
     );
     let client_provider_config = Arc::new(ClientProviderConfig::from_args(args.to_sdk_args())?);
-    let client = client_provider::get_raw_connected_client(client_provider_config).await?;
-    let client = client.as_ref();
-    system::init_by_producer(&args, client).await?;
-    produce_messages(&args, client).await
+    let client = client_provider::get_raw_client(client_provider_config, false).await?;
+    let client = IggyClient::new(client);
+    client.connect().await?;
+    system::init_by_producer(&args, &client).await?;
+    produce_messages(&args, &client).await
 }
 
 async fn produce_messages(args: &Args, client: &dyn Client) -> Result<(), Box<dyn Error>> {

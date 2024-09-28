@@ -32,12 +32,21 @@ pub async fn handle(
 ) -> Result<(), IggyError> {
     match try_handle(command, sender, session, &system).await {
         Ok(_) => {
-            debug!("Command was handled successfully, session: {session}.");
+            debug!("Command was handled successfully, session: {session}. TCP response was sent.");
             Ok(())
         }
         Err(error) => {
-            error!("Command was not handled successfully, session: {session}, error: {error}");
-            sender.send_error_response(error).await
+            error!("Command was not handled successfully, session: {session}, error: {error}.");
+            if let IggyError::ClientNotFound(_) = error {
+                sender.send_error_response(error).await?;
+                debug!("TCP error response was sent to: {session}.");
+                error!("Session: {session} will be deleted.");
+                Err(IggyError::ClientNotFound(session.client_id))
+            } else {
+                sender.send_error_response(error).await?;
+                debug!("TCP error response was sent to: {session}.");
+                Ok(())
+            }
         }
     }
 }
@@ -50,7 +59,9 @@ async fn try_handle(
 ) -> Result<(), IggyError> {
     debug!("Handling command '{command}', session: {session}...");
     match command {
-        ServerCommand::Ping(command) => ping_handler::handle(command, sender, session).await,
+        ServerCommand::Ping(command) => {
+            ping_handler::handle(command, sender, session, system).await
+        }
         ServerCommand::GetStats(command) => {
             get_stats_handler::handle(command, sender, session, system).await
         }

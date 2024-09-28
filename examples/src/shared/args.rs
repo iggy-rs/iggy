@@ -70,7 +70,10 @@ pub struct Args {
     pub tcp_reconnection_interval: String,
 
     #[arg(long, default_value = "5s")]
-    pub tcp_reconnection_re_establish_after: String,
+    pub tcp_reconnection_reestablish_after: String,
+
+    #[arg(long, default_value = "5s")]
+    pub tcp_heartbeat_interval: String,
 
     #[arg(long, default_value = "127.0.0.1:8090")]
     pub tcp_server_address: String,
@@ -100,7 +103,7 @@ pub struct Args {
     pub quic_reconnection_interval: String,
 
     #[arg(long, default_value = "5s")]
-    pub quic_reconnection_re_establish_after: String,
+    pub quic_reconnection_reestablish_after: String,
 
     #[arg(long, default_value = "10000")]
     pub quic_max_concurrent_bidi_streams: u64,
@@ -128,6 +131,9 @@ pub struct Args {
 
     #[arg(long, default_value = "false")]
     pub quic_validate_certificate: bool,
+
+    #[arg(long, default_value = "5s")]
+    pub quic_heartbeat_interval: String,
 }
 
 impl Args {
@@ -143,7 +149,8 @@ impl Args {
             tcp_reconnection_enabled: self.tcp_reconnection_enabled,
             tcp_reconnection_max_retries: self.tcp_reconnection_max_retries,
             tcp_reconnection_interval: self.tcp_reconnection_interval.clone(),
-            tcp_reconnection_re_establish_after: self.tcp_reconnection_re_establish_after.clone(),
+            tcp_reconnection_reestablish_after: self.tcp_reconnection_reestablish_after.clone(),
+            tcp_heartbeat_interval: self.tcp_heartbeat_interval.clone(),
             tcp_tls_enabled: self.tcp_tls_enabled,
             tcp_tls_domain: self.tcp_tls_domain.clone(),
             quic_client_address: self.quic_client_address.clone(),
@@ -151,7 +158,7 @@ impl Args {
             quic_server_name: self.quic_server_name.clone(),
             quic_reconnection_enabled: self.quic_reconnection_enabled,
             quic_reconnection_max_retries: self.quic_reconnection_max_retries,
-            quic_reconnection_re_establish_after: self.quic_reconnection_re_establish_after.clone(),
+            quic_reconnection_reestablish_after: self.quic_reconnection_reestablish_after.clone(),
             quic_reconnection_interval: self.quic_reconnection_interval.clone(),
             quic_max_concurrent_bidi_streams: self.quic_max_concurrent_bidi_streams,
             quic_datagram_send_buffer_size: self.quic_datagram_send_buffer_size,
@@ -162,6 +169,7 @@ impl Args {
             quic_keep_alive_interval: self.quic_keep_alive_interval,
             quic_max_idle_timeout: self.quic_max_idle_timeout,
             quic_validate_certificate: self.quic_validate_certificate,
+            quic_heartbeat_interval: self.quic_heartbeat_interval.clone(),
         }
     }
 

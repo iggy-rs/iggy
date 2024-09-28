@@ -9,6 +9,7 @@ use crate::system::get_clients::GetClients;
 use crate::system::get_me::GetMe;
 use crate::system::get_stats::GetStats;
 use crate::system::ping::Ping;
+use crate::utils::duration::IggyDuration;
 
 #[async_trait::async_trait]
 impl<B: BinaryClient> SystemClient for B {
@@ -43,5 +44,9 @@ impl<B: BinaryClient> SystemClient for B {
     async fn ping(&self) -> Result<(), IggyError> {
         self.send_with_response(&Ping {}).await?;
         Ok(())
+    }
+
+    async fn heartbeat_interval(&self) -> IggyDuration {
+        self.get_heartbeat_interval()
     }
 }

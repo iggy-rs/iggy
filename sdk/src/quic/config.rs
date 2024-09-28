@@ -33,6 +33,8 @@ pub struct QuicClientConfig {
     pub max_idle_timeout: u64,
     /// Whether to validate the server certificate.
     pub validate_certificate: bool,
+    /// Interval of heartbeats sent by the client
+    pub heartbeat_interval: IggyDuration,
 }
 
 #[derive(Debug, Clone)]
@@ -40,7 +42,7 @@ pub struct QuicClientReconnectionConfig {
     pub enabled: bool,
     pub max_retries: Option<u32>,
     pub interval: IggyDuration,
-    pub re_establish_after: IggyDuration,
+    pub reestablish_after: IggyDuration,
 }
 
 impl Default for QuicClientReconnectionConfig {
@@ -49,7 +51,7 @@ impl Default for QuicClientReconnectionConfig {
             enabled: true,
             max_retries: None,
             interval: IggyDuration::from_str("1s").unwrap(),
-            re_establish_after: IggyDuration::from_str("5s").unwrap(),
+            reestablish_after: IggyDuration::from_str("5s").unwrap(),
         }
     }
 }
@@ -61,6 +63,7 @@ impl Default for QuicClientConfig {
             server_address: "127.0.0.1:8080".to_string(),
             server_name: "localhost".to_string(),
             auto_login: AutoLogin::Disabled,
+            heartbeat_interval: IggyDuration::from_str("5s").unwrap(),
             reconnection: QuicClientReconnectionConfig::default(),
             response_buffer_size: 1000 * 1000 * 10,
             max_concurrent_bidi_streams: 10000,
@@ -195,6 +198,12 @@ impl QuicClientConfigBuilder {
     /// Enables or disables certificate validation. Defaults to false (disabled).
     pub fn with_validate_certificate(mut self, validate_certificate: bool) -> Self {
         self.config.validate_certificate = validate_certificate;
+        self
+    }
+
+    /// Sets the heartbeat interval. Defaults to 5000ms.
+    pub fn with_heartbeat_interval(mut self, interval: IggyDuration) -> Self {
+        self.config.heartbeat_interval = interval;
         self
     }
 

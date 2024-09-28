@@ -5,6 +5,7 @@ use crate::http::config::HttpClientConfig;
 use crate::http::HttpTransport;
 use crate::locking::{IggySharedMut, IggySharedMutFn};
 use crate::models::identity_info::IdentityInfo;
+use crate::utils::duration::IggyDuration;
 use async_broadcast::{broadcast, Receiver, Sender};
 use async_trait::async_trait;
 use reqwest::{Response, Url};
@@ -12,6 +13,7 @@ use reqwest_middleware::{ClientBuilder, ClientWithMiddleware};
 use reqwest_retry::{policies::ExponentialBackoff, RetryTransientMiddleware};
 use serde::Serialize;
 use std::ops::Deref;
+use std::str::FromStr;
 use std::sync::Arc;
 
 const UNAUTHORIZED_PATHS: &[&str] = &[
@@ -29,6 +31,7 @@ const UNAUTHORIZED_PATHS: &[&str] = &[
 pub struct HttpClient {
     /// The URL of the Iggy API.
     pub api_url: Url,
+    pub(crate) heartbeat_interval: IggyDuration,
     client: ClientWithMiddleware,
     access_token: IggySharedMut<String>,
     events: (Sender<DiagnosticEvent>, Receiver<DiagnosticEvent>),
@@ -248,6 +251,7 @@ impl HttpClient {
         Ok(Self {
             api_url,
             client,
+            heartbeat_interval: IggyDuration::from_str("5s").unwrap(),
             access_token: IggySharedMut::new("".to_string()),
             events: broadcast(1000),
         })

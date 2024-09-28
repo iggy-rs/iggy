@@ -255,14 +255,23 @@ impl BinaryTransport for TcpClient {
             error!("Failed to send a TCP diagnostic event: {error}");
         }
     }
+
+    fn get_heartbeat_interval(&self) -> IggyDuration {
+        self.config.heartbeat_interval
+    }
 }
 
 impl BinaryClient for TcpClient {}
 
 impl TcpClient {
     /// Create a new TCP client for the provided server address.
-    pub fn new(server_address: &str, auto_sign_in: AutoLogin) -> Result<Self, IggyError> {
+    pub fn new(
+        server_address: &str,
+        auto_sign_in: AutoLogin,
+        heartbeat_interval: IggyDuration,
+    ) -> Result<Self, IggyError> {
         Self::create(Arc::new(TcpClientConfig {
+            heartbeat_interval,
             server_address: server_address.to_string(),
             auto_login: auto_sign_in,
             ..Default::default()
@@ -274,8 +283,10 @@ impl TcpClient {
         server_address: &str,
         domain: &str,
         auto_sign_in: AutoLogin,
+        heartbeat_interval: IggyDuration,
     ) -> Result<Self, IggyError> {
         Self::create(Arc::new(TcpClientConfig {
+            heartbeat_interval,
             server_address: server_address.to_string(),
             tls_enabled: true,
             tls_domain: domain.to_string(),
@@ -379,7 +390,7 @@ impl TcpClient {
         if let Some(connected_at) = self.connected_at.lock().await.as_ref() {
             let now = IggyTimestamp::now();
             let elapsed = now.as_micros() - connected_at.as_micros();
-            let interval = self.config.reconnection.re_establish_after.as_micros();
+            let interval = self.config.reconnection.reestablish_after.as_micros();
             trace!(
                 "Elapsed time since last connection: {}",
                 IggyDuration::from(elapsed)

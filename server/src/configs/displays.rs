@@ -3,7 +3,7 @@ use crate::configs::server::{
     ArchiverConfig, DataMaintenanceConfig, DiskArchiverConfig, MessagesMaintenanceConfig,
     S3ArchiverConfig, StateMaintenanceConfig,
 };
-use crate::configs::system::MessageDeduplicationConfig;
+use crate::configs::system::{HeartbeatConfig, MessageDeduplicationConfig};
 use crate::configs::{
     http::{HttpConfig, HttpCorsConfig, HttpJwtConfig, HttpMetricsConfig, HttpTlsConfig},
     resource_quota::MemoryResourceQuota,
@@ -207,6 +207,12 @@ impl Display for CacheConfig {
     }
 }
 
+impl Display for HeartbeatConfig {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{{ interval: {} }}", self.interval)
+    }
+}
+
 impl Display for EncryptionConfig {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{{ enabled: {} }}", self.enabled)
@@ -299,10 +305,11 @@ impl Display for SystemConfig {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(
           f,
-          "{{ path: {}, logging: {}, cache: {}, stream: {}, topic: {}, partition: {}, segment: {}, encryption: {} }}",
+          "{{ path: {}, logging: {}, cache: {}, heartbeat: {}, stream: {}, topic: {}, partition: {}, segment: {}, encryption: {} }}",
           self.path,
           self.logging,
           self.cache,
+          self.heartbeat,
           self.stream,
           self.topic,
           self.partition,

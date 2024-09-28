@@ -132,6 +132,9 @@
     "runtime": {
       "path": "runtime"
     },
+    "heartbeat": {
+      "interval": "5 s"
+    },
     "logging": {
       "path": "logs",
       "level": "info",

@@ -9,8 +9,8 @@ use crate::configs::server::{
 };
 use crate::configs::system::{
     BackupConfig, CacheConfig, CompatibilityConfig, CompressionConfig, EncryptionConfig,
-    LoggingConfig, MessageDeduplicationConfig, PartitionConfig, RecoveryConfig, RuntimeConfig,
-    SegmentConfig, StateConfig, StreamConfig, SystemConfig, TopicConfig,
+    HeartbeatConfig, LoggingConfig, MessageDeduplicationConfig, PartitionConfig, RecoveryConfig,
+    RuntimeConfig, SegmentConfig, StateConfig, StreamConfig, SystemConfig, TopicConfig,
 };
 use crate::configs::tcp::{TcpConfig, TcpTlsConfig};
 use std::sync::Arc;
@@ -271,6 +271,7 @@ impl Default for SystemConfig {
             path: SERVER_CONFIG.system.path.parse().unwrap(),
             backup: BackupConfig::default(),
             database: None,
+            heartbeat: HeartbeatConfig::default(),
             runtime: RuntimeConfig::default(),
             logging: LoggingConfig::default(),
             cache: CacheConfig::default(),
@@ -306,6 +307,14 @@ impl Default for CompatibilityConfig {
                 .path
                 .parse()
                 .unwrap(),
+        }
+    }
+}
+
+impl Default for HeartbeatConfig {
+    fn default() -> HeartbeatConfig {
+        HeartbeatConfig {
+            interval: SERVER_CONFIG.system.heartbeat.interval.parse().unwrap(),
         }
     }
 }

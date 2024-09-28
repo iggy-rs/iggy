@@ -99,6 +99,7 @@ pub struct PersonalAccessTokenCleanerConfig {
 #[serde_as]
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct HeartbeatConfig {
+    pub enabled: bool,
     #[serde_as(as = "DisplayFromStr")]
     pub interval: IggyDuration,
 }

@@ -119,6 +119,7 @@
     }
   },
   "heartbeat": {
+    "enabled": false,
     "interval": "5 s"
   },
   "system": {

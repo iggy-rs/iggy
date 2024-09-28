@@ -548,7 +548,7 @@ impl ConnectionString {
                 enabled: true,
                 max_retries: match reconnection_retries.as_str() {
                     "unlimited" => None,
-                    _ => Some(reconnection_retries.parse().unwrap()),
+                    _ => Some(reconnection_retries.parse()?),
                 },
                 interval: IggyDuration::from_str(reconnection_interval.as_str())
                     .map_err(|_| IggyError::InvalidConnectionString)?,

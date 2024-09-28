@@ -314,6 +314,7 @@ impl Default for CompatibilityConfig {
 impl Default for HeartbeatConfig {
     fn default() -> HeartbeatConfig {
         HeartbeatConfig {
+            enabled: SERVER_CONFIG.heartbeat.enabled,
             interval: SERVER_CONFIG.heartbeat.interval.parse().unwrap(),
         }
     }

@@ -12,6 +12,7 @@ use tracing::{debug, error, info, warn};
 const MAX_THRESHOLD: f64 = 1.2;
 
 pub struct VerifyHeartbeats {
+    enabled: bool,
     interval: IggyDuration,
     sender: Sender<VerifyHeartbeatsCommand>,
 }
@@ -27,12 +28,18 @@ pub struct VerifyHeartbeatsExecutor;
 impl VerifyHeartbeats {
     pub fn new(config: &HeartbeatConfig, sender: Sender<VerifyHeartbeatsCommand>) -> Self {
         Self {
+            enabled: config.enabled,
             interval: config.interval,
             sender,
         }
     }
 
     pub fn start(&self) {
+        if !self.enabled {
+            info!("Heartbeats verification is disabled.");
+            return;
+        }
+
         let interval = self.interval;
         let max_interval = IggyDuration::from((MAX_THRESHOLD * interval.as_micros() as f64) as u64);
         let sender = self.sender.clone();

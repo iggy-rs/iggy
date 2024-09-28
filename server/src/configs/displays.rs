@@ -209,7 +209,11 @@ impl Display for CacheConfig {
 
 impl Display for HeartbeatConfig {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{{ interval: {} }}", self.interval)
+        write!(
+            f,
+            "{{ enabled: {}, interval: {} }}",
+            self.enabled, self.interval
+        )
     }
 }
 

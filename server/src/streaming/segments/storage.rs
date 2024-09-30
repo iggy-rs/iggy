@@ -51,7 +51,8 @@ impl SegmentStorage for FileSegmentStorage {
         );
         let log_file = file::open(&segment.log_path).await?;
         let file_size = log_file.metadata().await.unwrap().len() as u64;
-        segment.size_bytes = file_size as u32;
+        segment.size_bytes = file_size as _;
+        segment.last_index_position = file_size as _;
 
         if segment.config.segment.cache_indexes {
             segment.indexes = Some(segment.storage.segment.load_all_indexes(segment).await?);

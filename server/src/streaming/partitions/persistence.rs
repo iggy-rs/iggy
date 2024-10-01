@@ -1,8 +1,10 @@
-use std::sync::atomic::Ordering;
-
 use crate::state::system::PartitionState;
 use crate::streaming::partitions::partition::Partition;
 use iggy::error::IggyError;
+use std::path::Path;
+use std::sync::atomic::Ordering;
+use tokio::fs::create_dir;
+use tracing::error;
 
 impl Partition {
     pub async fn load(&mut self, state: PartitionState) -> Result<(), IggyError> {
@@ -47,6 +49,30 @@ impl Partition {
             .delete_consumer_offsets(&self.consumer_group_offsets_path)
             .await?;
         self.add_persisted_segment(0).await?;
+
+        if !Path::new(&self.consumer_offsets_path).exists()
+            && create_dir(&self.consumer_offsets_path).await.is_err()
+        {
+            error!(
+                "Failed to create consumer offsets directory for partition with ID: {} for stream with ID: {} and topic with ID: {}.",
+                self.partition_id, self.stream_id, self.topic_id
+            );
+            return Err(IggyError::CannotCreateConsumerOffsetsDirectory(
+                self.consumer_offsets_path.to_owned(),
+            ));
+        }
+
+        if !Path::new(&self.consumer_group_offsets_path).exists()
+            && create_dir(&self.consumer_group_offsets_path).await.is_err()
+        {
+            error!(
+                "Failed to create consumer group offsets directory for partition with ID: {} for stream with ID: {} and topic with ID: {}.",
+                self.partition_id, self.stream_id, self.topic_id
+            );
+            return Err(IggyError::CannotCreateConsumerOffsetsDirectory(
+                self.consumer_group_offsets_path.to_owned(),
+            ));
+        }
 
         Ok(())
     }

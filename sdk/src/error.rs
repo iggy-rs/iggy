@@ -272,6 +272,8 @@ pub enum IggyError {
     CannotDeleteConsumerOffsetsDirectory(String) = 3010,
     #[error("Failed to delete consumer offset file for path: {0}")]
     CannotDeleteConsumerOffsetFile(String) = 3011,
+    #[error("Failed to create consumer offsets directory for path: {0}")]
+    CannotCreateConsumerOffsetsDirectory(String) = 3012,
     #[error("Failed to read consumers offsets from path: {0}")]
     CannotReadConsumerOffsets(String) = 3020,
     #[error("Segment not found")]

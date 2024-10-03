@@ -29,7 +29,7 @@ chrono = { version = "0.4.38" }
 clap = { version = "4.5.17", features = ["derive"] }
 comfy-table = { version = "7.1.1", optional = true }
 crc32fast = "1.4.2"
-dashmap = "6.0.1"
+dashmap = "6.1.0"
 derive_more = { version = "1.0.0", features = ["full"] }
 dirs = "5.0.1"
 fast-async-mutex = { version = "0.6.7", optional = true }

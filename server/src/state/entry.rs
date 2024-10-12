@@ -132,6 +132,7 @@ impl BytesSerializable for StateEntry {
     where
         Self: Sized,
     {
+        // Test
         let index = bytes.slice(0..8).get_u64_le();
         let term = bytes.slice(8..16).get_u64_le();
         let leader_id = bytes.slice(16..20).get_u32_le();

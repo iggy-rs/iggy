@@ -16,7 +16,7 @@ login-session = ["dep:keyring"]
 
 [dependencies]
 ahash = { version = "0.8.11", features = ["serde"] }
-anyhow = "1.0.86"
+anyhow = "1.0.89"
 clap = { version = "4.5.17", features = ["derive"] }
 clap_complete = "4.5.26"
 figlet-rs = "0.1.5"

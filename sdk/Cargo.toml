@@ -45,7 +45,7 @@ regex = "1.10.4"
 reqwest = { version = "0.12.7", default-features = false, features = ["json", "rustls-tls"] }
 reqwest-middleware = { version = "0.3.2", features = ["json"] }
 reqwest-retry = "0.6.1"
-rustls = { version = "0.23.10", features = ["ring"] }
+rustls = { version = "0.23.13", features = ["ring"] }
 serde = { version = "1.0.210", features = ["derive", "rc"] }
 serde_json = "1.0.127"
 serde_with = { version = "3.8.1", features = ["base64"] }

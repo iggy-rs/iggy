@@ -25,7 +25,7 @@ serial_test = "3.1.1"
 server = { path = "../server" }
 tempfile = "3.10.1"
 tokio = { version = "1.40.0", features = ["full"] }
-tracing-subscriber = "0.3.18"
+tracing-subscriber = { version = "0.3.18", features = ["fmt", "env-filter"] }
 uuid = { version = "1.1.0", features = ["v7", "fast-rng", "zerocopy"] }
 xxhash-rust = { version = "0.8.12", features = ["xxh32"] }
 

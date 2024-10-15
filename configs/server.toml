@@ -272,6 +272,27 @@ enabled = false
 # Interval for expected client heartbeats
 interval = "5 s"
 
+# OpenTelemetry configuration
+[telemetry]
+# Enables or disables telemetry.
+enabled = false
+# Service name for telemetry.
+service_name = "iggy"
+
+# OpenTelemetry logs configuration
+[telemetry.logs]
+# Transport for sending logs. Options: "grpc", "http".
+transport = "grpc"
+# Endpoint for sending logs.
+endpoint = "http://localhost:7281/v1/logs"
+
+# OpenTelemetry traces configuration
+[telemetry.traces]
+# Transport for sending traces. Options: "grpc", "http".
+transport = "grpc"
+# Endpoint for sending traces.
+endpoint = "http://localhost:7281/v1/traces"
+
 # System configuration.
 [system]
 # Base path for system data storage.

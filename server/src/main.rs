@@ -30,15 +30,14 @@ async fn main() -> Result<(), ServerError> {
     let figure = standard_font.convert("Iggy Server");
     println!("{}", figure.unwrap());
 
-    let mut logging = Logging::new();
+    let args = Args::parse();
+    let config_provider = config_provider::resolve(&args.config_provider)?;
+    let config = ServerConfig::load(config_provider.as_ref()).await?;
+
+    let mut logging = Logging::new(config.telemetry.clone());
     logging.early_init();
 
     // From this point on, we can use tracing macros to log messages.
-
-    let args = Args::parse();
-
-    let config_provider = config_provider::resolve(&args.config_provider)?;
-    let config = ServerConfig::load(config_provider.as_ref()).await?;
 
     logging.late_init(config.system.get_system_path(), &config.system.logging)?;
 

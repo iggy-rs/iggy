@@ -9,7 +9,7 @@ use figment::{
 };
 use std::{env, path::Path};
 use toml::{map::Map, Value as TomlValue};
-use tracing::{debug, info};
+use tracing::debug;
 
 const DEFAULT_CONFIG_PROVIDER: &str = "file";
 const DEFAULT_CONFIG_PATH: &str = "configs/server.toml";
@@ -197,7 +197,7 @@ impl Provider for CustomEnvProvider {
                 value = "******".to_string();
             }
 
-            info!("{env_key} value changed to: {value} from environment variable");
+            println!("{env_key} value changed to: {value} from environment variable");
             Self::insert_overridden_values_from_env(
                 &source_dict,
                 &mut new_dict,
@@ -255,7 +255,7 @@ fn file_exists<P: AsRef<Path>>(path: P) -> bool {
 #[async_trait]
 impl ConfigProvider for FileConfigProvider {
     async fn load_config(&self) -> Result<ServerConfig, ServerError> {
-        info!("Loading config from path: '{}'...", self.path);
+        println!("Loading config from path: '{}'...", self.path);
 
         if !file_exists(&self.path) {
             return Err(ServerError::CannotLoadConfiguration(format!(
@@ -280,8 +280,8 @@ impl ConfigProvider for FileConfigProvider {
 
         match config_result {
             Ok(config) => {
-                info!("Config loaded from path: '{}'", self.path);
-                info!("Using Config: {config}");
+                println!("Config loaded from path: '{}'", self.path);
+                println!("Using Config: {config}");
                 Ok(config)
             }
             Err(figment_error) => Err(ServerError::CannotLoadConfiguration(format!(

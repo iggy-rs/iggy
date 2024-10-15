@@ -5,7 +5,8 @@ use crate::configs::quic::{QuicCertificateConfig, QuicConfig};
 use crate::configs::server::{
     ArchiverConfig, DataMaintenanceConfig, HeartbeatConfig, MessageSaverConfig,
     MessagesMaintenanceConfig, PersonalAccessTokenCleanerConfig, PersonalAccessTokenConfig,
-    ServerConfig, StateMaintenanceConfig,
+    ServerConfig, StateMaintenanceConfig, TelemetryConfig, TelemetryLogsConfig,
+    TelemetryTracesConfig,
 };
 use crate::configs::system::{
     BackupConfig, CacheConfig, CompatibilityConfig, CompressionConfig, EncryptionConfig,
@@ -31,6 +32,7 @@ impl Default for ServerConfig {
             quic: QuicConfig::default(),
             tcp: TcpConfig::default(),
             http: HttpConfig::default(),
+            telemetry: TelemetryConfig::default(),
         }
     }
 }
@@ -446,6 +448,35 @@ impl Default for RecoveryConfig {
     fn default() -> RecoveryConfig {
         RecoveryConfig {
             recreate_missing_state: SERVER_CONFIG.system.recovery.recreate_missing_state,
+        }
+    }
+}
+
+impl Default for TelemetryConfig {
+    fn default() -> TelemetryConfig {
+        TelemetryConfig {
+            enabled: SERVER_CONFIG.telemetry.enabled,
+            service_name: SERVER_CONFIG.telemetry.service_name.parse().unwrap(),
+            logs: TelemetryLogsConfig::default(),
+            traces: TelemetryTracesConfig::default(),
+        }
+    }
+}
+
+impl Default for TelemetryLogsConfig {
+    fn default() -> TelemetryLogsConfig {
+        TelemetryLogsConfig {
+            transport: SERVER_CONFIG.telemetry.logs.transport.parse().unwrap(),
+            endpoint: SERVER_CONFIG.telemetry.logs.endpoint.parse().unwrap(),
+        }
+    }
+}
+
+impl Default for TelemetryTracesConfig {
+    fn default() -> TelemetryTracesConfig {
+        TelemetryTracesConfig {
+            transport: SERVER_CONFIG.telemetry.traces.transport.parse().unwrap(),
+            endpoint: SERVER_CONFIG.telemetry.traces.endpoint.parse().unwrap(),
         }
     }
 }

@@ -19,6 +19,9 @@ use std::error::Error;
 use std::str::FromStr;
 use tokio::task::JoinHandle;
 use tracing::{error, info};
+use tracing_subscriber::layer::SubscriberExt;
+use tracing_subscriber::util::SubscriberInitExt;
+use tracing_subscriber::{EnvFilter, Registry};
 
 const TOPICS: &[&str] = &["events", "logs", "notifications"];
 const CONSUMER_GROUP: &str = "multi-tenant";
@@ -69,7 +72,10 @@ impl TenantConsumer {
 #[tokio::main]
 async fn main() -> anyhow::Result<(), Box<dyn Error>> {
     let args = Args::parse();
-    tracing_subscriber::fmt::init();
+    Registry::default()
+        .with(tracing_subscriber::fmt::layer())
+        .with(EnvFilter::try_from_default_env().unwrap_or(EnvFilter::new("INFO")))
+        .init();
     let tenants_count = env::var("TENANTS_COUNT")
         .unwrap_or_else(|_| 3.to_string())
         .parse::<u32>()

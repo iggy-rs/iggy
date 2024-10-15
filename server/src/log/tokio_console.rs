@@ -1,3 +1,4 @@
+use crate::configs::server::TelemetryConfig;
 use crate::configs::system::LoggingConfig;
 use crate::server_error::ServerError;
 use tracing_subscriber::prelude::*;
@@ -5,7 +6,7 @@ use tracing_subscriber::prelude::*;
 pub struct Logging {}
 
 impl Logging {
-    pub fn new() -> Self {
+    pub fn new(_: TelemetryConfig) -> Self {
         Self {}
     }
 
@@ -29,6 +30,6 @@ impl Logging {
 
 impl Default for Logging {
     fn default() -> Self {
-        Self::new()
+        Self::new(TelemetryConfig::default())
     }
 }

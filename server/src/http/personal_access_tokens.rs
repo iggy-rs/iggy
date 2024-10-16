@@ -18,6 +18,7 @@ use iggy::personal_access_tokens::delete_personal_access_token::DeletePersonalAc
 use iggy::personal_access_tokens::login_with_personal_access_token::LoginWithPersonalAccessToken;
 use iggy::validatable::Validatable;
 use std::sync::Arc;
+use tracing::instrument;
 
 pub fn router(state: Arc<AppState>) -> Router {
     Router::new()
@@ -48,6 +49,7 @@ async fn get_personal_access_tokens(
     Ok(Json(personal_access_tokens))
 }
 
+#[instrument(skip_all, fields(iggy_user_id = identity.user_id))]
 async fn create_personal_access_token(
     State(state): State<Arc<AppState>>,
     Extension(identity): Extension<Identity>,
@@ -81,6 +83,7 @@ async fn create_personal_access_token(
     Ok(Json(RawPersonalAccessToken { token }))
 }
 
+#[instrument(skip_all, fields(iggy_user_id = identity.user_id))]
 async fn delete_personal_access_token(
     State(state): State<Arc<AppState>>,
     Extension(identity): Extension<Identity>,
@@ -107,6 +110,7 @@ async fn delete_personal_access_token(
     Ok(StatusCode::NO_CONTENT)
 }
 
+#[instrument(skip_all)]
 async fn login_with_personal_access_token(
     State(state): State<Arc<AppState>>,
     Json(command): Json<LoginWithPersonalAccessToken>,

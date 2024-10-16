@@ -239,6 +239,7 @@ impl Logging {
             .build();
         global::set_tracer_provider(tracer_provider.clone());
         global::set_text_map_propagator(TraceContextPropagator::new());
+        global::shutdown_tracer_provider();
 
         Registry::default()
             .with(layers)

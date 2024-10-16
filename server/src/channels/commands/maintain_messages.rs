@@ -12,7 +12,7 @@ use iggy::utils::duration::IggyDuration;
 use iggy::utils::timestamp::IggyTimestamp;
 use std::sync::Arc;
 use tokio::time;
-use tracing::{debug, error, info};
+use tracing::{debug, error, info, instrument};
 
 pub struct MessagesMaintainer {
     cleaner_enabled: bool,
@@ -77,6 +77,7 @@ impl MessagesMaintainer {
 
 #[async_trait]
 impl ServerCommand<MaintainMessagesCommand> for MaintainMessagesExecutor {
+    #[instrument(skip_all)]
     async fn execute(&mut self, system: &SharedSystem, command: MaintainMessagesCommand) {
         let system = system.read().await;
         let streams = system.get_streams();

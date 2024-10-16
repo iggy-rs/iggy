@@ -21,9 +21,10 @@ use server::server_error::ServerError;
 use server::streaming::systems::system::{SharedSystem, System};
 use server::tcp::tcp_server;
 use tokio::time::Instant;
-use tracing::info;
+use tracing::{info, instrument};
 
 #[tokio::main]
+#[instrument(skip_all)]
 async fn main() -> Result<(), ServerError> {
     let startup_timestamp = Instant::now();
     let standard_font = FIGfont::standard().unwrap();

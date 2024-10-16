@@ -6,7 +6,7 @@ use flume::Sender;
 use iggy::utils::duration::IggyDuration;
 use iggy::utils::timestamp::IggyTimestamp;
 use tokio::time;
-use tracing::{error, info, warn};
+use tracing::{error, info, instrument, warn};
 
 pub struct StateArchiver {
     enabled: bool,
@@ -59,6 +59,7 @@ impl StateArchiver {
 
 #[async_trait]
 impl ServerCommand<ArchiveStateCommand> for ArchiveStateExecutor {
+    #[instrument(skip_all)]
     async fn execute(&mut self, system: &SharedSystem, command: ArchiveStateCommand) {
         let system = system.read().await;
         if system.archiver.is_none() {

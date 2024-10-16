@@ -6,7 +6,7 @@ use async_trait::async_trait;
 use flume::{Receiver, Sender};
 use iggy::utils::duration::IggyDuration;
 use tokio::time;
-use tracing::{error, info, warn};
+use tracing::{error, info, instrument, warn};
 
 pub struct MessagesSaver {
     enabled: bool,
@@ -58,6 +58,7 @@ impl MessagesSaver {
 
 #[async_trait]
 impl ServerCommand<SaveMessagesCommand> for SaveMessagesExecutor {
+    #[instrument(skip_all)]
     async fn execute(&mut self, system: &SharedSystem, _command: SaveMessagesCommand) {
         let saved_messages_count = system.read().await.persist_messages().await;
         match saved_messages_count {

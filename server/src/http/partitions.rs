@@ -12,6 +12,7 @@ use iggy::partitions::create_partitions::CreatePartitions;
 use iggy::partitions::delete_partitions::DeletePartitions;
 use iggy::validatable::Validatable;
 use std::sync::Arc;
+use tracing::instrument;
 
 pub fn router(state: Arc<AppState>) -> Router {
     Router::new()
@@ -22,6 +23,7 @@ pub fn router(state: Arc<AppState>) -> Router {
         .with_state(state)
 }
 
+#[instrument(skip_all, fields(iggy_user_id = identity.user_id, iggy_stream_id = stream_id, iggy_topic_id = topic_id))]
 async fn create_partitions(
     State(state): State<Arc<AppState>>,
     Extension(identity): Extension<Identity>,
@@ -51,6 +53,7 @@ async fn create_partitions(
     Ok(StatusCode::CREATED)
 }
 
+#[instrument(skip_all, fields(iggy_user_id = identity.user_id, iggy_stream_id = stream_id, iggy_topic_id = topic_id))]
 async fn delete_partitions(
     State(state): State<Arc<AppState>>,
     Extension(identity): Extension<Identity>,

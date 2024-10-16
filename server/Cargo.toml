@@ -23,7 +23,7 @@ blake3 = "1.5.4"
 bytes = "1.6.0"
 clap = { version = "4.5.17", features = ["derive"] }
 console-subscriber = { version = "0.4.0", optional = true }
-dashmap = "6.0.1"
+dashmap = "6.1.0"
 derive_more = "1.0.0"
 figlet-rs = "0.1.5"
 figment = { version = "0.10.18", features = ["json", "toml", "env"] }

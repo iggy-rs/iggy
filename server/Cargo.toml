@@ -1,6 +1,6 @@
 [package]
 name = "server"
-version = "0.4.52"
+version = "0.4.60"
 edition = "2021"
 build = "src/build.rs"
 
@@ -34,9 +34,15 @@ jsonwebtoken = "9.3.0"
 log = "0.4.20"
 moka = { version = "0.12.5", features = ["future"] }
 openssl = { version = "0.10.66", features = ["vendored"] }
+opentelemetry = { version = "0.26.0", features = ["trace", "logs"] }
+opentelemetry-appender-tracing = { version = "0.26.0", features = ["log"] }
+opentelemetry-otlp = { version = "0.26.0", features = ["logs", "trace", "grpc-tonic", "http", "http-proto", "reqwest-client", "tokio"] }
+opentelemetry-semantic-conventions = { version = "0.26.0" }
+opentelemetry_sdk = { version = "0.26.0", features = ["rt-tokio", "logs", "trace", "tokio"] }
 prometheus-client = "0.22.2"
 quinn = { version = "0.11.5" }
 rcgen = "0.13.1"
+reqwest = { version = "0.12.4", features = ["rustls-tls", "rustls-tls-no-provider"] }
 ring = "0.17.8"
 rmp-serde = "1.3.0"
 rust-s3 = { version = "0.34.0", features = ["default"] }
@@ -49,19 +55,20 @@ sled = "0.34.7"
 static-toml = "1.2.0"
 strip-ansi-escapes = "0.2.0"
 strum = { version = "0.26.2", features = ["derive"] }
-sysinfo = "0.31.4"
+sysinfo = "0.32.0"
 thiserror = "1.0.61"
 tokio = { version = "1.40.0", features = ["full"] }
 tokio-native-tls = "0.3.1"
 toml = "0.8.14"
-tower-http = { version = "0.5.2", features = [
+tower-http = { version = "0.6.1", features = [
     "add-extension",
     "cors",
     "trace",
 ] }
 tracing = { version = "0.1.40" }
 tracing-appender = "0.2.3"
-tracing-subscriber = { version = "0.3.18", features = ["fmt"] }
+tracing-opentelemetry = { version = "0.27.0" }
+tracing-subscriber = { version = "0.3.18", features = ["fmt", "env-filter"] }
 ulid = "1.1.2"
 uuid = { version = "1.1.0", features = ["v7", "fast-rng", "zerocopy"] }
 xxhash-rust = { version = "0.8.12", features = ["xxh32"] }

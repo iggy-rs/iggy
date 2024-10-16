@@ -28,7 +28,7 @@ impl System {
         let process_id = std::process::id();
         sys.refresh_cpu_all();
         sys.refresh_memory();
-        sys.refresh_processes(ProcessesToUpdate::Some(&[Pid::from_u32(process_id)]));
+        sys.refresh_processes(ProcessesToUpdate::Some(&[Pid::from_u32(process_id)]), true);
 
         let total_cpu_usage = sys.global_cpu_usage();
         let total_memory = sys.total_memory().into();

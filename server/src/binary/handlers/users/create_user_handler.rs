@@ -7,8 +7,9 @@ use crate::streaming::utils::crypto;
 use anyhow::Result;
 use iggy::error::IggyError;
 use iggy::users::create_user::CreateUser;
-use tracing::debug;
+use tracing::{debug, instrument};
 
+#[instrument(skip_all, fields(iggy_user_id = session.get_user_id(), iggy_client_id = session.client_id))]
 pub async fn handle(
     command: CreateUser,
     sender: &mut dyn Sender,

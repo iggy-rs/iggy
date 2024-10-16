@@ -2,7 +2,7 @@ extern crate sysinfo;
 
 use super::server::{
     ArchiverConfig, DataMaintenanceConfig, MessageSaverConfig, MessagesMaintenanceConfig,
-    StateMaintenanceConfig,
+    StateMaintenanceConfig, TelemetryConfig,
 };
 use super::system::CompressionConfig;
 use crate::archiver::ArchiverKind;
@@ -25,6 +25,7 @@ impl Validatable<ServerError> for ServerConfig {
         self.system.segment.validate()?;
         self.system.cache.validate()?;
         self.system.compression.validate()?;
+        self.telemetry.validate()?;
 
         let topic_size = match self.system.topic.max_size {
             MaxTopicSize::Custom(size) => Ok(size.as_bytes_u64()),
@@ -75,14 +76,43 @@ impl Validatable<ServerError> for CompressionConfig {
     }
 }
 
+impl Validatable<ServerError> for TelemetryConfig {
+    fn validate(&self) -> Result<(), ServerError> {
+        if !self.enabled {
+            return Ok(());
+        }
+
+        if self.service_name.trim().is_empty() {
+            return Err(ServerError::InvalidConfiguration(
+                "Telemetry service name cannot be empty.".into(),
+            ));
+        }
+
+        if self.logs.endpoint.is_empty() {
+            return Err(ServerError::InvalidConfiguration(
+                "Telemetry logs endpoint cannot be empty.".into(),
+            ));
+        }
+
+        if self.traces.endpoint.is_empty() {
+            return Err(ServerError::InvalidConfiguration(
+                "Telemetry traces endpoint cannot be empty.".into(),
+            ));
+        }
+
+        Ok(())
+    }
+}
+
 impl Validatable<ServerError> for CacheConfig {
     fn validate(&self) -> Result<(), ServerError> {
         let limit_bytes = self.size.clone().into();
         let mut sys = System::new_all();
         sys.refresh_all();
-        sys.refresh_processes(ProcessesToUpdate::Some(&[
-            Pid::from_u32(std::process::id()),
-        ]));
+        sys.refresh_processes(
+            ProcessesToUpdate::Some(&[Pid::from_u32(std::process::id())]),
+            true,
+        );
         let total_memory = sys.total_memory();
         let free_memory = sys.free_memory();
         let cache_percentage = (limit_bytes as f64 / total_memory as f64) * 100.0;

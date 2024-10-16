@@ -1,7 +1,8 @@
 use crate::configs::quic::{QuicCertificateConfig, QuicConfig};
 use crate::configs::server::{
     ArchiverConfig, DataMaintenanceConfig, DiskArchiverConfig, HeartbeatConfig,
-    MessagesMaintenanceConfig, S3ArchiverConfig, StateMaintenanceConfig,
+    MessagesMaintenanceConfig, S3ArchiverConfig, StateMaintenanceConfig, TelemetryConfig,
+    TelemetryLogsConfig, TelemetryTracesConfig,
 };
 use crate::configs::system::MessageDeduplicationConfig;
 use crate::configs::{
@@ -185,8 +186,8 @@ impl Display for ServerConfig {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
-            "{{ data_maintenance: {}, message_saver: {}, heartbeat: {}, system: {}, quic: {}, tcp: {}, http: {} }}",
-            self.data_maintenance, self.message_saver, self.heartbeat, self.system, self.quic, self.tcp, self.http
+            "{{ data_maintenance: {}, message_saver: {}, heartbeat: {}, system: {}, quic: {}, tcp: {}, http: {}, telemetry: {} }}",
+            self.data_maintenance, self.message_saver, self.heartbeat, self.system, self.quic, self.tcp, self.http, self.telemetry
         )
     }
 }
@@ -301,6 +302,36 @@ impl Display for TcpTlsConfig {
             f,
             "{{ enabled: {}, certificate: {} }}",
             self.enabled, self.certificate
+        )
+    }
+}
+
+impl Display for TelemetryConfig {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "{{ enabled: {}, service_name: {}, logs: {}, traces: {} }}",
+            self.enabled, self.service_name, self.logs, self.traces
+        )
+    }
+}
+
+impl Display for TelemetryLogsConfig {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "{{ transport: {}, endpoint: {} }}",
+            self.transport, self.endpoint
+        )
+    }
+}
+
+impl Display for TelemetryTracesConfig {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "{{ transport: {}, endpoint: {} }}",
+            self.transport, self.endpoint
         )
     }
 }

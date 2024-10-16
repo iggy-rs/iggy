@@ -21,24 +21,24 @@ use server::server_error::ServerError;
 use server::streaming::systems::system::{SharedSystem, System};
 use server::tcp::tcp_server;
 use tokio::time::Instant;
-use tracing::info;
+use tracing::{info, instrument};
 
 #[tokio::main]
+#[instrument(skip_all)]
 async fn main() -> Result<(), ServerError> {
     let startup_timestamp = Instant::now();
     let standard_font = FIGfont::standard().unwrap();
     let figure = standard_font.convert("Iggy Server");
     println!("{}", figure.unwrap());
 
-    let mut logging = Logging::new();
+    let args = Args::parse();
+    let config_provider = config_provider::resolve(&args.config_provider)?;
+    let config = ServerConfig::load(config_provider.as_ref()).await?;
+
+    let mut logging = Logging::new(config.telemetry.clone());
     logging.early_init();
 
     // From this point on, we can use tracing macros to log messages.
-
-    let args = Args::parse();
-
-    let config_provider = config_provider::resolve(&args.config_provider)?;
-    let config = ServerConfig::load(config_provider.as_ref()).await?;
 
     logging.late_init(config.system.get_system_path(), &config.system.logging)?;
 

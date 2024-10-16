@@ -152,7 +152,9 @@ impl<'a> IggyExampleTest<'a> {
         args.push("--message-batches-limit".into());
         args.push("1".into());
 
+        producer_cmd.envs(vec![("RUST_LOG", "info")]);
         producer_cmd.args(args.clone());
+        consumer_cmd.envs(vec![("RUST_LOG", "info")]);
         consumer_cmd.args(args);
 
         let producer_handle = tokio::spawn(async move {

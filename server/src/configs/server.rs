@@ -5,11 +5,13 @@ use crate::configs::quic::QuicConfig;
 use crate::configs::system::SystemConfig;
 use crate::configs::tcp::TcpConfig;
 use crate::server_error::ServerError;
+use derive_more::Display;
 use iggy::utils::duration::IggyDuration;
 use iggy::validatable::Validatable;
 use serde::{Deserialize, Serialize};
 use serde_with::serde_as;
 use serde_with::DisplayFromStr;
+use std::str::FromStr;
 use std::sync::Arc;
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
@@ -22,6 +24,7 @@ pub struct ServerConfig {
     pub quic: QuicConfig,
     pub tcp: TcpConfig,
     pub http: HttpConfig,
+    pub telemetry: TelemetryConfig,
 }
 
 #[serde_as]
@@ -102,6 +105,46 @@ pub struct HeartbeatConfig {
     pub enabled: bool,
     #[serde_as(as = "DisplayFromStr")]
     pub interval: IggyDuration,
+}
+
+#[derive(Debug, Deserialize, Serialize, Clone)]
+pub struct TelemetryConfig {
+    pub enabled: bool,
+    pub service_name: String,
+    pub logs: TelemetryLogsConfig,
+    pub traces: TelemetryTracesConfig,
+}
+
+#[derive(Debug, Deserialize, Serialize, Clone)]
+pub struct TelemetryLogsConfig {
+    pub transport: TelemetryTransport,
+    pub endpoint: String,
+}
+
+#[derive(Debug, Deserialize, Serialize, Clone)]
+pub struct TelemetryTracesConfig {
+    pub transport: TelemetryTransport,
+    pub endpoint: String,
+}
+
+#[derive(Debug, Serialize, Deserialize, PartialEq, Display, Copy, Clone)]
+#[serde(rename_all = "lowercase")]
+pub enum TelemetryTransport {
+    #[display("grpc")]
+    GRPC,
+    #[display("http")]
+    HTTP,
+}
+
+impl FromStr for TelemetryTransport {
+    type Err = String;
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "grpc" => Ok(TelemetryTransport::GRPC),
+            "http" => Ok(TelemetryTransport::HTTP),
+            _ => Err(format!("Invalid telemetry transport: {s}")),
+        }
+    }
 }
 
 impl ServerConfig {

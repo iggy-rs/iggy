@@ -15,6 +15,7 @@ use iggy::messages::send_messages::SendMessages;
 use iggy::models::messages::PolledMessages;
 use iggy::validatable::Validatable;
 use std::sync::Arc;
+use tracing::instrument;
 
 pub fn router(state: Arc<AppState>) -> Router {
     Router::new()
@@ -87,6 +88,7 @@ async fn send_messages(
     Ok(StatusCode::CREATED)
 }
 
+#[instrument(skip_all, fields(iggy_user_id = identity.user_id, iggy_stream_id = stream_id, iggy_topic_id = topic_id, iggy_partition_id = partition_id, iggy_fsync = fsync))]
 async fn flush_unsaved_buffer(
     State(state): State<Arc<AppState>>,
     Extension(identity): Extension<Identity>,

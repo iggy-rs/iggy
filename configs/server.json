@@ -122,6 +122,18 @@
     "enabled": false,
     "interval": "5 s"
   },
+  "telemetry": {
+    "enabled": false,
+    "service_name": "iggy",
+    "logs": {
+      "transport": "grpc",
+      "endpoint": "http://localhost:7281/v1/logs"
+    },
+    "traces": {
+      "transport": "grpc",
+      "endpoint": "http://localhost:7281/v1/traces"
+    }
+  },
   "system": {
     "path": "local_data",
     "backup": {

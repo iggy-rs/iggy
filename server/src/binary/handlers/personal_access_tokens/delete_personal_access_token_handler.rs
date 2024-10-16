@@ -5,8 +5,9 @@ use crate::streaming::systems::system::SharedSystem;
 use anyhow::Result;
 use iggy::error::IggyError;
 use iggy::personal_access_tokens::delete_personal_access_token::DeletePersonalAccessToken;
-use tracing::debug;
+use tracing::{debug, instrument};
 
+#[instrument(skip_all, fields(iggy_user_id = session.get_user_id(), iggy_client_id = session.client_id))]
 pub async fn handle(
     command: DeletePersonalAccessToken,
     sender: &mut dyn Sender,

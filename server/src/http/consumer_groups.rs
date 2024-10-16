@@ -14,6 +14,7 @@ use iggy::identifier::Identifier;
 use iggy::models::consumer_group::{ConsumerGroup, ConsumerGroupDetails};
 use iggy::validatable::Validatable;
 use std::sync::Arc;
+use tracing::instrument;
 
 pub fn router(state: Arc<AppState>) -> Router {
     Router::new()
@@ -70,6 +71,7 @@ async fn get_consumer_groups(
     Ok(Json(consumer_groups))
 }
 
+#[instrument(skip_all, fields(iggy_user_id = identity.user_id, iggy_stream_id = stream_id, iggy_topic_id = topic_id))]
 async fn create_consumer_group(
     State(state): State<Arc<AppState>>,
     Extension(identity): Extension<Identity>,
@@ -104,6 +106,7 @@ async fn create_consumer_group(
     Ok((StatusCode::CREATED, Json(consumer_group_details)))
 }
 
+#[instrument(skip_all, fields(iggy_user_id = identity.user_id, iggy_stream_id = stream_id, iggy_topic_id = topic_id, iggy_group_id = group_id))]
 async fn delete_consumer_group(
     State(state): State<Arc<AppState>>,
     Extension(identity): Extension<Identity>,

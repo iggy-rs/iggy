@@ -4,8 +4,9 @@ use crate::streaming::systems::system::SharedSystem;
 use anyhow::Result;
 use iggy::consumer_groups::join_consumer_group::JoinConsumerGroup;
 use iggy::error::IggyError;
-use tracing::debug;
+use tracing::{debug, instrument};
 
+#[instrument(skip_all, fields(iggy_user_id = session.get_user_id(), iggy_client_id = session.client_id, iggy_stream_id = command.stream_id.as_string(), iggy_topic_id = command.topic_id.as_string(), iggy_group_id = command.group_id.as_string()))]
 pub async fn handle(
     command: JoinConsumerGroup,
     sender: &mut dyn Sender,

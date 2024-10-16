@@ -17,6 +17,7 @@ use iggy::validatable::Validatable;
 
 use crate::state::command::EntryCommand;
 use std::sync::Arc;
+use tracing::instrument;
 
 pub fn router(state: Arc<AppState>) -> Router {
     Router::new()
@@ -59,6 +60,7 @@ async fn get_streams(
     Ok(Json(streams))
 }
 
+#[instrument(skip_all, fields(iggy_user_id = identity.user_id))]
 async fn create_stream(
     State(state): State<Arc<AppState>>,
     Extension(identity): Extension<Identity>,
@@ -86,6 +88,7 @@ async fn create_stream(
     Ok(response)
 }
 
+#[instrument(skip_all, fields(iggy_user_id = identity.user_id, iggy_stream_id = stream_id))]
 async fn update_stream(
     State(state): State<Arc<AppState>>,
     Extension(identity): Extension<Identity>,
@@ -113,6 +116,7 @@ async fn update_stream(
     Ok(StatusCode::NO_CONTENT)
 }
 
+#[instrument(skip_all, fields(iggy_user_id = identity.user_id, iggy_stream_id = stream_id))]
 async fn delete_stream(
     State(state): State<Arc<AppState>>,
     Extension(identity): Extension<Identity>,
@@ -140,6 +144,7 @@ async fn delete_stream(
     Ok(StatusCode::NO_CONTENT)
 }
 
+#[instrument(skip_all, fields(iggy_user_id = identity.user_id, iggy_stream_id = stream_id))]
 async fn purge_stream(
     State(state): State<Arc<AppState>>,
     Extension(identity): Extension<Identity>,

@@ -17,11 +17,17 @@ use std::error::Error;
 use std::str::FromStr;
 use std::sync::Arc;
 use tracing::{error, info, warn};
+use tracing_subscriber::layer::SubscriberExt;
+use tracing_subscriber::util::SubscriberInitExt;
+use tracing_subscriber::{EnvFilter, Registry};
 
 #[tokio::main]
 async fn main() -> anyhow::Result<(), Box<dyn Error>> {
     let args = Args::parse();
-    tracing_subscriber::fmt::init();
+    Registry::default()
+        .with(tracing_subscriber::fmt::layer())
+        .with(EnvFilter::try_from_default_env().unwrap_or(EnvFilter::new("INFO")))
+        .init();
     info!(
         "New SDK consumer has started, selected transport: {}",
         args.transport

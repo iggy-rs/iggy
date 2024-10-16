@@ -15,7 +15,7 @@ use std::path::Path;
 use std::sync::Arc;
 use tokio::fs::{create_dir, remove_dir_all};
 use tokio::time::Instant;
-use tracing::{info, trace};
+use tracing::{info, instrument, trace};
 
 use crate::archiver::disk::DiskArchiver;
 use crate::archiver::s3::S3Archiver;
@@ -174,6 +174,7 @@ impl System {
         }
     }
 
+    #[instrument(skip_all)]
     pub async fn init(&mut self) -> Result<(), IggyError> {
         let system_path = self.config.get_system_path();
         if !Path::new(&system_path).exists() && create_dir(&system_path).await.is_err() {
@@ -231,11 +232,13 @@ impl System {
         Ok(())
     }
 
+    #[instrument(skip_all)]
     pub async fn shutdown(&mut self) -> Result<(), IggyError> {
         self.persist_messages().await?;
         Ok(())
     }
 
+    #[instrument(skip_all)]
     pub async fn persist_messages(&self) -> Result<usize, IggyError> {
         trace!("Saving buffered messages on disk...");
         let mut saved_messages_number = 0;

@@ -1,6 +1,8 @@
 pub(crate) mod client_table;
 pub(crate) mod replica;
 pub(crate) mod status;
+pub(crate) mod header;
+pub(crate) mod message;
 
 // Types
 pub(crate) type OpNumber = u64;
@@ -10,7 +12,7 @@ pub(crate) type Version = usize;
 
 // TODO: const generics ?
 pub(crate) struct QuorumCounter<T> {
-    lamport_timestamp: T,
+    value: T,
     acks: usize,
     quorum: bool,
 }
@@ -21,7 +23,7 @@ where
 {
     fn default() -> Self {
         Self {
-            lamport_timestamp: Default::default(),
+            value: Default::default(),
             acks: Default::default(),
             quorum: Default::default(),
         }

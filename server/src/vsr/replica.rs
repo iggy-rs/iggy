@@ -34,9 +34,6 @@ pub struct Replica<S, B> {
     log_view_number: ViewNumber,
     op_number: OpNumber,
     status: Status,
-    // This is where we differ from the VRR paper, we use `commit_min` and `commit_max`
-    // to slice the log during the state transfer protocol.
-    commit_min: CommitNumber,
     commit_max: CommitNumber,
 
     // TODO: sometimes replica sends message to itself (e.g acking our own prepare or when starting view change).
@@ -45,4 +42,11 @@ pub struct Replica<S, B> {
     start_view_change_quorum: QuorumCounter<ViewNumber>,
     do_view_change_quorum: QuorumCounter<ViewNumber>,
     // TODO: section with auxiliary data, related to messages (user data).
+}
+
+impl<S,B> Replica<S,B> {
+
+    fn on_command(&self) {
+
+    }
 }

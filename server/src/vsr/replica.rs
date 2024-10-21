@@ -1,5 +1,5 @@
 use super::*;
-use crate::versioning::SemanticVersion;
+use crate::{command::ServerCommand, versioning::SemanticVersion};
 use client_table::ClientTable;
 use status::Status;
 use std::marker::PhantomData;
@@ -45,8 +45,66 @@ pub struct Replica<S, B> {
 }
 
 impl<S,B> Replica<S,B> {
+    fn on_command(&self, command: ServerCommand) {
+        match command {
+            ServerCommand::CreateStream(command) => {
 
-    fn on_command(&self) {
+            },
+            ServerCommand::UpdateStream(command) => {
 
+            }
+            ServerCommand::DeleteStream(command) => {
+
+            }
+            ServerCommand::PurgeStream(command) => {
+
+            }
+            ServerCommand::CreateTopic(command) => {
+
+            }
+            ServerCommand::UpdateTopic(command) => {
+
+            }
+            ServerCommand::DeleteTopic(command) => {
+
+            }
+            ServerCommand::PurgeTopic(command) => {
+
+            }
+            ServerCommand::CreatePartitions(command) => {
+
+            }
+            ServerCommand::DeletePartitions(command) => {
+
+            }
+            ServerCommand::CreateConsumerGroup(command) => {
+
+            }
+            ServerCommand::DeleteConsumerGroup(command) => {
+
+            }
+            ServerCommand::CreateUser(command) => {
+
+            }
+            ServerCommand::UpdateUser(command) => {
+
+            }
+            ServerCommand::DeleteUser(command) => {
+
+            }
+            ServerCommand::ChangePassword(command) => {
+
+            }
+            ServerCommand::UpdatePermissions(command) => {
+
+            }
+            ServerCommand::CreatePersonalAccessToken(command) => {
+
+            }
+            ServerCommand::DeletePersonalAccessToken(command) => {
+
+            }
+            _ => { unreachable!();}
+        }
     }
 }

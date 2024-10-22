@@ -1,10 +1,14 @@
 use super::*;
 use crate::{command::ServerCommand, versioning::SemanticVersion};
 use client_table::ClientTable;
+use header::Header;
+use iggy::bytes_serializable::BytesSerializable;
+use message::IggyMessage;
 use status::Status;
 use std::marker::PhantomData;
 
 // TODO: trait bounds
+// TODO: seperate a `consesus` instance that we will have there.
 pub struct Replica<S, B> {
     id: usize,
     cluster: u128,
@@ -43,68 +47,22 @@ pub struct Replica<S, B> {
     do_view_change_quorum: QuorumCounter<ViewNumber>,
     // TODO: section with auxiliary data, related to messages (user data).
 }
+impl<S,B> Replica<S,B> {
+    // TODO: Implement lol.
+    pub fn new() {
+
+    }
+}
 
 impl<S,B> Replica<S,B> {
-    fn on_command(&self, command: ServerCommand) {
-        match command {
-            ServerCommand::CreateStream(command) => {
+    // TODO: Switch to accepting a `IggyMessage` struct, once the `Request` variant is implemented.
+    fn on_message(&self, command: ServerCommand) {
+        let message_payload = command.to_bytes();
+    }
 
-            },
-            ServerCommand::UpdateStream(command) => {
 
-            }
-            ServerCommand::DeleteStream(command) => {
-
-            }
-            ServerCommand::PurgeStream(command) => {
-
-            }
-            ServerCommand::CreateTopic(command) => {
-
-            }
-            ServerCommand::UpdateTopic(command) => {
-
-            }
-            ServerCommand::DeleteTopic(command) => {
-
-            }
-            ServerCommand::PurgeTopic(command) => {
-
-            }
-            ServerCommand::CreatePartitions(command) => {
-
-            }
-            ServerCommand::DeletePartitions(command) => {
-
-            }
-            ServerCommand::CreateConsumerGroup(command) => {
-
-            }
-            ServerCommand::DeleteConsumerGroup(command) => {
-
-            }
-            ServerCommand::CreateUser(command) => {
-
-            }
-            ServerCommand::UpdateUser(command) => {
-
-            }
-            ServerCommand::DeleteUser(command) => {
-
-            }
-            ServerCommand::ChangePassword(command) => {
-
-            }
-            ServerCommand::UpdatePermissions(command) => {
-
-            }
-            ServerCommand::CreatePersonalAccessToken(command) => {
-
-            }
-            ServerCommand::DeletePersonalAccessToken(command) => {
-
-            }
-            _ => { unreachable!();}
-        }
+    fn replicate(&self, message: IggyMessage) {
+        assert!(message.header.is_prepare());
+        //TODO: replicate it.
     }
 }

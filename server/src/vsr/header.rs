@@ -1,11 +1,18 @@
 use crate::versioning::SemanticVersion;
 use super::{Operation, ProtocolVersion};
 
+//TODO: maybe name it differently, to distinguish between different headers ? dunno.
 pub enum Header {
     // TODO: Add Request header, for now let's just use the `Command` enum
     // and ignore the request_number and all of the client side data required by VSR.
     Prepare(Prepare),
     PrepareOk(PrepareOk),
+}
+
+impl Header {
+    pub fn is_prepare(&self) -> bool {
+        matches!(self, Header::Prepare(_))
+    }
 }
 
 #[derive(Debug, Clone)]

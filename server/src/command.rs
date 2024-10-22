@@ -50,6 +50,8 @@ use iggy::{
 use std::fmt::{Display, Formatter};
 use strum::EnumString;
 
+// TODO: This has to be refactored into an body enum, that will be used by IggyMessage.
+// TODO: Split this enum into two seperate enums (Metadata, Message).
 #[derive(Debug, PartialEq, EnumString)]
 pub enum ServerCommand {
     Ping(Ping),

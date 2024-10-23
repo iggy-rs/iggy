@@ -68,7 +68,9 @@ The name is an abbreviation for the Italian Greyhound - small yet extremely fast
 - **TLS** support for all transport protocols (TCP, QUIC, HTTPS)
 - Optional server-side as well as client-side **data encryption** using AES-256-GCM
 - Optional metadata support in the form of **message headers**
-- Built-in **CLI** to manage the streaming server
+- Optional **data backups & archivization** on disk and/or the **S3** compatible cloud storage (e.g. AWS S3)
+- Support for **[OpenTelemetry](https://opentelemetry.io/)** logs & traces + Prometheus metrics
+- Built-in **CLI** to manage the streaming server installable via `cargo install iggy-cli`
 - Built-in **benchmarking app** to test the performance
 - **Single binary deployment** (no external dependencies)
 - Running as a single node (no cluster support yet)
@@ -103,7 +105,9 @@ For the detailed information about current progress, please refer to the [projec
 
 ## CLI
 
-The brand new, rich, interactive CLI is being implemented under the `cli` project, to provide the best developer experience. This will be a great addition to the Web UI, especially for all the developers who prefer using the console tools.
+The brand new, rich, interactive CLI is implemented under the `cli` project, to provide the best developer experience. This is a great addition to the Web UI, especially for all the developers who prefer using the console tools.
+
+Iggy CLI can be installed with `cargo install iggy-cli` and then simply accessed by typing `iggy` in your terminal.
 
 ![CLI](assets/cli.png)
 

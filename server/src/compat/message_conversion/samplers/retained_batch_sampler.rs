@@ -1,7 +1,7 @@
 use crate::compat::message_conversion::binary_schema::BinarySchema;
 use crate::compat::message_conversion::schema_sampler::BinarySchemaSampler;
 use crate::compat::message_conversion::snapshots::retained_batch_snapshot::RetainedMessageBatchSnapshot;
-use crate::server_error::ServerError;
+use crate::server_error::CompatError;
 use crate::streaming::utils::file;
 use async_trait::async_trait;
 use bytes::{BufMut, Bytes};
@@ -32,7 +32,7 @@ unsafe impl Sync for RetainedMessageBatchSampler {}
 
 #[async_trait]
 impl BinarySchemaSampler for RetainedMessageBatchSampler {
-    async fn try_sample(&self) -> Result<BinarySchema, ServerError> {
+    async fn try_sample(&self) -> Result<BinarySchema, CompatError> {
         let mut index_file = file::open(&self.index_path).await?;
         let mut log_file = file::open(&self.log_path).await?;
         let log_file_size = log_file.metadata().await?.len();
@@ -56,7 +56,7 @@ impl BinarySchemaSampler for RetainedMessageBatchSampler {
         }
         let batch = RetainedMessageBatchSnapshot::try_from(Bytes::from(buffer))?;
         if batch.base_offset != self.segment_start_offset {
-            return Err(ServerError::InvalidBatchBaseOffsetFormatConversion);
+            return Err(CompatError::InvalidBatchBaseOffsetFormatConversion);
         }
         Ok(BinarySchema::RetainedMessageBatchSchema)
     }

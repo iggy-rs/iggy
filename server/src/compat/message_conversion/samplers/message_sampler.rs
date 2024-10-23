@@ -1,7 +1,7 @@
 use crate::compat::message_conversion::binary_schema::BinarySchema;
 use crate::compat::message_conversion::schema_sampler::BinarySchemaSampler;
 use crate::compat::message_conversion::snapshots::message_snapshot::MessageSnapshot;
-use crate::server_error::ServerError;
+use crate::server_error::CompatError;
 use crate::streaming::utils::file;
 use async_trait::async_trait;
 use bytes::{BufMut, BytesMut};
@@ -27,7 +27,7 @@ unsafe impl Sync for MessageSampler {}
 
 #[async_trait]
 impl BinarySchemaSampler for MessageSampler {
-    async fn try_sample(&self) -> Result<BinarySchema, ServerError> {
+    async fn try_sample(&self) -> Result<BinarySchema, CompatError> {
         let mut index_file = file::open(&self.index_path).await?;
         let mut log_file = file::open(&self.log_path).await?;
         let log_file_size = log_file.metadata().await?.len();
@@ -46,7 +46,7 @@ impl BinarySchemaSampler for MessageSampler {
 
         let message = MessageSnapshot::try_from(buffer.freeze())?;
         if message.offset != self.segment_start_offset {
-            return Err(ServerError::InvalidMessageOffsetFormatConversion);
+            return Err(CompatError::InvalidMessageOffsetFormatConversion);
         }
         Ok(BinarySchema::RetainedMessageSchema)
     }

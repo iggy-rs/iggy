@@ -1,6 +1,6 @@
 use crate::archiver::Archiver;
 use crate::configs::server::S3ArchiverConfig;
-use crate::server_error::ServerError;
+use crate::server_error::ArchiverError;
 use crate::streaming::utils::file;
 use async_trait::async_trait;
 use s3::creds::Credentials;
@@ -16,7 +16,7 @@ pub struct S3Archiver {
 }
 
 impl S3Archiver {
-    pub fn new(config: S3ArchiverConfig) -> Result<Self, ServerError> {
+    pub fn new(config: S3ArchiverConfig) -> Result<Self, ArchiverError> {
         let credentials = Credentials::new(
             Some(&config.key_id),
             Some(&config.key_secret),
@@ -24,7 +24,7 @@ impl S3Archiver {
             None,
             None,
         )
-        .map_err(|_| ServerError::InvalidS3Credentials)?;
+        .map_err(|_| ArchiverError::InvalidS3Credentials)?;
 
         let bucket = Bucket::new(
             &config.bucket,
@@ -42,14 +42,14 @@ impl S3Archiver {
             },
             credentials,
         )
-        .map_err(|_| ServerError::CannotInitializeS3Archiver)?;
+        .map_err(|_| ArchiverError::CannotInitializeS3Archiver)?;
         Ok(Self {
             bucket,
             tmp_upload_dir: config.tmp_upload_dir,
         })
     }
 
-    async fn copy_file_to_tmp(&self, path: &str) -> Result<String, ServerError> {
+    async fn copy_file_to_tmp(&self, path: &str) -> Result<String, ArchiverError> {
         debug!(
             "Copying file: {path} to temporary S3 upload directory: {}",
             self.tmp_upload_dir
@@ -68,11 +68,11 @@ impl S3Archiver {
 
 #[async_trait]
 impl Archiver for S3Archiver {
-    async fn init(&self) -> Result<(), ServerError> {
+    async fn init(&self) -> Result<(), ArchiverError> {
         let response = self.bucket.list("/".to_string(), None).await;
         if let Err(error) = response {
             error!("Cannot initialize S3 archiver: {error}");
-            return Err(ServerError::CannotInitializeS3Archiver);
+            return Err(ArchiverError::CannotInitializeS3Archiver);
         }
 
         if Path::new(&self.tmp_upload_dir).exists() {
@@ -94,7 +94,7 @@ impl Archiver for S3Archiver {
         &self,
         file: &str,
         base_directory: Option<String>,
-    ) -> Result<bool, ServerError> {
+    ) -> Result<bool, ArchiverError> {
         debug!("Checking if file: {file} is archived on S3.");
         let base_directory = base_directory.as_deref().unwrap_or_default();
         let destination = Path::new(&base_directory).join(file);
@@ -119,10 +119,12 @@ impl Archiver for S3Archiver {
         &self,
         files: &[&str],
         base_directory: Option<String>,
-    ) -> Result<(), ServerError> {
+    ) -> Result<(), ArchiverError> {
         for path in files {
             if !Path::new(path).exists() {
-                return Err(ServerError::FileToArchiveNotFound(path.to_string()));
+                return Err(ArchiverError::FileToArchiveNotFound {
+                    file_path: path.to_string(),
+                });
             }
 
             let source = self.copy_file_to_tmp(path).await?;
@@ -137,8 +139,9 @@ impl Archiver for S3Archiver {
                 .await;
             if let Err(error) = response {
                 error!("Cannot archive file: {path} on S3: {}", error);
-                fs::remove_file(&source).await?;
-                return Err(ServerError::CannotArchiveFile(path.to_string()));
+                return Err(ArchiverError::CannotArchiveFile {
+                    file_path: path.to_string(),
+                });
             }
 
             let response = response.unwrap();
@@ -150,8 +153,9 @@ impl Archiver for S3Archiver {
             }
 
             error!("Cannot archive file: {path} on S3, received an invalid status code: {status}.");
-            fs::remove_file(&source).await?;
-            return Err(ServerError::CannotArchiveFile(path.to_string()));
+            return Err(ArchiverError::CannotArchiveFile {
+                file_path: path.to_string(),
+            });
         }
         Ok(())
     }

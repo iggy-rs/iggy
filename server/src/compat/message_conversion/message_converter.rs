@@ -3,6 +3,7 @@ use crate::compat::message_conversion::samplers::retained_batch_sampler::Retaine
 use crate::compat::message_conversion::schema_sampler::BinarySchemaSampler;
 use crate::streaming::sizeable::Sizeable;
 use bytes::{BufMut, BytesMut};
+use error_set::ResultContext;
 use iggy::error::IggyError;
 
 use crate::streaming::segments::storage::{INDEX_SIZE, TIME_INDEX_SIZE};
@@ -36,11 +37,16 @@ where
         let size = self.get_size_bytes();
         let mut batch_bytes = BytesMut::with_capacity(size as usize);
         self.extend(&mut batch_bytes);
-
-        writer.write_all(&batch_bytes).await?;
+    
+        writer.write_all(&batch_bytes).await.with_error(|err| {
+            format!(
+                "MESSAGE_CONVERSION - failed to persist data, size: {}, error: {err}",
+                size
+            )
+        })?;
         Ok(())
     }
-
+    
     async fn persist_index(
         &self,
         position: u32,
@@ -50,11 +56,16 @@ where
         let mut index_bytes = BytesMut::with_capacity(INDEX_SIZE as usize);
         index_bytes.put_u32_le(relative_offset);
         index_bytes.put_u32_le(position);
-
-        writer.write_all(&index_bytes).await?;
+    
+        writer.write_all(&index_bytes).await.with_error(|err| {
+            format!(
+                "MESSAGE_CONVERSION - failed to persist index, position: {}, relative_offset: {}, error: {err}",
+                position, relative_offset
+            )
+        })?;
         Ok(())
     }
-
+    
     async fn persist_time_index(
         &self,
         timestamp: u64,
@@ -64,8 +75,13 @@ where
         let mut time_index_bytes = BytesMut::with_capacity(TIME_INDEX_SIZE as usize);
         time_index_bytes.put_u32_le(relative_offset);
         time_index_bytes.put_u64_le(timestamp);
-
-        writer.write_all(&time_index_bytes).await?;
+    
+        writer.write_all(&time_index_bytes).await.with_error(|err| {
+            format!(
+                "MESSAGE_CONVERSION - failed to persist time index, timestamp: {}, relative_offset: {}, error: {err}",
+                timestamp, relative_offset
+            )
+        })?;
         Ok(())
     }
 }

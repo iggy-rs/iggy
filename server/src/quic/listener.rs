@@ -7,6 +7,7 @@ use crate::streaming::session::Session;
 use crate::streaming::systems::system::SharedSystem;
 use anyhow::{anyhow, Context};
 use bytes::Bytes;
+use error_set::ResultContext;
 use iggy::validatable::Validatable;
 use iggy::{bytes_serializable::BytesSerializable, messages::MAX_PAYLOAD_SIZE};
 use quinn::{Connection, Endpoint, RecvStream, SendStream};
@@ -49,9 +50,13 @@ async fn handle_connection(
     incoming_connection: quinn::Connecting,
     system: SharedSystem,
 ) -> Result<(), ConnectionError> {
-    let connection = incoming_connection.await?;
+    let connection = incoming_connection
+        .await
+        .with_error(|_| format!("Failed to establish QUIC connection"))?;
+
     let address = connection.remote_address();
     info!("Client has connected: {address}");
+
     let session = system
         .read()
         .await
@@ -59,7 +64,10 @@ async fn handle_connection(
         .await;
 
     let client_id = session.client_id;
-    while let Some(stream) = accept_stream(&connection, &system, client_id).await? {
+    while let Some(stream) = accept_stream(&connection, &system, client_id)
+        .await
+        .with_error(|_| format!("Failed to accept stream from client: {address}"))?
+    {
         let system = system.clone();
         let session = session.clone();
 

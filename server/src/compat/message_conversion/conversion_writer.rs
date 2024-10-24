@@ -1,4 +1,5 @@
 use crate::streaming::utils::file;
+use error_set::ResultContext;
 use iggy::error::IggyError;
 use tracing::trace;
 
@@ -38,9 +39,24 @@ impl<'w> ConversionWriter<'w> {
     }
 
     pub async fn create_alt_directories(&self) -> Result<(), IggyError> {
-        tokio::fs::File::create(&self.alt_log_path).await?;
-        tokio::fs::File::create(&self.alt_index_path).await?;
-        tokio::fs::File::create(&self.alt_time_index_path).await?;
+        tokio::fs::File::create(&self.alt_log_path)
+            .await
+            .with_error(|err| format!(
+                "MESSAGE_CONVERSION - failed to create alt log file, alt_log_path: {}, error: {err}",
+                self.alt_log_path
+            ))?;
+        tokio::fs::File::create(&self.alt_index_path)
+            .await
+            .with_error(|err| format!(
+                "MESSAGE_CONVERSION - failed to create alt index file, alt_index_path: {}, error: {err}",
+                self.alt_index_path
+            ))?;
+        tokio::fs::File::create(&self.alt_time_index_path)
+            .await
+            .with_error(|err| format!(
+                "MESSAGE_CONVERSION - failed to create alt time index file, alt_time_index_path: {}, error: {err}",
+                self.alt_time_index_path
+            ))?;
 
         trace!(
             "Created temporary files for conversion, log: {}, index: {}, time_index: {}",
@@ -71,27 +87,59 @@ impl<'w> ConversionWriter<'w> {
         let log_path_last_idx = log_backup_path.rfind('/').unwrap();
         let index_path_last_idx = index_backup_path.rfind('/').unwrap();
         let time_index_path_last_idx = time_index_backup_path.rfind('/').unwrap();
+
         if tokio::fs::metadata(&log_backup_path[..log_path_last_idx])
             .await
             .is_err()
         {
-            tokio::fs::create_dir_all(&log_backup_path[..log_path_last_idx]).await?;
+            tokio::fs::create_dir_all(&log_backup_path[..log_path_last_idx]).await.with_error(|err| {
+                format!(
+                    "MESSAGE_CONVERSION - failed to create directories for log backup, log_backup_path: {}, error: {err}",
+                    log_backup_path
+                )
+            })?;
         }
         if tokio::fs::metadata(&index_backup_path[..index_path_last_idx])
             .await
             .is_err()
         {
-            tokio::fs::create_dir_all(&index_backup_path[..index_path_last_idx]).await?;
+            tokio::fs::create_dir_all(&index_backup_path[..index_path_last_idx]).await.with_error(|err| {
+                format!(
+                    "MESSAGE_CONVERSION - failed to create directories for index backup, index_backup_path: {}, error: {err}",
+                    index_backup_path
+                )
+            })?;
         }
         if tokio::fs::metadata(&time_index_backup_path[..time_index_path_last_idx])
             .await
             .is_err()
         {
-            tokio::fs::create_dir_all(&time_index_backup_path[..time_index_path_last_idx]).await?;
+            tokio::fs::create_dir_all(&time_index_backup_path[..time_index_path_last_idx]).await.with_error(|err| {
+                format!(
+                    "MESSAGE_CONVERSION - failed to create directories for time index backup, time_index_backup_path: {}, error: {err}",
+                    time_index_backup_path
+                )
+            })?;
         }
-        file::rename(self.log_path, log_backup_path).await?;
-        file::rename(self.index_path, index_backup_path).await?;
-        file::rename(self.time_index_path, time_index_backup_path).await?;
+
+        file::rename(self.log_path, log_backup_path).await.with_error(|err| {
+            format!(
+                "MESSAGE_CONVERSION - failed to rename log file to backup, log_path: {}, log_backup_path: {}, error: {err}",
+                self.log_path, log_backup_path
+            )
+        })?;
+        file::rename(self.index_path, index_backup_path).await.with_error(|err| {
+            format!(
+                "MESSAGE_CONVERSION - failed to rename index file to backup, index_path: {}, index_backup_path: {}, error: {err}",
+                self.index_path, index_backup_path
+            )
+        })?;
+        file::rename(self.time_index_path, time_index_backup_path).await.with_error(|err| {
+            format!(
+                "MESSAGE_CONVERSION - failed to rename time index file to backup, time_index_path: {}, time_index_backup_path: {}, error: {err}",
+                self.time_index_path, time_index_backup_path
+            )
+        })?;
 
         trace!(
             "Created backup of converted segment, log: {}, index: {}, time_index: {}",
@@ -103,9 +151,24 @@ impl<'w> ConversionWriter<'w> {
     }
 
     pub async fn replace_with_converted(&self) -> Result<(), IggyError> {
-        file::rename(&self.alt_log_path, self.log_path).await?;
-        file::rename(&self.alt_index_path, self.index_path).await?;
-        file::rename(&self.alt_time_index_path, self.time_index_path).await?;
+        file::rename(&self.alt_log_path, self.log_path).await.with_error(|err| {
+            format!(
+                "MESSAGE_CONVERSION - failed to replace log file with converted, alt_log_path: {}, log_path: {}, error: {err}",
+                self.alt_log_path, self.log_path
+            )
+        })?;
+        file::rename(&self.alt_index_path, self.index_path).await.with_error(|err| {
+            format!(
+                "MESSAGE_CONVERSION - failed to replace index file with converted, alt_index_path: {}, index_path: {}, error: {err}",
+                self.alt_index_path, self.index_path
+            )
+        })?;
+        file::rename(&self.alt_time_index_path, self.time_index_path).await.with_error(|err| {
+            format!(
+                "MESSAGE_CONVERSION - failed to replace time index file with converted, alt_time_index_path: {}, time_index_path: {}, error: {err}",
+                self.alt_time_index_path, self.time_index_path
+            )
+        })?;
 
         trace!("Replaced old segment with newly converted files");
         Ok(())

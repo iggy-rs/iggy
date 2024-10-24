@@ -2,6 +2,7 @@ use crate::binary::sender::Sender;
 use crate::streaming::session::Session;
 use crate::streaming::systems::system::SharedSystem;
 use anyhow::Result;
+use error_set::ResultContext;
 use iggy::error::IggyError;
 use iggy::users::logout_user::LogoutUser;
 use tracing::{debug, instrument};
@@ -15,7 +16,7 @@ pub async fn handle(
 ) -> Result<(), IggyError> {
     debug!("session: {session}, command: {command}");
     let system = system.read().await;
-    system.logout_user(session).await?;
+    system.logout_user(session).await.with_error(|_| format!("USER_HANDLER - failed to logout user, session: {session}"))?;
     session.clear_user_id();
     sender.send_empty_ok_response().await?;
     Ok(())

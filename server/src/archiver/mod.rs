@@ -1,7 +1,7 @@
 pub mod disk;
 pub mod s3;
 
-use crate::server_error::ServerError;
+use crate::server_error::ArchiverError;
 use async_trait::async_trait;
 use derive_more::Display;
 use serde::{Deserialize, Serialize};
@@ -31,17 +31,17 @@ impl FromStr for ArchiverKind {
 
 #[async_trait]
 pub trait Archiver: Sync + Send {
-    async fn init(&self) -> Result<(), ServerError>;
+    async fn init(&self) -> Result<(), ArchiverError>;
     async fn is_archived(
         &self,
         file: &str,
         base_directory: Option<String>,
-    ) -> Result<bool, ServerError>;
+    ) -> Result<bool, ArchiverError>;
     async fn archive(
         &self,
         files: &[&str],
         base_directory: Option<String>,
-    ) -> Result<(), ServerError>;
+    ) -> Result<(), ArchiverError>;
 }
 
 impl Debug for dyn Archiver {

@@ -1,7 +1,7 @@
 use crate::binary::command;
 use crate::binary::sender::Sender;
 use crate::command::ServerCommand;
-use crate::server_error::ServerError;
+use crate::server_error::ConnectionError;
 use crate::streaming::session::Session;
 use crate::streaming::systems::system::SharedSystem;
 use bytes::{BufMut, BytesMut};
@@ -18,14 +18,14 @@ pub(crate) async fn handle_connection(
     session: Arc<Session>,
     sender: &mut dyn Sender,
     system: SharedSystem,
-) -> Result<(), ServerError> {
+) -> Result<(), ConnectionError> {
     let mut initial_buffer = [0u8; INITIAL_BYTES_LENGTH];
     loop {
         let read_length = match sender.read(&mut initial_buffer).await {
             Ok(read_length) => read_length,
             Err(error) => {
                 if error.as_code() == IggyError::ConnectionClosed.as_code() {
-                    return Err(ServerError::from(error));
+                    return Err(ConnectionError::from(error));
                 } else {
                     sender.send_error_response(error).await?;
                     continue;
@@ -65,9 +65,9 @@ pub(crate) async fn handle_connection(
     }
 }
 
-pub(crate) fn handle_error(error: ServerError) {
+pub(crate) fn handle_error(error: ConnectionError) {
     match error {
-        ServerError::IoError(error) => match error.kind() {
+        ConnectionError::IoError(error) => match error.kind() {
             ErrorKind::UnexpectedEof => {
                 info!("Connection has been closed.");
             }
@@ -84,7 +84,7 @@ pub(crate) fn handle_error(error: ServerError) {
                 error!("Connection has failed: {error}");
             }
         },
-        ServerError::SdkError(sdk_error) => match sdk_error {
+        ConnectionError::SdkError(sdk_error) => match sdk_error {
             IggyError::ConnectionClosed => {
                 debug!("Client closed connection.");
             }

@@ -3,6 +3,7 @@ use crate::state::command::EntryCommand;
 use crate::streaming::session::Session;
 use crate::streaming::systems::system::SharedSystem;
 use anyhow::Result;
+use error_set::ResultContext;
 use iggy::consumer_groups::delete_consumer_group::DeleteConsumerGroup;
 use iggy::error::IggyError;
 use tracing::{debug, instrument};
@@ -24,16 +25,30 @@ pub async fn handle(
                 &command.topic_id,
                 &command.group_id,
             )
-            .await?;
+            .await.with_error(|_| format!(
+                "Failed to delete consumer group for stream_id: {}, topic_id: {}, group_id: {:?}, session: {}",
+                command.stream_id, command.topic_id, command.group_id, session
+            ))?;
     }
+
     let system = system.read().await;
+    let stream_id = command.stream_id.clone();
+    let topic_id = command.topic_id.clone();
+    let group_id = command.group_id.clone();
+
     system
         .state
         .apply(
             session.get_user_id(),
             EntryCommand::DeleteConsumerGroup(command),
         )
-        .await?;
+        .await
+        .with_error(|_| {
+            format!(
+                "Failed to apply delete consumer group for stream_id: {}, topic_id: {}, group_id: {:?}, session: {}",
+                stream_id, topic_id, group_id, session
+            )
+        })?;
     sender.send_empty_ok_response().await?;
     Ok(())
 }

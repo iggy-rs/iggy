@@ -1,56 +1,85 @@
-use quinn::{ConnectionError, ReadToEndError, WriteError};
+use error_set::error_set;
+use quinn::{ConnectionError as QuicConnectionError, ReadToEndError, WriteError};
 use std::array::TryFromSliceError;
-use thiserror::Error;
 use tokio::io;
 
-#[derive(Debug, Error)]
-pub enum ServerError {
-    #[error("IO error")]
-    IoError(#[from] io::Error),
-    #[error("Connection error")]
-    ConnectionError(#[from] ConnectionError),
-    #[error("Invalid configuration provider: {0}")]
-    InvalidConfigurationProvider(String),
-    #[error("Cannot load configuration: {0}")]
-    CannotLoadConfiguration(String),
-    #[error("Invalid configuration: {0}")]
-    InvalidConfiguration(String),
-    #[error("SDK error")]
-    SdkError(#[from] iggy::error::IggyError),
-    #[error("Write error")]
-    WriteError(#[from] WriteError),
-    #[error("Read to end error")]
-    ReadToEndError(#[from] ReadToEndError),
-    #[error("Try from slice error")]
-    TryFromSliceError(#[from] TryFromSliceError),
-    #[error("Logging filter reload failure")]
-    FilterReloadFailure,
-    #[error("Logging stdout reload failure")]
-    StdoutReloadFailure,
-    #[error("Logging file reload failure")]
-    FileReloadFailure,
-    #[error("Cache config validation failure: {0}")]
-    CacheConfigValidationFailure(String),
-    #[error("Command length error: {0}")]
-    CommandLengthError(String),
-    #[error("Cannot read message, when performing format conversion, {0}")]
-    InvalidMessageFieldFormatConversionSampling(String),
-    #[error("Invalid message offset, when performing format conversion")]
-    InvalidMessageOffsetFormatConversion,
-    #[error("Invalid batch base offset, when performing format conversion")]
-    InvalidBatchBaseOffsetFormatConversion,
-    #[error("Cannot read message batch, when performing format conversion, {0}")]
-    CannotReadMessageBatchFormatConversion(String),
-    #[error("Cannot remove old segment files")]
-    CannotRemoveOldSegmentFiles,
-    #[error("Cannot persist new segment files")]
-    CannotPersistNewSegmentFiles,
-    #[error("Cannot archive file: {0}")]
-    CannotArchiveFile(String),
-    #[error("Cannot initialize S3 archiver")]
-    CannotInitializeS3Archiver,
-    #[error("Invalid S3 credentials")]
-    InvalidS3Credentials,
-    #[error("File to archive not found: {0}")]
-    FileToArchiveNotFound(String),
-}
+error_set!(
+    ServerError = ServerConfigError || ServerArchiverError || ConnectionError || ServerLogError || ServerCompatError;
+
+    ServerIoError = {
+        #[display("IO error")]
+        IoError(io::Error),
+
+        #[display("Write error")]
+        WriteError(WriteError),
+
+        #[display("Read to end error")]
+        ReadToEndError(ReadToEndError)
+    };
+
+    ServerConfigError = {
+        #[display("Invalid configuration provider: {}", provider_type)]
+        InvalidConfigurationProvider { provider_type: String },
+
+        #[display("Cannot load configuration")]
+        CannotLoadConfiguration,
+
+        #[display("Invalid configuration")]
+        InvalidConfiguration,
+
+        #[display("Cache config validation failure")]
+        CacheConfigValidationFailure,
+    };
+
+    ServerArchiverError = {
+        #[display("File to archive not found: {}", file_path)]
+        FileToArchiveNotFound { file_path: String },
+
+        #[display("Cannot initialize S3 archiver")]
+        CannotInitializeS3Archiver,
+
+        #[display("Invalid S3 credentials")]
+        InvalidS3Credentials,
+
+        #[display("Cannot archive file: {}", file_path)]
+        CannotArchiveFile { file_path: String },
+    } || ServerIoError;
+
+    ConnectionError = {
+        #[display("Connection error")]
+        QuicConnectionError(QuicConnectionError),
+    } || ServerIoError || ServerCommonError;
+
+    ServerLogError = {
+        #[display("Logging filter reload failure")]
+        FilterReloadFailure,
+
+        #[display("Logging stdout reload failure")]
+        StdoutReloadFailure,
+
+        #[display("Logging file reload failure")]
+        FileReloadFailure,
+    };
+
+    ServerCompatError = {
+        #[display("Invalid message offset, when performing format conversion")]
+        InvalidMessageOffsetFormatConversion,
+
+        #[display("Invalid batch base offset, when performing format conversion")]
+        InvalidBatchBaseOffsetFormatConversion,
+
+        #[display("Cannot read message, when performing format conversion")]
+        InvalidMessageFieldFormatConversionSampling,
+
+        #[display("Cannot read message batch, when performing format conversion")]
+        CannotReadMessageBatchFormatConversion,
+    } || ServerIoError || ServerCommonError;
+
+    ServerCommonError = {
+        #[display("Try from slice error")]
+        TryFromSliceError(TryFromSliceError),
+
+        #[display("SDK error")]
+        SdkError(iggy::error::IggyError),
+    };
+);

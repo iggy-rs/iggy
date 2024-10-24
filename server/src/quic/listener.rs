@@ -1,12 +1,13 @@
 use crate::binary::command;
 use crate::command::ServerCommand;
 use crate::quic::quic_sender::QuicSender;
-use crate::server_error::ServerError;
+use crate::server_error::ConnectionError;
 use crate::streaming::clients::client_manager::Transport;
 use crate::streaming::session::Session;
 use crate::streaming::systems::system::SharedSystem;
 use anyhow::{anyhow, Context};
 use bytes::Bytes;
+use error_set::ResultContext;
 use iggy::validatable::Validatable;
 use iggy::{bytes_serializable::BytesSerializable, messages::MAX_PAYLOAD_SIZE};
 use quinn::{Connection, Endpoint, RecvStream, SendStream};
@@ -48,10 +49,14 @@ pub fn start(endpoint: Endpoint, system: SharedSystem) {
 async fn handle_connection(
     incoming_connection: quinn::Connecting,
     system: SharedSystem,
-) -> Result<(), ServerError> {
-    let connection = incoming_connection.await?;
+) -> Result<(), ConnectionError> {
+    let connection = incoming_connection
+        .await
+        .with_error(|_| format!("Failed to establish QUIC connection"))?;
+
     let address = connection.remote_address();
     info!("Client has connected: {address}");
+
     let session = system
         .read()
         .await
@@ -59,7 +64,10 @@ async fn handle_connection(
         .await;
 
     let client_id = session.client_id;
-    while let Some(stream) = accept_stream(&connection, &system, client_id).await? {
+    while let Some(stream) = accept_stream(&connection, &system, client_id)
+        .await
+        .with_error(|_| format!("Failed to accept stream from client: {address}"))?
+    {
         let system = system.clone();
         let session = session.clone();
 
@@ -79,7 +87,7 @@ async fn accept_stream(
     connection: &Connection,
     system: &SharedSystem,
     client_id: u32,
-) -> Result<Option<BiStream>, ServerError> {
+) -> Result<Option<BiStream>, ConnectionError> {
     match connection.accept_bi().await {
         Err(quinn::ConnectionError::ApplicationClosed { .. }) => {
             info!("Connection closed");

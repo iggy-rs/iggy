@@ -2,6 +2,7 @@ use crate::binary::sender::Sender;
 use crate::streaming::session::Session;
 use crate::streaming::systems::system::SharedSystem;
 use anyhow::Result;
+use error_set::ResultContext;
 use iggy::consumer_groups::join_consumer_group::JoinConsumerGroup;
 use iggy::error::IggyError;
 use tracing::{debug, instrument};
@@ -22,7 +23,13 @@ pub async fn handle(
             &command.topic_id,
             &command.group_id,
         )
-        .await?;
+        .await
+        .with_error(|_| {
+            format!(
+                "Failed to join consumer group for stream_id: {}, topic_id: {}, group_id: {}, session: {}",
+                command.stream_id, command.topic_id, command.group_id, session
+            )
+        })?;
     sender.send_empty_ok_response().await?;
     Ok(())
 }

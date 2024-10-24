@@ -3,6 +3,7 @@ use crate::state::command::EntryCommand;
 use crate::streaming::session::Session;
 use crate::streaming::systems::system::SharedSystem;
 use anyhow::Result;
+use error_set::ResultContext;
 use iggy::error::IggyError;
 use iggy::partitions::create_partitions::CreatePartitions;
 use tracing::{debug, instrument};
@@ -24,17 +25,33 @@ pub async fn handle(
                 &command.topic_id,
                 command.partitions_count,
             )
-            .await?;
+            .await
+            .with_error(|_| {
+                format!(
+                    "Failed to create partitions for stream_id: {}, topic_id: {}, partitions_count: {}, session: {}",
+                    command.stream_id, command.topic_id, command.partitions_count, session
+                )
+            })?;
     }
 
     let system = system.read().await;
+    let stream_id = command.stream_id.clone();
+    let topic_id = command.topic_id.clone();
+    let partitions_count = command.partitions_count.clone();
+
     system
         .state
         .apply(
             session.get_user_id(),
             EntryCommand::CreatePartitions(command),
         )
-        .await?;
+        .await
+        .with_error(|_| {
+            format!(
+                "Failed to apply create partitions for stream_id: {}, topic_id: {}, partitions_count: {}, session: {}",
+                stream_id, topic_id, partitions_count, session
+            )
+        })?;
     sender.send_empty_ok_response().await?;
     Ok(())
 }

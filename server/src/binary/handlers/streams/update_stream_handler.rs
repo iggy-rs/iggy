@@ -3,6 +3,7 @@ use crate::state::command::EntryCommand;
 use crate::streaming::session::Session;
 use crate::streaming::systems::system::SharedSystem;
 use anyhow::Result;
+use error_set::ResultContext;
 use iggy::error::IggyError;
 use iggy::streams::update_stream::UpdateStream;
 use tracing::{debug, instrument};
@@ -15,18 +16,27 @@ pub async fn handle(
     system: &SharedSystem,
 ) -> Result<(), IggyError> {
     debug!("session: {session}, command: {command}");
+    let stream_id = command.stream_id.clone();
+
     {
         let mut system = system.write().await;
         system
             .update_stream(session, &command.stream_id, &command.name)
-            .await?;
+            .await
+            .with_error(|_| {
+                format!("Failed to update stream with id: {stream_id}, session: {session}")
+            })?;
     }
 
     let system = system.read().await;
+
     system
         .state
         .apply(session.get_user_id(), EntryCommand::UpdateStream(command))
-        .await?;
+        .await
+        .with_error(|_| {
+            format!("Failed to apply update stream with id: {stream_id}, session: {session}")
+        })?;
     sender.send_empty_ok_response().await?;
     Ok(())
 }

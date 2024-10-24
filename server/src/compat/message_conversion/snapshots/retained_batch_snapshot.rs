@@ -1,6 +1,6 @@
 use super::message_snapshot::MessageSnapshot;
 use crate::compat::message_conversion::message_converter::Extendable;
-use crate::server_error::ServerError;
+use crate::server_error::ServerCompatError;
 use crate::streaming::sizeable::Sizeable;
 use bytes::{BufMut, Bytes, BytesMut};
 use iggy::error::IggyError;
@@ -77,56 +77,36 @@ impl Extendable for RetainedMessageBatchSnapshot {
 }
 
 impl TryFrom<Bytes> for RetainedMessageBatchSnapshot {
-    type Error = ServerError;
+    type Error = ServerCompatError;
     fn try_from(value: Bytes) -> Result<Self, Self::Error> {
         let base_offset = u64::from_le_bytes(
             value
                 .get(0..8)
-                .ok_or_else(|| {
-                    ServerError::CannotReadMessageBatchFormatConversion(
-                        "Failed to read batch base offset".to_owned(),
-                    )
-                })?
+                .ok_or_else(|| ServerCompatError::CannotReadMessageBatchFormatConversion)?
                 .try_into()?,
         );
         let length = u32::from_le_bytes(
             value
                 .get(8..12)
-                .ok_or_else(|| {
-                    ServerError::CannotReadMessageBatchFormatConversion(
-                        "Failed to read batch length".to_owned(),
-                    )
-                })?
+                .ok_or_else(|| ServerCompatError::CannotReadMessageBatchFormatConversion)?
                 .try_into()?,
         );
         let last_offset_delta = u32::from_le_bytes(
             value
                 .get(12..16)
-                .ok_or_else(|| {
-                    ServerError::CannotReadMessageBatchFormatConversion(
-                        "Failed to read batch last_offset_delta".to_owned(),
-                    )
-                })?
+                .ok_or_else(|| ServerCompatError::CannotReadMessageBatchFormatConversion)?
                 .try_into()?,
         );
         let max_timestamp = u64::from_le_bytes(
             value
                 .get(16..24)
-                .ok_or_else(|| {
-                    ServerError::CannotReadMessageBatchFormatConversion(
-                        "Failed to read batch max_timestamp".to_owned(),
-                    )
-                })?
+                .ok_or_else(|| ServerCompatError::CannotReadMessageBatchFormatConversion)?
                 .try_into()?,
         );
         let bytes = Bytes::from(
             value
                 .get(24..length as usize)
-                .ok_or_else(|| {
-                    ServerError::CannotReadMessageBatchFormatConversion(
-                        "Failed to read batch payload".to_owned(),
-                    )
-                })?
+                .ok_or_else(|| ServerCompatError::CannotReadMessageBatchFormatConversion)?
                 .to_owned(),
         );
         Ok(RetainedMessageBatchSnapshot {

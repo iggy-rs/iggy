@@ -1,5 +1,5 @@
 use crate::compat::message_conversion::message_converter::Extendable;
-use crate::server_error::ServerError;
+use crate::server_error::ServerCompatError;
 use crate::streaming::sizeable::Sizeable;
 use bytes::{BufMut, Bytes, BytesMut};
 use iggy::bytes_serializable::BytesSerializable;
@@ -76,62 +76,42 @@ impl Sizeable for MessageSnapshot {
 }
 
 impl TryFrom<Bytes> for MessageSnapshot {
-    type Error = ServerError;
+    type Error = ServerCompatError;
 
     fn try_from(value: Bytes) -> Result<Self, Self::Error> {
         let offset = u64::from_le_bytes(
             value
                 .get(0..8)
-                .ok_or_else(|| {
-                    ServerError::InvalidMessageFieldFormatConversionSampling(
-                        "Invalid offset bytes for message snapshot".to_owned(),
-                    )
-                })?
+                .ok_or_else(|| ServerCompatError::InvalidMessageFieldFormatConversionSampling)?
                 .try_into()?,
         );
-        let state = MessageState::from_code(*value.get(8).ok_or_else(|| {
-            ServerError::InvalidMessageFieldFormatConversionSampling(
-                "Invalid state for message snapshot".to_owned(),
-            )
-        })?)?;
+        let state = MessageState::from_code(
+            *value
+                .get(8)
+                .ok_or_else(|| ServerCompatError::InvalidMessageFieldFormatConversionSampling)?,
+        )?;
         let timestamp = u64::from_le_bytes(
             value
                 .get(9..17)
-                .ok_or_else(|| {
-                    ServerError::InvalidMessageFieldFormatConversionSampling(
-                        "Invalid timestamp bytes for message snapshot".to_owned(),
-                    )
-                })?
+                .ok_or_else(|| ServerCompatError::InvalidMessageFieldFormatConversionSampling)?
                 .try_into()?,
         );
         let id = u128::from_le_bytes(
             value
                 .get(17..33)
-                .ok_or_else(|| {
-                    ServerError::InvalidMessageFieldFormatConversionSampling(
-                        "Invalid id bytes for message snapshot".to_owned(),
-                    )
-                })?
+                .ok_or_else(|| ServerCompatError::InvalidMessageFieldFormatConversionSampling)?
                 .try_into()?,
         );
         let checksum = u32::from_le_bytes(
             value
                 .get(33..37)
-                .ok_or_else(|| {
-                    ServerError::InvalidMessageFieldFormatConversionSampling(
-                        "Invalid checksum bytes for message snapshot".to_owned(),
-                    )
-                })?
+                .ok_or_else(|| ServerCompatError::InvalidMessageFieldFormatConversionSampling)?
                 .try_into()?,
         );
         let headers_length = u32::from_le_bytes(
             value
                 .get(37..41)
-                .ok_or_else(|| {
-                    ServerError::InvalidMessageFieldFormatConversionSampling(
-                        "Invalid headers_length bytes for message snapshot".to_owned(),
-                    )
-                })?
+                .ok_or_else(|| ServerCompatError::InvalidMessageFieldFormatConversionSampling)?
                 .try_into()?,
         );
         let headers = match headers_length {
@@ -139,11 +119,7 @@ impl TryFrom<Bytes> for MessageSnapshot {
             _ => {
                 let headers_payload = &value[41..(41 + headers_length as usize)];
                 let headers = HashMap::from_bytes(Bytes::copy_from_slice(headers_payload))
-                    .map_err(|_| {
-                        ServerError::InvalidMessageFieldFormatConversionSampling(
-                            "Invalid headers bytes for message snapshot".to_owned(),
-                        )
-                    })?;
+                    .map_err(|_| ServerCompatError::InvalidMessageFieldFormatConversionSampling)?;
                 Some(headers)
             }
         };
@@ -152,11 +128,7 @@ impl TryFrom<Bytes> for MessageSnapshot {
         let payload_length = u32::from_le_bytes(
             value
                 .get(position..(position + 4))
-                .ok_or_else(|| {
-                    ServerError::InvalidMessageFieldFormatConversionSampling(
-                        "Invalid payload bytes for message snapshot".to_owned(),
-                    )
-                })?
+                .ok_or_else(|| ServerCompatError::InvalidMessageFieldFormatConversionSampling)?
                 .try_into()?,
         );
         let payload =

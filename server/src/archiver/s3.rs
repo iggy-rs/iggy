@@ -1,8 +1,9 @@
 use crate::archiver::Archiver;
 use crate::configs::server::S3ArchiverConfig;
-use crate::server_error::ServerError;
+use crate::server_error::ServerArchiverError;
 use crate::streaming::utils::file;
 use async_trait::async_trait;
+use error_set::ResultContext;
 use s3::creds::Credentials;
 use s3::{Bucket, Region};
 use std::path::Path;
@@ -16,7 +17,7 @@ pub struct S3Archiver {
 }
 
 impl S3Archiver {
-    pub fn new(config: S3ArchiverConfig) -> Result<Self, ServerError> {
+    pub fn new(config: S3ArchiverConfig) -> Result<Self, ServerArchiverError> {
         let credentials = Credentials::new(
             Some(&config.key_id),
             Some(&config.key_secret),
@@ -24,7 +25,7 @@ impl S3Archiver {
             None,
             None,
         )
-        .map_err(|_| ServerError::InvalidS3Credentials)?;
+        .map_err(|_| ServerArchiverError::InvalidS3Credentials)?;
 
         let bucket = Bucket::new(
             &config.bucket,
@@ -42,14 +43,14 @@ impl S3Archiver {
             },
             credentials,
         )
-        .map_err(|_| ServerError::CannotInitializeS3Archiver)?;
+        .map_err(|_| ServerArchiverError::CannotInitializeS3Archiver)?;
         Ok(Self {
             bucket,
             tmp_upload_dir: config.tmp_upload_dir,
         })
     }
 
-    async fn copy_file_to_tmp(&self, path: &str) -> Result<String, ServerError> {
+    async fn copy_file_to_tmp(&self, path: &str) -> Result<String, ServerArchiverError> {
         debug!(
             "Copying file: {path} to temporary S3 upload directory: {}",
             self.tmp_upload_dir
@@ -58,9 +59,17 @@ impl S3Archiver {
         let destination = Path::new(&self.tmp_upload_dir).join(path);
         let destination_path = destination.to_str().unwrap_or_default().to_owned();
         debug!("Creating temporary S3 upload directory: {destination_path}");
-        fs::create_dir_all(destination.parent().unwrap()).await?;
+        fs::create_dir_all(destination.parent().unwrap())
+            .await
+            .with_error(|_| {
+                format!(
+                    "Failed to create temporary S3 upload directory for path: {destination_path}"
+                )
+            })?;
         debug!("Copying file: {path} to temporary S3 upload path: {destination_path}");
-        fs::copy(source, destination).await?;
+        fs::copy(source, &destination).await.with_error(|_| {
+            format!("Failed to copy file: {path} to temporary S3 upload path: {destination_path}")
+        })?;
         debug!("File: {path} copied to temporary S3 upload path: {destination_path}");
         Ok(destination_path)
     }
@@ -68,11 +77,11 @@ impl S3Archiver {
 
 #[async_trait]
 impl Archiver for S3Archiver {
-    async fn init(&self) -> Result<(), ServerError> {
+    async fn init(&self) -> Result<(), ServerArchiverError> {
         let response = self.bucket.list("/".to_string(), None).await;
         if let Err(error) = response {
             error!("Cannot initialize S3 archiver: {error}");
-            return Err(ServerError::CannotInitializeS3Archiver);
+            return Err(ServerArchiverError::CannotInitializeS3Archiver);
         }
 
         if Path::new(&self.tmp_upload_dir).exists() {
@@ -94,7 +103,7 @@ impl Archiver for S3Archiver {
         &self,
         file: &str,
         base_directory: Option<String>,
-    ) -> Result<bool, ServerError> {
+    ) -> Result<bool, ServerArchiverError> {
         debug!("Checking if file: {file} is archived on S3.");
         let base_directory = base_directory.as_deref().unwrap_or_default();
         let destination = Path::new(&base_directory).join(file);
@@ -119,15 +128,19 @@ impl Archiver for S3Archiver {
         &self,
         files: &[&str],
         base_directory: Option<String>,
-    ) -> Result<(), ServerError> {
+    ) -> Result<(), ServerArchiverError> {
         for path in files {
             if !Path::new(path).exists() {
-                return Err(ServerError::FileToArchiveNotFound(path.to_string()));
+                return Err(ServerArchiverError::FileToArchiveNotFound {
+                    file_path: path.to_string(),
+                });
             }
 
             let source = self.copy_file_to_tmp(path).await?;
             debug!("Archiving file: {source} on S3.");
-            let mut file = file::open(&source).await?;
+            let mut file = file::open(&source)
+                .await
+                .with_error(|_| format!("Failed to open source file: {source} for archiving"))?;
             let base_directory = base_directory.as_deref().unwrap_or_default();
             let destination = Path::new(&base_directory).join(path);
             let destination_path = destination.to_str().unwrap_or_default().to_owned();
@@ -137,21 +150,31 @@ impl Archiver for S3Archiver {
                 .await;
             if let Err(error) = response {
                 error!("Cannot archive file: {path} on S3: {}", error);
-                fs::remove_file(&source).await?;
-                return Err(ServerError::CannotArchiveFile(path.to_string()));
+                fs::remove_file(&source).await.with_error(|_| {
+                    format!("Failed to remove temporary file: {source} after S3 failure")
+                })?;
+                return Err(ServerArchiverError::CannotArchiveFile {
+                    file_path: path.to_string(),
+                });
             }
 
             let response = response.unwrap();
             let status = response.status_code();
             if status == 200 {
                 debug!("Archived file: {path} on S3.");
-                fs::remove_file(&source).await?;
+                fs::remove_file(&source).await.with_error(|_| {
+                    format!("Failed to remove temporary file: {source} after successful archive")
+                })?;
                 continue;
             }
 
             error!("Cannot archive file: {path} on S3, received an invalid status code: {status}.");
-            fs::remove_file(&source).await?;
-            return Err(ServerError::CannotArchiveFile(path.to_string()));
+            fs::remove_file(&source).await.with_error(|_| {
+                format!("Failed to remove temporary file: {source} after invalid status code")
+            })?;
+            return Err(ServerArchiverError::CannotArchiveFile {
+                file_path: path.to_string(),
+            });
         }
         Ok(())
     }

@@ -1,5 +1,5 @@
 use crate::configs::server::ServerConfig;
-use crate::server_error::ServerError;
+use crate::server_error::ServerConfigError;
 use crate::IGGY_ROOT_PASSWORD_ENV;
 use async_trait::async_trait;
 use figment::{
@@ -24,7 +24,7 @@ const SECRET_KEYS: [&str; 6] = [
 
 #[async_trait]
 pub trait ConfigProvider {
-    async fn load_config(&self) -> Result<ServerConfig, ServerError>;
+    async fn load_config(&self) -> Result<ServerConfig, ServerConfigError>;
 }
 
 #[derive(Debug)]
@@ -212,16 +212,16 @@ impl Provider for CustomEnvProvider {
     }
 }
 
-pub fn resolve(config_provider_type: &str) -> Result<Box<dyn ConfigProvider>, ServerError> {
+pub fn resolve(config_provider_type: &str) -> Result<Box<dyn ConfigProvider>, ServerConfigError> {
     match config_provider_type {
         DEFAULT_CONFIG_PROVIDER => {
             let path =
                 env::var("IGGY_CONFIG_PATH").unwrap_or_else(|_| DEFAULT_CONFIG_PATH.to_string());
             Ok(Box::new(FileConfigProvider::new(path)))
         }
-        _ => Err(ServerError::InvalidConfigurationProvider(
-            config_provider_type.to_string(),
-        )),
+        _ => Err(ServerConfigError::InvalidConfigurationProvider {
+            provider_type: config_provider_type.to_string(),
+        }),
     }
 }
 
@@ -254,14 +254,11 @@ fn file_exists<P: AsRef<Path>>(path: P) -> bool {
 
 #[async_trait]
 impl ConfigProvider for FileConfigProvider {
-    async fn load_config(&self) -> Result<ServerConfig, ServerError> {
+    async fn load_config(&self) -> Result<ServerConfig, ServerConfigError> {
         println!("Loading config from path: '{}'...", self.path);
 
         if !file_exists(&self.path) {
-            return Err(ServerError::CannotLoadConfiguration(format!(
-                "Cannot find configuration file at path: '{}'.",
-                self.path,
-            )));
+            return Err(ServerConfigError::CannotLoadConfiguration);
         }
 
         let config_builder = Figment::new();
@@ -269,8 +266,8 @@ impl ConfigProvider for FileConfigProvider {
         let config_builder = match extension {
             "json" => config_builder.merge(Json::file(&self.path)),
             "toml" => config_builder.merge(Toml::file(&self.path)),
-            e => {
-                return Err(ServerError::CannotLoadConfiguration(format!("Cannot load configuration: invalid file extension: {e}, only .json and .toml are supported.")));
+            _ => {
+                return Err(ServerConfigError::CannotLoadConfiguration);
             }
         };
 
@@ -284,10 +281,7 @@ impl ConfigProvider for FileConfigProvider {
                 println!("Using Config: {config}");
                 Ok(config)
             }
-            Err(figment_error) => Err(ServerError::CannotLoadConfiguration(format!(
-                "Failed to load configuration: {}",
-                figment_error
-            ))),
+            Err(_) => Err(ServerConfigError::CannotLoadConfiguration),
         }
     }
 }

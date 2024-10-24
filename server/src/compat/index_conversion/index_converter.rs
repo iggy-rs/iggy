@@ -2,7 +2,7 @@ use std::path::Path;
 use std::time::Duration;
 
 use crate::streaming::utils::file;
-use crate::{server_error::ServerError, streaming::segments::storage::INDEX_SIZE};
+use crate::{server_error::CompatError, streaming::segments::storage::INDEX_SIZE};
 use bytes::{BufMut, BytesMut};
 use tokio::fs::OpenOptions;
 use tokio::io::{AsyncReadExt, AsyncWriteExt, BufReader, BufWriter};
@@ -22,18 +22,18 @@ impl IndexConverter {
         }
     }
 
-    pub async fn migrate(&self) -> Result<(), ServerError> {
+    pub async fn migrate(&self) -> Result<(), CompatError> {
         let indexes = self.convert_indexes().await?;
         self.replace_with_converted(indexes).await?;
 
         Ok(())
     }
 
-    pub async fn needs_migration(&self) -> Result<bool, ServerError> {
+    pub async fn needs_migration(&self) -> Result<bool, CompatError> {
         Ok(file::exists(&self.time_index_path).await?)
     }
 
-    async fn convert_indexes(&self) -> Result<Vec<u8>, ServerError> {
+    async fn convert_indexes(&self) -> Result<Vec<u8>, CompatError> {
         let index_file = file::open(&self.index_path).await?;
         let time_index_file = file::open(&self.time_index_path).await?;
 
@@ -65,9 +65,7 @@ impl IndexConverter {
             let timestamp = timestamp_result?;
 
             if relative_offset != time_relative_offset {
-                return Err(ServerError::IndexMigrationError(
-                    "Mismatched relative offsets in normal index: {relative_offset} vs time index: {time_relative_offset}".to_string(),
-                ));
+                return Err(CompatError::IndexMigrationError);
             }
 
             let mut new_index_entry = BytesMut::with_capacity(INDEX_SIZE as usize); // u32 + u32 + u64
@@ -82,22 +80,19 @@ impl IndexConverter {
         Ok(new_index_writer.into_inner())
     }
 
-    async fn replace_with_converted(&self, indexes: Vec<u8>) -> Result<(), ServerError> {
+    async fn replace_with_converted(&self, indexes: Vec<u8>) -> Result<(), CompatError> {
         file::remove(&self.index_path).await?;
         file::remove(&self.time_index_path).await?;
 
-        let dir_path =
-            Path::new(&self.index_path)
-                .parent()
-                .ok_or(ServerError::IndexMigrationError(
-                    "Failed to get parent directory of index file".to_string(),
-                ))?;
+        let dir_path = Path::new(&self.index_path)
+            .parent()
+            .ok_or(CompatError::IndexMigrationError)?;
 
         let dir = OpenOptions::new().read(true).open(dir_path).await?;
 
-        dir.sync_all().await.map_err(|e| {
-            ServerError::IndexMigrationError(format!("Failed to sync data for directory: {}", e))
-        })?;
+        dir.sync_all()
+            .await
+            .map_err(|_| CompatError::IndexMigrationError)?;
 
         let wait_duration = Duration::from_secs(2);
         let sleep_duration = Duration::from_millis(10);

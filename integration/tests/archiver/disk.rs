@@ -1,7 +1,6 @@
 use crate::archiver::DiskArchiverSetup;
-use server::archiver::Archiver;
-use server::server_error::ServerError;
 use server::streaming::utils::file;
+use server::{archiver::Archiver, server_error::ArchiverError};
 use std::path::Path;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 
@@ -89,7 +88,7 @@ async fn should_fail_when_file_to_archive_does_not_exist() {
 
     assert!(result.is_err());
     let error = result.err().unwrap();
-    assert!(matches!(error, ServerError::FileToArchiveNotFound(_)));
+    assert!(matches!(error, ArchiverError::FileToArchiveNotFound { .. }));
 }
 
 async fn create_file(path: &str, content: &str) {

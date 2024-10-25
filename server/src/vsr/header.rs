@@ -1,5 +1,5 @@
-use crate::versioning::SemanticVersion;
 use super::{Operation, ProtocolVersion};
+use crate::versioning::SemanticVersion;
 
 //TODO: maybe name it differently, to distinguish between different headers ? dunno.
 pub enum Header {
@@ -13,9 +13,13 @@ impl Header {
     pub fn is_prepare(&self) -> bool {
         matches!(self, Header::Prepare(_))
     }
+
+    pub fn is_prepare_ok(&self) -> bool {
+        matches!(self, Header::PrepareOk(_))
+    }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Default, Debug, Clone)]
 pub struct Prepare {
     pub checksum: u128,
     pub checksum_body: u128,
@@ -43,6 +47,8 @@ pub struct Prepare {
     pub request_number: u32,
     pub operation: Operation,
 }
+
+//TODO: Create a method for constructing prepare.
 
 #[derive(Debug, Clone)]
 pub struct PrepareOk {

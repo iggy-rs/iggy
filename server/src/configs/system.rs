@@ -120,7 +120,6 @@ pub struct RecoveryConfig {
 pub struct SegmentConfig {
     pub size: IggyByteSize,
     pub cache_indexes: bool,
-    pub cache_time_indexes: bool,
     #[serde_as(as = "DisplayFromStr")]
     pub message_expiry: IggyExpiry,
     pub archive_expired: bool,

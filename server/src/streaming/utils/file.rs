@@ -26,6 +26,10 @@ pub async fn rename(old_path: &str, new_path: &str) -> Result<(), std::io::Error
     tokio::fs::rename(Path::new(old_path), Path::new(new_path)).await
 }
 
+pub async fn exists(path: &str) -> Result<bool, std::io::Error> {
+    tokio::fs::try_exists(path).await
+}
+
 pub async fn folder_size<P>(path: P) -> std::io::Result<u64>
 where
     P: Into<PathBuf> + AsRef<Path>,

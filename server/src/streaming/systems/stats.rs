@@ -1,8 +1,8 @@
 use crate::streaming::session::Session;
 use crate::streaming::systems::system::System;
-use iggy::error::IggyError;
 use iggy::locking::IggySharedMutFn;
 use iggy::models::stats::Stats;
+use iggy::{error::IggyError, utils::duration::IggyDuration};
 use std::sync::OnceLock;
 use sysinfo::{Pid, ProcessesToUpdate, System as SysinfoSystem};
 use tokio::sync::Mutex;
@@ -62,7 +62,7 @@ impl System {
             stats.process_id = process.pid().as_u32();
             stats.cpu_usage = process.cpu_usage();
             stats.memory_usage = process.memory().into();
-            stats.run_time = process.run_time().into();
+            stats.run_time = IggyDuration::new_from_secs(process.run_time());
             stats.start_time = process.start_time().into();
 
             let disk_usage = process.disk_usage();

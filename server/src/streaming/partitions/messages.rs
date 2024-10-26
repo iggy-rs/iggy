@@ -37,38 +37,35 @@ impl Partition {
         let mut found_index = None;
         let mut start_offset = self.segments.last().unwrap().start_offset;
         // Since index cache is configurable globally, not per segment we can handle it this way.
-        let cache_time_index = self.config.segment.cache_time_indexes;
-        if !cache_time_index {
+        if !self.config.segment.cache_indexes {
             for segment in self.segments.iter() {
-                let time_index = segment
+                let index = segment
                     .storage
                     .as_ref()
                     .segment
-                    .try_load_time_index_for_timestamp(segment, timestamp)
+                    .try_load_index_for_timestamp(segment, timestamp)
                     .await?;
-                if time_index.is_none() {
+                if index.is_none() {
                     continue;
                 } else {
-                    found_index = time_index;
-                    start_offset =
-                        segment.start_offset + found_index.unwrap().relative_offset as u64;
+                    found_index = index;
+                    start_offset = segment.start_offset + found_index.unwrap().offset as u64;
                     break;
                 }
             }
         } else {
             start_offset = self.segments.first().unwrap().start_offset;
             for segment in self.segments.iter().rev() {
-                let time_indexes = segment.time_indexes.as_ref().unwrap();
-                let time_index = time_indexes
+                let indexes = segment.indexes.as_ref().unwrap();
+                let index = indexes
                     .iter()
                     .rposition(|time_index| time_index.timestamp <= timestamp)
-                    .map(|idx| time_indexes[idx]);
-                if time_index.is_none() {
+                    .map(|idx| indexes[idx]);
+                if index.is_none() {
                     continue;
                 } else {
-                    found_index = time_index;
-                    start_offset =
-                        segment.start_offset + found_index.unwrap().relative_offset as u64;
+                    found_index = index;
+                    start_offset = segment.start_offset + found_index.unwrap().offset as u64;
                     break;
                 }
             }

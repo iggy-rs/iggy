@@ -4,6 +4,7 @@ use crate::streaming::session::Session;
 use crate::streaming::systems::system::SharedSystem;
 use crate::streaming::utils::crypto;
 use anyhow::Result;
+use error_set::ResultContext;
 use iggy::error::IggyError;
 use iggy::users::change_password::ChangePassword;
 use tracing::{debug, instrument};
@@ -25,7 +26,13 @@ pub async fn handle(
                 &command.current_password,
                 &command.new_password,
             )
-            .await?;
+            .await
+            .with_error(|_| {
+                format!(
+                    "USER_HANDLER - failed to change password for user_id: {}, session: {session}",
+                    command.user_id
+                )
+            })?;
     }
 
     // For the security of the system, we hash the password before storing it in metadata.
@@ -40,7 +47,13 @@ pub async fn handle(
                 new_password: crypto::hash_password(&command.new_password),
             }),
         )
-        .await?;
+        .await
+        .with_error(|_| {
+            format!(
+            "USER_HANDLER - failed to apply change password for user_id: {}, session: {session}",
+            command.user_id
+        )
+        })?;
     sender.send_empty_ok_response().await?;
     Ok(())
 }

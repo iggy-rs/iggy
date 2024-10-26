@@ -1513,6 +1513,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8a8a70e1c5e3557e22af5af1e78f546303c9953638e60aee2c547322076cfabf"
 dependencies = [
  "error_set_impl",
+ "tracing",
 ]
 
 [[package]]

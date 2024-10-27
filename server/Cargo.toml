@@ -31,6 +31,7 @@ futures = "0.3.30"
 iggy = { path = "../sdk" }
 jsonwebtoken = "9.3.0"
 log = "0.4.20"
+memmap2 = "0.9.5"
 moka = { version = "0.12.5", features = ["future"] }
 openssl = { version = "0.10.66", features = ["vendored"] }
 opentelemetry = { version = "0.26.0", features = ["trace", "logs"] }

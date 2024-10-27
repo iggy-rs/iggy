@@ -117,14 +117,12 @@ impl Segment {
             return Ok(EMPTY_MESSAGES.into_iter().map(Arc::new).collect());
         }
 
-        if let Some(indices) = &self.indexes {
+        if self.indexes.is_some() {
             let relative_start_offset = (start_offset - self.start_offset) as u32;
             let relative_end_offset = (end_offset - self.start_offset) as u32;
-            let index_range = match self.load_highest_lower_bound_index(
-                indices,
-                relative_start_offset,
-                relative_end_offset,
-            ) {
+            let index_range = match self
+                .load_highest_lower_bound_index(relative_start_offset, relative_end_offset)
+            {
                 Ok(range) => range,
                 Err(_) => {
                     trace!(

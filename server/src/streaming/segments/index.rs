@@ -1,7 +1,75 @@
 use crate::streaming::segments::segment::Segment;
 use iggy::error::IggyError;
 use iggy::error::IggyError::InvalidOffset;
+use memmap2::Mmap;
+use std::ops::Deref;
+use std::ops::Index as IndexOp;
 
+#[derive(Debug)]
+pub enum Indexes {
+    InMemory(Vec<Index>),
+    MemoryMapped { mmap: Mmap },
+}
+
+impl From<Vec<Index>> for Indexes {
+    fn from(indexes: Vec<Index>) -> Self {
+        Indexes::InMemory(indexes)
+    }
+}
+
+impl Indexes {
+    pub fn push(&mut self, index: Index) {
+        match self {
+            Indexes::InMemory(vec) => {
+                vec.push(index);
+            }
+            Indexes::MemoryMapped { .. } => {
+                panic!("Cannot push to memory-mapped indexes");
+            }
+        }
+    }
+}
+
+impl Deref for Indexes {
+    type Target = [Index];
+
+    fn deref(&self) -> &Self::Target {
+        match self {
+            Indexes::InMemory(vec) => vec.as_slice(),
+            Indexes::MemoryMapped { mmap, .. } => {
+                let bytes = &mmap[..];
+                let len = bytes.len() / std::mem::size_of::<Index>();
+                let ptr = bytes.as_ptr() as *const Index;
+                unsafe { std::slice::from_raw_parts(ptr, len) }
+            }
+        }
+    }
+}
+
+impl IndexOp<usize> for Indexes {
+    type Output = Index;
+
+    fn index(&self, idx: usize) -> &Self::Output {
+        &self.deref()[idx]
+    }
+}
+
+impl Default for Indexes {
+    fn default() -> Self {
+        Indexes::InMemory(Vec::new())
+    }
+}
+
+impl<'a> IntoIterator for &'a Indexes {
+    type Item = &'a Index;
+    type IntoIter = std::slice::Iter<'a, Index>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.deref().iter()
+    }
+}
+
+#[repr(C)]
 #[derive(Debug, Eq, Clone, Copy, Default)]
 pub struct Index {
     pub offset: u32,
@@ -22,12 +90,19 @@ pub struct IndexRange {
 }
 
 impl Segment {
+    pub fn get_indexes_slice(&self) -> &[Index] {
+        match &self.indexes {
+            Some(indexes) => indexes,
+            None => &[],
+        }
+    }
+
     pub fn load_highest_lower_bound_index(
         &self,
-        indices: &[Index],
         start_offset: u32,
         end_offset: u32,
     ) -> Result<IndexRange, IggyError> {
+        let indices = self.get_indexes_slice();
         let starting_offset_idx = binary_search_index(indices, start_offset);
         let ending_offset_idx = binary_search_index(indices, end_offset);
 
@@ -143,16 +218,16 @@ mod tests {
                 timestamp: 5000,
             },
         ];
-        segment.indexes.as_mut().unwrap().extend(indexes);
+        if let Some(Indexes::InMemory(vec)) = segment.indexes.as_mut() {
+            vec.extend(indexes);
+        }
     }
 
     #[test]
     fn should_find_both_indices() {
         let mut segment = create_segment();
         create_test_indices(&mut segment);
-        let result = segment
-            .load_highest_lower_bound_index(segment.indexes.as_ref().unwrap(), 15, 45)
-            .unwrap();
+        let result = segment.load_highest_lower_bound_index(15, 45).unwrap();
 
         assert_eq!(result.start.offset, 20);
         assert_eq!(result.end.offset, 50);
@@ -162,16 +237,12 @@ mod tests {
     fn start_and_end_index_should_be_equal() {
         let mut segment = create_segment();
         create_test_indices(&mut segment);
-        let result_end_range = segment
-            .load_highest_lower_bound_index(segment.indexes.as_ref().unwrap(), 65, 100)
-            .unwrap();
+        let result_end_range = segment.load_highest_lower_bound_index(65, 100).unwrap();
 
         assert_eq!(result_end_range.start.offset, 65);
         assert_eq!(result_end_range.end.offset, 65);
 
-        let result_start_range = segment
-            .load_highest_lower_bound_index(segment.indexes.as_ref().unwrap(), 0, 5)
-            .unwrap();
+        let result_start_range = segment.load_highest_lower_bound_index(0, 5).unwrap();
         assert_eq!(result_start_range.start.offset, 5);
         assert_eq!(result_start_range.end.offset, 5);
     }
@@ -180,9 +251,7 @@ mod tests {
     fn should_clamp_last_index_when_out_of_range() {
         let mut segment = create_segment();
         create_test_indices(&mut segment);
-        let result = segment
-            .load_highest_lower_bound_index(segment.indexes.as_ref().unwrap(), 5, 100)
-            .unwrap();
+        let result = segment.load_highest_lower_bound_index(5, 100).unwrap();
 
         assert_eq!(result.start.offset, 5);
         assert_eq!(result.end.offset, 65);
@@ -193,8 +262,7 @@ mod tests {
         let mut segment = create_segment();
         create_test_indices(&mut segment);
 
-        let result =
-            segment.load_highest_lower_bound_index(segment.indexes.as_ref().unwrap(), 100, 200);
+        let result = segment.load_highest_lower_bound_index(100, 200);
         assert!(result.is_err());
     }
 }

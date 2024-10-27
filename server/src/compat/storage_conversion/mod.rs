@@ -8,7 +8,7 @@ use crate::state::State;
 use crate::streaming::batching::message_batch::RetainedMessageBatch;
 use crate::streaming::partitions::partition::{ConsumerOffset, Partition};
 use crate::streaming::persistence::persister::Persister;
-use crate::streaming::segments::index::{Index, IndexRange};
+use crate::streaming::segments::index::{Index, IndexRange, Indexes};
 use crate::streaming::segments::segment::Segment;
 use crate::streaming::storage::{
     PartitionStorage, SegmentStorage, StreamStorage, SystemInfoStorage, SystemStorage, TopicStorage,
@@ -246,8 +246,8 @@ impl SegmentStorage for NoopSegmentStorage {
         Ok(())
     }
 
-    async fn load_all_indexes(&self, _segment: &Segment) -> Result<Vec<Index>, IggyError> {
-        Ok(vec![])
+    async fn load_all_indexes(&self, _segment: &Segment) -> Result<Indexes, IggyError> {
+        Ok(Indexes::default())
     }
 
     async fn load_index_range(

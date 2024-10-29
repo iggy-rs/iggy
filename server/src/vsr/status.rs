@@ -1,4 +1,4 @@
-#[derive(Default)]
+#[derive(Debug, Default, PartialEq, Eq)]
 pub enum Status {
     #[default]
     Normal,

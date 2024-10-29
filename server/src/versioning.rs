@@ -1,10 +1,11 @@
 use iggy::error::IggyError;
+use std::cmp::Ordering;
 use std::fmt::Display;
 use std::str::FromStr;
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 
-#[derive(Default, Debug, Clone, Copy)]
+#[derive(Default, Debug, Eq)]
 pub struct SemanticVersion {
     pub major: u32,
     pub minor: u32,
@@ -73,6 +74,24 @@ impl SemanticVersion {
         }
 
         Err(IggyError::InvalidVersion(self.to_string()))
+    }
+}
+
+impl PartialEq for SemanticVersion {
+    fn eq(&self, other: &Self) -> bool {
+        self.major == other.major && self.minor == other.minor && self.patch == other.patch
+    }
+}
+
+impl PartialOrd for SemanticVersion {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        if self.major != other.major {
+            return self.major.partial_cmp(&other.major);
+        }
+        if self.minor != other.minor {
+            return self.minor.partial_cmp(&other.minor);
+        }
+        self.patch.partial_cmp(&other.patch)
     }
 }
 

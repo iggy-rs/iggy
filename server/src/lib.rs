@@ -22,6 +22,7 @@ pub mod server_error;
 pub mod state;
 pub mod streaming;
 pub mod tcp;
+pub mod utils;
 pub mod versioning;
 
 pub(crate) mod vsr;

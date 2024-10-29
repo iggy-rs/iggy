@@ -1,25 +1,34 @@
 use super::{Operation, ProtocolVersion};
 use crate::versioning::SemanticVersion;
 
-//TODO: maybe name it differently, to distinguish between different headers ? dunno.
-pub enum Header {
-    // TODO: Add Request header, for now let's just use the `Command` enum
-    // and ignore the request_number and all of the client side data required by VSR.
-    Prepare(Prepare),
-    PrepareOk(PrepareOk),
+pub trait IggyHeader {}
+
+#[derive(Default, Debug)]
+pub struct Request {
+    pub checksum: u128,
+    pub checksum_body: u128,
+    // Reserved for further usage, for encryption.
+    pub nonce_reserved: u128,
+    pub cluster: u128,
+    pub size: u32,
+    // Reserved for further usage.
+    pub epoch: u32,
+    pub view_number: u32,
+    pub version: SemanticVersion,
+    // Version of VSR protocol.
+    pub protocol_version: ProtocolVersion,
+    // Currently not used, since our body has that information in it's payload.
+    pub command: u32,
+    pub replica: u8,
+    // Reserved for further usage.
+    pub session_id: u64,
+    pub timestamp: u64,
+    pub request_number: u32,
+    pub operation: Operation,
 }
 
-impl Header {
-    pub fn is_prepare(&self) -> bool {
-        matches!(self, Header::Prepare(_))
-    }
-
-    pub fn is_prepare_ok(&self) -> bool {
-        matches!(self, Header::PrepareOk(_))
-    }
-}
-
-#[derive(Default, Debug, Clone)]
+//TODO: Create a method for constructing prepare.
+#[derive(Default, Debug)]
 pub struct Prepare {
     pub checksum: u128,
     pub checksum_body: u128,
@@ -30,7 +39,7 @@ pub struct Prepare {
     // Reserved for further usage.
     pub epoch: u32,
     pub view_number: u32,
-    pub release: SemanticVersion,
+    pub version: SemanticVersion,
     // Version of VSR protocol.
     pub protocol_version: ProtocolVersion,
     // Currently not used, since our body has that information in it's payload.
@@ -48,9 +57,7 @@ pub struct Prepare {
     pub operation: Operation,
 }
 
-//TODO: Create a method for constructing prepare.
-
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct PrepareOk {
     pub checksum: u128,
     pub checksum_body: u128,
@@ -61,7 +68,6 @@ pub struct PrepareOk {
     // Reserved for further usage.
     pub epoch: u32,
     pub view: u32,
-    pub release: SemanticVersion,
     // Version of VSR Protocol
     pub protocol_version: ProtocolVersion,
     // Currently not used, since our body has that information in it's payload.

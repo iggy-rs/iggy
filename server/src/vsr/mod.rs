@@ -1,8 +1,10 @@
+use crate::utils::bitset::OptimalBitset;
+
 pub(crate) mod client_table;
+pub(crate) mod consensus;
 pub(crate) mod header;
 pub(crate) mod message;
 pub(crate) mod replica;
-pub(crate) mod consensus;
 pub(crate) mod status;
 
 // Types
@@ -11,9 +13,9 @@ pub(crate) type CommitNumber = u64;
 pub(crate) type ViewNumber = u32;
 pub(crate) type Version = usize;
 pub(crate) type ProtocolVersion = u16;
-pub(crate) type ReplicaCount = u8; // TODO: Is this enough? 255 replicas.
+pub(crate) type ReplicaCount = u8;
 
-#[derive(Default, Debug, Clone)]
+#[derive(Default, Debug, PartialEq, Eq)]
 pub(crate) enum Operation {
     /// Authorization
     Auth,
@@ -24,11 +26,20 @@ pub(crate) enum Operation {
     Messages,
 }
 
-// TODO: const generics ?
 pub(crate) struct QuorumCounter<T> {
     value: T,
-    acks: ReplicaCount,
+    acks: OptimalBitset,
     quorum: bool,
+}
+
+impl<T> QuorumCounter<T> {
+    pub fn new(value: T, acks: OptimalBitset) -> Self {
+        Self {
+            value,
+            acks,
+            quorum: false
+        }
+    }
 }
 
 impl<T> Default for QuorumCounter<T>

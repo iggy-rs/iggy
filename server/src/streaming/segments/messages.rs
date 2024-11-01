@@ -28,7 +28,6 @@ impl Segment {
         count: u32,
     ) -> Result<Vec<Arc<RetainedMessage>>, IggyError> {
         if count == 0 {
-            warn!("Empty messages, count = 0");
             return Ok(EMPTY_MESSAGES.into_iter().map(Arc::new).collect());
         }
 
@@ -95,7 +94,6 @@ impl Segment {
         start_offset: u64,
         end_offset: u64,
     ) -> Vec<Arc<RetainedMessage>> {
-        warn!("Loading messages from unsaved_buffer");
         let batch_accumulator = self.unsaved_messages.as_ref().unwrap();
         batch_accumulator.get_messages_by_offset(start_offset, end_offset)
     }
@@ -135,7 +133,6 @@ impl Segment {
                         start_offset,
                         end_offset
                     );
-                    warn!("Empty messages, error when getting index");
                     return Ok(EMPTY_MESSAGES.into_iter().map(Arc::new).collect());
                 }
             };
@@ -175,10 +172,6 @@ impl Segment {
             .to_messages_with_filter(messages_count, &|msg| {
                 msg.offset >= start_offset && msg.offset <= end_offset
             });
-
-        if messages.len() == 0 {
-            warn!("Loading messages with count 0");
-        }
         trace!(
             "Loaded {} messages from disk, segment start offset: {}, end offset: {}.",
             messages.len(),

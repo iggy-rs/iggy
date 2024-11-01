@@ -97,6 +97,7 @@ mod tests {
             topic_id,
             partition_id,
             start_offset,
+            None,
             config,
             storage,
             IggyExpiry::NeverExpire,

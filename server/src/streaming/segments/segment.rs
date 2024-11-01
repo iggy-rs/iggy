@@ -65,6 +65,7 @@ impl Segment {
         topic_id: u32,
         partition_id: u32,
         start_offset: u64,
+        unsaved_messages: Option<BatchAccumulator>,
         config: Arc<SystemConfig>,
         storage: Arc<SystemStorage>,
         message_expiry: IggyExpiry,

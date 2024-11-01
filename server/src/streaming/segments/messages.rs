@@ -9,7 +9,7 @@ use crate::streaming::sizeable::Sizeable;
 use iggy::error::IggyError;
 use std::sync::atomic::Ordering;
 use std::sync::Arc;
-use tracing::{info, trace, warn};
+use tracing::{error, info, trace, warn};
 
 const EMPTY_MESSAGES: Vec<RetainedMessage> = vec![];
 
@@ -28,6 +28,7 @@ impl Segment {
         count: u32,
     ) -> Result<Vec<Arc<RetainedMessage>>, IggyError> {
         if count == 0 {
+            warn!("Empty messages, count = 0");
             return Ok(EMPTY_MESSAGES.into_iter().map(Arc::new).collect());
         }
 
@@ -94,6 +95,7 @@ impl Segment {
         start_offset: u64,
         end_offset: u64,
     ) -> Vec<Arc<RetainedMessage>> {
+        warn!("Loading messages from unsaved_buffer");
         let batch_accumulator = self.unsaved_messages.as_ref().unwrap();
         batch_accumulator.get_messages_by_offset(start_offset, end_offset)
     }
@@ -128,11 +130,12 @@ impl Segment {
             ) {
                 Ok(range) => range,
                 Err(_) => {
-                    trace!(
+                    error!(
                         "Cannot load messages from disk, index range not found: {} - {}.",
                         start_offset,
                         end_offset
                     );
+                    warn!("Empty messages, error when getting index");
                     return Ok(EMPTY_MESSAGES.into_iter().map(Arc::new).collect());
                 }
             };
@@ -173,6 +176,9 @@ impl Segment {
                 msg.offset >= start_offset && msg.offset <= end_offset
             });
 
+        if messages.len() == 0 {
+            warn!("Loading messages with count 0");
+        }
         trace!(
             "Loaded {} messages from disk, segment start offset: {}, end offset: {}.",
             messages.len(),
@@ -281,6 +287,7 @@ impl Segment {
             self.unsaved_messages = Some(batch_accumulator);
         }
         let saved_bytes = storage.save_batches(self, batch).await?;
+        assert_eq!(saved_bytes, batch_size);
         storage.save_index(&self.index_path, index).await?;
         storage
             .save_time_index(&self.time_index_path, time_index)
@@ -305,7 +312,6 @@ impl Segment {
         if self.is_full().await {
             self.end_offset = self.current_offset;
             self.is_closed = true;
-            self.unsaved_messages = None;
             info!(
                 "Closed segment with start offset: {} for partition with ID: {}.",
                 self.start_offset, self.partition_id

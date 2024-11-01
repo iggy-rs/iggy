@@ -132,10 +132,12 @@ impl Partition {
             self.partition_id
         );
         if self.segments.is_empty() {
+            warn!("Empty messages segment is empty");
             return Ok(EMPTY_MESSAGES.into_iter().map(Arc::new).collect());
         }
 
         if start_offset > self.current_offset {
+            warn!("Empty messages offset is greater than current_offset");
             return Ok(EMPTY_MESSAGES.into_iter().map(Arc::new).collect());
         }
 
@@ -143,10 +145,14 @@ impl Partition {
 
         let messages = self.try_get_messages_from_cache(start_offset, end_offset);
         if let Some(messages) = messages {
+            warn!("getting messages from cache");
             return Ok(messages);
         }
 
         let segments = self.filter_segments_by_offsets(start_offset, end_offset);
+        if segments.len() == 0 {
+            warn!("Empty messages no segments");
+        }
         match segments.len() {
             0 => Ok(EMPTY_MESSAGES.into_iter().map(Arc::new).collect()),
             1 => segments[0].get_messages(start_offset, count).await,
@@ -264,6 +270,7 @@ impl Partition {
     ) -> Option<Vec<Arc<RetainedMessage>>> {
         let cache = self.cache.as_ref()?;
         if cache.is_empty() || start_offset > end_offset || end_offset > self.current_offset {
+            warn!("Empty messages cache is empty");
             return None;
         }
 
@@ -277,6 +284,7 @@ impl Partition {
         if start_offset >= first_buffered_offset {
             return Some(self.load_messages_from_cache(start_offset, end_offset));
         }
+        warn!("Empty messages cache offset is greater or equal to cache start_offset");
         None
     }
 
@@ -340,11 +348,13 @@ impl Partition {
         );
 
         if self.cache.is_none() || start_offset > end_offset {
+            warn!("Empty messages cache is none or start_offset > end_offset");
             return EMPTY_MESSAGES.into_iter().map(Arc::new).collect();
         }
 
         let cache = self.cache.as_ref().unwrap();
         if cache.is_empty() {
+            warn!("Empty messages cache is empty");
             return EMPTY_MESSAGES.into_iter().map(Arc::new).collect();
         }
 
@@ -386,11 +396,13 @@ impl Partition {
             let last_segment = self.segments.last_mut().ok_or(IggyError::SegmentNotFound)?;
             if last_segment.is_closed {
                 let start_offset = last_segment.end_offset + 1;
+                let unsaved_messages = last_segment.unsaved_messages.clone();
                 trace!(
                     "Current segment is closed, creating new segment with start offset: {} for partition with ID: {}...",
                     start_offset, self.partition_id
                 );
-                self.add_persisted_segment(start_offset).await?;
+                // Rolling over messages that couldn't be persisted during segment close.
+                self.add_persisted_segment(unsaved_messages, start_offset).await?;
             }
         }
 

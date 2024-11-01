@@ -131,6 +131,7 @@ impl Consumer {
         }
 
         current_iteration = 0;
+        let mut previous_start_offset = 0;
         let start_timestamp = Instant::now();
         while received_messages < total_messages {
             let offset = current_iteration * self.messages_per_batch as u64;
@@ -173,7 +174,7 @@ impl Consumer {
                 );
                 continue;
             }
-
+            assert!(previous_start_offset <= polled_messages.messages[0].offset);
             if polled_messages.messages.len() != self.messages_per_batch as usize {
                 warn!(
                     "Consumer #{} → expected {} messages, but got {} messages, retrying...",
@@ -183,6 +184,7 @@ impl Consumer {
                 );
                 continue;
             }
+            previous_start_offset = polled_messages.messages[0].offset;
 
             latencies.push(latency_end);
             received_messages += polled_messages.messages.len() as u64;

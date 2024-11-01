@@ -498,7 +498,7 @@ async fn delete_segments(
 
                 if partition.get_segments().is_empty() {
                     let start_offset = last_end_offset + 1;
-                    partition.add_persisted_segment(start_offset).await?;
+                    partition.add_persisted_segment(None, start_offset).await?;
                 }
             }
             Err(error) => {

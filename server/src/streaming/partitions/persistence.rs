@@ -48,7 +48,7 @@ impl Partition {
             .partition
             .delete_consumer_offsets(&self.consumer_group_offsets_path)
             .await?;
-        self.add_persisted_segment(0).await?;
+        self.add_persisted_segment(None, 0).await?;
 
         if !Path::new(&self.consumer_offsets_path).exists()
             && create_dir(&self.consumer_offsets_path).await.is_err()

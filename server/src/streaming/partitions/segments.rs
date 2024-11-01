@@ -1,5 +1,6 @@
 use std::sync::atomic::Ordering;
 
+use crate::streaming::batching::batch_accumulator::BatchAccumulator;
 use crate::streaming::partitions::partition::Partition;
 use crate::streaming::segments::segment::Segment;
 use iggy::error::IggyError;
@@ -42,7 +43,7 @@ impl Partition {
         expired_segments
     }
 
-    pub async fn add_persisted_segment(&mut self, start_offset: u64) -> Result<(), IggyError> {
+    pub async fn add_persisted_segment(&mut self, unsaved_messages: Option<BatchAccumulator>, start_offset: u64) -> Result<(), IggyError> {
         info!(
             "Creating the new segment for partition with ID: {}, stream with ID: {}, topic with ID: {}...",
             self.partition_id, self.stream_id, self.topic_id
@@ -52,6 +53,7 @@ impl Partition {
             self.topic_id,
             self.partition_id,
             start_offset,
+            unsaved_messages,
             self.config.clone(),
             self.storage.clone(),
             self.message_expiry,

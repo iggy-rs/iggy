@@ -148,6 +148,7 @@ impl Partition {
                 topic_id,
                 partition_id,
                 0,
+                None,
                 partition.config.clone(),
                 partition.storage.clone(),
                 partition.message_expiry,

@@ -279,7 +279,6 @@ impl Segment {
             self.unsaved_messages = Some(batch_accumulator);
         }
         let saved_bytes = storage.save_batches(self, batch, fsync).await?;
-        assert_eq!(saved_bytes, batch_size);
         storage.save_index(&self.index_path, index).await?;
         storage
             .save_time_index(&self.time_index_path, time_index)

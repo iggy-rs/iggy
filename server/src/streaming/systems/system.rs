@@ -101,6 +101,7 @@ impl System {
 
         let state_persister = Self::resolve_persister(config.state.enforce_fsync);
         let partition_persister = Self::resolve_persister(config.partition.enforce_fsync);
+        let fsync_persister = Self::resolve_persister(true);
 
         let state = Arc::new(FileState::new(
             &config.get_state_log_path(),
@@ -110,7 +111,7 @@ impl System {
         ));
         Self::create(
             config.clone(),
-            SystemStorage::new(config, partition_persister),
+            SystemStorage::new(config, partition_persister, fsync_persister),
             state,
             encryptor,
             data_maintenance_config,
@@ -234,16 +235,16 @@ impl System {
 
     #[instrument(skip_all)]
     pub async fn shutdown(&mut self) -> Result<(), IggyError> {
-        self.persist_messages().await?;
+        self.persist_messages(true).await?;
         Ok(())
     }
 
     #[instrument(skip_all)]
-    pub async fn persist_messages(&self) -> Result<usize, IggyError> {
+    pub async fn persist_messages(&self, fsync: bool) -> Result<usize, IggyError> {
         trace!("Saving buffered messages on disk...");
         let mut saved_messages_number = 0;
         for stream in self.streams.values() {
-            saved_messages_number += stream.persist_messages().await?;
+            saved_messages_number += stream.persist_messages(fsync).await?;
         }
 
         Ok(saved_messages_number)

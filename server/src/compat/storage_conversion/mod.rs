@@ -235,6 +235,7 @@ impl SegmentStorage for NoopSegmentStorage {
         &self,
         _segment: &Segment,
         _batch: RetainedMessageBatch,
+        _fsync: bool,
     ) -> Result<u32, IggyError> {
         Ok(0)
     }

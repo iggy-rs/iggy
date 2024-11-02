@@ -318,7 +318,7 @@ path = "compatibility"
 # Determines whether to enforce file synchronization on state updates (boolean).
 # `true` ensures immediate writing of data to disk for durability.
 # `false` allows the OS to manage write operations, which can improve performance.
-enforce_fsync = false
+enforce_fsync = true
 
 # Runtime configuration.
 [system.runtime]

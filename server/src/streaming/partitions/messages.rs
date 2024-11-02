@@ -488,7 +488,7 @@ impl Partition {
                     self.partition_id
                 );
 
-                last_segment.persist_messages().await.unwrap();
+                last_segment.persist_messages(false).await?;
                 self.unsaved_messages_count = 0;
             }
         }
@@ -512,7 +512,7 @@ impl Partition {
         // Make sure all of the messages from the accumulator are persisted
         // no leftover from one round trip.
         while last_segment.unsaved_messages.is_some() {
-            last_segment.persist_messages().await.unwrap();
+            last_segment.persist_messages(false).await?;
         }
         self.unsaved_messages_count = 0;
         Ok(())

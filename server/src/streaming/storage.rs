@@ -75,6 +75,7 @@ pub trait SegmentStorage: Send + Sync {
         &self,
         segment: &Segment,
         batch: RetainedMessageBatch,
+        fsync: bool,
     ) -> Result<u32, IggyError>;
     async fn load_message_ids(&self, segment: &Segment) -> Result<Vec<u128>, IggyError>;
     async fn load_checksums(&self, segment: &Segment) -> Result<(), IggyError>;
@@ -108,7 +109,11 @@ pub struct SystemStorage {
 }
 
 impl SystemStorage {
-    pub fn new(config: Arc<SystemConfig>, persister: Arc<dyn Persister>) -> Self {
+    pub fn new(
+        config: Arc<SystemConfig>,
+        persister: Arc<dyn Persister>,
+        fsync_persister: Arc<dyn Persister>,
+    ) -> Self {
         Self {
             info: Arc::new(FileSystemInfoStorage::new(
                 config.get_state_info_path(),
@@ -117,7 +122,7 @@ impl SystemStorage {
             stream: Arc::new(FileStreamStorage),
             topic: Arc::new(FileTopicStorage),
             partition: Arc::new(FilePartitionStorage::new(persister.clone())),
-            segment: Arc::new(FileSegmentStorage::new(persister.clone())),
+            segment: Arc::new(FileSegmentStorage::new(persister.clone(), fsync_persister)),
             persister,
         }
     }
@@ -301,6 +306,7 @@ pub(crate) mod tests {
             &self,
             _segment: &Segment,
             _batch: RetainedMessageBatch,
+            _fsync: bool,
         ) -> Result<u32, IggyError> {
             Ok(0)
         }

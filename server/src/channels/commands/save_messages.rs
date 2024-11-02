@@ -59,8 +59,12 @@ impl MessagesSaver {
 #[async_trait]
 impl ServerCommand<SaveMessagesCommand> for SaveMessagesExecutor {
     #[instrument(skip_all)]
-    async fn execute(&mut self, system: &SharedSystem, _command: SaveMessagesCommand) {
-        let saved_messages_count = system.read().await.persist_messages().await;
+    async fn execute(&mut self, system: &SharedSystem, command: SaveMessagesCommand) {
+        let saved_messages_count = system
+            .read()
+            .await
+            .persist_messages(command.enforce_fsync)
+            .await;
         match saved_messages_count {
             Ok(n) => {
                 if n > 0 {

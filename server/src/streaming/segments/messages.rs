@@ -250,7 +250,7 @@ impl Segment {
         (index, time_index)
     }
 
-    pub async fn persist_messages(&mut self) -> Result<usize, IggyError> {
+    pub async fn persist_messages(&mut self, fsync: bool) -> Result<usize, IggyError> {
         let storage = self.storage.segment.clone();
         if self.unsaved_messages.is_none() {
             return Ok(0);
@@ -278,7 +278,7 @@ impl Segment {
         if has_remainder {
             self.unsaved_messages = Some(batch_accumulator);
         }
-        let saved_bytes = storage.save_batches(self, batch).await?;
+        let saved_bytes = storage.save_batches(self, batch, fsync).await?;
         assert_eq!(saved_bytes, batch_size);
         storage.save_index(&self.index_path, index).await?;
         storage

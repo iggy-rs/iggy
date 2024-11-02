@@ -31,11 +31,15 @@ const BUF_READER_CAPACITY_BYTES: usize = 512 * 1000;
 #[derive(Debug)]
 pub struct FileSegmentStorage {
     persister: Arc<dyn Persister>,
+    fsync_persister: Arc<dyn Persister>,
 }
 
 impl FileSegmentStorage {
-    pub fn new(persister: Arc<dyn Persister>) -> Self {
-        Self { persister }
+    pub fn new(persister: Arc<dyn Persister>, fsync_persister: Arc<dyn Persister>) -> Self {
+        Self {
+            persister,
+            fsync_persister,
+        }
     }
 }
 
@@ -250,13 +254,19 @@ impl SegmentStorage for FileSegmentStorage {
         &self,
         segment: &Segment,
         batch: RetainedMessageBatch,
+        fsync: bool,
     ) -> Result<u32, IggyError> {
         let batch_size = batch.get_size_bytes();
         let mut bytes = BytesMut::with_capacity(batch_size as usize);
         batch.extend(&mut bytes);
 
-        if let Err(err) = self
-            .persister
+        let persister = if fsync {
+            &self.fsync_persister
+        } else {
+            &self.persister
+        };
+
+        if let Err(err) = persister
             .append(&segment.log_path, &bytes)
             .await
             .with_context(|| format!("Failed to save messages to segment: {}", segment.log_path))

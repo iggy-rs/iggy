@@ -130,8 +130,7 @@ impl Segment {
                 Err(_) => {
                     error!(
                         "Cannot load messages from disk, index range not found: {} - {}.",
-                        start_offset,
-                        end_offset
+                        start_offset, end_offset
                     );
                     return Ok(EMPTY_MESSAGES.into_iter().map(Arc::new).collect());
                 }

@@ -2022,7 +2022,7 @@ dependencies = [
 
 [[package]]
 name = "iggy"
-version = "0.6.31"
+version = "0.6.32"
 dependencies = [
  "aes-gcm",
  "ahash 0.8.11",
@@ -3998,7 +3998,7 @@ dependencies = [
 
 [[package]]
 name = "server"
-version = "0.4.60"
+version = "0.4.61"
 dependencies = [
  "ahash 0.8.11",
  "anyhow",

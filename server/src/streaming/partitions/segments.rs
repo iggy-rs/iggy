@@ -43,7 +43,11 @@ impl Partition {
         expired_segments
     }
 
-    pub async fn add_persisted_segment(&mut self, unsaved_messages: Option<BatchAccumulator>, start_offset: u64) -> Result<(), IggyError> {
+    pub async fn add_persisted_segment(
+        &mut self,
+        unsaved_messages: Option<BatchAccumulator>,
+        start_offset: u64,
+    ) -> Result<(), IggyError> {
         info!(
             "Creating the new segment for partition with ID: {}, stream with ID: {}, topic with ID: {}...",
             self.partition_id, self.stream_id, self.topic_id

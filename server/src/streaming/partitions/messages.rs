@@ -392,7 +392,8 @@ impl Partition {
                     start_offset, self.partition_id
                 );
                 // Rolling over messages that couldn't be persisted during segment close.
-                self.add_persisted_segment(unsaved_messages, start_offset).await?;
+                self.add_persisted_segment(unsaved_messages, start_offset)
+                    .await?;
             }
         }
 

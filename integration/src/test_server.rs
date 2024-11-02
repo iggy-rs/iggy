@@ -25,12 +25,14 @@ use server::configs::config_provider::{ConfigProvider, FileConfigProvider};
 
 pub const SYSTEM_PATH_ENV_VAR: &str = "IGGY_SYSTEM_PATH";
 pub const TEST_VERBOSITY_ENV_VAR: &str = "IGGY_TEST_VERBOSE";
+pub const IPV6_ENV_VAR: &str = "IGGY_TCP_IPV6";
 const USER_PASSWORD: &str = "secret";
 const SLEEP_INTERVAL_MS: u64 = 20;
 const LOCAL_DATA_PREFIX: &str = "local_data_";
 
 const MAX_PORT_WAIT_DURATION_S: u64 = 60;
 
+#[derive(PartialEq)]
 pub enum IpAddrKind {
     V4,
     V6,
@@ -89,6 +91,10 @@ impl TestServer {
             for (key, value) in extra {
                 envs.insert(key, value);
             }
+        }
+
+        if ip_kind == IpAddrKind::V6 {
+            envs.insert(IPV6_ENV_VAR.to_string(), "true".to_string());
         }
 
         // If IGGY_SYSTEM_PATH is not set, use a random path starting with "local_data_"

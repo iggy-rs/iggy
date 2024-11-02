@@ -188,5 +188,8 @@ async fn try_handle(
         ServerCommand::FlushUnsavedBuffer(command) => {
             flush_unsaved_buffer_handler::handle(command, sender, session, system).await
         }
+        ServerCommand::GetSnapshotFile(command) => {
+            get_snapshot::handle(command, sender, session, system).await
+        }
     }
 }

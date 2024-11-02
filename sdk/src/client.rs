@@ -12,11 +12,13 @@ use crate::models::identity_info::IdentityInfo;
 use crate::models::messages::PolledMessages;
 use crate::models::permissions::Permissions;
 use crate::models::personal_access_token::{PersonalAccessTokenInfo, RawPersonalAccessToken};
+use crate::models::snapshot::Snapshot;
 use crate::models::stats::Stats;
 use crate::models::stream::{Stream, StreamDetails};
 use crate::models::topic::{Topic, TopicDetails};
 use crate::models::user_info::{UserInfo, UserInfoDetails};
 use crate::models::user_status::UserStatus;
+use crate::snapshot::{SnapshotCompression, SystemSnapshotType};
 use crate::tcp::config::{TcpClientConfig, TcpClientReconnectionConfig};
 use crate::utils::duration::IggyDuration;
 use crate::utils::expiry::IggyExpiry;
@@ -102,6 +104,14 @@ pub trait SystemClient {
     /// Ping the server to check if it's alive.
     async fn ping(&self) -> Result<(), IggyError>;
     async fn heartbeat_interval(&self) -> IggyDuration;
+    /// Capture and package the current system state as a snapshot.
+    ///
+    /// Authentication is required.
+    async fn snapshot(
+        &self,
+        compression: SnapshotCompression,
+        snapshot_types: Vec<SystemSnapshotType>,
+    ) -> Result<Snapshot, IggyError>;
 }
 
 /// This trait defines the methods to interact with the user module.

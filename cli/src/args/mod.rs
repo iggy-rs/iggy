@@ -7,6 +7,7 @@ use figlet_rs::FIGfont;
 
 use iggy::args::{Args as IggyArgs, ArgsOptional as IggyArgsOptional};
 use iggy::cli::context::common::ContextConfig;
+use system::SnapshotArgs;
 
 use crate::args::{
     client::ClientAction,
@@ -137,6 +138,9 @@ pub(crate) enum Command {
     /// Server OS name, version, etc. are also collected.
     #[clap(verbatim_doc_comment)]
     Stats(StatsArgs),
+    /// collect iggy server troubleshooting data
+    #[clap(verbatim_doc_comment)]
+    Snapshot(SnapshotArgs),
     /// personal access token operations
     #[command(subcommand)]
     Pat(PersonalAccessTokenAction),

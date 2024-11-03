@@ -3,10 +3,13 @@ use crate::binary::{fail_if_not_authenticated, mapper};
 use crate::client::SystemClient;
 use crate::error::IggyError;
 use crate::models::client_info::{ClientInfo, ClientInfoDetails};
+use crate::models::snapshot::Snapshot;
 use crate::models::stats::Stats;
+use crate::snapshot::{SnapshotCompression, SystemSnapshotType};
 use crate::system::get_client::GetClient;
 use crate::system::get_clients::GetClients;
 use crate::system::get_me::GetMe;
+use crate::system::get_snapshot::GetSnapshot;
 use crate::system::get_stats::GetStats;
 use crate::system::ping::Ping;
 use crate::utils::duration::IggyDuration;
@@ -48,5 +51,21 @@ impl<B: BinaryClient> SystemClient for B {
 
     async fn heartbeat_interval(&self) -> IggyDuration {
         self.get_heartbeat_interval()
+    }
+
+    async fn snapshot(
+        &self,
+        compression: SnapshotCompression,
+        snapshot_types: Vec<SystemSnapshotType>,
+    ) -> Result<Snapshot, IggyError> {
+        fail_if_not_authenticated(self).await?;
+        let response = self
+            .send_with_response(&GetSnapshot {
+                compression,
+                snapshot_types,
+            })
+            .await?;
+        let snapshot = Snapshot::new(response.to_vec());
+        Ok(snapshot)
     }
 }

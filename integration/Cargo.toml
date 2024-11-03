@@ -28,6 +28,7 @@ tokio = { version = "1.40.0", features = ["full"] }
 tracing-subscriber = { version = "0.3.18", features = ["fmt", "env-filter"] }
 uuid = { version = "1.1.0", features = ["v7", "fast-rng", "zerocopy"] }
 xxhash-rust = { version = "0.8.12", features = ["xxh32"] }
+zip = "2.2.0"
 
 # Some tests are failing in CI due to lack of IPv6 interfaces
 # inside the docker containers. This is a temporary workaround (hopefully).

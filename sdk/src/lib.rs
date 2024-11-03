@@ -27,6 +27,7 @@ pub mod partitioner;
 pub mod partitions;
 pub mod personal_access_tokens;
 pub mod quic;
+pub mod snapshot;
 pub mod streams;
 pub mod system;
 pub mod tcp;

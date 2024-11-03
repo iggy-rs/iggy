@@ -128,6 +128,7 @@ jobs:
           repository: ${{ github.event.pull_request.head.repo.full_name }}
           ref: ${{ github.event.pull_request.head.ref }}
           fetch-depth: 0
+          clean: false
 
       - name: Build iggy-server (PR)
         run: IGGY_CI_BUILD=true cargo build

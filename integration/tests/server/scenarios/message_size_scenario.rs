@@ -80,7 +80,7 @@ pub async fn run(client_factory: &dyn ClientFactory) {
     .await;
     send_message_and_check_result(
         &client,
-        MessageToSend::OfSizeWithHeaders(100_000, 100_000_001),
+        MessageToSend::OfSizeWithHeaders(100_000, 1_000_000_001),
         Err(InvalidResponse(
             4022,
             23,

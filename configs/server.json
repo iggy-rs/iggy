@@ -143,7 +143,7 @@
       }
     },
     "state": {
-      "enforce_fsync": false
+      "enforce_fsync": true
     },
     "runtime": {
       "path": "runtime"
@@ -179,7 +179,7 @@
       "path": "partitions",
       "enforce_fsync": false,
       "validate_checksum": false,
-      "messages_required_to_save": 5000
+      "messages_required_to_save": 1000
     },
     "segment": {
       "size": "1 GB",

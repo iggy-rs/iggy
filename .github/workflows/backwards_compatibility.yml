@@ -79,18 +79,16 @@ jobs:
     steps:
       - run: echo "${{ needs.check_commit_message.outputs.should_skip == 'true' }}"
 
-      - uses: actions/checkout@v4
+      - name: Checkout code (origin/master)
+        uses: actions/checkout@v4
         with:
-          ref: ${{ github.ref }}
+          ref: master
           fetch-depth: 0
 
       - name: Cache cargo & target directories
         uses: Swatinem/rust-cache@v2
         with:
           key: "v2"
-
-      - name: Reset to origin/master
-        run: git fetch && git reset --hard origin/master
 
       - name: Build iggy-server (origin/master)
         run: IGGY_CI_BUILD=true cargo build
@@ -124,8 +122,13 @@ jobs:
       - name: Remove iggy-server logs (origin/master)
         run: rm local_data/logs/iggy*
 
-      - name: Reset to pull request branch (PR)
-        run: git reset --hard origin/$BRANCH_NAME
+      - name: Checkout code (PR)
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ github.event.pull_request.head.repo.full_name }}
+          ref: ${{ github.event.pull_request.head.ref }}
+          fetch-depth: 0
+          clean: false
 
       - name: Build iggy-server (PR)
         run: IGGY_CI_BUILD=true cargo build

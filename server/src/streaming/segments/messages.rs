@@ -4,7 +4,6 @@ use crate::streaming::batching::message_batch::{RetainedMessageBatch, RETAINED_B
 use crate::streaming::models::messages::RetainedMessage;
 use crate::streaming::segments::index::{Index, IndexRange};
 use crate::streaming::segments::segment::Segment;
-use crate::streaming::segments::time_index::TimeIndex;
 use crate::streaming::sizeable::Sizeable;
 use iggy::error::IggyError;
 use std::sync::atomic::Ordering;
@@ -225,31 +224,16 @@ impl Segment {
         &mut self,
         batch_last_offset: u64,
         batch_max_timestamp: u64,
-    ) -> (Index, TimeIndex) {
+    ) -> Index {
         let relative_offset = (batch_last_offset - self.start_offset) as u32;
         trace!("Storing index for relative_offset: {relative_offset}");
         let index = Index {
-            relative_offset,
+            offset: relative_offset,
             position: self.last_index_position,
-        };
-        let time_index = TimeIndex {
-            relative_offset,
             timestamp: batch_max_timestamp,
         };
-        match (&mut self.indexes, &mut self.time_indexes) {
-            (Some(indexes), Some(time_indexes)) => {
-                indexes.push(index);
-                time_indexes.push(time_index);
-            }
-            (Some(indexes), None) => {
-                indexes.push(index);
-            }
-            (None, Some(time_indexes)) => {
-                time_indexes.push(time_index);
-            }
-            (None, None) => {}
-        };
-        (index, time_index)
+        self.indexes.as_mut().unwrap().push(index);
+        index
     }
 
     pub async fn persist_messages(&mut self) -> Result<usize, IggyError> {
@@ -264,7 +248,7 @@ impl Segment {
         }
         let batch_max_offset = batch_accumulator.batch_max_offset();
         let batch_max_timestamp = batch_accumulator.batch_max_timestamp();
-        let (index, time_index) =
+        let index =
             self.store_offset_and_timestamp_index_for_batch(batch_max_offset, batch_max_timestamp);
 
         let unsaved_messages_number = batch_accumulator.unsaved_messages_count();
@@ -282,9 +266,6 @@ impl Segment {
         }
         let saved_bytes = storage.save_batches(self, batch).await?;
         storage.save_index(&self.index_path, index).await?;
-        storage
-            .save_time_index(&self.time_index_path, time_index)
-            .await?;
         self.last_index_position += batch_size;
         self.size_bytes += RETAINED_BATCH_OVERHEAD;
         self.size_of_parent_stream

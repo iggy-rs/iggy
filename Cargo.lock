@@ -3998,11 +3998,10 @@ dependencies = [
 
 [[package]]
 name = "server"
-version = "0.4.60"
+version = "0.4.70"
 dependencies = [
  "ahash 0.8.11",
  "anyhow",
- "async-stream",
  "async-trait",
  "atone",
  "axum",

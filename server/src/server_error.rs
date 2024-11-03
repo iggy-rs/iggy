@@ -33,18 +33,6 @@ pub enum ServerError {
     CacheConfigValidationFailure(String),
     #[error("Command length error: {0}")]
     CommandLengthError(String),
-    #[error("Cannot read message, when performing format conversion, {0}")]
-    InvalidMessageFieldFormatConversionSampling(String),
-    #[error("Invalid message offset, when performing format conversion")]
-    InvalidMessageOffsetFormatConversion,
-    #[error("Invalid batch base offset, when performing format conversion")]
-    InvalidBatchBaseOffsetFormatConversion,
-    #[error("Cannot read message batch, when performing format conversion, {0}")]
-    CannotReadMessageBatchFormatConversion(String),
-    #[error("Cannot remove old segment files")]
-    CannotRemoveOldSegmentFiles,
-    #[error("Cannot persist new segment files")]
-    CannotPersistNewSegmentFiles,
     #[error("Cannot archive file: {0}")]
     CannotArchiveFile(String),
     #[error("Cannot initialize S3 archiver")]
@@ -53,4 +41,6 @@ pub enum ServerError {
     InvalidS3Credentials,
     #[error("File to archive not found: {0}")]
     FileToArchiveNotFound(String),
+    #[error("Index migration error: {0}")]
+    IndexMigrationError(String),
 }

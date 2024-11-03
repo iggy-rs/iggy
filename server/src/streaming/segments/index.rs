@@ -4,13 +4,14 @@ use iggy::error::IggyError::InvalidOffset;
 
 #[derive(Debug, Eq, Clone, Copy, Default)]
 pub struct Index {
-    pub relative_offset: u32,
+    pub offset: u32,
     pub position: u32,
+    pub timestamp: u64,
 }
 
 impl PartialEq<Self> for Index {
     fn eq(&self, other: &Self) -> bool {
-        self.relative_offset == other.relative_offset
+        self.offset == other.offset
     }
 }
 
@@ -19,6 +20,7 @@ pub struct IndexRange {
     pub start: Index,
     pub end: Index,
 }
+
 impl Segment {
     pub fn load_highest_lower_bound_index(
         &self,
@@ -42,8 +44,9 @@ impl Segment {
         }
     }
 }
+
 fn binary_search_index(indices: &[Index], offset: u32) -> Option<usize> {
-    match indices.binary_search_by(|index| index.relative_offset.cmp(&offset)) {
+    match indices.binary_search_by(|index| index.offset.cmp(&offset)) {
         Ok(index) => Some(index),
         Err(index) => {
             if index < indices.len() {
@@ -54,16 +57,19 @@ fn binary_search_index(indices: &[Index], offset: u32) -> Option<usize> {
         }
     }
 }
+
 impl IndexRange {
     pub fn max_range() -> Self {
         Self {
             start: Index {
-                relative_offset: 0,
+                offset: 0,
                 position: 0,
+                timestamp: 0,
             },
             end: Index {
-                relative_offset: u32::MAX - 1,
+                offset: u32::MAX - 1,
                 position: u32::MAX,
+                timestamp: u64::MAX,
             },
         }
     }
@@ -113,24 +119,29 @@ mod tests {
     fn create_test_indices(segment: &mut Segment) {
         let indexes = vec![
             Index {
-                relative_offset: 5,
+                offset: 5,
                 position: 0,
+                timestamp: 1000,
             },
             Index {
-                relative_offset: 20,
+                offset: 20,
                 position: 100,
+                timestamp: 2000,
             },
             Index {
-                relative_offset: 35,
+                offset: 35,
                 position: 200,
+                timestamp: 3000,
             },
             Index {
-                relative_offset: 50,
+                offset: 50,
                 position: 300,
+                timestamp: 4000,
             },
             Index {
-                relative_offset: 65,
+                offset: 65,
                 position: 400,
+                timestamp: 5000,
             },
         ];
         segment.indexes.as_mut().unwrap().extend(indexes);
@@ -144,8 +155,8 @@ mod tests {
             .load_highest_lower_bound_index(segment.indexes.as_ref().unwrap(), 15, 45)
             .unwrap();
 
-        assert_eq!(result.start.relative_offset, 20);
-        assert_eq!(result.end.relative_offset, 50);
+        assert_eq!(result.start.offset, 20);
+        assert_eq!(result.end.offset, 50);
     }
 
     #[test]
@@ -156,14 +167,14 @@ mod tests {
             .load_highest_lower_bound_index(segment.indexes.as_ref().unwrap(), 65, 100)
             .unwrap();
 
-        assert_eq!(result_end_range.start.relative_offset, 65);
-        assert_eq!(result_end_range.end.relative_offset, 65);
+        assert_eq!(result_end_range.start.offset, 65);
+        assert_eq!(result_end_range.end.offset, 65);
 
         let result_start_range = segment
             .load_highest_lower_bound_index(segment.indexes.as_ref().unwrap(), 0, 5)
             .unwrap();
-        assert_eq!(result_start_range.start.relative_offset, 5);
-        assert_eq!(result_start_range.end.relative_offset, 5);
+        assert_eq!(result_start_range.start.offset, 5);
+        assert_eq!(result_start_range.end.offset, 5);
     }
 
     #[test]
@@ -174,8 +185,8 @@ mod tests {
             .load_highest_lower_bound_index(segment.indexes.as_ref().unwrap(), 5, 100)
             .unwrap();
 
-        assert_eq!(result.start.relative_offset, 5);
-        assert_eq!(result.end.relative_offset, 65);
+        assert_eq!(result.start.offset, 5);
+        assert_eq!(result.end.offset, 65);
     }
 
     #[test]

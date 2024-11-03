@@ -1,9 +1,9 @@
-use crate::compat::message_conversion::message_converter::MessageFormatConverter;
+use crate::compat::index_conversion::index_converter::IndexConverter;
 use crate::state::system::PartitionState;
 use crate::streaming::batching::batch_accumulator::BatchAccumulator;
 use crate::streaming::partitions::partition::{ConsumerOffset, Partition};
 use crate::streaming::persistence::persister::Persister;
-use crate::streaming::segments::segment::{Segment, LOG_EXTENSION};
+use crate::streaming::segments::segment::{Segment, INDEX_EXTENSION, LOG_EXTENSION};
 use crate::streaming::storage::PartitionStorage;
 use crate::streaming::utils::file;
 use anyhow::Context;
@@ -53,14 +53,13 @@ impl PartitionStorage for FilePartitionStorage {
 
         let mut dir_entries = dir_entries.unwrap();
         while let Some(dir_entry) = dir_entries.next_entry().await.unwrap_or(None) {
-            let metadata = dir_entry.metadata().await.unwrap();
-            if metadata.is_dir() {
-                continue;
-            }
-
             let path = dir_entry.path();
             let extension = path.extension();
             if extension.is_none() || extension.unwrap() != LOG_EXTENSION {
+                continue;
+            }
+            let metadata = dir_entry.metadata().await.unwrap();
+            if metadata.is_dir() {
                 continue;
             }
 
@@ -88,37 +87,24 @@ impl PartitionStorage for FilePartitionStorage {
                 partition.messages_count.clone(),
             );
 
-            let log_path = segment.log_path.to_owned();
             let index_path = segment.index_path.to_owned();
-            let message_format_converter =
-                MessageFormatConverter::init(start_offset, log_path, index_path);
+            let time_index_path = index_path.replace(INDEX_EXTENSION, "timeindex");
 
-            info!("Attempting to detect changes in binary schema for partition with ID: {} and segment with start offset: {}", partition.partition_id, start_offset);
-            let samplers_count = message_format_converter.samplers.len();
-            // Check if partition has any segments
-            for (idx, sampler) in message_format_converter.samplers.iter().enumerate() {
-                trace!("Trying to sample the message format for partition with ID: {} and segment with start offset: {}", partition.partition_id, start_offset);
-                match sampler.try_sample().await {
-                    Ok(schema) if idx == 0 => {
-                        // Found message in the newest format, no conversion needed
-                        trace!("Detected up to date binary schema: {:?}, for partition with ID: {} and segment with start offset: {}", schema, partition.partition_id, start_offset);
-                        break;
+            let index_converter = IndexConverter::new(index_path, time_index_path);
+            if let Ok(true) = index_converter.needs_migration().await {
+                match index_converter.migrate().await {
+                    Ok(_) => {
+                        info!(
+                            "Migrated indexes for partition with ID: {} for stream with ID: {} and topic with ID: {}.",
+                            partition.partition_id, partition.stream_id, partition.topic_id
+                        );
                     }
-                    Ok(schema) => {
-                        // Found old format, need to convert it
-                        info!("Detected changes in binary schema for partition with ID: {} and segment with start offset: {}", partition.partition_id, start_offset);
-                        segment.convert_segment_from_schema(schema).await?;
+                    Err(err) => {
+                        error!(
+                            "Failed to migrate indexes for partition with ID: {} for stream with ID: {} and topic with ID: {}. Error: {}",
+                            partition.partition_id, partition.stream_id, partition.topic_id, err
+                        );
                     }
-                    Err(err) if idx + 1 == samplers_count => {
-                        // Didn't find any message format, return an error
-                        return Err(IggyError::CannotLoadResource(anyhow::anyhow!(err)
-                                .context(format!(
-                                    "Failed to find a valid message format, when trying to perform a conversion for partition with ID: {} and segment with start offset: {}.",
-                                    partition.partition_id,
-                                    start_offset
-                                ))));
-                    }
-                    _ => {}
                 }
             }
 

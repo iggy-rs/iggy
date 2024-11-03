@@ -6,7 +6,7 @@ use iggy::utils::expiry::IggyExpiry;
 use iggy::utils::{checksum, timestamp::IggyTimestamp};
 use server::streaming::models::messages::RetainedMessage;
 use server::streaming::segments::segment;
-use server::streaming::segments::segment::{INDEX_EXTENSION, LOG_EXTENSION, TIME_INDEX_EXTENSION};
+use server::streaming::segments::segment::{INDEX_EXTENSION, LOG_EXTENSION};
 use server::streaming::sizeable::Sizeable;
 use std::sync::atomic::AtomicU64;
 use std::sync::Arc;
@@ -114,7 +114,6 @@ async fn should_load_existing_segment_from_disk() {
         assert_eq!(loaded_segment.is_closed, segment.is_closed);
         assert_eq!(loaded_segment.log_path, segment.log_path);
         assert_eq!(loaded_segment.index_path, segment.index_path);
-        assert_eq!(loaded_segment.time_index_path, segment.time_index_path);
         assert!(loaded_messages.is_empty());
     }
 }
@@ -360,10 +359,8 @@ async fn assert_persisted_segment(partition_path: &str, start_offset: u64) {
     let segment_path = format!("{}/{:0>20}", partition_path, start_offset);
     let log_path = format!("{}.{}", segment_path, LOG_EXTENSION);
     let index_path = format!("{}.{}", segment_path, INDEX_EXTENSION);
-    let time_index_path = format!("{}.{}", segment_path, TIME_INDEX_EXTENSION);
     assert!(fs::metadata(&log_path).await.is_ok());
     assert!(fs::metadata(&index_path).await.is_ok());
-    assert!(fs::metadata(&time_index_path).await.is_ok());
 }
 
 fn create_message(offset: u64, payload: &str, timestamp: IggyTimestamp) -> PolledMessage {

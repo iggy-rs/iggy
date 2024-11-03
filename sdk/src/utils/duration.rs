@@ -27,6 +27,12 @@ impl IggyDuration {
         IggyDuration { duration }
     }
 
+    pub fn new_from_secs(secs: u64) -> IggyDuration {
+        IggyDuration {
+            duration: Duration::from_secs(secs),
+        }
+    }
+
     pub fn as_human_time_string(&self) -> String {
         format!("{}", format_duration(self.duration))
     }

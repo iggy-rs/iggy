@@ -476,7 +476,18 @@ impl Partition {
         self.unsaved_messages_count += messages_count;
         {
             let last_segment = self.segments.last_mut().ok_or(IggyError::SegmentNotFound)?;
+            let accumulator_size = last_segment
+                .unsaved_messages
+                .as_ref()
+                .map(|acc| acc.get_size_bytes())
+                .unwrap_or_else(|| 0);
             if self.unsaved_messages_count >= self.config.partition.messages_required_to_save
+                || accumulator_size
+                    >= self
+                        .config
+                        .partition
+                        .messages_batch_size_required_to_save
+                        .as_bytes_u64()
                 || last_segment.is_full().await
             {
                 trace!(

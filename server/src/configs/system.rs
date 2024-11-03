@@ -97,6 +97,7 @@ pub struct TopicConfig {
 pub struct PartitionConfig {
     pub path: String,
     pub messages_required_to_save: u32,
+    pub messages_batch_size_required_to_save: IggyByteSize,
     pub enforce_fsync: bool,
     pub validate_checksum: bool,
 }

@@ -244,9 +244,10 @@ impl Display for PartitionConfig {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(
           f,
-          "{{ path: {}, messages_required_to_save: {}, enforce_fsync: {}, validate_checksum: {} }}",
+          "{{ path: {}, messages_required_to_save: {}, messages_batch_size_required_to_save: {}, enforce_fsync: {}, validate_checksum: {} }}",
           self.path,
           self.messages_required_to_save,
+          self.messages_batch_size_required_to_save,
           self.enforce_fsync,
           self.validate_checksum
       )

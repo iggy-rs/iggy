@@ -422,6 +422,11 @@ validate_checksum = false
 # Adjusting this can balance between write performance and data durability.
 messages_required_to_save = 1000
 
+# The size of buffered messages before triggering a save to disk (bytes).
+# Specifies the size of messages that accumulate before persisting to storage.
+# Adjusting this can balance between write performance and data durability.
+messages_batch_size_required_to_save = "1 MB"
+
 # Segment configuration
 [system.segment]
 # Defines the soft limit for the size of a storage segment.

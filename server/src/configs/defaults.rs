@@ -403,6 +403,12 @@ impl Default for PartitionConfig {
             path: SERVER_CONFIG.system.partition.path.parse().unwrap(),
             messages_required_to_save: SERVER_CONFIG.system.partition.messages_required_to_save
                 as u32,
+            messages_batch_size_required_to_save: SERVER_CONFIG
+                .system
+                .partition
+                .messages_batch_size_required_to_save
+                .parse()
+                .unwrap(),
             enforce_fsync: SERVER_CONFIG.system.partition.enforce_fsync,
             validate_checksum: SERVER_CONFIG.system.partition.validate_checksum,
         }

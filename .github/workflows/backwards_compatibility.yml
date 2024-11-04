@@ -122,6 +122,9 @@ jobs:
       - name: Remove iggy-server logs (origin/master)
         run: rm local_data/logs/iggy*
 
+      - name: Copy local_data directory (origin/master)
+        run: cp -r local_data ..
+
       - name: Checkout code (PR)
         uses: actions/checkout@v4
         with:
@@ -132,6 +135,9 @@ jobs:
 
       - name: Build iggy-server (PR)
         run: IGGY_CI_BUILD=true cargo build
+
+      - name: Restore local_data directory (PR)
+        run: cp -r ../local_data .
 
       - uses: JarvusInnovations/background-action@v1
         name: Run iggy-server in background (PR)

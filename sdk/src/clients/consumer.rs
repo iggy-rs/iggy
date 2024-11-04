@@ -259,6 +259,7 @@ impl IggyConsumer {
                     offset,
                     &last_stored_offsets,
                 )
+                .await
             }
         });
 

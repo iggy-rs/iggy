@@ -454,13 +454,13 @@ impl ConnectionString {
         }
 
         let connection_string = connection_string.replace(CONNECTION_STRING_PREFIX, "");
-        let parts = connection_string.split("@").collect::<Vec<&str>>();
+        let parts = connection_string.split('@').collect::<Vec<&str>>();
 
         if parts.len() != 2 {
             return Err(IggyError::InvalidConnectionString);
         }
 
-        let credentials = parts[0].split(":").collect::<Vec<&str>>();
+        let credentials = parts[0].split(':').collect::<Vec<&str>>();
         if credentials.len() != 2 {
             return Err(IggyError::InvalidConnectionString);
         }
@@ -471,7 +471,7 @@ impl ConnectionString {
             return Err(IggyError::InvalidConnectionString);
         }
 
-        let server_and_options = parts[1].split("?").collect::<Vec<&str>>();
+        let server_and_options = parts[1].split('?').collect::<Vec<&str>>();
         if server_and_options.len() > 2 {
             return Err(IggyError::InvalidConnectionString);
         }
@@ -481,11 +481,11 @@ impl ConnectionString {
             return Err(IggyError::InvalidConnectionString);
         }
 
-        if !server_address.contains(":") {
+        if !server_address.contains(':') {
             return Err(IggyError::InvalidConnectionString);
         }
 
-        let port = server_address.split(":").collect::<Vec<&str>>()[1];
+        let port = server_address.split(':').collect::<Vec<&str>>()[1];
         if port.is_empty() {
             return Err(IggyError::InvalidConnectionString);
         }
@@ -512,7 +512,7 @@ impl ConnectionString {
     }
 
     fn parse_options(options: &str) -> Result<ConnectionStringOptions, IggyError> {
-        let options = options.split("&").collect::<Vec<&str>>();
+        let options = options.split('&').collect::<Vec<&str>>();
         let mut tls_enabled = false;
         let mut tls_domain = "localhost".to_string();
         let mut reconnection_retries = "unlimited".to_owned();
@@ -521,7 +521,7 @@ impl ConnectionString {
         let mut heartbeat_interval = "5s".to_owned();
 
         for option in options {
-            let option_parts = option.split("=").collect::<Vec<&str>>();
+            let option_parts = option.split('=').collect::<Vec<&str>>();
             if option_parts.len() != 2 {
                 return Err(IggyError::InvalidConnectionString);
             }

@@ -72,7 +72,7 @@ pub async fn should_be_successful() {
         .unwrap();
 
     let zip_path = snapshot_file.path();
-    let file = File::open(&zip_path).unwrap();
+    let file = File::open(zip_path).unwrap();
     let mut archive = ZipArchive::new(file).unwrap();
 
     let contents = {

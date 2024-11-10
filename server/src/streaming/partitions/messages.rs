@@ -4,6 +4,7 @@ use crate::streaming::models::messages::RetainedMessage;
 use crate::streaming::partitions::partition::Partition;
 use crate::streaming::polling_consumer::PollingConsumer;
 use crate::streaming::segments::segment::Segment;
+use iggy::confirmation::Confirmation;
 use iggy::messages::send_messages::Message;
 use iggy::models::messages::POLLED_MESSAGE_METADATA;
 use iggy::utils::timestamp::IggyTimestamp;
@@ -378,6 +379,7 @@ impl Partition {
         &mut self,
         appendable_batch_info: AppendableBatchInfo,
         messages: Vec<Message>,
+        confirmation: Option<Confirmation>,
     ) -> Result<(), IggyError> {
         {
             let last_segment = self.segments.last_mut().ok_or(IggyError::SegmentNotFound)?;
@@ -482,7 +484,7 @@ impl Partition {
                     self.partition_id
                 );
 
-                last_segment.persist_messages().await.unwrap();
+                last_segment.persist_messages(confirmation).await.unwrap();
                 self.unsaved_messages_count = 0;
             }
         }
@@ -506,7 +508,7 @@ impl Partition {
         // Make sure all of the messages from the accumulator are persisted
         // no leftover from one round trip.
         while last_segment.unsaved_messages.is_some() {
-            last_segment.persist_messages().await.unwrap();
+            last_segment.persist_messages(None).await.unwrap();
         }
         self.unsaved_messages_count = 0;
         Ok(())
@@ -552,7 +554,7 @@ mod tests {
             partition_id: partition.partition_id,
         };
         partition
-            .append_messages(appendable_batch_info, messages)
+            .append_messages(appendable_batch_info, messages, None)
             .await
             .unwrap();
 
@@ -574,7 +576,7 @@ mod tests {
             partition_id: partition.partition_id,
         };
         partition
-            .append_messages(appendable_batch_info, messages)
+            .append_messages(appendable_batch_info, messages, None)
             .await
             .unwrap();
 

@@ -1,4 +1,5 @@
 use iggy::utils::crypto::{Aes256GcmEncryptor, Encryptor};
+use server::configs::system::SystemConfig;
 use server::state::file::FileState;
 use server::streaming::persistence::persister::FilePersister;
 use server::versioning::SemanticVersion;
@@ -31,7 +32,9 @@ impl StateSetup {
         create_dir(&directory_path).await.unwrap();
 
         let version = SemanticVersion::from_str("1.2.3").unwrap();
-        let persister = FilePersister {};
+
+        let config = SystemConfig::default();
+        let persister = FilePersister::new(Arc::new(config)).await;
         let encryptor: Option<Arc<dyn Encryptor>> = match encryption_key {
             Some(key) => Some(Arc::new(Aes256GcmEncryptor::new(key).unwrap())),
             None => None,

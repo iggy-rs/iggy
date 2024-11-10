@@ -5,6 +5,7 @@ mod common;
 mod consumer_offset;
 mod messages;
 mod partition;
+mod persistence;
 mod segment;
 mod snapshot;
 mod stream;

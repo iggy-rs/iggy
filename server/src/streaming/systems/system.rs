@@ -81,7 +81,7 @@ pub struct System {
 const CACHE_OVER_EVICTION_FACTOR: u64 = 5;
 
 impl System {
-    pub fn new(
+    pub async fn new(
         config: Arc<SystemConfig>,
         data_maintenance_config: DataMaintenanceConfig,
         pat_config: PersonalAccessTokenConfig,
@@ -99,8 +99,8 @@ impl System {
             false => None,
         };
 
-        let state_persister = Self::resolve_persister(config.state.enforce_fsync);
-        let partition_persister = Self::resolve_persister(config.partition.enforce_fsync);
+        let state_persister = Arc::new(FilePersister::new(config.clone()).await);
+        let partition_persister = Arc::new(FilePersister::new(config.clone()).await);
 
         let state = Arc::new(FileState::new(
             &config.get_state_log_path(),
@@ -116,13 +116,6 @@ impl System {
             data_maintenance_config,
             pat_config,
         )
-    }
-
-    fn resolve_persister(enforce_fsync: bool) -> Arc<dyn Persister> {
-        match enforce_fsync {
-            true => Arc::new(FileWithSyncPersister),
-            false => Arc::new(FilePersister),
-        }
     }
 
     pub fn create(

@@ -424,6 +424,16 @@ impl Default for StateConfig {
     fn default() -> StateConfig {
         StateConfig {
             enforce_fsync: SERVER_CONFIG.system.state.enforce_fsync,
+            server_confirmation: SERVER_CONFIG
+                .system
+                .state
+                .server_confirmation
+                .parse()
+                .unwrap(),
+            idle_timeout: SERVER_CONFIG.system.state.idle_timeout.parse().unwrap(),
+            max_file_operation_retries: SERVER_CONFIG.system.state.max_file_operation_retries
+                as u32,
+            retry_delay: SERVER_CONFIG.system.state.retry_delay.parse().unwrap(),
         }
     }
 }

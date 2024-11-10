@@ -17,6 +17,8 @@ use crate::configs::{
 };
 use std::fmt::{Display, Formatter};
 
+use super::system::StateConfig;
+
 impl Display for HttpConfig {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(
@@ -336,11 +338,25 @@ impl Display for TelemetryTracesConfig {
     }
 }
 
+impl Display for StateConfig {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "{{ enforce_fsync: {}, server_confirmation: {}, idle_timeout: {}, max_file_operation_retries: {}, retry_delay: {} }}",
+            self.enforce_fsync,
+            self.server_confirmation,
+            self.idle_timeout,
+            self.max_file_operation_retries,
+            self.retry_delay,
+        )
+    }
+}
+
 impl Display for SystemConfig {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(
           f,
-          "{{ path: {}, logging: {}, cache: {}, stream: {}, topic: {}, partition: {}, segment: {}, encryption: {} }}",
+          "{{ path: {}, logging: {}, cache: {}, stream: {}, topic: {}, partition: {}, segment: {}, encryption: {}, state: {} }}",
           self.path,
           self.logging,
           self.cache,
@@ -348,7 +364,8 @@ impl Display for SystemConfig {
           self.topic,
           self.partition,
           self.segment,
-          self.encryption
+          self.encryption,
+          self.state,
       )
     }
 }

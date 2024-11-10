@@ -143,7 +143,11 @@
       }
     },
     "state": {
-      "enforce_fsync": false
+      "enforce_fsync": false,
+      "idle_timeout": "5 m",
+      "server_confirmation": "wait",
+      "max_file_operation_retries": 1,
+      "retry_delay": "1 s"
     },
     "runtime": {
       "path": "runtime"

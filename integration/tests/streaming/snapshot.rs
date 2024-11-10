@@ -14,7 +14,8 @@ async fn should_create_snapshot_file() {
         setup.config.clone(),
         DataMaintenanceConfig::default(),
         PersonalAccessTokenConfig::default(),
-    );
+    )
+    .await;
 
     system.init().await.unwrap();
 

@@ -320,6 +320,26 @@ path = "compatibility"
 # `false` allows the OS to manage write operations, which can improve performance.
 enforce_fsync = false
 
+# Defines the file system confirmation behavior during state updates.
+# Controls how the system waits for file write operations to complete.
+# Possible values:
+# - "wait": waits for the file operation to complete before proceeding.
+# - "wait_with_flush": waits for the file operation to complete and ensures data is flushed to disk.
+# - "nowait": proceeds without waiting for the file operation to finish, potentially increasing performance but at the cost of durability.
+server_confirmation = "wait"
+
+# Timeout for idle state, after which the task will be considered inactive.
+# The task will be notified if it remains idle for this duration.
+idle_timeout = "5 m"
+
+# Maximum number of retries for a failed file operation (e.g., append, overwrite).
+# This defines how many times the system will attempt the operation before failing.
+max_file_operation_retries = 1
+
+# Delay between retries in case of a failed file operation.
+# This helps to avoid immediate repeated attempts and can reduce load.
+retry_delay = "1 s"
+
 # Runtime configuration.
 [system.runtime]
 # Path for storing runtime data.

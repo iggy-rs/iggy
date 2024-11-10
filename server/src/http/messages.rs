@@ -76,6 +76,7 @@ async fn send_messages(
     let topic_id = command.topic_id;
     let partitioning = command.partitioning;
     let system = state.system.read().await;
+    // TODO add confirmation
     system
         .append_messages(
             &Session::stateless(identity.user_id, identity.ip_address),
@@ -83,6 +84,7 @@ async fn send_messages(
             topic_id,
             partitioning,
             messages,
+            None,
         )
         .await?;
     Ok(StatusCode::CREATED)

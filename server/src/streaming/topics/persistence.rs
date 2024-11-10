@@ -28,7 +28,7 @@ impl Topic {
         for partition in self.get_partitions() {
             let mut partition = partition.write().await;
             for segment in partition.get_segments_mut() {
-                saved_messages_number += segment.persist_messages().await?;
+                saved_messages_number += segment.persist_messages(None).await?;
             }
         }
 

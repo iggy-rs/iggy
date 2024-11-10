@@ -20,7 +20,7 @@ impl TestSetup {
 
         let config = Arc::new(config);
         fs::create_dir(config.get_system_path()).await.unwrap();
-        let persister = FilePersister {};
+        let persister = FilePersister::new(config.clone()).await;
         let storage = Arc::new(SystemStorage::new(config.clone(), Arc::new(persister)));
         TestSetup { config, storage }
     }

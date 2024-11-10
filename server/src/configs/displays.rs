@@ -13,7 +13,7 @@ use crate::configs::{
         CacheConfig, CompressionConfig, EncryptionConfig, LoggingConfig, PartitionConfig,
         SegmentConfig, StreamConfig, SystemConfig, TopicConfig,
     },
-    tcp::{TcpConfig, TcpTlsConfig},
+    tcp::{TcpConfig, TcpSocketConfig, TcpTlsConfig},
 };
 use std::fmt::{Display, Formatter};
 
@@ -290,8 +290,8 @@ impl Display for TcpConfig {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
-            "{{ enabled: {}, address: {}, tls: {} }}",
-            self.enabled, self.address, self.tls
+            "{{ enabled: {}, address: {}, ipv6: {}, tls: {}, socket: {} }}",
+            self.enabled, self.address, self.ipv6, self.tls, self.socket,
         )
     }
 }
@@ -302,6 +302,16 @@ impl Display for TcpTlsConfig {
             f,
             "{{ enabled: {}, certificate: {} }}",
             self.enabled, self.certificate
+        )
+    }
+}
+
+impl Display for TcpSocketConfig {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "{{ override defaults: {}, recv buffer size: {}, send buffer size {}, keepalive: {}, nodelay: {}, linger: {} }}",
+            self.override_defaults, self.recv_buffer_size, self.send_buffer_size, self.keepalive, self.nodelay, self.linger,
         )
     }
 }

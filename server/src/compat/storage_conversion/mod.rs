@@ -19,6 +19,7 @@ use crate::streaming::topics::topic::Topic;
 use async_trait::async_trait;
 use iggy::consumer::ConsumerKind;
 use iggy::error::IggyError;
+use iggy::utils::byte_size::IggyByteSize;
 use std::path::Path;
 use std::sync::Arc;
 use tokio::fs::{read_dir, rename};
@@ -234,8 +235,8 @@ impl SegmentStorage for NoopSegmentStorage {
         &self,
         _segment: &Segment,
         _batch: RetainedMessageBatch,
-    ) -> Result<u32, IggyError> {
-        Ok(0)
+    ) -> Result<IggyByteSize, IggyError> {
+        Ok(IggyByteSize::default())
     }
 
     async fn load_message_ids(&self, _segment: &Segment) -> Result<Vec<u128>, IggyError> {

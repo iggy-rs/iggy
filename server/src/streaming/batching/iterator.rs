@@ -10,7 +10,7 @@ pub trait IntoMessagesIterator {
 
 pub struct RetainedMessageBatchIterator<'a> {
     batch: &'a RetainedMessageBatch,
-    current_position: u32,
+    current_position: u64,
 }
 
 impl<'a> RetainedMessageBatchIterator<'a> {
@@ -27,7 +27,7 @@ impl<'a> RetainedMessageBatchIterator<'a> {
 impl<'a> Iterator for RetainedMessageBatchIterator<'a> {
     type Item = RetainedMessage;
     fn next(&mut self) -> Option<Self::Item> {
-        if self.current_position < self.batch.length {
+        if self.current_position < self.batch.length.as_bytes_u64() {
             let start_position = self.current_position as usize;
             let length = u32::from_le_bytes(
                 self.batch.bytes[start_position..start_position + 4]
@@ -38,7 +38,7 @@ impl<'a> Iterator for RetainedMessageBatchIterator<'a> {
                 .batch
                 .bytes
                 .slice(start_position + 4..start_position + 4 + length as usize);
-            self.current_position += 4 + length;
+            self.current_position += 4 + length as u64;
             RetainedMessage::try_from_bytes(message).ok()
         } else {
             None

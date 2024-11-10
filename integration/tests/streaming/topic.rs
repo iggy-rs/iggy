@@ -8,7 +8,9 @@ use crate::streaming::create_messages;
 use iggy::compression::compression_algorithm::CompressionAlgorithm;
 use iggy::messages::poll_messages::PollingStrategy;
 use iggy::messages::send_messages::Partitioning;
+use iggy::utils::byte_size::IggyByteSize;
 use iggy::utils::expiry::IggyExpiry;
+use iggy::utils::sizeable::Sizeable;
 use iggy::utils::timestamp::IggyTimestamp;
 use iggy::utils::topic_size::MaxTopicSize;
 use server::state::system::{PartitionState, TopicState};
@@ -203,7 +205,10 @@ async fn should_purge_existing_topic_on_disk() {
 
         let messages = create_messages();
         let messages_count = messages.len();
-        let batch_size = messages.iter().map(|msg| msg.get_size_bytes() as u64).sum();
+        let batch_size = messages
+            .iter()
+            .map(|msg| msg.get_size_bytes())
+            .sum::<IggyByteSize>();
         topic
             .append_messages(batch_size, Partitioning::partition_id(1), messages)
             .await

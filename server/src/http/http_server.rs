@@ -125,6 +125,7 @@ async fn build_app_state(config: &HttpConfig, system: SharedSystem) -> Arc<AppSt
         system,
     })
 }
+
 fn configure_cors(config: HttpCorsConfig) -> CorsLayer {
     let allowed_origins = match config.allowed_origins {
         origins if origins.is_empty() => AllowOrigin::default(),

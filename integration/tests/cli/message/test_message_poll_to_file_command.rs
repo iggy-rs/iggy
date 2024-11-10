@@ -145,7 +145,7 @@ impl IggyCmdTestCase for TestMessagePollToFileCmd<'_> {
                                      self.topic_name, self.stream_name, self.topic_name, self.stream_name);
         let message_file = format!("Storing messages to {} binary file", self.output_file);
         let message_count = format!(
-            "Stored {} of total size [0-9]+ B to {} binary file",
+            "Stored {} of total size [0-9.]+ K?B to {} binary file",
             match self.message_count {
                 1 => "1 message".into(),
                 _ => format!("{} messages", self.message_count),

@@ -1,5 +1,7 @@
 use crate::bytes_serializable::BytesSerializable;
 use crate::error::IggyError;
+use crate::utils::byte_size::IggyByteSize;
+use crate::utils::sizeable::Sizeable;
 use crate::validatable::Validatable;
 use bytes::{BufMut, Bytes, BytesMut};
 use serde::{Deserialize, Serialize};
@@ -113,11 +115,6 @@ impl Identifier {
         }
     }
 
-    /// Returns the size of the identifier in bytes.
-    pub fn get_size_bytes(&self) -> u32 {
-        2 + u32::from(self.length)
-    }
-
     /// Creates a new identifier from the given identifier.
     pub fn from_identifier(identifier: &Identifier) -> Self {
         Self {
@@ -166,6 +163,12 @@ impl Identifier {
             length: length as u8,
             value: value.as_bytes().to_vec(),
         })
+    }
+}
+
+impl Sizeable for Identifier {
+    fn get_size_bytes(&self) -> IggyByteSize {
+        IggyByteSize::from(u64::from(self.length) + 2)
     }
 }
 

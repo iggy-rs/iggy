@@ -3,6 +3,7 @@ use crate::command::{Command, UPDATE_PERMISSIONS_CODE};
 use crate::error::IggyError;
 use crate::identifier::Identifier;
 use crate::models::permissions::Permissions;
+use crate::utils::sizeable::Sizeable;
 use crate::validatable::Validatable;
 use bytes::{BufMut, Bytes, BytesMut};
 use serde::{Deserialize, Serialize};
@@ -55,7 +56,7 @@ impl BytesSerializable for UpdatePermissions {
         }
 
         let user_id = Identifier::from_bytes(bytes.clone())?;
-        let mut position = user_id.get_size_bytes() as usize;
+        let mut position = user_id.get_size_bytes().as_bytes_usize();
         let has_permissions = bytes[position];
         if has_permissions > 1 {
             return Err(IggyError::InvalidCommand);
@@ -106,7 +107,7 @@ mod tests {
         };
         let bytes = command.to_bytes();
         let user_id = Identifier::from_bytes(bytes.clone()).unwrap();
-        let mut position = user_id.get_size_bytes() as usize;
+        let mut position = user_id.get_size_bytes().as_bytes_usize();
         let has_permissions = bytes[position];
         position += 1;
         let permissions_length =

@@ -1,6 +1,8 @@
 use crate::streaming::common::test_setup::TestSetup;
 use crate::streaming::create_messages;
+use iggy::utils::byte_size::IggyByteSize;
 use iggy::utils::expiry::IggyExpiry;
+use iggy::utils::sizeable::Sizeable;
 use iggy::utils::timestamp::IggyTimestamp;
 use server::state::system::PartitionState;
 use server::streaming::batching::appendable_batch_info::AppendableBatchInfo;
@@ -176,7 +178,10 @@ async fn should_purge_existing_partition_on_disk() {
         let messages = create_messages();
         let messages_count = messages.len();
         let appendable_batch_info = AppendableBatchInfo::new(
-            messages.iter().map(|msg| msg.get_size_bytes() as u64).sum(),
+            messages
+                .iter()
+                .map(|msg| msg.get_size_bytes())
+                .sum::<IggyByteSize>(),
             partition.partition_id,
         );
         partition

@@ -3,6 +3,7 @@ use crate::command::{Command, POLL_MESSAGES_CODE};
 use crate::consumer::{Consumer, ConsumerKind};
 use crate::error::IggyError;
 use crate::identifier::Identifier;
+use crate::utils::sizeable::Sizeable;
 use crate::utils::timestamp::IggyTimestamp;
 use crate::validatable::Validatable;
 use bytes::{BufMut, Bytes, BytesMut};
@@ -258,15 +259,15 @@ impl BytesSerializable for PollMessages {
         let mut position = 0;
         let consumer_kind = ConsumerKind::from_code(bytes[0])?;
         let consumer_id = Identifier::from_bytes(bytes.slice(1..))?;
-        position += 1 + consumer_id.get_size_bytes() as usize;
+        position += 1 + consumer_id.get_size_bytes().as_bytes_usize();
         let consumer = Consumer {
             kind: consumer_kind,
             id: consumer_id,
         };
         let stream_id = Identifier::from_bytes(bytes.slice(position..))?;
-        position += stream_id.get_size_bytes() as usize;
+        position += stream_id.get_size_bytes().as_bytes_usize();
         let topic_id = Identifier::from_bytes(bytes.slice(position..))?;
-        position += topic_id.get_size_bytes() as usize;
+        position += topic_id.get_size_bytes().as_bytes_usize();
         let partition_id = u32::from_le_bytes(bytes[position..position + 4].try_into()?);
         let partition_id = match partition_id {
             0 => None,
@@ -404,15 +405,15 @@ mod tests {
         let mut position = 0;
         let consumer_kind = ConsumerKind::from_code(bytes[0]).unwrap();
         let consumer_id = Identifier::from_bytes(bytes.slice(1..)).unwrap();
-        position += 1 + consumer_id.get_size_bytes() as usize;
+        position += 1 + consumer_id.get_size_bytes().as_bytes_usize();
         let consumer = Consumer {
             kind: consumer_kind,
             id: consumer_id,
         };
         let stream_id = Identifier::from_bytes(bytes.slice(position..)).unwrap();
-        position += stream_id.get_size_bytes() as usize;
+        position += stream_id.get_size_bytes().as_bytes_usize();
         let topic_id = Identifier::from_bytes(bytes.slice(position..)).unwrap();
-        position += topic_id.get_size_bytes() as usize;
+        position += topic_id.get_size_bytes().as_bytes_usize();
         let partition_id = u32::from_le_bytes(bytes[position..position + 4].try_into().unwrap());
         let polling_kind = PollingKind::from_code(bytes[position + 4]).unwrap();
         position += 5;

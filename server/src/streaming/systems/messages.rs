@@ -7,6 +7,8 @@ use iggy::messages::poll_messages::PollingStrategy;
 use iggy::messages::send_messages::Message;
 use iggy::messages::send_messages::Partitioning;
 use iggy::models::messages::{PolledMessage, PolledMessages};
+use iggy::utils::byte_size::IggyByteSize;
+use iggy::utils::sizeable::Sizeable;
 use iggy::{error::IggyError, identifier::Identifier};
 use tracing::{error, trace};
 
@@ -69,7 +71,7 @@ impl System {
                         offset: message.offset,
                         timestamp: message.timestamp,
                         checksum: message.checksum,
-                        length: payload.len() as u32,
+                        length: IggyByteSize::from(payload.len() as u64),
                         payload: Bytes::from(payload),
                         headers: message.headers.clone(),
                     });
@@ -100,7 +102,7 @@ impl System {
             topic.topic_id,
         )?;
 
-        let mut batch_size_bytes = 0;
+        let mut batch_size_bytes = IggyByteSize::default();
         let mut messages = messages;
         if let Some(encryptor) = &self.encryptor {
             for message in messages.iter_mut() {
@@ -109,7 +111,7 @@ impl System {
                     Ok(payload) => {
                         message.payload = Bytes::from(payload);
                         message.length = message.payload.len() as u32;
-                        batch_size_bytes += message.get_size_bytes() as u64;
+                        batch_size_bytes += message.get_size_bytes();
                     }
                     Err(error) => {
                         error!("Cannot encrypt the message. Error: {}", error);
@@ -118,7 +120,10 @@ impl System {
                 }
             }
         } else {
-            batch_size_bytes = messages.iter().map(|msg| msg.get_size_bytes() as u64).sum();
+            batch_size_bytes = messages
+                .iter()
+                .map(|msg| msg.get_size_bytes())
+                .sum::<IggyByteSize>();
         }
 
         if let Some(memory_tracker) = CacheMemoryTracker::get_instance() {

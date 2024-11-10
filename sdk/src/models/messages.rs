@@ -2,6 +2,8 @@ use crate::bytes_serializable::BytesSerializable;
 use crate::error::IggyError;
 use crate::models::header;
 use crate::models::header::{HeaderKey, HeaderValue};
+use crate::utils::byte_size::IggyByteSize;
+use crate::utils::sizeable::Sizeable;
 use crate::utils::timestamp::IggyTimestamp;
 use bytes::{BufMut, Bytes, BytesMut};
 use serde::{Deserialize, Serialize};
@@ -55,7 +57,7 @@ pub struct PolledMessage {
     pub headers: Option<HashMap<HeaderKey, HeaderValue>>,
     /// The length of the payload.
     #[serde(skip)]
-    pub length: u32,
+    pub length: IggyByteSize,
     /// The binary payload of the message.
     #[serde_as(as = "Base64")]
     pub payload: Bytes,
@@ -139,8 +141,7 @@ impl PolledMessage {
             timestamp: timestamp.as_micros(),
             id,
             checksum,
-            #[allow(clippy::cast_possible_truncation)]
-            length: payload.len() as u32,
+            length: IggyByteSize::from(payload.len() as u64),
             payload,
             headers,
         }
@@ -149,12 +150,6 @@ impl PolledMessage {
     /// Returns the timestamp of the message as `IggyTimestamp`.
     pub fn timestamp(&self) -> IggyTimestamp {
         self.timestamp.into()
-    }
-
-    /// Returns the size of the message in bytes.
-    pub fn get_size_bytes(&self) -> u32 {
-        // Offset + State + Timestamp + ID + Checksum + Length + Payload + Headers
-        8 + 1 + 8 + 16 + 4 + 4 + self.length + header::get_headers_size_bytes(&self.headers)
     }
 
     /// Extends the provided bytes with the message.
@@ -172,7 +167,16 @@ impl PolledMessage {
         } else {
             bytes.put_u32_le(0u32);
         }
-        bytes.put_u32_le(self.length);
+        bytes.put_u32_le(self.length.as_bytes_u64() as u32);
         bytes.put_slice(&self.payload);
+    }
+}
+
+impl Sizeable for PolledMessage {
+    fn get_size_bytes(&self) -> IggyByteSize {
+        // Offset + State + Timestamp + ID + Checksum + Length + Payload + Headers
+        header::get_headers_size_bytes(&self.headers)
+            + self.length
+            + IggyByteSize::from(8 + 1 + 8 + 16 + 4 + 4)
     }
 }

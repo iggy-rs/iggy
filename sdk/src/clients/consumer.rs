@@ -6,6 +6,7 @@ use crate::identifier::{IdKind, Identifier};
 use crate::locking::{IggySharedMut, IggySharedMutFn};
 use crate::messages::poll_messages::{PollingKind, PollingStrategy};
 use crate::models::messages::{PolledMessage, PolledMessages};
+use crate::utils::byte_size::IggyByteSize;
 use crate::utils::crypto::Encryptor;
 use crate::utils::duration::IggyDuration;
 use crate::utils::timestamp::IggyTimestamp;
@@ -761,7 +762,7 @@ impl Stream for IggyConsumer {
 
                                 let payload = payload.unwrap();
                                 message.payload = Bytes::from(payload);
-                                message.length = message.payload.len() as u32;
+                                message.length = IggyByteSize::from(message.payload.len() as u64);
                             }
                         }
 

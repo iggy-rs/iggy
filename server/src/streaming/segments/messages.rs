@@ -4,8 +4,9 @@ use crate::streaming::batching::message_batch::{RetainedMessageBatch, RETAINED_B
 use crate::streaming::models::messages::RetainedMessage;
 use crate::streaming::segments::index::{Index, IndexRange};
 use crate::streaming::segments::segment::Segment;
-use crate::streaming::sizeable::Sizeable;
 use iggy::error::IggyError;
+use iggy::utils::byte_size::IggyByteSize;
+use iggy::utils::sizeable::Sizeable;
 use std::sync::atomic::Ordering;
 use std::sync::Arc;
 use tracing::{info, trace, warn};
@@ -184,7 +185,7 @@ impl Segment {
 
     pub async fn append_batch(
         &mut self,
-        batch_size: u64,
+        batch_size: IggyByteSize,
         messages_count: u32,
         batch: &[Arc<RetainedMessage>],
     ) -> Result<(), IggyError> {
@@ -203,7 +204,8 @@ impl Segment {
         let curr_offset = batch_accumulator.batch_max_offset();
 
         self.current_offset = curr_offset;
-        self.size_bytes += batch_size as u32;
+        self.size_bytes += batch_size;
+        let batch_size = batch_size.as_bytes_u64();
         self.size_of_parent_stream
             .fetch_add(batch_size, Ordering::AcqRel);
         self.size_of_parent_topic
@@ -266,14 +268,14 @@ impl Segment {
         }
         let saved_bytes = storage.save_batches(self, batch).await?;
         storage.save_index(&self.index_path, index).await?;
-        self.last_index_position += batch_size;
-        self.size_bytes += RETAINED_BATCH_OVERHEAD;
+        self.last_index_position += batch_size.as_bytes_u64() as u32;
+        self.size_bytes += IggyByteSize::from(RETAINED_BATCH_OVERHEAD);
         self.size_of_parent_stream
-            .fetch_add(RETAINED_BATCH_OVERHEAD as u64, Ordering::AcqRel);
+            .fetch_add(RETAINED_BATCH_OVERHEAD, Ordering::AcqRel);
         self.size_of_parent_topic
-            .fetch_add(RETAINED_BATCH_OVERHEAD as u64, Ordering::AcqRel);
+            .fetch_add(RETAINED_BATCH_OVERHEAD, Ordering::AcqRel);
         self.size_of_parent_partition
-            .fetch_add(RETAINED_BATCH_OVERHEAD as u64, Ordering::AcqRel);
+            .fetch_add(RETAINED_BATCH_OVERHEAD, Ordering::AcqRel);
 
         trace!(
             "Saved {} messages on disk in segment with start offset: {} for partition with ID: {}, total bytes written: {}.",

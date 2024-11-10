@@ -4,6 +4,7 @@ use iggy::client::MessageClient;
 use iggy::clients::client::IggyClient;
 use iggy::error::IggyError;
 use iggy::messages::send_messages::{Message, Partitioning};
+use iggy::utils::byte_size::IggyByteSize;
 use iggy::utils::duration::IggyDuration;
 use integration::test_server::{login_root, ClientFactory};
 use std::str::FromStr;
@@ -117,25 +118,26 @@ impl Producer {
 
         let duration = end_timestamp - start_timestamp;
         let average_latency: Duration = latencies.iter().sum::<Duration>() / latencies.len() as u32;
-        let total_size_bytes = total_messages * self.message_size as u64;
-        let average_throughput = total_size_bytes as f64 / duration.as_secs_f64() / 1e6;
+        let total_size_bytes = IggyByteSize::from(total_messages * self.message_size as u64);
+        let average_throughput =
+            total_size_bytes.as_bytes_u64() as f64 / duration.as_secs_f64() / 1e6;
 
         info!(
-        "Producer #{} → sent {} messages in {} batches of {} messages in {:.2} s, total size: {} bytes, average throughput: {:.2} MB/s, p50 latency: {:.2} ms, p90 latency: {:.2} ms, p95 latency: {:.2} ms, p99 latency: {:.2} ms, p999 latency: {:.2} ms, average latency: {:.2} ms",
-        self.producer_id,
-        total_messages,
-        self.message_batches,
-        self.messages_per_batch,
-        duration.as_secs_f64(),
-        total_size_bytes,
-        average_throughput,
-        p50.as_secs_f64() * 1000.0,
-        p90.as_secs_f64() * 1000.0,
-        p95.as_secs_f64() * 1000.0,
-        p99.as_secs_f64() * 1000.0,
-        p999.as_secs_f64() * 1000.0,
-        average_latency.as_secs_f64() * 1000.0
-    );
+            "Producer #{} → sent {} messages in {} batches of {} messages in {:.2} s, total size: {}, average throughput: {:.2} MB/s, p50 latency: {:.2} ms, p90 latency: {:.2} ms, p95 latency: {:.2} ms, p99 latency: {:.2} ms, p999 latency: {:.2} ms, average latency: {:.2} ms",
+            self.producer_id,
+            total_messages,
+            self.message_batches,
+            self.messages_per_batch,
+            duration.as_secs_f64(),
+            total_size_bytes.as_human_string(),
+            average_throughput,
+            p50.as_secs_f64() * 1000.0,
+            p90.as_secs_f64() * 1000.0,
+            p95.as_secs_f64() * 1000.0,
+            p99.as_secs_f64() * 1000.0,
+            p999.as_secs_f64() * 1000.0,
+            average_latency.as_secs_f64() * 1000.0
+        );
 
         Ok(BenchmarkResult {
             kind: BenchmarkKind::Send,

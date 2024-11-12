@@ -11,6 +11,7 @@ use crate::streaming::utils::head_tail_buf::HeadTailBuffer;
 use anyhow::Context;
 use async_trait::async_trait;
 use bytes::{BufMut, BytesMut};
+use iggy::confirmation::Confirmation;
 use iggy::error::IggyError;
 use iggy::utils::byte_size::IggyByteSize;
 use iggy::utils::checksum;
@@ -211,6 +212,7 @@ impl SegmentStorage for FileSegmentStorage {
         &self,
         segment: &Segment,
         batch: RetainedMessageBatch,
+        confirmation: Option<Confirmation>,
     ) -> Result<u32, IggyError> {
         let batch_size = batch.get_size_bytes();
         let mut bytes = BytesMut::with_capacity(batch_size as usize);
@@ -218,7 +220,7 @@ impl SegmentStorage for FileSegmentStorage {
 
         if let Err(err) = self
             .persister
-            .append(&segment.log_path, &bytes)
+            .append(&segment.log_path, bytes.into(), confirmation)
             .await
             .with_context(|| format!("Failed to save messages to segment: {}", segment.log_path))
         {
@@ -394,14 +396,19 @@ impl SegmentStorage for FileSegmentStorage {
         Ok(Some(index_range))
     }
 
-    async fn save_index(&self, index_path: &str, index: Index) -> Result<(), IggyError> {
+    async fn save_index(
+        &self,
+        index_path: &str,
+        index: Index,
+        confirmation: Option<Confirmation>,
+    ) -> Result<(), IggyError> {
         let mut bytes = BytesMut::with_capacity(INDEX_SIZE as usize);
         bytes.put_u32_le(index.offset);
         bytes.put_u32_le(index.position);
         bytes.put_u64_le(index.timestamp);
         if let Err(err) = self
             .persister
-            .append(index_path, &bytes)
+            .append(index_path, bytes.into(), confirmation)
             .await
             .with_context(|| format!("Failed to save index to segment: {}", index_path))
         {

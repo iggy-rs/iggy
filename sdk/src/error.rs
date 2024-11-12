@@ -380,6 +380,8 @@ pub enum IggyError {
     InvalidConnectionString = 8000,
     #[error("Snaphot file completion failed")]
     SnapshotFileCompletionFailed = 9000,
+    #[error("Failed to queue command")]
+    CommandQueueError(#[source] anyhow::Error) = 10000,
 }
 
 impl IggyError {

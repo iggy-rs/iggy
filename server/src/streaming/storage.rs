@@ -14,6 +14,7 @@ use crate::streaming::systems::storage::FileSystemInfoStorage;
 use crate::streaming::topics::storage::FileTopicStorage;
 use crate::streaming::topics::topic::Topic;
 use async_trait::async_trait;
+use iggy::confirmation::Confirmation;
 use iggy::consumer::ConsumerKind;
 use iggy::error::IggyError;
 use std::fmt::{Debug, Formatter};
@@ -74,6 +75,7 @@ pub trait SegmentStorage: Send + Sync {
         &self,
         segment: &Segment,
         batch: RetainedMessageBatch,
+        confirmation: Option<Confirmation>,
     ) -> Result<u32, IggyError>;
     async fn load_message_ids(&self, segment: &Segment) -> Result<Vec<u128>, IggyError>;
     async fn load_checksums(&self, segment: &Segment) -> Result<(), IggyError>;
@@ -84,7 +86,12 @@ pub trait SegmentStorage: Send + Sync {
         index_start_offset: u64,
         index_end_offset: u64,
     ) -> Result<Option<IndexRange>, IggyError>;
-    async fn save_index(&self, index_path: &str, index: Index) -> Result<(), IggyError>;
+    async fn save_index(
+        &self,
+        index_path: &str,
+        index: Index,
+        confirmation: Option<Confirmation>,
+    ) -> Result<(), IggyError>;
     async fn try_load_index_for_timestamp(
         &self,
         segment: &Segment,
@@ -157,6 +164,7 @@ pub(crate) mod tests {
     use crate::streaming::streams::stream::Stream;
     use crate::streaming::topics::topic::Topic;
     use async_trait::async_trait;
+    use bytes::Bytes;
     use std::sync::Arc;
 
     struct TestPersister {}
@@ -168,7 +176,12 @@ pub(crate) mod tests {
 
     #[async_trait]
     impl Persister for TestPersister {
-        async fn append(&self, _path: &str, _bytes: &[u8]) -> Result<(), IggyError> {
+        async fn append(
+            &self,
+            _path: &str,
+            _bytes: Bytes,
+            _confirmation: Option<Confirmation>,
+        ) -> Result<(), IggyError> {
             Ok(())
         }
 
@@ -295,6 +308,7 @@ pub(crate) mod tests {
             &self,
             _segment: &Segment,
             _batch: RetainedMessageBatch,
+            _confirmation: Option<Confirmation>,
         ) -> Result<u32, IggyError> {
             Ok(0)
         }
@@ -320,7 +334,12 @@ pub(crate) mod tests {
             Ok(None)
         }
 
-        async fn save_index(&self, _index_path: &str, _index: Index) -> Result<(), IggyError> {
+        async fn save_index(
+            &self,
+            _index_path: &str,
+            _index: Index,
+            _confirmation: Option<Confirmation>,
+        ) -> Result<(), IggyError> {
             Ok(())
         }
 

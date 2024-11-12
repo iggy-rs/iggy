@@ -5,6 +5,7 @@ use crate::streaming::models::messages::RetainedMessage;
 use crate::streaming::segments::index::{Index, IndexRange};
 use crate::streaming::segments::segment::Segment;
 use crate::streaming::sizeable::Sizeable;
+use iggy::confirmation::Confirmation;
 use iggy::error::IggyError;
 use std::sync::atomic::Ordering;
 use std::sync::Arc;
@@ -236,7 +237,10 @@ impl Segment {
         index
     }
 
-    pub async fn persist_messages(&mut self) -> Result<usize, IggyError> {
+    pub async fn persist_messages(
+        &mut self,
+        confirmation: Option<Confirmation>,
+    ) -> Result<usize, IggyError> {
         let storage = self.storage.segment.clone();
         if self.unsaved_messages.is_none() {
             return Ok(0);
@@ -264,8 +268,12 @@ impl Segment {
         if has_remainder {
             self.unsaved_messages = Some(batch_accumulator);
         }
-        let saved_bytes = storage.save_batches(self, batch).await?;
-        storage.save_index(&self.index_path, index).await?;
+        let saved_bytes = storage
+            .save_batches(self, batch, confirmation.clone())
+            .await?;
+        storage
+            .save_index(&self.index_path, index, confirmation)
+            .await?;
         self.last_index_position += batch_size;
         self.size_bytes += RETAINED_BATCH_OVERHEAD;
         self.size_of_parent_stream

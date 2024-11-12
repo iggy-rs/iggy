@@ -172,7 +172,7 @@ async fn should_persist_and_load_segment_with_messages() {
         .append_batch(batch_size, messages_count as u32, &messages)
         .await
         .unwrap();
-    segment.persist_messages().await.unwrap();
+    segment.persist_messages(None).await.unwrap();
     let mut loaded_segment = segment::Segment::create(
         stream_id,
         topic_id,
@@ -257,7 +257,7 @@ async fn given_all_expired_messages_segment_should_be_expired() {
         .append_batch(batch_size, messages_count as u32, &messages)
         .await
         .unwrap();
-    segment.persist_messages().await.unwrap();
+    segment.persist_messages(None).await.unwrap();
 
     segment.is_closed = true;
     let is_expired = segment.is_expired(now).await;
@@ -342,7 +342,7 @@ async fn given_at_least_one_not_expired_message_segment_should_not_be_expired() 
         .append_batch(not_expired_message_size, 1, &not_expired_messages)
         .await
         .unwrap();
-    segment.persist_messages().await.unwrap();
+    segment.persist_messages(None).await.unwrap();
 
     let is_expired = segment.is_expired(now).await;
     assert!(!is_expired);

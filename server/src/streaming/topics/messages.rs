@@ -5,6 +5,7 @@ use crate::streaming::sizeable::Sizeable;
 use crate::streaming::topics::topic::Topic;
 use crate::streaming::utils::file::folder_size;
 use crate::streaming::utils::hash;
+use iggy::confirmation::Confirmation;
 use iggy::error::IggyError;
 use iggy::locking::IggySharedMutFn;
 use iggy::messages::poll_messages::{PollingKind, PollingStrategy};
@@ -73,6 +74,7 @@ impl Topic {
         batch_size: u64,
         partitioning: Partitioning,
         messages: Vec<Message>,
+        confirmation: Option<Confirmation>,
     ) -> Result<(), IggyError> {
         if !self.has_partitions() {
             return Err(IggyError::NoPartitions(self.topic_id, self.stream_id));
@@ -97,7 +99,7 @@ impl Topic {
         };
 
         let appendable_batch_info = AppendableBatchInfo::new(batch_size, partition_id);
-        self.append_messages_to_partition(appendable_batch_info, messages)
+        self.append_messages_to_partition(appendable_batch_info, messages, confirmation)
             .await
     }
 
@@ -121,6 +123,7 @@ impl Topic {
         &self,
         appendable_batch_info: AppendableBatchInfo,
         messages: Vec<Message>,
+        confirmation: Option<Confirmation>,
     ) -> Result<(), IggyError> {
         let partition = self.partitions.get(&appendable_batch_info.partition_id);
         partition
@@ -133,7 +136,7 @@ impl Topic {
             })?
             .write()
             .await
-            .append_messages(appendable_batch_info, messages)
+            .append_messages(appendable_batch_info, messages, confirmation)
             .await?;
 
         Ok(())
@@ -308,7 +311,7 @@ mod tests {
             let messages = vec![Message::new(Some(entity_id as u128), Bytes::new(), None)];
             let batch_size = messages.iter().map(|msg| msg.get_size_bytes() as u64).sum();
             topic
-                .append_messages(batch_size, partitioning.clone(), messages)
+                .append_messages(batch_size, partitioning.clone(), messages, None)
                 .await
                 .unwrap();
         }
@@ -337,7 +340,7 @@ mod tests {
             let messages = vec![Message::new(Some(entity_id as u128), Bytes::new(), None)];
             let batch_size = messages.iter().map(|msg| msg.get_size_bytes() as u64).sum();
             topic
-                .append_messages(batch_size, partitioning, messages)
+                .append_messages(batch_size, partitioning, messages, None)
                 .await
                 .unwrap();
         }

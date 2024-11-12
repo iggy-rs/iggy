@@ -17,6 +17,8 @@ use crate::streaming::streams::stream::Stream;
 use crate::streaming::systems::info::SystemInfo;
 use crate::streaming::topics::topic::Topic;
 use async_trait::async_trait;
+use bytes::Bytes;
+use iggy::confirmation::Confirmation;
 use iggy::consumer::ConsumerKind;
 use iggy::error::IggyError;
 use std::path::Path;
@@ -107,7 +109,12 @@ struct NoopSegmentStorage {}
 
 #[async_trait]
 impl Persister for NoopPersister {
-    async fn append(&self, _path: &str, _bytes: &[u8]) -> Result<(), IggyError> {
+    async fn append(
+        &self,
+        _path: &str,
+        _bytes: Bytes,
+        _confirmation: Option<Confirmation>,
+    ) -> Result<(), IggyError> {
         Ok(())
     }
 
@@ -234,6 +241,7 @@ impl SegmentStorage for NoopSegmentStorage {
         &self,
         _segment: &Segment,
         _batch: RetainedMessageBatch,
+        _confirmation: Option<Confirmation>,
     ) -> Result<u32, IggyError> {
         Ok(0)
     }
@@ -259,7 +267,12 @@ impl SegmentStorage for NoopSegmentStorage {
         Ok(None)
     }
 
-    async fn save_index(&self, _index_path: &str, _index: Index) -> Result<(), IggyError> {
+    async fn save_index(
+        &self,
+        _index_path: &str,
+        _index: Index,
+        _confirmation: Option<Confirmation>,
+    ) -> Result<(), IggyError> {
         Ok(())
     }
 

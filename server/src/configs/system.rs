@@ -1,4 +1,5 @@
 use crate::configs::resource_quota::MemoryResourceQuota;
+use iggy::confirmation::Confirmation;
 use iggy::utils::byte_size::IggyByteSize;
 use iggy::utils::expiry::IggyExpiry;
 use iggy::utils::topic_size::MaxTopicSize;
@@ -125,9 +126,17 @@ pub struct SegmentConfig {
     pub archive_expired: bool,
 }
 
+#[serde_as]
 #[derive(Debug, Deserialize, Serialize)]
 pub struct StateConfig {
     pub enforce_fsync: bool,
+    #[serde_as(as = "DisplayFromStr")]
+    pub server_confirmation: Confirmation,
+    #[serde_as(as = "DisplayFromStr")]
+    pub idle_timeout: IggyDuration,
+    pub max_file_operation_retries: u32,
+    #[serde_as(as = "DisplayFromStr")]
+    pub retry_delay: IggyDuration,
 }
 
 impl SystemConfig {

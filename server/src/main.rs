@@ -42,11 +42,14 @@ async fn main() -> Result<(), ServerError> {
 
     logging.late_init(config.system.get_system_path(), &config.system.logging)?;
 
-    let system = SharedSystem::new(System::new(
-        config.system.clone(),
-        config.data_maintenance.clone(),
-        config.personal_access_token.clone(),
-    ));
+    let system = SharedSystem::new(
+        System::new(
+            config.system.clone(),
+            config.data_maintenance.clone(),
+            config.personal_access_token.clone(),
+        )
+        .await,
+    );
 
     // Workaround to ensure that the statistics are initialized before the server
     // loads streams and starts accepting connections. This is necessary to

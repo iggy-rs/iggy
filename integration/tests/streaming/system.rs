@@ -13,7 +13,8 @@ async fn should_initialize_system_and_base_directories() {
         setup.config.clone(),
         DataMaintenanceConfig::default(),
         PersonalAccessTokenConfig::default(),
-    );
+    )
+    .await;
 
     system.init().await.unwrap();
 
@@ -36,7 +37,8 @@ async fn should_create_and_persist_stream() {
         setup.config.clone(),
         DataMaintenanceConfig::default(),
         PersonalAccessTokenConfig::default(),
-    );
+    )
+    .await;
     let stream_id = 1;
     let stream_name = "test";
     let session = Session::new(1, 1, SocketAddr::new(Ipv4Addr::LOCALHOST.into(), 1234));
@@ -57,7 +59,8 @@ async fn should_create_and_persist_stream_with_automatically_generated_id() {
         setup.config.clone(),
         DataMaintenanceConfig::default(),
         PersonalAccessTokenConfig::default(),
-    );
+    )
+    .await;
     let stream_id = 1;
     let stream_name = "test";
     let session = Session::new(1, 1, SocketAddr::new(Ipv4Addr::LOCALHOST.into(), 1234));
@@ -78,7 +81,8 @@ async fn should_delete_persisted_stream() {
         setup.config.clone(),
         DataMaintenanceConfig::default(),
         PersonalAccessTokenConfig::default(),
-    );
+    )
+    .await;
     let stream_id = 1;
     let stream_name = "test";
     let session = Session::new(1, 1, SocketAddr::new(Ipv4Addr::LOCALHOST.into(), 1234));

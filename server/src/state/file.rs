@@ -252,7 +252,7 @@ impl State for FileState {
         );
         let bytes = entry.to_bytes();
         self.entries_count.fetch_add(1, Ordering::SeqCst);
-        self.persister.append(&self.path, &bytes).await?;
+        self.persister.append(&self.path, bytes, None).await?;
         debug!("Applied state entry: {entry}");
         Ok(())
     }

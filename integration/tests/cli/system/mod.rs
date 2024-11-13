@@ -7,4 +7,5 @@ mod test_logout_cmd;
 mod test_logout_command;
 mod test_me_command;
 mod test_ping_command;
+mod test_snapshot_cmd;
 mod test_stats_command;

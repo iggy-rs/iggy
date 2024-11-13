@@ -378,6 +378,8 @@ pub enum IggyError {
     CannotReadBatchPayload = 7004,
     #[error("Invalid connection string")]
     InvalidConnectionString = 8000,
+    #[error("Snaphot file completion failed")]
+    SnapshotFileCompletionFailed = 9000,
 }
 
 impl IggyError {

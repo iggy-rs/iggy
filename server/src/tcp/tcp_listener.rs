@@ -4,17 +4,24 @@ use crate::tcp::connection_handler::{handle_connection, handle_error};
 use crate::tcp::tcp_sender::TcpSender;
 use std::net::SocketAddr;
 use tokio::io::AsyncWriteExt;
-use tokio::net::TcpListener;
+use tokio::net::TcpSocket;
 use tokio::sync::oneshot;
 use tracing::{error, info};
 
-pub async fn start(address: &str, system: SharedSystem) -> SocketAddr {
+pub async fn start(address: &str, socket: TcpSocket, system: SharedSystem) -> SocketAddr {
     let address = address.to_string();
     let (tx, rx) = oneshot::channel();
     tokio::spawn(async move {
-        let listener = TcpListener::bind(&address)
-            .await
-            .expect("Unable to start TCP server.");
+        let addr = address.parse();
+        if addr.is_err() {
+            panic!("Unable to parse address {:?}", address);
+        }
+
+        socket
+            .bind(addr.unwrap())
+            .expect("Unable to bind socket to address");
+
+        let listener = socket.listen(1024).expect("Unable to start TCP server.");
 
         let local_addr = listener
             .local_addr()

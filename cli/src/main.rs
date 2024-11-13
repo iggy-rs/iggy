@@ -21,6 +21,7 @@ use clap::Parser;
 use iggy::args::Args;
 use iggy::cli::context::common::ContextManager;
 use iggy::cli::context::use_context::UseContextCmd;
+use iggy::cli::system::snapshot::GetSnapshotCmd;
 use iggy::cli::{
     client::{get_client::GetClientCmd, get_clients::GetClientsCmd},
     consumer_group::{
@@ -150,6 +151,11 @@ fn get_command(
         Command::Ping(args) => Box::new(PingCmd::new(args.count)),
         Command::Me => Box::new(GetMeCmd::new()),
         Command::Stats(args) => Box::new(GetStatsCmd::new(cli_options.quiet, args.output.into())),
+        Command::Snapshot(args) => Box::new(GetSnapshotCmd::new(
+            args.compression,
+            args.snapshot_types,
+            args.out_dir,
+        )),
         Command::Pat(command) => match command {
             PersonalAccessTokenAction::Create(pat_create_args) => {
                 Box::new(CreatePersonalAccessTokenCmd::new(

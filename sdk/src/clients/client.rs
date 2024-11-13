@@ -21,12 +21,14 @@ use crate::models::identity_info::IdentityInfo;
 use crate::models::messages::PolledMessages;
 use crate::models::permissions::Permissions;
 use crate::models::personal_access_token::{PersonalAccessTokenInfo, RawPersonalAccessToken};
+use crate::models::snapshot::Snapshot;
 use crate::models::stats::Stats;
 use crate::models::stream::{Stream, StreamDetails};
 use crate::models::topic::{Topic, TopicDetails};
 use crate::models::user_info::{UserInfo, UserInfoDetails};
 use crate::models::user_status::UserStatus;
 use crate::partitioner::Partitioner;
+use crate::snapshot::{SnapshotCompression, SystemSnapshotType};
 use crate::tcp::client::TcpClient;
 use crate::utils::crypto::Encryptor;
 use crate::utils::duration::IggyDuration;
@@ -351,6 +353,18 @@ impl SystemClient for IggyClient {
 
     async fn heartbeat_interval(&self) -> IggyDuration {
         self.client.read().await.heartbeat_interval().await
+    }
+
+    async fn snapshot(
+        &self,
+        compression: SnapshotCompression,
+        snapshot_types: Vec<SystemSnapshotType>,
+    ) -> Result<Snapshot, IggyError> {
+        self.client
+            .read()
+            .await
+            .snapshot(compression, snapshot_types)
+            .await
     }
 }
 

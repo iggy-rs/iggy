@@ -80,10 +80,19 @@
   "tcp": {
     "enabled": true,
     "address": "0.0.0.0:8090",
+    "ipv6": false,
     "tls": {
       "enabled": false,
       "certificate": "certs/iggy.pfx",
       "password": "iggy123"
+    },
+    "socket": {
+      "override_defaults": false,
+      "recv_buffer_size": "100 KB",
+      "send_buffer_size": "100 KB",
+      "keepalive": false,
+      "nodelay": false,
+      "linger": "0 s"
     }
   },
   "quic": {

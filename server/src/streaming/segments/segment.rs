@@ -1,6 +1,6 @@
+use super::index::Indexes;
 use crate::configs::system::SystemConfig;
 use crate::streaming::batching::batch_accumulator::BatchAccumulator;
-use crate::streaming::segments::index::Index;
 use crate::streaming::storage::SystemStorage;
 use iggy::utils::expiry::IggyExpiry;
 use iggy::utils::timestamp::IggyTimestamp;
@@ -34,7 +34,7 @@ pub struct Segment {
     pub(crate) message_expiry: IggyExpiry,
     pub(crate) unsaved_messages: Option<BatchAccumulator>,
     pub(crate) config: Arc<SystemConfig>,
-    pub(crate) indexes: Option<Vec<Index>>,
+    pub(crate) indexes: Option<Indexes>,
     pub(crate) storage: Arc<SystemStorage>,
 }
 
@@ -74,7 +74,7 @@ impl Segment {
                 _ => message_expiry,
             },
             indexes: match config.segment.cache_indexes {
-                true => Some(Vec::new()),
+                true => Some(Indexes::default()),
                 false => None,
             },
             unsaved_messages: None,

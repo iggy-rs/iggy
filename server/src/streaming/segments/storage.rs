@@ -14,14 +14,18 @@ use bytes::{BufMut, BytesMut};
 use iggy::error::IggyError;
 use iggy::utils::byte_size::IggyByteSize;
 use iggy::utils::checksum;
+use memmap2::Mmap;
 use std::io::SeekFrom;
 use std::path::Path;
 use std::sync::atomic::Ordering;
 use std::sync::Arc;
+use tokio::fs::File;
 use tokio::io::{AsyncReadExt, AsyncSeekExt, BufReader};
 use tracing::{error, info, trace, warn};
 
-const EMPTY_INDEXES: Vec<Index> = vec![];
+use super::index::Indexes;
+
+const EMPTY_INDEXES: Indexes = Indexes::InMemory(Vec::new());
 pub const INDEX_SIZE: u32 = 16; // offset: 4 bytes, position: 4 bytes, timestamp: 8 bytes
 const BUF_READER_CAPACITY_BYTES: usize = 512 * 1000;
 
@@ -72,6 +76,9 @@ impl SegmentStorage for FileSegmentStorage {
 
         if segment.is_full().await {
             segment.is_closed = true;
+            let file = Arc::new(File::open(&segment.index_path).await?);
+            let mmap = unsafe { Mmap::map(&file) }?;
+            segment.indexes = Some(Indexes::MemoryMapped { mmap });
         }
 
         let messages_count = segment.get_messages_count();
@@ -267,7 +274,7 @@ impl SegmentStorage for FileSegmentStorage {
         Ok(())
     }
 
-    async fn load_all_indexes(&self, segment: &Segment) -> Result<Vec<Index>, IggyError> {
+    async fn load_all_indexes(&self, segment: &Segment) -> Result<Indexes, IggyError> {
         trace!("Loading indexes from file...");
         let file = file::open(&segment.index_path).await?;
         let file_size = file.metadata().await?.len() as usize;
@@ -315,7 +322,7 @@ impl SegmentStorage for FileSegmentStorage {
 
         trace!("Loaded {} indexes from file.", indexes_count);
 
-        Ok(indexes)
+        Ok(Indexes::InMemory(indexes))
     }
 
     async fn load_index_range(

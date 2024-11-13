@@ -1,4 +1,5 @@
 use super::batching::message_batch::RetainedMessageBatch;
+use super::segments::index::Indexes;
 use crate::configs::system::SystemConfig;
 use crate::state::system::{PartitionState, StreamState, TopicState};
 use crate::streaming::partitions::partition::{ConsumerOffset, Partition};
@@ -77,7 +78,7 @@ pub trait SegmentStorage: Send + Sync {
     ) -> Result<u32, IggyError>;
     async fn load_message_ids(&self, segment: &Segment) -> Result<Vec<u128>, IggyError>;
     async fn load_checksums(&self, segment: &Segment) -> Result<(), IggyError>;
-    async fn load_all_indexes(&self, segment: &Segment) -> Result<Vec<Index>, IggyError>;
+    async fn load_all_indexes(&self, segment: &Segment) -> Result<Indexes, IggyError>;
     async fn load_index_range(
         &self,
         segment: &Segment,
@@ -307,8 +308,8 @@ pub(crate) mod tests {
             Ok(())
         }
 
-        async fn load_all_indexes(&self, _segment: &Segment) -> Result<Vec<Index>, IggyError> {
-            Ok(vec![])
+        async fn load_all_indexes(&self, _segment: &Segment) -> Result<Indexes, IggyError> {
+            Ok(Indexes::default())
         }
 
         async fn load_index_range(

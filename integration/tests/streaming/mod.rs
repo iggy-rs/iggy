@@ -6,6 +6,7 @@ mod consumer_offset;
 mod messages;
 mod partition;
 mod segment;
+mod snapshot;
 mod stream;
 mod system;
 mod topic;

@@ -5,13 +5,18 @@ use crate::tcp::connection_handler::{handle_connection, handle_error};
 use crate::tcp::tcp_tls_sender::TcpTlsSender;
 use std::net::SocketAddr;
 use tokio::io::AsyncWriteExt;
-use tokio::net::TcpListener;
+use tokio::net::TcpSocket;
 use tokio::sync::oneshot;
 use tokio_native_tls::native_tls;
 use tokio_native_tls::native_tls::Identity;
 use tracing::{error, info};
 
-pub(crate) async fn start(address: &str, config: TcpTlsConfig, system: SharedSystem) -> SocketAddr {
+pub(crate) async fn start(
+    address: &str,
+    config: TcpTlsConfig,
+    socket: TcpSocket,
+    system: SharedSystem,
+) -> SocketAddr {
     let address = address.to_string();
     let (tx, rx) = oneshot::channel();
     tokio::spawn(async move {
@@ -31,8 +36,17 @@ pub(crate) async fn start(address: &str, config: TcpTlsConfig, system: SharedSys
                 .unwrap(),
         );
 
-        let listener = TcpListener::bind(&address)
-            .await
+        let addr = address.parse();
+        if addr.is_err() {
+            panic!("Unable to parse address {:?}", address);
+        }
+
+        socket
+            .bind(addr.unwrap())
+            .expect("Unable to bind socket to address");
+
+        let listener = socket
+            .listen(1024)
             .expect("Unable to start TCP TLS server.");
 
         let local_addr = listener

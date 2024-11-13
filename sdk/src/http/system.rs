@@ -3,13 +3,17 @@ use crate::error::IggyError;
 use crate::http::client::HttpClient;
 use crate::http::HttpTransport;
 use crate::models::client_info::{ClientInfo, ClientInfoDetails};
+use crate::models::snapshot::Snapshot;
 use crate::models::stats::Stats;
+use crate::snapshot::{SnapshotCompression, SystemSnapshotType};
+use crate::system::get_snapshot::GetSnapshot;
 use crate::utils::duration::IggyDuration;
 use async_trait::async_trait;
 
 const PING: &str = "/ping";
 const CLIENTS: &str = "/clients";
 const STATS: &str = "/stats";
+const SNAPSHOT: &str = "/snapshot";
 
 #[async_trait]
 impl SystemClient for HttpClient {
@@ -46,5 +50,24 @@ impl SystemClient for HttpClient {
 
     async fn heartbeat_interval(&self) -> IggyDuration {
         self.heartbeat_interval
+    }
+
+    async fn snapshot(
+        &self,
+        compression: SnapshotCompression,
+        snapshot_types: Vec<SystemSnapshotType>,
+    ) -> Result<Snapshot, IggyError> {
+        let response = self
+            .post(
+                SNAPSHOT,
+                &GetSnapshot {
+                    compression,
+                    snapshot_types,
+                },
+            )
+            .await?;
+        let file = response.bytes().await?;
+        let snapshot = Snapshot::new(file.to_vec());
+        Ok(snapshot)
     }
 }

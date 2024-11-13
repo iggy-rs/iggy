@@ -11,6 +11,8 @@ pub const PING: &str = "ping";
 pub const PING_CODE: u32 = 1;
 pub const GET_STATS: &str = "stats";
 pub const GET_STATS_CODE: u32 = 10;
+pub const GET_SNAPSHOT_FILE: &str = "snapshot";
+pub const GET_SNAPSHOT_FILE_CODE: u32 = 11;
 pub const GET_ME: &str = "me";
 pub const GET_ME_CODE: u32 = 20;
 pub const GET_CLIENT: &str = "client.get";
@@ -139,6 +141,7 @@ pub fn get_name_from_code(code: u32) -> Result<&'static str, IggyError> {
         DELETE_CONSUMER_GROUP_CODE => Ok(DELETE_CONSUMER_GROUP),
         JOIN_CONSUMER_GROUP_CODE => Ok(JOIN_CONSUMER_GROUP),
         LEAVE_CONSUMER_GROUP_CODE => Ok(LEAVE_CONSUMER_GROUP),
+        GET_SNAPSHOT_FILE_CODE => Ok(GET_SNAPSHOT_FILE),
         _ => Err(IggyError::InvalidCommand),
     }
 }

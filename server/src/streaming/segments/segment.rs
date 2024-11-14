@@ -2,6 +2,7 @@ use crate::configs::system::SystemConfig;
 use crate::streaming::batching::batch_accumulator::BatchAccumulator;
 use crate::streaming::segments::index::Index;
 use crate::streaming::storage::SystemStorage;
+use iggy::utils::byte_size::IggyByteSize;
 use iggy::utils::expiry::IggyExpiry;
 use iggy::utils::timestamp::IggyTimestamp;
 use std::sync::atomic::AtomicU64;
@@ -9,7 +10,7 @@ use std::sync::Arc;
 
 pub const LOG_EXTENSION: &str = "log";
 pub const INDEX_EXTENSION: &str = "index";
-pub const MAX_SIZE_BYTES: u32 = 1000 * 1000 * 1000;
+pub const MAX_SIZE_BYTES: u64 = 1000 * 1000 * 1000;
 
 #[derive(Debug)]
 pub struct Segment {
@@ -21,9 +22,9 @@ pub struct Segment {
     pub current_offset: u64,
     pub index_path: String,
     pub log_path: String,
-    pub size_bytes: u32,
+    pub size_bytes: IggyByteSize,
     pub last_index_position: u32,
-    pub max_size_bytes: u32,
+    pub max_size_bytes: IggyByteSize,
     pub size_of_parent_stream: Arc<AtomicU64>,
     pub size_of_parent_topic: Arc<AtomicU64>,
     pub size_of_parent_partition: Arc<AtomicU64>,
@@ -66,9 +67,9 @@ impl Segment {
             current_offset: start_offset,
             log_path: Self::get_log_path(&path),
             index_path: Self::get_index_path(&path),
-            size_bytes: 0,
+            size_bytes: IggyByteSize::from(0),
             last_index_position: 0,
-            max_size_bytes: config.segment.size.as_bytes_u64() as u32,
+            max_size_bytes: config.segment.size,
             message_expiry: match message_expiry {
                 IggyExpiry::ServerDefault => config.segment.message_expiry,
                 _ => message_expiry,

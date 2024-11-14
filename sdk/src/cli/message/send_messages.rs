@@ -4,6 +4,7 @@ use crate::client::Client;
 use crate::identifier::Identifier;
 use crate::messages::send_messages::{Message, Partitioning};
 use crate::models::header::{HeaderKey, HeaderValue};
+use crate::utils::sizeable::Sizeable;
 use anyhow::Context;
 use async_trait::async_trait;
 use bytes::Bytes;
@@ -103,7 +104,7 @@ impl CliCommand for SendMessagesCmd {
                 let message = Message::from_bytes(message_bytes);
                 match message {
                     Ok(message) => {
-                        let message_size = message.get_size_bytes() as usize;
+                        let message_size = message.get_size_bytes().as_bytes_usize();
                         messages.push(message);
                         bytes_read += message_size;
                     }

@@ -1,5 +1,6 @@
 use crate::args::simple::BenchmarkKind;
 use colored::Colorize;
+use iggy::utils::byte_size::IggyByteSize;
 use std::collections::HashSet;
 use std::{
     fmt::{Display, Formatter},
@@ -14,7 +15,7 @@ pub struct BenchmarkResult {
     pub end_timestamp: Instant,
     pub average_latency: Duration,
     pub latency_percentiles: LatencyPercentiles,
-    pub total_size_bytes: u64,
+    pub total_size_bytes: IggyByteSize,
     pub total_messages: u64,
 }
 
@@ -80,7 +81,7 @@ impl BenchmarkResults {
             .iter()
             .filter(&mut predicate)
             .map(|r| r.total_size_bytes)
-            .sum::<u64>();
+            .sum::<IggyByteSize>();
         let total_duration = (self
             .results
             .iter()
@@ -149,9 +150,11 @@ impl BenchmarkResults {
             / self.results.len() as u32)
             .as_secs_f64()
             * 1000.0;
-        let average_throughput =
-            total_size_bytes as f64 / total_duration / 1e6 / self.results.len() as f64;
-        let total_throughput = total_size_bytes as f64 / total_duration / 1e6;
+        let average_throughput = total_size_bytes.as_bytes_u64() as f64
+            / total_duration
+            / 1e6
+            / self.results.len() as f64;
+        let total_throughput = total_size_bytes.as_bytes_u64() as f64 / total_duration / 1e6;
         let messages_per_second = total_messages as f64 / total_duration;
 
         BenchmarkStatistics {

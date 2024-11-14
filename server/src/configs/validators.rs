@@ -115,9 +115,9 @@ impl Validatable<ServerError> for CacheConfig {
         );
         let total_memory = sys.total_memory();
         let free_memory = sys.free_memory();
-        let cache_percentage = (limit_bytes as f64 / total_memory as f64) * 100.0;
+        let cache_percentage = (limit_bytes.as_bytes_u64() as f64 / total_memory as f64) * 100.0;
 
-        let pretty_cache_limit = IggyByteSize::from(limit_bytes).as_human_string();
+        let pretty_cache_limit = limit_bytes.as_human_string();
         let pretty_total_memory = IggyByteSize::from(total_memory).as_human_string();
         let pretty_free_memory = IggyByteSize::from(free_memory).as_human_string();
 
@@ -150,7 +150,7 @@ impl Validatable<ServerError> for CacheConfig {
 
 impl Validatable<ServerError> for SegmentConfig {
     fn validate(&self) -> Result<(), ServerError> {
-        if self.size.as_bytes_u64() as u32 > segment::MAX_SIZE_BYTES {
+        if self.size > segment::MAX_SIZE_BYTES {
             return Err(ServerError::InvalidConfiguration(format!(
                 "Segment size cannot be greater than: {} bytes.",
                 segment::MAX_SIZE_BYTES

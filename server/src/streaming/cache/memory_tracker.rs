@@ -14,7 +14,7 @@ static mut INSTANCE: Option<Arc<CacheMemoryTracker>> = None;
 #[derive(Debug)]
 pub struct CacheMemoryTracker {
     used_memory_bytes: AtomicU64,
-    limit_bytes: u64,
+    limit_bytes: IggyByteSize,
 }
 
 type MessageSize = u64;
@@ -48,16 +48,16 @@ impl CacheMemoryTracker {
         let free_memory_percentage =
             free_memory.as_bytes_u64() as f64 / total_memory_bytes.as_bytes_u64() as f64 * 100.0;
         let used_memory_bytes = AtomicU64::new(0);
-        let limit_bytes = IggyByteSize::from(limit.into());
+        let limit_bytes = limit.into();
 
         info!(
             "Cache memory tracker started, cache: {}, total memory: {}, free memory: {}, free memory percentage: {:.2}%",
-            limit_bytes, total_memory_bytes, free_memory, free_memory_percentage
+            limit_bytes.as_human_string(), total_memory_bytes.as_human_string(), free_memory, free_memory_percentage
         );
 
         CacheMemoryTracker {
             used_memory_bytes,
-            limit_bytes: limit_bytes.as_bytes_u64(),
+            limit_bytes,
         }
     }
 
@@ -93,11 +93,12 @@ impl CacheMemoryTracker {
         }
     }
 
-    pub fn usage_bytes(&self) -> u64 {
-        self.used_memory_bytes.load(Ordering::SeqCst)
+    pub fn usage_bytes(&self) -> IggyByteSize {
+        IggyByteSize::from(self.used_memory_bytes.load(Ordering::SeqCst))
     }
 
-    pub fn will_fit_into_cache(&self, requested_size: u64) -> bool {
-        self.used_memory_bytes.load(Ordering::SeqCst) + requested_size <= self.limit_bytes
+    pub fn will_fit_into_cache(&self, requested_size: IggyByteSize) -> bool {
+        IggyByteSize::from(self.used_memory_bytes.load(Ordering::SeqCst)) + requested_size
+            <= self.limit_bytes
     }
 }

@@ -16,6 +16,7 @@ use crate::streaming::topics::topic::Topic;
 use async_trait::async_trait;
 use iggy::consumer::ConsumerKind;
 use iggy::error::IggyError;
+use iggy::utils::byte_size::IggyByteSize;
 use std::fmt::{Debug, Formatter};
 use std::sync::Arc;
 
@@ -74,7 +75,7 @@ pub trait SegmentStorage: Send + Sync {
         &self,
         segment: &Segment,
         batch: RetainedMessageBatch,
-    ) -> Result<u32, IggyError>;
+    ) -> Result<IggyByteSize, IggyError>;
     async fn load_message_ids(&self, segment: &Segment) -> Result<Vec<u128>, IggyError>;
     async fn load_checksums(&self, segment: &Segment) -> Result<(), IggyError>;
     async fn load_all_indexes(&self, segment: &Segment) -> Result<Vec<Index>, IggyError>;
@@ -295,8 +296,8 @@ pub(crate) mod tests {
             &self,
             _segment: &Segment,
             _batch: RetainedMessageBatch,
-        ) -> Result<u32, IggyError> {
-            Ok(0)
+        ) -> Result<IggyByteSize, IggyError> {
+            Ok(IggyByteSize::default())
         }
 
         async fn load_message_ids(&self, _segment: &Segment) -> Result<Vec<u128>, IggyError> {

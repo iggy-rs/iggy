@@ -9,6 +9,7 @@ use crate::streaming::storage::SystemStorage;
 use crate::streaming::streams::stream::Stream;
 use crate::streaming::users::permissioner::Permissioner;
 use iggy::error::IggyError;
+use iggy::utils::byte_size::IggyByteSize;
 use iggy::utils::crypto::{Aes256GcmEncryptor, Encryptor};
 use std::collections::HashMap;
 use std::path::Path;
@@ -260,7 +261,7 @@ impl System {
         }
     }
 
-    pub async fn clean_cache(&self, size_to_clean: u64) {
+    pub async fn clean_cache(&self, size_to_clean: IggyByteSize) {
         for stream in self.streams.values() {
             for topic in stream.get_topics() {
                 for partition in topic.get_partitions().into_iter() {
@@ -268,9 +269,9 @@ impl System {
                         let memory_tracker = CacheMemoryTracker::get_instance().unwrap();
                         let mut partition_guard = partition.write().await;
                         let cache = &mut partition_guard.cache.as_mut().unwrap();
-                        let size_to_remove = (cache.current_size() as f64
-                            / memory_tracker.usage_bytes() as f64
-                            * size_to_clean as f64)
+                        let size_to_remove = (cache.current_size().as_bytes_u64() as f64
+                            / memory_tracker.usage_bytes().as_bytes_u64() as f64
+                            * size_to_clean.as_bytes_u64() as f64)
                             .ceil() as u64;
                         cache.evict_by_size(size_to_remove * CACHE_OVER_EVICTION_FACTOR);
                     });

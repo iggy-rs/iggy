@@ -1,14 +1,17 @@
-use crate::streaming::sizeable::Sizeable;
 use bytes::{BufMut, Bytes, BytesMut};
 use iggy::bytes_serializable::BytesSerializable;
 use iggy::error::IggyError;
 use iggy::models::messages::PolledMessage;
+use iggy::utils::byte_size::IggyByteSize;
 use iggy::utils::checksum;
+use iggy::utils::sizeable::Sizeable;
 use iggy::{messages::send_messages::Message, models::messages::MessageState};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::ops::Deref;
 use std::sync::Arc;
+
+use crate::streaming::local_sizeable::LocalSizeable;
 
 // It's the same as PolledMessages from Iggy models, but with the Arc<Message> instead of Message.
 #[derive(Debug, Serialize, Deserialize)]
@@ -39,7 +42,7 @@ impl RetainedMessage {
             id: self.id,
             checksum: self.checksum,
             headers,
-            length: self.payload.len() as u32,
+            length: IggyByteSize::from(self.payload.len() as u64),
             payload: self.payload.clone(),
         };
         Ok(message)
@@ -69,7 +72,7 @@ impl RetainedMessage {
         let message_state = self.message_state;
         let headers = &self.headers;
 
-        bytes.put_u32_le(length);
+        bytes.put_u32_le(length.as_bytes_u64() as u32);
         bytes.put_u64_le(offset);
         bytes.put_u8(message_state.as_code());
         bytes.put_u64_le(timestamp);
@@ -113,26 +116,20 @@ impl RetainedMessage {
 }
 
 impl Sizeable for RetainedMessage {
-    fn get_size_bytes(&self) -> u32 {
-        let headers_len = self
-            .headers
-            .as_ref()
-            .map(|h| 4 + h.len() as u32)
-            .unwrap_or(4);
-        16 + 8 + 8 + 4 + 1 + headers_len + self.payload.len() as u32
+    fn get_size_bytes(&self) -> IggyByteSize {
+        let headers_len = self.headers.as_ref().map(|h| 4 + h.len()).unwrap_or(4);
+        let size = 16 + 8 + 8 + 4 + 1 + headers_len + self.payload.len();
+        IggyByteSize::from(size as u64)
     }
 }
 
-impl<T> Sizeable for T
+impl<T> LocalSizeable for T
 where
     T: Deref<Target = RetainedMessage>,
 {
-    fn get_size_bytes(&self) -> u32 {
-        let headers_len = self
-            .headers
-            .as_ref()
-            .map(|h| 4 + h.len() as u32)
-            .unwrap_or(4);
-        16 + 8 + 8 + 4 + 1 + headers_len + self.payload.len() as u32
+    fn get_size_bytes(&self) -> IggyByteSize {
+        let headers_len = self.headers.as_ref().map(|h| 4 + h.len()).unwrap_or(4);
+        let size = 16 + 8 + 8 + 4 + 1 + headers_len + self.payload.len();
+        IggyByteSize::from(size as u64)
     }
 }

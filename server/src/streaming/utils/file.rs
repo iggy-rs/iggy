@@ -1,4 +1,5 @@
 use atone::Vc;
+use iggy::utils::byte_size::IggyByteSize;
 use std::path::{Path, PathBuf};
 use tokio::fs::{read_dir, remove_file, File, OpenOptions};
 
@@ -30,7 +31,7 @@ pub async fn exists(path: &str) -> Result<bool, std::io::Error> {
     tokio::fs::try_exists(path).await
 }
 
-pub async fn folder_size<P>(path: P) -> std::io::Result<u64>
+pub async fn folder_size<P>(path: P) -> std::io::Result<IggyByteSize>
 where
     P: Into<PathBuf> + AsRef<Path>,
 {
@@ -51,5 +52,5 @@ where
             }
         }
     }
-    Ok(total_size)
+    Ok(total_size.into())
 }

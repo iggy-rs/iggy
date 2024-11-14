@@ -3,7 +3,9 @@ use crate::streaming::create_messages;
 use iggy::identifier::Identifier;
 use iggy::messages::poll_messages::PollingStrategy;
 use iggy::messages::send_messages::Partitioning;
+use iggy::utils::byte_size::IggyByteSize;
 use iggy::utils::expiry::IggyExpiry;
+use iggy::utils::sizeable::Sizeable;
 use iggy::utils::timestamp::IggyTimestamp;
 use iggy::utils::topic_size::MaxTopicSize;
 use server::state::system::StreamState;
@@ -127,7 +129,10 @@ async fn should_purge_existing_stream_on_disk() {
         let topic = stream
             .get_topic(&Identifier::numeric(topic_id).unwrap())
             .unwrap();
-        let batch_size = messages.iter().map(|msg| msg.get_size_bytes() as u64).sum();
+        let batch_size = messages
+            .iter()
+            .map(|msg| msg.get_size_bytes())
+            .sum::<IggyByteSize>();
         topic
             .append_messages(batch_size, Partitioning::partition_id(1), messages)
             .await

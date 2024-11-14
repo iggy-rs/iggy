@@ -276,7 +276,7 @@ pub fn map_polled_messages(payload: Bytes) -> Result<PolledMessages, IggyError> 
             checksum,
             id,
             headers,
-            length: message_length,
+            length: IggyByteSize::from(message_length as u64),
             payload: Bytes::from(payload),
         });
 

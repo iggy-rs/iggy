@@ -2,6 +2,7 @@ use crate::bytes_serializable::BytesSerializable;
 use crate::command::{Command, PURGE_TOPIC_CODE};
 use crate::error::IggyError;
 use crate::identifier::Identifier;
+use crate::utils::sizeable::Sizeable;
 use crate::validatable::Validatable;
 use bytes::{BufMut, Bytes, BytesMut};
 use serde::{Deserialize, Serialize};
@@ -50,7 +51,7 @@ impl BytesSerializable for PurgeTopic {
 
         let mut position = 0;
         let stream_id = Identifier::from_bytes(bytes.clone())?;
-        position += stream_id.get_size_bytes() as usize;
+        position += stream_id.get_size_bytes().as_bytes_usize();
         let topic_id = Identifier::from_bytes(bytes.slice(position..))?;
         let command = PurgeTopic {
             stream_id,
@@ -80,7 +81,7 @@ mod tests {
         let bytes = command.to_bytes();
         let mut position = 0;
         let stream_id = Identifier::from_bytes(bytes.clone()).unwrap();
-        position += stream_id.get_size_bytes() as usize;
+        position += stream_id.get_size_bytes().as_bytes_usize();
         let topic_id = Identifier::from_bytes(bytes.slice(position..)).unwrap();
 
         assert!(!bytes.is_empty());

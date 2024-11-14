@@ -10,6 +10,7 @@ use iggy::error::IggyError;
 use iggy::locking::IggySharedMut;
 use iggy::utils::byte_size::IggyByteSize;
 use iggy::utils::expiry::IggyExpiry;
+use iggy::utils::sizeable::Sizeable;
 use iggy::utils::timestamp::IggyTimestamp;
 use iggy::utils::topic_size::MaxTopicSize;
 use std::collections::HashMap;
@@ -153,10 +154,6 @@ impl Topic {
         matches!(self.max_topic_size, MaxTopicSize::Unlimited)
     }
 
-    pub fn get_size(&self) -> IggyByteSize {
-        IggyByteSize::from(self.size_bytes.load(Ordering::SeqCst))
-    }
-
     pub fn get_partitions(&self) -> Vec<IggySharedMut<Partition>> {
         self.partitions.values().cloned().collect()
     }
@@ -233,6 +230,12 @@ impl Topic {
             IggyExpiry::ServerDefault => config.segment.message_expiry,
             _ => message_expiry,
         }
+    }
+}
+
+impl Sizeable for Topic {
+    fn get_size_bytes(&self) -> IggyByteSize {
+        IggyByteSize::from(self.size_bytes.load(Ordering::SeqCst))
     }
 }
 

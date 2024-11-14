@@ -7,8 +7,10 @@ use crate::streaming::segments::segment::Segment;
 use crate::streaming::storage::SystemStorage;
 use dashmap::DashMap;
 use iggy::consumer::ConsumerKind;
+use iggy::utils::byte_size::IggyByteSize;
 use iggy::utils::duration::IggyDuration;
 use iggy::utils::expiry::IggyExpiry;
+use iggy::utils::sizeable::Sizeable;
 use iggy::utils::timestamp::IggyTimestamp;
 use std::sync::atomic::{AtomicU32, AtomicU64, Ordering};
 use std::sync::Arc;
@@ -166,9 +168,11 @@ impl Partition {
 
         partition
     }
+}
 
-    pub fn get_size_bytes(&self) -> u64 {
-        self.size_bytes.load(Ordering::SeqCst)
+impl Sizeable for Partition {
+    fn get_size_bytes(&self) -> IggyByteSize {
+        IggyByteSize::from(self.size_bytes.load(Ordering::SeqCst))
     }
 }
 

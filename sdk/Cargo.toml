@@ -43,8 +43,8 @@ passterm = { version = "2.0.1", optional = true }
 pem = { version = "3.0.4" }
 quinn = { version = "0.11.5" }
 regex = "1.10.4"
-reqwest = { version = "0.12.7", default-features = false, features = ["json", "rustls-tls"] }
-reqwest-middleware = { version = "0.3.3", features = ["json"] }
+reqwest = { version = "0.12.9", default-features = false, features = ["json", "rustls-tls"] }
+reqwest-middleware = { version = "0.4.0", features = ["json"] }
 reqwest-retry = "0.7.0"
 rustls = { version = "0.23.10", features = ["ring"] }
 serde = { version = "1.0.210", features = ["derive", "rc"] }

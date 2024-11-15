@@ -72,6 +72,7 @@ impl Producer {
             1 => Partitioning::partition_id(default_partition_id),
             2.. => Partitioning::balanced(),
         };
+        /*
         info!(
             "Producer #{} → warming up for {}...",
             self.producer_id, self.warmup_time
@@ -82,6 +83,7 @@ impl Producer {
                 .send_messages(&stream_id, &topic_id, &partitioning, &mut messages)
                 .await?;
         }
+        */
 
         info!(
             "Producer #{} → sending {} messages in {} batches of {} messages...",

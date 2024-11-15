@@ -1,6 +1,7 @@
 use super::message_batch::{RetainedMessageBatch, RETAINED_BATCH_OVERHEAD};
 use crate::streaming::{models::messages::RetainedMessage, sizeable::Sizeable};
 use bytes::BytesMut;
+use tracing::warn;
 use std::sync::Arc;
 
 #[derive(Debug, Clone)]
@@ -82,6 +83,9 @@ impl BatchAccumulator {
 
         let mut remaining_messages = Vec::with_capacity(remainder.len());
         let has_remainder = !remainder.is_empty();
+        if has_remainder {
+            warn!("has remainder");
+        }
         if has_remainder {
             self.base_offset = remainder.first().unwrap().offset;
             self.current_size = remainder

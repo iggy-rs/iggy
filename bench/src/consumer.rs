@@ -79,6 +79,7 @@ impl Consumer {
         let mut topic_not_found_counter = 0;
         let mut strategy = PollingStrategy::offset(0);
 
+        /*
         if self.warmup_time.get_duration() != Duration::from_millis(0) {
             if let Some(cg_id) = self.consumer_group_id {
                 info!(
@@ -117,6 +118,7 @@ impl Consumer {
                 current_iteration += 1;
             }
         }
+        */
 
         if let Some(cg_id) = self.consumer_group_id {
             info!(

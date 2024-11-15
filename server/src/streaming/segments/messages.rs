@@ -5,7 +5,11 @@ use crate::streaming::models::messages::RetainedMessage;
 use crate::streaming::segments::index::{Index, IndexRange};
 use crate::streaming::segments::segment::Segment;
 use crate::streaming::sizeable::Sizeable;
+use bytes::buf::UninitSlice;
+use bytes::{BufMut, Bytes, BytesMut};
 use iggy::error::IggyError;
+use std::alloc::{self, Layout};
+use std::slice::from_raw_parts;
 use std::sync::atomic::Ordering;
 use std::sync::Arc;
 use tracing::{error, info, trace, warn};
@@ -161,15 +165,23 @@ impl Segment {
         end_offset: u64,
     ) -> Result<Vec<Arc<RetainedMessage>>, IggyError> {
         let messages_count = (start_offset + end_offset) as usize;
-        let messages = self
-            .storage
-            .segment
-            .load_message_batches(self, index_range)
-            .await?
+        let path = self.log_path.as_str();
+        let start_position = index_range.start.position;
+        let end_offset = index_range.end.offset as u64  + self.start_offset;
+        let batch = self
+            .direct_io_storage
+            .read_batches(path, start_position as _, end_offset)
+            .await?;
+        error!("batches_count: {}", batch.len());
+        let messages = batch
             .iter()
+            .to_messages();
+            /*
             .to_messages_with_filter(messages_count, &|msg| {
                 msg.offset >= start_offset && msg.offset <= end_offset
             });
+            */
+            error!("messages len: {}", messages.len());
         trace!(
             "Loaded {} messages from disk, segment start offset: {}, end offset: {}.",
             messages.len(),
@@ -235,7 +247,9 @@ impl Segment {
     }
 
     pub async fn persist_messages(&mut self, fsync: bool) -> Result<usize, IggyError> {
-        let storage = self.storage.segment.clone();
+        let sector_size = 512;
+        let storage = self.direct_io_storage.clone();
+        let index_storage = self.storage.segment.clone();
         if self.unsaved_messages.is_none() {
             return Ok(0);
         }
@@ -259,19 +273,29 @@ impl Segment {
 
         let (has_remainder, batch) = batch_accumulator.materialize_batch_and_maybe_update_state();
         let batch_size = batch.get_size_bytes();
+        let sectors = batch_size.div_ceil(sector_size);
+        let adjusted_size = sector_size * sectors;
+        let layout = Layout::from_size_align(adjusted_size as _, sector_size as _).unwrap();
+        let ptr = unsafe { alloc::alloc(layout) };
+        unsafe { std::ptr::write_bytes(ptr, 0, adjusted_size as _) };
+        //let slice = unsafe {std::slice::from_raw_parts(ptr, adjusted_size as _)};
         if has_remainder {
             self.unsaved_messages = Some(batch_accumulator);
         }
-        let saved_bytes = storage.save_batches(self, batch, fsync).await?;
-        storage.save_index(&self.index_path, index).await?;
-        self.last_index_position += batch_size;
-        self.size_bytes += RETAINED_BATCH_OVERHEAD;
+        let mut bytes = unsafe  {Vec::from_raw_parts(ptr, adjusted_size as _, adjusted_size as _)};
+        let diff = bytes.len() as u32 - batch_size;
+        batch.extend2(&mut bytes);
+        let saved_bytes = storage.write_batches(self.log_path.as_str(), &bytes).await?;
+        index_storage.save_index(&self.index_path, index).await?;
+        self.last_index_position += adjusted_size;
+        let size_increment = RETAINED_BATCH_OVERHEAD + diff;
+        self.size_bytes += size_increment;
         self.size_of_parent_stream
-            .fetch_add(RETAINED_BATCH_OVERHEAD as u64, Ordering::AcqRel);
+            .fetch_add(size_increment as u64, Ordering::AcqRel);
         self.size_of_parent_topic
-            .fetch_add(RETAINED_BATCH_OVERHEAD as u64, Ordering::AcqRel);
+            .fetch_add(size_increment as u64, Ordering::AcqRel);
         self.size_of_parent_partition
-            .fetch_add(RETAINED_BATCH_OVERHEAD as u64, Ordering::AcqRel);
+            .fetch_add(size_increment as u64, Ordering::AcqRel);
 
         trace!(
             "Saved {} messages on disk in segment with start offset: {} for partition with ID: {}, total bytes written: {}.",

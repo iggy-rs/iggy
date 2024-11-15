@@ -17,3 +17,4 @@ pub mod systems;
 pub mod topics;
 pub mod users;
 pub mod utils;
+pub mod direct_io;

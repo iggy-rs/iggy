@@ -2,6 +2,7 @@ use crate::streaming::batching::batch_filter::BatchItemizer;
 use crate::streaming::batching::iterator::IntoMessagesIterator;
 use crate::streaming::models::messages::RetainedMessage;
 use bytes::{BufMut, Bytes, BytesMut};
+use tracing::warn;
 
 pub const RETAINED_BATCH_OVERHEAD: u32 = 8 + 8 + 4 + 4;
 
@@ -44,6 +45,14 @@ impl RetainedMessageBatch {
 
     pub fn get_last_offset(&self) -> u64 {
         self.base_offset + self.last_offset_delta as u64
+    }
+
+    pub fn extend2(&self, bytes: &mut Vec<u8>) {
+        bytes[0..8].copy_from_slice(&self.base_offset.to_le_bytes());
+        bytes[8..12].copy_from_slice(&self.length.to_le_bytes());
+        bytes[12..16].copy_from_slice(&self.last_offset_delta.to_le_bytes());
+        bytes[16..24].copy_from_slice(&self.max_timestamp.to_le_bytes());
+        bytes[24..self.length as usize + RETAINED_BATCH_OVERHEAD as usize].copy_from_slice(&self.bytes);
     }
 
     pub fn extend(&self, bytes: &mut BytesMut) {

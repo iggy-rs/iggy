@@ -1,5 +1,6 @@
 use crate::configs::system::SystemConfig;
 use crate::streaming::batching::batch_accumulator::BatchAccumulator;
+use crate::streaming::direct_io::storage::DirectIOStorage;
 use crate::streaming::segments::index::Index;
 use crate::streaming::storage::SystemStorage;
 use iggy::utils::expiry::IggyExpiry;
@@ -36,6 +37,7 @@ pub struct Segment {
     pub(crate) config: Arc<SystemConfig>,
     pub(crate) indexes: Option<Vec<Index>>,
     pub(crate) storage: Arc<SystemStorage>,
+    pub(crate) direct_io_storage: Arc<DirectIOStorage>,
 }
 
 impl Segment {
@@ -78,6 +80,7 @@ impl Segment {
                 true => Some(Vec::new()),
                 false => None,
             },
+            direct_io_storage: Default::default(),
             unsaved_messages,
             is_closed: false,
             size_of_parent_stream,

@@ -12,6 +12,7 @@ use crate::utils::timestamp::IggyTimestamp;
 use async_broadcast::{broadcast, Receiver, Sender};
 use async_trait::async_trait;
 use bytes::{Buf, BufMut, Bytes, BytesMut};
+use rustls::pki_types::{pem::PemObject, CertificateDer, ServerName};
 use std::fmt::Debug;
 use std::net::SocketAddr;
 use std::str::FromStr;
@@ -21,8 +22,7 @@ use tokio::net::tcp::{OwnedReadHalf, OwnedWriteHalf};
 use tokio::net::TcpStream;
 use tokio::sync::Mutex;
 use tokio::time::sleep;
-use tokio_native_tls::native_tls::TlsConnector;
-use tokio_native_tls::TlsStream;
+use tokio_rustls::{TlsConnector, TlsStream};
 use tracing::{error, info, trace, warn};
 
 const REQUEST_INITIAL_BYTES_LENGTH: usize = 4;
@@ -462,24 +462,44 @@ impl TcpClient {
                 break;
             }
 
-            let connector = tokio_native_tls::TlsConnector::from(
-                TlsConnector::builder().build().map_err(|error| {
-                    error!("Failed to create a TLS connector: {error}");
-                    IggyError::CannotEstablishConnection
-                })?,
-            );
-            let stream = tokio_native_tls::TlsConnector::connect(
-                &connector,
-                &self.config.tls_domain,
-                stream,
-            )
-            .await
-            .map_err(|error| {
-                error!("Failed to establish a TLS connection: {error}");
-                IggyError::CannotEstablishConnection
-            })?;
+            let mut root_cert_store = rustls::RootCertStore::empty();
+            if let Some(certificate_path) = &self.config.tls_ca_file {
+                for cert in CertificateDer::pem_file_iter(certificate_path).map_err(|error| {
+                    error!("Failed to read the CA file: {certificate_path}. {error}",);
+                    IggyError::InvalidTlsCertificatePath
+                })? {
+                    let certificate = cert.map_err(|error| {
+                        error!(
+                            "Failed to read a certificate from the CA file: {certificate_path}. {error}",
+                        );
+                        IggyError::InvalidTlsCertificate
+                    })?;
+                    root_cert_store.add(certificate).map_err(|error| {
+                        error!(
+                            "Failed to add a certificate to the root certificate store. {error}",
+                        );
+                        IggyError::InvalidTlsCertificate
+                    })?;
+                }
+            } else {
+                root_cert_store.extend(webpki_roots::TLS_SERVER_ROOTS.iter().cloned());
+            }
 
-            connection_stream = Box::new(TcpTlsConnectionStream::new(client_address, stream));
+            let config = rustls::ClientConfig::builder()
+                .with_root_certificates(root_cert_store)
+                .with_no_client_auth();
+            let connector = TlsConnector::from(Arc::new(config));
+            let stream = TcpStream::connect(client_address).await?;
+            let tls_domain = self.config.tls_domain.to_owned();
+            let domain = ServerName::try_from(tls_domain).map_err(|error| {
+                error!("Failed to create a server name from the domain. {error}",);
+                IggyError::InvalidTlsDomain
+            })?;
+            let stream = connector.connect(domain, stream).await?;
+            connection_stream = Box::new(TcpTlsConnectionStream::new(
+                client_address,
+                TlsStream::Client(stream),
+            ));
             break;
         }
 

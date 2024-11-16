@@ -69,7 +69,7 @@ impl ConsumerOffset {
 
 impl Partition {
     #[allow(clippy::too_many_arguments)]
-    pub fn create(
+    pub async fn create(
         stream_id: u32,
         topic_id: u32,
         partition_id: u32,
@@ -160,7 +160,8 @@ impl Partition {
                 partition.messages_count_of_parent_stream.clone(),
                 partition.messages_count_of_parent_topic.clone(),
                 partition.messages_count.clone(),
-            );
+            )
+            .await;
             partition.segments.push(segment);
             partition
                 .segments_count_of_parent_stream
@@ -202,8 +203,8 @@ mod tests {
     use std::sync::atomic::{AtomicU32, AtomicU64};
     use std::sync::Arc;
 
-    #[test]
-    fn should_be_created_with_a_single_segment_given_valid_parameters() {
+    #[tokio::test]
+    async fn should_be_created_with_a_single_segment_given_valid_parameters() {
         let storage = Arc::new(get_test_system_storage());
         let stream_id = 1;
         let topic_id = 2;
@@ -226,7 +227,8 @@ mod tests {
             Arc::new(AtomicU64::new(0)),
             Arc::new(AtomicU32::new(0)),
             IggyTimestamp::now(),
-        );
+        )
+        .await;
 
         assert_eq!(partition.stream_id, stream_id);
         assert_eq!(partition.topic_id, topic_id);
@@ -243,8 +245,8 @@ mod tests {
         assert!(consumer_offsets.is_empty());
     }
 
-    #[test]
-    fn should_not_initialize_cache_given_zero_capacity() {
+    #[tokio::test]
+    async fn should_not_initialize_cache_given_zero_capacity() {
         let storage = Arc::new(get_test_system_storage());
         let partition = Partition::create(
             1,
@@ -266,12 +268,13 @@ mod tests {
             Arc::new(AtomicU64::new(0)),
             Arc::new(AtomicU32::new(0)),
             IggyTimestamp::now(),
-        );
+        )
+        .await;
         assert!(partition.cache.is_none());
     }
 
-    #[test]
-    fn should_not_initialize_segments_given_false_with_segment_parameter() {
+    #[tokio::test]
+    async fn should_not_initialize_segments_given_false_with_segment_parameter() {
         let storage = Arc::new(get_test_system_storage());
         let topic_id = 1;
         let partition = Partition::create(
@@ -288,7 +291,8 @@ mod tests {
             Arc::new(AtomicU64::new(0)),
             Arc::new(AtomicU32::new(0)),
             IggyTimestamp::now(),
-        );
+        )
+        .await;
         assert!(partition.segments.is_empty());
     }
 }

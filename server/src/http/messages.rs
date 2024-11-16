@@ -84,6 +84,7 @@ async fn send_messages(
     let command_topic_id = command.topic_id;
     let partitioning = command.partitioning;
     let system = state.system.read().await;
+    // TODO(haze): Add confirmation level after testing is complete
     system
         .append_messages(
             &Session::stateless(identity.user_id, identity.ip_address),
@@ -91,6 +92,7 @@ async fn send_messages(
             command_topic_id,
             partitioning,
             messages,
+            None,
         )
         .await
         .with_error_context(|_| {

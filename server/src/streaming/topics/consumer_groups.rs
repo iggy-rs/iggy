@@ -211,7 +211,7 @@ mod tests {
     async fn should_be_created_given_valid_parameters() {
         let group_id = 1;
         let name = "test";
-        let mut topic = get_topic();
+        let mut topic = get_topic().await;
         let topic_id = topic.topic_id;
         let result = topic.create_consumer_group(Some(group_id), name).await;
         assert!(result.is_ok());
@@ -240,7 +240,7 @@ mod tests {
     async fn should_not_be_created_given_already_existing_group_with_same_id() {
         let group_id = 1;
         let name = "test";
-        let mut topic = get_topic();
+        let mut topic = get_topic().await;
         let result = topic.create_consumer_group(Some(group_id), name).await;
         assert!(result.is_ok());
         assert_eq!(topic.consumer_groups.len(), 1);
@@ -255,7 +255,7 @@ mod tests {
     async fn should_not_be_created_given_already_existing_group_with_same_name() {
         let group_id = 1;
         let name = "test";
-        let mut topic = get_topic();
+        let mut topic = get_topic().await;
         let result = topic.create_consumer_group(Some(group_id), name).await;
         assert!(result.is_ok());
         assert_eq!(topic.consumer_groups.len(), 1);
@@ -274,7 +274,7 @@ mod tests {
     async fn should_be_deleted_given_already_existing_group_with_same_id() {
         let group_id = 1;
         let name = "test";
-        let mut topic = get_topic();
+        let mut topic = get_topic().await;
         let result = topic.create_consumer_group(Some(group_id), name).await;
         assert!(result.is_ok());
         assert_eq!(topic.consumer_groups.len(), 1);
@@ -289,7 +289,7 @@ mod tests {
     async fn should_not_be_deleted_given_non_existing_group_with_same_id() {
         let group_id = 1;
         let name = "test";
-        let mut topic = get_topic();
+        let mut topic = get_topic().await;
         let result = topic.create_consumer_group(Some(group_id), name).await;
         assert!(result.is_ok());
         assert_eq!(topic.consumer_groups.len(), 1);
@@ -306,7 +306,7 @@ mod tests {
         let group_id = 1;
         let name = "test";
         let member_id = 1;
-        let mut topic = get_topic();
+        let mut topic = get_topic().await;
         topic
             .create_consumer_group(Some(group_id), name)
             .await
@@ -329,7 +329,7 @@ mod tests {
         let group_id = 1;
         let name = "test";
         let member_id = 1;
-        let mut topic = get_topic();
+        let mut topic = get_topic().await;
         topic
             .create_consumer_group(Some(group_id), name)
             .await
@@ -351,7 +351,7 @@ mod tests {
         assert!(members.is_empty())
     }
 
-    fn get_topic() -> Topic {
+    async fn get_topic() -> Topic {
         let storage = Arc::new(get_test_system_storage());
         let stream_id = 1;
         let id = 2;
@@ -378,6 +378,7 @@ mod tests {
             MaxTopicSize::ServerDefault,
             1,
         )
+        .await
         .unwrap()
     }
 }

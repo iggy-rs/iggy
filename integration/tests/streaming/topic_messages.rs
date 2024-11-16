@@ -84,7 +84,7 @@ async fn assert_polling_messages(cache: CacheConfig, expect_enabled_cache: bool)
         .map(|m| m.get_size_bytes())
         .sum::<IggyByteSize>();
     topic
-        .append_messages(batch_size, partitioning, messages)
+        .append_messages(batch_size, partitioning, messages, None)
         .await
         .unwrap();
 
@@ -129,6 +129,7 @@ async fn given_key_none_messages_should_be_appended_to_the_next_partition_using_
                 batch_size,
                 partitioning.clone(),
                 vec![get_message(i as u128, &payload)],
+                None,
             )
             .await
             .unwrap();
@@ -154,6 +155,7 @@ async fn given_key_partition_id_messages_should_be_appended_to_the_chosen_partit
                 batch_size,
                 partitioning.clone(),
                 vec![get_message(i as u128, &payload)],
+                None,
             )
             .await
             .unwrap();
@@ -183,6 +185,7 @@ async fn given_key_messages_key_messages_should_be_appended_to_the_calculated_pa
                 batch_size,
                 partitioning,
                 vec![get_message(entity_id as u128, &payload)],
+                None,
             )
             .await
             .unwrap();
@@ -241,6 +244,7 @@ async fn init_topic(setup: &TestSetup, partitions_count: u32) -> Topic {
         MaxTopicSize::ServerDefault,
         1,
     )
+    .await
     .unwrap();
     topic.persist().await.unwrap();
     topic

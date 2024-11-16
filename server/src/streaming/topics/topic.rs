@@ -49,7 +49,7 @@ pub struct Topic {
 
 impl Topic {
     #[allow(clippy::too_many_arguments)]
-    pub fn empty(
+    pub async fn empty(
         stream_id: u32,
         topic_id: u32,
         name: &str,
@@ -74,11 +74,12 @@ impl Topic {
             MaxTopicSize::ServerDefault,
             1,
         )
+        .await
         .unwrap()
     }
 
     #[allow(clippy::too_many_arguments)]
-    pub fn create(
+    pub async fn create(
         stream_id: u32,
         topic_id: u32,
         name: &str,
@@ -125,7 +126,7 @@ impl Topic {
             message_expiry, topic.message_expiry
         );
 
-        topic.add_partitions(partitions_count)?;
+        topic.add_partitions(partitions_count).await?;
         Ok(topic)
     }
 
@@ -296,6 +297,7 @@ mod tests {
             max_topic_size,
             replication_factor,
         )
+        .await
         .unwrap();
 
         assert_eq!(topic.stream_id, stream_id);

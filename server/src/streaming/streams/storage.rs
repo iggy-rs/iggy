@@ -75,7 +75,8 @@ impl StreamStorage for FileStreamStorage {
                 stream.segments_count.clone(),
                 stream.config.clone(),
                 stream.storage.clone(),
-            );
+            )
+            .await;
             unloaded_topics.push(topic);
         }
 
@@ -115,7 +116,8 @@ impl StreamStorage for FileStreamStorage {
                     stream.segments_count.clone(),
                     stream.config.clone(),
                     stream.storage.clone(),
-                );
+                )
+                .await;
                 topic.persist().await.with_error_context(|_| {
                     format!("{COMPONENT} - failed to persist topic: {topic}")
                 })?;

@@ -2,15 +2,26 @@ use crate::configs::system::SystemConfig;
 use crate::streaming::batching::batch_accumulator::BatchAccumulator;
 use crate::streaming::segments::index::Index;
 use crate::streaming::storage::SystemStorage;
+use bytes::Bytes;
 use iggy::utils::byte_size::IggyByteSize;
 use iggy::utils::expiry::IggyExpiry;
 use iggy::utils::timestamp::IggyTimestamp;
+use tracing::error;
 use std::sync::atomic::AtomicU64;
 use std::sync::Arc;
+use tokio::{fs, task};
+use flume::{unbounded, Receiver, Sender};
+
 
 pub const LOG_EXTENSION: &str = "log";
 pub const INDEX_EXTENSION: &str = "index";
 pub const MAX_SIZE_BYTES: u64 = 1000 * 1000 * 1000;
+
+#[derive(Debug)]
+pub struct PersisterTask {
+    pub sender: Sender<Bytes>,
+    task_handle: task::JoinHandle<()>,
+}
 
 #[derive(Debug)]
 pub struct Segment {
@@ -32,6 +43,7 @@ pub struct Segment {
     pub messages_count_of_parent_topic: Arc<AtomicU64>,
     pub messages_count_of_parent_partition: Arc<AtomicU64>,
     pub is_closed: bool,
+    pub persister_task: PersisterTask,
     pub(crate) message_expiry: IggyExpiry,
     pub(crate) unsaved_messages: Option<BatchAccumulator>,
     pub(crate) config: Arc<SystemConfig>,
@@ -41,7 +53,7 @@ pub struct Segment {
 
 impl Segment {
     #[allow(clippy::too_many_arguments)]
-    pub fn create(
+    pub async fn create(
         stream_id: u32,
         topic_id: u32,
         partition_id: u32,
@@ -57,6 +69,29 @@ impl Segment {
         messages_count_of_parent_partition: Arc<AtomicU64>,
     ) -> Segment {
         let path = config.get_segment_path(stream_id, topic_id, partition_id, start_offset);
+
+        let (sender, receiver): (Sender<Bytes>, Receiver<Bytes>) =
+            unbounded();
+
+        let task_path = path.clone();
+        let persister = storage.segment.persister();
+        let task_handle = task::spawn(async move {
+            loop {
+                tokio::select! {
+                    data = receiver.recv_async() => {
+                        match data {
+                            Ok(data) => {
+                                persister.append(&task_path, &data).await;
+                            },
+                            Err(e) => {
+                                error!("Error receiving data from chan: {}", e);
+                                continue
+                            }
+                        }
+                    }
+                }
+            }
+        });
 
         Segment {
             stream_id,
@@ -88,6 +123,7 @@ impl Segment {
             messages_count_of_parent_partition,
             config,
             storage,
+            persister_task: PersisterTask { sender, task_handle},
         }
     }
 
@@ -174,7 +210,7 @@ mod tests {
             messages_count_of_parent_stream,
             messages_count_of_parent_topic,
             messages_count_of_parent_partition,
-        );
+        ).await;
 
         assert_eq!(segment.stream_id, stream_id);
         assert_eq!(segment.topic_id, topic_id);
@@ -192,8 +228,8 @@ mod tests {
         assert!(!segment.is_full().await);
     }
 
-    #[test]
-    fn should_not_initialize_indexes_cache_when_disabled() {
+    #[tokio::test]
+    async fn should_not_initialize_indexes_cache_when_disabled() {
         let storage = Arc::new(get_test_system_storage());
         let stream_id = 1;
         let topic_id = 2;
@@ -228,7 +264,7 @@ mod tests {
             messages_count_of_parent_stream,
             messages_count_of_parent_topic,
             messages_count_of_parent_partition,
-        );
+        ).await;
 
         assert!(segment.indexes.is_none());
     }

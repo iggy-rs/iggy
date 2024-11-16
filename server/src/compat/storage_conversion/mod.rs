@@ -66,12 +66,13 @@ pub async fn init(
         return Err(IggyError::CannotReadStreams);
     }
 
+    let persister = Arc::new(NoopPersister {});
     let noop_storage = SystemStorage {
         info: Arc::new(NoopSystemInfoStorage {}),
         stream: Arc::new(NoopStreamStorage {}),
         topic: Arc::new(NoopTopicStorage {}),
         partition: Arc::new(NoopPartitionStorage {}),
-        segment: Arc::new(NoopSegmentStorage {}),
+        segment: Arc::new(NoopSegmentStorage { persister: persister.clone() }),
         persister: Arc::new(NoopPersister {}),
     };
     let noop_storage = Arc::new(noop_storage);
@@ -104,7 +105,9 @@ struct NoopSystemInfoStorage {}
 struct NoopStreamStorage {}
 struct NoopTopicStorage {}
 struct NoopPartitionStorage {}
-struct NoopSegmentStorage {}
+struct NoopSegmentStorage {
+    persister: Arc<dyn Persister>
+}
 
 #[async_trait]
 impl Persister for NoopPersister {
@@ -270,5 +273,9 @@ impl SegmentStorage for NoopSegmentStorage {
         _timestamp: u64,
     ) -> Result<Option<Index>, IggyError> {
         Ok(None)
+    }
+
+    fn persister(&self) -> Arc<dyn Persister> {
+        self.persister.clone()
     }
 }

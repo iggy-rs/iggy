@@ -546,7 +546,7 @@ mod tests {
 
     #[tokio::test]
     async fn given_disabled_message_deduplication_all_messages_should_be_appended() {
-        let mut partition = create_partition(false);
+        let mut partition = create_partition(false).await;
         let messages = create_messages();
         let messages_count = messages.len() as u32;
         let appendable_batch_info = AppendableBatchInfo {
@@ -570,7 +570,7 @@ mod tests {
 
     #[tokio::test]
     async fn given_enabled_message_deduplication_only_messages_with_unique_id_should_be_appended() {
-        let mut partition = create_partition(true);
+        let mut partition = create_partition(true).await;
         let messages = create_messages();
         let messages_count = messages.len() as u32;
         let unique_messages_count = 3;
@@ -593,7 +593,7 @@ mod tests {
         assert_eq!(loaded_messages.len(), unique_messages_count);
     }
 
-    fn create_partition(deduplication_enabled: bool) -> Partition {
+    async fn create_partition(deduplication_enabled: bool) -> Partition {
         let storage = Arc::new(get_test_system_storage());
         let stream_id = 1;
         let topic_id = 2;
@@ -620,6 +620,6 @@ mod tests {
             Arc::new(AtomicU64::new(0)),
             Arc::new(AtomicU32::new(0)),
             IggyTimestamp::now(),
-        )
+        ).await
     }
 }

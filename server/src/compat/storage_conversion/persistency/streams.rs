@@ -81,7 +81,7 @@ pub async fn load(config: &SystemConfig, db: &Db, stream: &mut Stream) -> Result
             stream.segments_count.clone(),
             stream.config.clone(),
             stream.storage.clone(),
-        );
+        ).await;
         topics::load(config, db, &mut topic).await?;
         topics.push(topic);
     }

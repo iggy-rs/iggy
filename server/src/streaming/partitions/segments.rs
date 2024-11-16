@@ -61,7 +61,7 @@ impl Partition {
             self.messages_count_of_parent_stream.clone(),
             self.messages_count_of_parent_topic.clone(),
             self.messages_count.clone(),
-        );
+        ).await;
         new_segment.persist().await?;
         self.segments.push(new_segment);
         self.segments_count_of_parent_stream

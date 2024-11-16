@@ -307,7 +307,7 @@ mod tests {
         let partitioning = Partitioning::partition_id(partition_id);
         let partitions_count = 3;
         let messages_count: u32 = 1000;
-        let topic = init_topic(partitions_count);
+        let topic = init_topic(partitions_count).await;
 
         for entity_id in 1..=messages_count {
             let messages = vec![Message::new(Some(entity_id as u128), Bytes::new(), None)];
@@ -338,7 +338,7 @@ mod tests {
     async fn given_messages_key_key_messages_should_be_appended_to_the_calculated_partitions() {
         let partitions_count = 3;
         let messages_count = 1000;
-        let topic = init_topic(partitions_count);
+        let topic = init_topic(partitions_count).await;
 
         for entity_id in 1..=messages_count {
             let partitioning = Partitioning::messages_key_u32(entity_id);
@@ -366,12 +366,12 @@ mod tests {
         assert_eq!(read_messages_count, messages_count as usize);
     }
 
-    #[test]
-    fn given_multiple_partitions_calculate_next_partition_id_should_return_next_partition_id_using_round_robin(
+    #[tokio::test]
+    async fn given_multiple_partitions_calculate_next_partition_id_should_return_next_partition_id_using_round_robin(
     ) {
         let partitions_count = 3;
         let messages_count = 1000;
-        let topic = init_topic(partitions_count);
+        let topic = init_topic(partitions_count).await;
 
         let mut expected_partition_id = 0;
         for _ in 1..=messages_count {
@@ -385,11 +385,11 @@ mod tests {
         }
     }
 
-    #[test]
-    fn given_multiple_partitions_calculate_partition_id_by_hash_should_return_next_partition_id() {
+    #[tokio::test]
+    async fn given_multiple_partitions_calculate_partition_id_by_hash_should_return_next_partition_id() {
         let partitions_count = 3;
         let messages_count = 1000;
-        let topic = init_topic(partitions_count);
+        let topic = init_topic(partitions_count).await;
 
         for entity_id in 1..=messages_count {
             let key = Partitioning::messages_key_u32(entity_id);
@@ -404,7 +404,7 @@ mod tests {
         }
     }
 
-    fn init_topic(partitions_count: u32) -> Topic {
+    async fn init_topic(partitions_count: u32) -> Topic {
         let storage = Arc::new(get_test_system_storage());
         let stream_id = 1;
         let id = 2;
@@ -430,6 +430,7 @@ mod tests {
             MaxTopicSize::ServerDefault,
             1,
         )
+        .await
         .unwrap()
     }
 }

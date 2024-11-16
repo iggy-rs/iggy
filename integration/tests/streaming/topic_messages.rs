@@ -241,6 +241,7 @@ async fn init_topic(setup: &TestSetup, partitions_count: u32) -> Topic {
         MaxTopicSize::ServerDefault,
         1,
     )
+    .await
     .unwrap();
     topic.persist().await.unwrap();
     topic

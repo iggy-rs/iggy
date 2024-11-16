@@ -9,7 +9,8 @@ use crate::streaming::utils::file;
 use crate::streaming::utils::head_tail_buf::HeadTailBuffer;
 use anyhow::Context;
 use async_trait::async_trait;
-use bytes::{BufMut, BytesMut};
+use bytes::{BufMut, Bytes, BytesMut};
+use flume::Sender;
 use iggy::error::IggyError;
 use iggy::utils::byte_size::IggyByteSize;
 use iggy::utils::checksum;
@@ -217,14 +218,18 @@ impl SegmentStorage for FileSegmentStorage {
         let mut bytes = BytesMut::with_capacity(batch_size.as_bytes_usize());
         batch.extend(&mut bytes);
 
-        if let Err(err) = self
-            .persister
-            .append(&segment.log_path, &bytes)
-            .await
-            .with_context(|| format!("Failed to save messages to segment: {}", segment.log_path))
-        {
-            return Err(IggyError::CannotSaveMessagesToSegment(err));
+        if let Err(err) = segment.persister_task.sender.send_async(bytes.into()).await {
+            return Err(IggyError::CannotSaveMessagesToSegment(err.into()));
         }
+
+        // if let Err(err) = self
+        //     .persister
+        //     .append(&segment.log_path, &bytes)
+        //     .await
+        //     .with_context(|| format!("Failed to save messages to segment: {}", segment.log_path))
+        // {
+        //     return Err(IggyError::CannotSaveMessagesToSegment(err));
+        // }
 
         Ok(batch_size)
     }
@@ -446,6 +451,10 @@ impl SegmentStorage for FileSegmentStorage {
                 return Ok(None);
             }
         }
+    }
+
+    fn persister(&self) -> Arc<dyn Persister> {
+        self.persister.clone()
     }
 }
 

@@ -14,6 +14,8 @@ use crate::streaming::systems::storage::FileSystemInfoStorage;
 use crate::streaming::topics::storage::FileTopicStorage;
 use crate::streaming::topics::topic::Topic;
 use async_trait::async_trait;
+use bytes::Bytes;
+use flume::Sender;
 use iggy::consumer::ConsumerKind;
 use iggy::error::IggyError;
 use iggy::utils::byte_size::IggyByteSize;
@@ -91,6 +93,7 @@ pub trait SegmentStorage: Send + Sync {
         segment: &Segment,
         timestamp: u64,
     ) -> Result<Option<Index>, IggyError>;
+    fn persister(&self) -> Arc<dyn Persister>;
 }
 
 #[derive(Debug)]
@@ -165,7 +168,9 @@ pub(crate) mod tests {
     struct TestStreamStorage {}
     struct TestTopicStorage {}
     struct TestPartitionStorage {}
-    struct TestSegmentStorage {}
+    struct TestSegmentStorage {
+        persister: Arc<TestPersister>,
+    }
 
     #[async_trait]
     impl Persister for TestPersister {
@@ -332,16 +337,21 @@ pub(crate) mod tests {
         ) -> Result<Option<Index>, IggyError> {
             Ok(None)
         }
+
+        fn persister(&self) -> Arc<dyn Persister> {
+            self.persister.clone()
+        }
     }
 
     pub fn get_test_system_storage() -> SystemStorage {
+        let persister = Arc::new(TestPersister {});
         SystemStorage {
             info: Arc::new(TestSystemInfoStorage {}),
             stream: Arc::new(TestStreamStorage {}),
             topic: Arc::new(TestTopicStorage {}),
             partition: Arc::new(TestPartitionStorage {}),
-            segment: Arc::new(TestSegmentStorage {}),
-            persister: Arc::new(TestPersister {}),
+            segment: Arc::new(TestSegmentStorage { persister: persister.clone() }),
+            persister,
         }
     }
 }

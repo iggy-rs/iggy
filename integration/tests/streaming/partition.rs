@@ -35,7 +35,7 @@ async fn should_persist_partition_with_segment() {
             Arc::new(AtomicU64::new(0)),
             Arc::new(AtomicU32::new(0)),
             IggyTimestamp::now(),
-        );
+        ).await;
 
         partition.persist().await.unwrap();
 
@@ -66,7 +66,7 @@ async fn should_load_existing_partition_from_disk() {
             Arc::new(AtomicU64::new(0)),
             Arc::new(AtomicU32::new(0)),
             IggyTimestamp::now(),
-        );
+        ).await;
         partition.persist().await.unwrap();
         assert_persisted_partition(&partition.partition_path, with_segment).await;
 
@@ -85,7 +85,7 @@ async fn should_load_existing_partition_from_disk() {
             Arc::new(AtomicU64::new(0)),
             Arc::new(AtomicU32::new(0)),
             now,
-        );
+        ).await;
         let partition_state = PartitionState {
             id: partition.partition_id,
             created_at: now,
@@ -139,7 +139,7 @@ async fn should_delete_existing_partition_from_disk() {
             Arc::new(AtomicU64::new(0)),
             Arc::new(AtomicU32::new(0)),
             IggyTimestamp::now(),
-        );
+        ).await;
         partition.persist().await.unwrap();
         assert_persisted_partition(&partition.partition_path, with_segment).await;
 
@@ -172,7 +172,7 @@ async fn should_purge_existing_partition_on_disk() {
             Arc::new(AtomicU64::new(0)),
             Arc::new(AtomicU32::new(0)),
             IggyTimestamp::now(),
-        );
+        ).await;
         partition.persist().await.unwrap();
         assert_persisted_partition(&partition.partition_path, with_segment).await;
         let messages = create_messages();

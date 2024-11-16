@@ -73,7 +73,7 @@ impl StreamStorage for FileStreamStorage {
                 stream.segments_count.clone(),
                 stream.config.clone(),
                 stream.storage.clone(),
-            );
+            ).await;
             unloaded_topics.push(topic);
         }
 
@@ -113,7 +113,7 @@ impl StreamStorage for FileStreamStorage {
                     stream.segments_count.clone(),
                     stream.config.clone(),
                     stream.storage.clone(),
-                );
+                ).await;
                 topic.persist().await?;
                 unloaded_topics.push(topic);
                 info!(

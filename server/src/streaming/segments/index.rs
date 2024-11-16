@@ -84,7 +84,7 @@ mod tests {
     use std::sync::atomic::AtomicU64;
     use std::sync::Arc;
 
-    fn create_segment() -> Segment {
+    async fn create_segment() -> Segment {
         let storage = Arc::new(get_test_system_storage());
         let stream_id = 1;
         let topic_id = 2;
@@ -112,7 +112,7 @@ mod tests {
             Arc::new(AtomicU64::new(0)),
             Arc::new(AtomicU64::new(0)),
             Arc::new(AtomicU64::new(0)),
-        )
+        ).await
     }
 
     fn create_test_indices(segment: &mut Segment) {
@@ -146,9 +146,9 @@ mod tests {
         segment.indexes.as_mut().unwrap().extend(indexes);
     }
 
-    #[test]
-    fn should_find_both_indices() {
-        let mut segment = create_segment();
+    #[tokio::test]
+    async fn should_find_both_indices() {
+        let mut segment = create_segment().await;
         create_test_indices(&mut segment);
         let result = segment
             .load_highest_lower_bound_index(segment.indexes.as_ref().unwrap(), 15, 45)
@@ -158,9 +158,9 @@ mod tests {
         assert_eq!(result.end.offset, 50);
     }
 
-    #[test]
-    fn start_and_end_index_should_be_equal() {
-        let mut segment = create_segment();
+    #[tokio::test]
+    async fn start_and_end_index_should_be_equal() {
+        let mut segment = create_segment().await;
         create_test_indices(&mut segment);
         let result_end_range = segment
             .load_highest_lower_bound_index(segment.indexes.as_ref().unwrap(), 65, 100)
@@ -176,9 +176,9 @@ mod tests {
         assert_eq!(result_start_range.end.offset, 5);
     }
 
-    #[test]
-    fn should_clamp_last_index_when_out_of_range() {
-        let mut segment = create_segment();
+    #[tokio::test]
+    async fn should_clamp_last_index_when_out_of_range() {
+        let mut segment = create_segment().await;
         create_test_indices(&mut segment);
         let result = segment
             .load_highest_lower_bound_index(segment.indexes.as_ref().unwrap(), 5, 100)
@@ -188,9 +188,9 @@ mod tests {
         assert_eq!(result.end.offset, 65);
     }
 
-    #[test]
-    fn should_return_err_when_both_indices_out_of_range() {
-        let mut segment = create_segment();
+    #[tokio::test]
+    async fn should_return_err_when_both_indices_out_of_range() {
+        let mut segment = create_segment().await;
         create_test_indices(&mut segment);
 
         let result =

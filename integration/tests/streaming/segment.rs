@@ -35,7 +35,7 @@ async fn should_persist_segment() {
             Arc::new(AtomicU64::new(0)),
             Arc::new(AtomicU64::new(0)),
             Arc::new(AtomicU64::new(0)),
-        );
+        ).await;
 
         setup
             .create_partition_directory(stream_id, topic_id, partition_id)
@@ -73,7 +73,7 @@ async fn should_load_existing_segment_from_disk() {
             Arc::new(AtomicU64::new(0)),
             Arc::new(AtomicU64::new(0)),
             Arc::new(AtomicU64::new(0)),
-        );
+        ).await;
         setup
             .create_partition_directory(stream_id, topic_id, partition_id)
             .await;
@@ -100,7 +100,7 @@ async fn should_load_existing_segment_from_disk() {
             Arc::new(AtomicU64::new(0)),
             Arc::new(AtomicU64::new(0)),
             Arc::new(AtomicU64::new(0)),
-        );
+        ).await;
         loaded_segment.load().await.unwrap();
         let loaded_messages = loaded_segment.get_messages(0, 10).await.unwrap();
 
@@ -137,7 +137,7 @@ async fn should_persist_and_load_segment_with_messages() {
         Arc::new(AtomicU64::new(0)),
         Arc::new(AtomicU64::new(0)),
         Arc::new(AtomicU64::new(0)),
-    );
+    ).await;
 
     setup
         .create_partition_directory(stream_id, topic_id, partition_id)
@@ -188,7 +188,7 @@ async fn should_persist_and_load_segment_with_messages() {
         Arc::new(AtomicU64::new(0)),
         Arc::new(AtomicU64::new(0)),
         Arc::new(AtomicU64::new(0)),
-    );
+    ).await;
     loaded_segment.load().await.unwrap();
     let messages = loaded_segment
         .get_messages(0, messages_count as u32)
@@ -220,7 +220,7 @@ async fn given_all_expired_messages_segment_should_be_expired() {
         Arc::new(AtomicU64::new(0)),
         Arc::new(AtomicU64::new(0)),
         Arc::new(AtomicU64::new(0)),
-    );
+    ).await;
 
     setup
         .create_partition_directory(stream_id, topic_id, partition_id)
@@ -288,7 +288,7 @@ async fn given_at_least_one_not_expired_message_segment_should_not_be_expired() 
         Arc::new(AtomicU64::new(0)),
         Arc::new(AtomicU64::new(0)),
         Arc::new(AtomicU64::new(0)),
-    );
+    ).await;
 
     setup
         .create_partition_directory(stream_id, topic_id, partition_id)

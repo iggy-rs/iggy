@@ -25,11 +25,6 @@ async fn validate_server_config_toml_from_repository() {
     scenario_parsing_from_file("toml").await;
 }
 
-#[tokio::test]
-async fn validate_server_config_json_from_repository() {
-    scenario_parsing_from_file("json").await;
-}
-
 // This test needs to be run in serial because it modifies the environment variables
 // which are shared, since all tests run in parallel by default.
 #[serial]

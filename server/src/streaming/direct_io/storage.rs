@@ -1,9 +1,9 @@
-use std::{io::{SeekFrom, Write}, os::unix::fs::OpenOptionsExt};
+use std::{alloc::{self, Layout}, io::{Read, Seek, SeekFrom, Write}, os::unix::fs::OpenOptionsExt};
 
-use bytes::{BufMut, BytesMut};
+use bytes::{BufMut, Bytes, BytesMut};
 use iggy::error::IggyError;
 use tracing::warn;
-use tokio::{fs::OpenOptions, io::{AsyncReadExt, AsyncSeekExt, AsyncWriteExt, BufReader}};
+use tokio::{fs::OpenOptions, io::{AsyncReadExt, AsyncSeekExt, AsyncWriteExt, BufReader}, task::spawn_blocking};
 use crate::streaming::batching::message_batch::{RetainedMessageBatch, RETAINED_BATCH_OVERHEAD};
 
 #[derive(Debug, Default)]
@@ -11,86 +11,118 @@ pub struct DirectIOStorage {
 }
 
 impl DirectIOStorage {
-    pub async fn read_batches(&self, file_path: &str, start_position: u64, end_offset: u64) -> Result<Vec<RetainedMessageBatch>, IggyError> {
-        let file = OpenOptions::new().read(true).custom_flags(libc::O_DIRECT).open(file_path).await?;
-        warn!("start_position: {}", start_position);
-
-        let sector_size = 4096;
+    pub async fn read_batches(&self, file_path: &str, start_position: u64, end_position: u64) -> Result<Vec<RetainedMessageBatch>, IggyError> {
+        //let mut file = OpenOptions::new().read(true).custom_flags(libc::O_DIRECT).open(file_path).await?;
+        let mut file = std::fs::File::options().read(true).custom_flags(libc::O_DIRECT).open(file_path)?;
+        file.seek(SeekFrom::Start(start_position))?;
         let mut batches = Vec::new();
-        let file_size = file.metadata().await?.len();
+        let file_size = file.metadata()?.len();
         if file_size == 0 {
-            warn!("file_size is 0");
             return Ok(batches);
         }
+        // Aloc the buf
+        let buf_size = if start_position == end_position {
+            file_size - start_position
+        } else {
+            end_position - start_position
+        };
+        let sector_size = 4096;
+        let alignment = buf_size % sector_size;
+        assert!(alignment == 0);
 
-        let mut reader = BufReader::with_capacity(4096 * 1000, file);
-        reader
-            .seek(SeekFrom::Start(start_position as u64))
-            .await?;
+        let layout = Layout::from_size_align(buf_size as _, sector_size as _).unwrap();
+        let ptr = unsafe { alloc::alloc(layout) };
+        // Not sure if this is required
+        unsafe { std::ptr::write_bytes(ptr, 0, buf_size as _) };
+        let mut bytes = unsafe  {Vec::from_raw_parts(ptr, buf_size as _, buf_size as _)};
+        let result = spawn_blocking(move || {
+            if let Err(e) = file.read_exact(&mut bytes) {
+                warn!("error reading batch: {}", e);
+            }
+            Self::serialize_batches(bytes, &mut batches);
+            Ok(batches)
+        }).await.unwrap();
+        result
+    }
 
-        let mut read_bytes = start_position as u64;
-        let mut last_batch_to_read = false;
-        while !last_batch_to_read {
-            let Ok(batch_base_offset) = reader.read_u64_le().await else {
-                break;
-            };
-            let batch_length = reader
-                .read_u32_le()
-                .await
-                .map_err(|_| IggyError::CannotReadBatchLength)?;
-            let last_offset_delta = reader
-                .read_u32_le()
-                .await
-                .map_err(|_| IggyError::CannotReadLastOffsetDelta)?;
-            let max_timestamp = reader
-                .read_u64_le()
-                .await
-                .map_err(|_| IggyError::CannotReadMaxTimestamp)?;
+    fn serialize_batches(bytes: Vec<u8>, batches: &mut Vec<RetainedMessageBatch>) {
+        let len = bytes.len();
+        let mut read_bytes = 0;
+        let sector_size = 4096;
 
-            let last_offset = batch_base_offset + (last_offset_delta as u64);
+        while read_bytes < len {
+            // Read batch_base_offset
+            let batch_base_offset = u64::from_le_bytes(
+                bytes[read_bytes..read_bytes + 8]
+                    .try_into()
+                    .expect("Failed to read batch_base_offset"),
+            );
+            read_bytes += 8;
+
+            // Read batch_length
+            let batch_length = u32::from_le_bytes(
+                bytes[read_bytes..read_bytes + 4]
+                    .try_into()
+                    .expect("Failed to read batch_length"),
+            );
+            read_bytes += 4;
+
+            // Read last_offset_delta
+            let last_offset_delta = u32::from_le_bytes(
+                bytes[read_bytes..read_bytes + 4]
+                    .try_into()
+                    .expect("Failed to read last_offset_delta"),
+            );
+            read_bytes += 4;
+
+            // Read max_timestamp
+            let max_timestamp = u64::from_le_bytes(
+                bytes[read_bytes..read_bytes + 8]
+                    .try_into()
+                    .expect("Failed to read max_timestamp"),
+            );
+            read_bytes += 8;
+
+            // Calculate last_offset and other values
             let total_batch_size = batch_length + RETAINED_BATCH_OVERHEAD;
             let sectors = total_batch_size.div_ceil(sector_size);
             let adjusted_size = sector_size * sectors;
-            warn!("adjusted_size: {}", adjusted_size);
             let diff = adjusted_size - total_batch_size;
 
+            // Read payload
             let payload_len = batch_length as usize;
-            let mut payload = BytesMut::with_capacity(payload_len);
-            payload.put_bytes(0, payload_len);
-            if let Err(error) = reader.read_exact(&mut payload).await {
+            let payload_start = read_bytes;
+            let payload_end = read_bytes + payload_len;
+            if payload_end > len {
                 warn!(
-                    "Cannot read batch payload for batch with base offset: {batch_base_offset}, last offset delta: {last_offset_delta}, max timestamp: {max_timestamp}, batch length: {batch_length} and payload length: {payload_len}.\nProbably OS hasn't flushed the data yet, try setting `enforce_fsync = true` for partition configuration if this issue occurs again.\n{error}",
+                    "Cannot read batch payload for batch with base offset: {batch_base_offset}, last offset delta: {last_offset_delta}, max timestamp: {max_timestamp}, batch length: {batch_length} and payload length: {payload_len}.\nProbably OS hasn't flushed the data yet, try setting `enforce_fsync = true` for partition configuration if this issue occurs again."
                 );
                 break;
             }
-            // TEMP
-            let mut temp = BytesMut::with_capacity(diff as _);
-            temp.put_bytes(0, diff as _);
-            if let Err(e) = reader.read_exact(&mut temp).await {
-                warn!("lol error reading padding");
-            }
 
-            read_bytes += 8 + 4 + 4 + 8 + payload_len as u64;
-            last_batch_to_read = read_bytes >= file_size || last_offset == end_offset;
-
+            // Ergh....
+            let payload = Bytes::copy_from_slice(&bytes[payload_start..payload_end]);
+            read_bytes = payload_end + diff as usize;
             let batch = RetainedMessageBatch::new(
                 batch_base_offset,
                 last_offset_delta,
                 max_timestamp,
                 batch_length,
-                payload.freeze(),
+                payload,
             );
             batches.push(batch);
         }
-        Ok(batches)
     }
 
-    pub async fn write_batches(&self, file_path: &str, bytes: &[u8]) -> Result<u32, IggyError> {
-        //let mut std_file = std::fs::File::options().append(true).custom_flags(libc::O_DIRECT).open(file_path)?;
-        let mut file = OpenOptions::new().append(true).custom_flags(libc::O_DIRECT).open(file_path).await?;
-        if let Err(e) = file.write_all(bytes).await {
-            warn!("error writing: {}", e);
-        }
-        Ok(bytes.len() as _)
+    pub async fn write_batches(&self, file_path: &str, bytes: Vec<u8>) -> Result<u32, IggyError> {
+        let mut std_file = std::fs::File::options().append(true).custom_flags(libc::O_DIRECT).open(file_path)?;
+        //let mut file = OpenOptions::new().append(true).custom_flags(libc::O_DIRECT).open(file_path).await?;
+        let size = bytes.len() as _;
+        spawn_blocking(move || {
+            if let Err(e) = std_file.write_all(&bytes) {
+                warn!("error writing: {}", e);
+            }
+        }).await.unwrap();
+        Ok(size)
     }
 }

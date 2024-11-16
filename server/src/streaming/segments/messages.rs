@@ -167,21 +167,16 @@ impl Segment {
         let messages_count = (start_offset + end_offset) as usize;
         let path = self.log_path.as_str();
         let start_position = index_range.start.position;
-        let end_offset = index_range.end.offset as u64  + self.start_offset;
+        let end_position = index_range.end.position;
         let batch = self
             .direct_io_storage
-            .read_batches(path, start_position as _, end_offset)
+            .read_batches(path, start_position as _, end_position as _)
             .await?;
-        error!("batches_count: {}", batch.len());
         let messages = batch
             .iter()
-            .to_messages();
-            /*
             .to_messages_with_filter(messages_count, &|msg| {
                 msg.offset >= start_offset && msg.offset <= end_offset
             });
-            */
-            error!("messages len: {}", messages.len());
         trace!(
             "Loaded {} messages from disk, segment start offset: {}, end offset: {}.",
             messages.len(),
@@ -247,7 +242,7 @@ impl Segment {
     }
 
     pub async fn persist_messages(&mut self, fsync: bool) -> Result<usize, IggyError> {
-        let sector_size = 512;
+        let sector_size = 4096;
         let storage = self.direct_io_storage.clone();
         let index_storage = self.storage.segment.clone();
         if self.unsaved_messages.is_none() {
@@ -285,7 +280,7 @@ impl Segment {
         let mut bytes = unsafe  {Vec::from_raw_parts(ptr, adjusted_size as _, adjusted_size as _)};
         let diff = bytes.len() as u32 - batch_size;
         batch.extend2(&mut bytes);
-        let saved_bytes = storage.write_batches(self.log_path.as_str(), &bytes).await?;
+        let saved_bytes = storage.write_batches(self.log_path.as_str(), bytes).await?;
         index_storage.save_index(&self.index_path, index).await?;
         self.last_index_position += adjusted_size;
         let size_increment = RETAINED_BATCH_OVERHEAD + diff;

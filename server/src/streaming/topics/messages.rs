@@ -4,6 +4,7 @@ use crate::streaming::polling_consumer::PollingConsumer;
 use crate::streaming::topics::topic::Topic;
 use crate::streaming::utils::file::folder_size;
 use crate::streaming::utils::hash;
+use iggy::confirmation::Confirmation;
 use iggy::error::IggyError;
 use iggy::locking::IggySharedMutFn;
 use iggy::messages::poll_messages::{PollingKind, PollingStrategy};
@@ -74,6 +75,7 @@ impl Topic {
         batch_size: IggyByteSize,
         partitioning: Partitioning,
         messages: Vec<Message>,
+        confirmation: Option<Confirmation>,
     ) -> Result<(), IggyError> {
         if !self.has_partitions() {
             return Err(IggyError::NoPartitions(self.topic_id, self.stream_id));
@@ -98,7 +100,7 @@ impl Topic {
         };
 
         let appendable_batch_info = AppendableBatchInfo::new(batch_size, partition_id);
-        self.append_messages_to_partition(appendable_batch_info, messages)
+        self.append_messages_to_partition(appendable_batch_info, messages, confirmation)
             .await
     }
 
@@ -122,6 +124,7 @@ impl Topic {
         &self,
         appendable_batch_info: AppendableBatchInfo,
         messages: Vec<Message>,
+        confirmation: Option<Confirmation>,
     ) -> Result<(), IggyError> {
         let partition = self.partitions.get(&appendable_batch_info.partition_id);
         partition
@@ -134,7 +137,7 @@ impl Topic {
             })?
             .write()
             .await
-            .append_messages(appendable_batch_info, messages)
+            .append_messages(appendable_batch_info, messages, confirmation)
             .await?;
 
         Ok(())
@@ -307,7 +310,7 @@ mod tests {
         let partitioning = Partitioning::partition_id(partition_id);
         let partitions_count = 3;
         let messages_count: u32 = 1000;
-        let topic = init_topic(partitions_count);
+        let topic = init_topic(partitions_count).await;
 
         for entity_id in 1..=messages_count {
             let messages = vec![Message::new(Some(entity_id as u128), Bytes::new(), None)];
@@ -316,7 +319,7 @@ mod tests {
                 .map(|msg| msg.get_size_bytes())
                 .sum::<IggyByteSize>();
             topic
-                .append_messages(batch_size, partitioning.clone(), messages)
+                .append_messages(batch_size, partitioning.clone(), messages, None)
                 .await
                 .unwrap();
         }
@@ -338,7 +341,7 @@ mod tests {
     async fn given_messages_key_key_messages_should_be_appended_to_the_calculated_partitions() {
         let partitions_count = 3;
         let messages_count = 1000;
-        let topic = init_topic(partitions_count);
+        let topic = init_topic(partitions_count).await;
 
         for entity_id in 1..=messages_count {
             let partitioning = Partitioning::messages_key_u32(entity_id);
@@ -348,7 +351,7 @@ mod tests {
                 .map(|msg| msg.get_size_bytes())
                 .sum::<IggyByteSize>();
             topic
-                .append_messages(batch_size, partitioning, messages)
+                .append_messages(batch_size, partitioning, messages, None)
                 .await
                 .unwrap();
         }
@@ -366,12 +369,12 @@ mod tests {
         assert_eq!(read_messages_count, messages_count as usize);
     }
 
-    #[test]
-    fn given_multiple_partitions_calculate_next_partition_id_should_return_next_partition_id_using_round_robin(
+    #[tokio::test]
+    async fn given_multiple_partitions_calculate_next_partition_id_should_return_next_partition_id_using_round_robin(
     ) {
         let partitions_count = 3;
         let messages_count = 1000;
-        let topic = init_topic(partitions_count);
+        let topic = init_topic(partitions_count).await;
 
         let mut expected_partition_id = 0;
         for _ in 1..=messages_count {
@@ -385,11 +388,12 @@ mod tests {
         }
     }
 
-    #[test]
-    fn given_multiple_partitions_calculate_partition_id_by_hash_should_return_next_partition_id() {
+    #[tokio::test]
+    async fn given_multiple_partitions_calculate_partition_id_by_hash_should_return_next_partition_id(
+    ) {
         let partitions_count = 3;
         let messages_count = 1000;
-        let topic = init_topic(partitions_count);
+        let topic = init_topic(partitions_count).await;
 
         for entity_id in 1..=messages_count {
             let key = Partitioning::messages_key_u32(entity_id);
@@ -404,7 +408,7 @@ mod tests {
         }
     }
 
-    fn init_topic(partitions_count: u32) -> Topic {
+    async fn init_topic(partitions_count: u32) -> Topic {
         let storage = Arc::new(get_test_system_storage());
         let stream_id = 1;
         let id = 2;
@@ -430,6 +434,7 @@ mod tests {
             MaxTopicSize::ServerDefault,
             1,
         )
+        .await
         .unwrap()
     }
 }

@@ -18,8 +18,9 @@ pub async fn handle(
     let topic_id = command.topic_id;
     let partitioning = command.partitioning;
     let messages = command.messages;
+    // TODO(haze): Add confirmation level after testing is complete
     system
-        .append_messages(session, stream_id, topic_id, partitioning, messages)
+        .append_messages(session, stream_id, topic_id, partitioning, messages, None)
         .await?;
     sender.send_empty_ok_response().await?;
     Ok(())

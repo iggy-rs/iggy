@@ -11,7 +11,7 @@ use crate::configs::{
     server::{MessageSaverConfig, ServerConfig},
     system::{
         CacheConfig, CompressionConfig, EncryptionConfig, LoggingConfig, PartitionConfig,
-        SegmentConfig, StreamConfig, SystemConfig, TopicConfig,
+        SegmentConfig, StateConfig, StreamConfig, SystemConfig, TopicConfig,
     },
     tcp::{TcpConfig, TcpSocketConfig, TcpTlsConfig},
 };
@@ -267,8 +267,8 @@ impl Display for SegmentConfig {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
-            "{{ size_bytes: {}, cache_indexes: {}, message_expiry: {}, archive_expired: {} }}",
-            self.size, self.cache_indexes, self.message_expiry, self.archive_expired
+            "{{ size_bytes: {}, cache_indexes: {}, message_expiry: {}, archive_expired: {}, server_confirmation: {} }}",
+            self.size, self.cache_indexes, self.message_expiry, self.archive_expired, self.server_confirmation,
         )
     }
 }
@@ -336,6 +336,18 @@ impl Display for TelemetryLogsConfig {
     }
 }
 
+impl Display for StateConfig {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "{{ enforce_fsync: {}, max_file_operation_retries: {}, retry_delay: {} }}",
+            self.enforce_fsync,
+            self.max_file_operation_retries,
+            self.retry_delay,
+        )
+    }
+}
+
 impl Display for TelemetryTracesConfig {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(
@@ -350,7 +362,7 @@ impl Display for SystemConfig {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(
           f,
-          "{{ path: {}, logging: {}, cache: {}, stream: {}, topic: {}, partition: {}, segment: {}, encryption: {} }}",
+          "{{ path: {}, logging: {}, cache: {}, stream: {}, topic: {}, partition: {}, segment: {}, encryption: {}, state: {} }}",
           self.path,
           self.logging,
           self.cache,
@@ -358,7 +370,8 @@ impl Display for SystemConfig {
           self.topic,
           self.partition,
           self.segment,
-          self.encryption
+          self.encryption,
+          self.state,
       )
     }
 }

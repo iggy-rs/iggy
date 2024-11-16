@@ -344,6 +344,14 @@ path = "compatibility"
 # `false` allows the OS to manage write operations, which can improve performance.
 enforce_fsync = false
 
+# Maximum number of retries for a failed file operation (e.g., append, overwrite).
+# This defines how many times the system will attempt the operation before failing.
+max_file_operation_retries = 1
+
+# Delay between retries in case of a failed file operation.
+# This helps to avoid immediate repeated attempts and can reduce load.
+retry_delay = "1 s"
+
 # Runtime configuration.
 [system.runtime]
 # Path for storing runtime data.
@@ -457,6 +465,13 @@ size = "1 GB"
 # A time value in human-readable format determines the lifespan of messages.
 # Example: `message_expiry = "2 days 4 hours 15 minutes"` means messages will expire after that duration.
 message_expiry = "none"
+
+# Defines the file system confirmation behavior during state updates.
+# Controls how the system waits for file write operations to complete.
+# Possible values:
+# - "wait": waits for the file operation to complete before proceeding.
+# - "nowait": proceeds without waiting for the file operation to finish, potentially increasing performance but at the cost of durability.
+server_confirmation = "wait"
 
 # Configures whether expired segments are archived (boolean) or just deleted without archiving.
 archive_expired = false

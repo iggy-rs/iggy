@@ -187,7 +187,8 @@ pub async fn load(
             partition.messages_count_of_parent_stream.clone(),
             partition.messages_count_of_parent_topic.clone(),
             partition.messages_count.clone(),
-        );
+        )
+        .await;
 
         segment.load().await?;
         let capacity = partition.config.partition.messages_required_to_save;

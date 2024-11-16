@@ -102,7 +102,8 @@ pub async fn load(config: &SystemConfig, db: &Db, topic: &mut Topic) -> Result<(
             topic.size_bytes.clone(),
             topic.segments_count_of_parent_stream.clone(),
             IggyTimestamp::zero(),
-        );
+        )
+        .await;
         partitions::load(config, db, &mut partition).await?;
         topic
             .partitions

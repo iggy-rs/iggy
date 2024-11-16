@@ -2,6 +2,7 @@ use crate::streaming::cache::memory_tracker::CacheMemoryTracker;
 use crate::streaming::session::Session;
 use crate::streaming::systems::system::System;
 use bytes::Bytes;
+use iggy::confirmation::Confirmation;
 use iggy::consumer::Consumer;
 use iggy::messages::poll_messages::PollingStrategy;
 use iggy::messages::send_messages::Message;
@@ -93,6 +94,7 @@ impl System {
         topic_id: Identifier,
         partitioning: Partitioning,
         messages: Vec<Message>,
+        confirmation: Option<Confirmation>,
     ) -> Result<(), IggyError> {
         self.ensure_authenticated(session)?;
         let topic = self.find_topic(session, &stream_id, &topic_id)?;
@@ -133,7 +135,7 @@ impl System {
         }
         let messages_count = messages.len() as u64;
         topic
-            .append_messages(batch_size_bytes, partitioning, messages)
+            .append_messages(batch_size_bytes, partitioning, messages, confirmation)
             .await?;
         self.metrics.increment_messages(messages_count);
         Ok(())

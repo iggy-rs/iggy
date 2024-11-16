@@ -437,6 +437,12 @@ impl Default for SegmentConfig {
             cache_indexes: SERVER_CONFIG.system.segment.cache_indexes,
             message_expiry: SERVER_CONFIG.system.segment.message_expiry.parse().unwrap(),
             archive_expired: SERVER_CONFIG.system.segment.archive_expired,
+            server_confirmation: SERVER_CONFIG
+                .system
+                .segment
+                .server_confirmation
+                .parse()
+                .unwrap(),
         }
     }
 }
@@ -445,6 +451,9 @@ impl Default for StateConfig {
     fn default() -> StateConfig {
         StateConfig {
             enforce_fsync: SERVER_CONFIG.system.state.enforce_fsync,
+            max_file_operation_retries: SERVER_CONFIG.system.state.max_file_operation_retries
+                as u32,
+            retry_delay: SERVER_CONFIG.system.state.retry_delay.parse().unwrap(),
         }
     }
 }

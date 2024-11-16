@@ -84,7 +84,8 @@ impl PartitionStorage for FilePartitionStorage {
                 partition.messages_count_of_parent_stream.clone(),
                 partition.messages_count_of_parent_topic.clone(),
                 partition.messages_count.clone(),
-            );
+            )
+            .await;
 
             let index_path = segment.index_path.to_owned();
             let time_index_path = index_path.replace(INDEX_EXTENSION, "timeindex");

@@ -1,0 +1,58 @@
+name: performance
+on:
+  workflow_dispatch:
+  # TODO(hubcio): uncomment when the workflow is ready
+  # pull_request:
+  #   branches:
+  #     - master
+  # push:
+  #   branches:
+  #     - master
+
+jobs:
+  run_benchmarks:
+    runs-on: performance
+    env:
+      IGGY_CI_BUILD: true
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          ref: master
+          fetch-depth: 0
+
+      - name: Cache cargo & target directories
+        uses: Swatinem/rust-cache@v2
+        with:
+          key: "v2"
+
+      - name: Build iggy-server
+        run: cargo build --release
+
+      - uses: JarvusInnovations/background-action@v1
+        name: Run iggy-server in background
+        with:
+          run: |
+            target/release/iggy-server &
+          wait-on: tcp:localhost:8090
+          wait-for: 1m
+          log-output: true
+          log-output-if: timeout
+          tail: true
+
+      # Write 10 GB of data to the disk (10 producers * 1000 batches * 1000 messages in batch * 1000 bytes per message)
+      - name: Run send bench
+        timeout-minutes: 1
+        run: target/release/iggy-bench --verbose --warmup-time 0 send tcp
+
+      # Read 10 GB of data from the disk
+      - name: Run poll bench
+        timeout-minutes: 1
+        run: target/release/iggy-bench --verbose poll tcp
+
+      - name: Stop iggy-server
+        timeout-minutes: 1
+        run: pkill -15 iggy-server && while pgrep -l iggy-server; do sleep 2; done;
+
+      - name: Print iggy-server logs
+        run: cat local_data/logs/iggy*

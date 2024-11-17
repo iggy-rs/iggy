@@ -228,7 +228,7 @@ impl Stream {
 mod tests {
     use super::*;
     use crate::configs::system::SystemConfig;
-    use crate::streaming::storage::tests::get_test_system_storage;
+    use crate::streaming::iggy_storage::tests::get_test_system_storage;
     use iggy::utils::byte_size::IggyByteSize;
     use std::sync::Arc;
 

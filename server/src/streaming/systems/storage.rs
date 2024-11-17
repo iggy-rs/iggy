@@ -1,5 +1,5 @@
 use crate::streaming::persistence::persister::Persister;
-use crate::streaming::storage::SystemInfoStorage;
+use crate::streaming::iggy_storage::SystemInfoStorage;
 use crate::streaming::systems::info::SystemInfo;
 use crate::streaming::utils::file;
 use anyhow::Context;

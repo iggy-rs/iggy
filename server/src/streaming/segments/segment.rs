@@ -2,7 +2,7 @@ use crate::configs::system::SystemConfig;
 use crate::streaming::batching::batch_accumulator::BatchAccumulator;
 use crate::streaming::direct_io::storage::DirectIOStorage;
 use crate::streaming::segments::index::Index;
-use crate::streaming::storage::SystemStorage;
+use crate::streaming::iggy_storage::SystemStorage;
 use iggy::utils::expiry::IggyExpiry;
 use iggy::utils::timestamp::IggyTimestamp;
 use std::sync::atomic::AtomicU64;
@@ -141,7 +141,7 @@ impl Segment {
 mod tests {
     use super::*;
     use crate::configs::system::SegmentConfig;
-    use crate::streaming::storage::tests::get_test_system_storage;
+    use crate::streaming::iggy_storage::tests::get_test_system_storage;
     use iggy::utils::duration::IggyDuration;
 
     #[tokio::test]

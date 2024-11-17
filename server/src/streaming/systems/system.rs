@@ -5,7 +5,7 @@ use crate::streaming::clients::client_manager::ClientManager;
 use crate::streaming::diagnostics::metrics::Metrics;
 use crate::streaming::persistence::persister::*;
 use crate::streaming::session::Session;
-use crate::streaming::storage::SystemStorage;
+use crate::streaming::iggy_storage::SystemStorage;
 use crate::streaming::streams::stream::Stream;
 use crate::streaming::users::permissioner::Permissioner;
 use iggy::error::IggyError;

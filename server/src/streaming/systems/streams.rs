@@ -367,7 +367,7 @@ mod tests {
     use crate::state::command::EntryCommand;
     use crate::state::entry::StateEntry;
     use crate::state::State;
-    use crate::streaming::storage::tests::get_test_system_storage;
+    use crate::streaming::iggy_storage::tests::get_test_system_storage;
     use crate::streaming::users::user::User;
     use async_trait::async_trait;
     use iggy::users::defaults::{DEFAULT_ROOT_PASSWORD, DEFAULT_ROOT_USERNAME};

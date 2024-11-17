@@ -2,7 +2,7 @@ use crate::streaming::common::test_setup::TestSetup;
 use iggy::consumer::ConsumerKind;
 use server::configs::system::SystemConfig;
 use server::streaming::partitions::partition::ConsumerOffset;
-use server::streaming::storage::PartitionStorage;
+use server::streaming::iggy_storage::PartitionStorage;
 use std::sync::Arc;
 use tokio::fs;
 

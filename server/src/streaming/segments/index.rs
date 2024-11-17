@@ -89,7 +89,7 @@ impl IndexRange {
 mod tests {
     use super::*;
     use crate::configs::system::{SegmentConfig, SystemConfig};
-    use crate::streaming::storage::tests::get_test_system_storage;
+    use crate::streaming::iggy_storage::tests::get_test_system_storage;
     use iggy::utils::expiry::IggyExpiry;
     use std::sync::atomic::AtomicU64;
     use std::sync::Arc;

@@ -1,6 +1,6 @@
 use server::configs::system::SystemConfig;
 use server::streaming::persistence::persister::{FilePersister, FileWithSyncPersister};
-use server::streaming::storage::SystemStorage;
+use server::streaming::iggy_storage::SystemStorage;
 use std::sync::Arc;
 use tokio::fs;
 use uuid::Uuid;

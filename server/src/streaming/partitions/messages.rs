@@ -543,7 +543,7 @@ mod tests {
     use super::*;
     use crate::configs::system::{MessageDeduplicationConfig, SystemConfig};
     use crate::streaming::partitions::create_messages;
-    use crate::streaming::storage::tests::get_test_system_storage;
+    use crate::streaming::iggy_storage::tests::get_test_system_storage;
 
     #[tokio::test]
     async fn given_disabled_message_deduplication_all_messages_should_be_appended() {

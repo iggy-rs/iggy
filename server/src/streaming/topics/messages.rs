@@ -288,7 +288,7 @@ impl Topic {
 mod tests {
     use super::*;
     use crate::configs::system::SystemConfig;
-    use crate::streaming::storage::tests::get_test_system_storage;
+    use crate::streaming::iggy_storage::tests::get_test_system_storage;
     use bytes::Bytes;
     use iggy::compression::compression_algorithm::CompressionAlgorithm;
     use iggy::utils::topic_size::MaxTopicSize;

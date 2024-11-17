@@ -1,6 +1,6 @@
 use crate::state::system::TopicState;
 use crate::streaming::partitions::partition::Partition;
-use crate::streaming::storage::TopicStorage;
+use crate::streaming::iggy_storage::TopicStorage;
 use crate::streaming::topics::consumer_group::ConsumerGroup;
 use crate::streaming::topics::topic::Topic;
 use anyhow::Context;

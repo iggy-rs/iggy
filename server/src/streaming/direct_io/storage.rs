@@ -33,7 +33,6 @@ impl DirectIOStorage {
         let layout = Layout::from_size_align(buf_size as _, sector_size as _).unwrap();
         let ptr = unsafe { alloc::alloc(layout) };
         // Not sure if this is required
-        unsafe { std::ptr::write_bytes(ptr, 0, buf_size as _) };
         let mut bytes = unsafe  {Vec::from_raw_parts(ptr, buf_size as _, buf_size as _)};
         let result = spawn_blocking(move || {
             if let Err(e) = file.read_exact(&mut bytes) {

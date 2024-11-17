@@ -2,7 +2,7 @@ use crate::state::command::EntryCommand;
 use crate::state::models::CreatePersonalAccessTokenWithHash;
 use crate::state::State;
 use crate::streaming::personal_access_tokens::personal_access_token::PersonalAccessToken;
-use crate::streaming::storage::SystemStorage;
+use crate::streaming::iggy_storage::SystemStorage;
 use crate::streaming::streams::stream::Stream;
 use crate::streaming::users::user::User;
 use iggy::consumer_groups::create_consumer_group::CreateConsumerGroup;

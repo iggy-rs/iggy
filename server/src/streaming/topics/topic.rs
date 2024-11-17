@@ -1,7 +1,7 @@
 use crate::configs::system::SystemConfig;
 use crate::streaming::partitions::partition::Partition;
 use crate::streaming::polling_consumer::PollingConsumer;
-use crate::streaming::storage::SystemStorage;
+use crate::streaming::iggy_storage::SystemStorage;
 use crate::streaming::topics::consumer_group::ConsumerGroup;
 use core::fmt;
 use iggy::compression::compression_algorithm::CompressionAlgorithm;
@@ -255,7 +255,7 @@ mod tests {
     use std::str::FromStr;
 
     use super::*;
-    use crate::streaming::storage::tests::get_test_system_storage;
+    use crate::streaming::iggy_storage::tests::get_test_system_storage;
 
     #[tokio::test]
     async fn should_be_created_given_valid_parameters() {

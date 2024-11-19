@@ -14,7 +14,7 @@ readme = "../README.md"
 [dependencies]
 aes-gcm = "0.10.3"
 ahash = { version = "0.8.11", features = ["serde"] }
-anyhow = "1.0.86"
+anyhow = "1.0.93"
 async-broadcast = { version = "0.7.1" }
 async-dropper = { version = "0.3.1", features = ["tokio", "simple"] }
 async-trait = "0.1.82"

@@ -11,7 +11,7 @@ tokio-console = ["dep:console-subscriber", "tokio/tracing"]
 
 [dependencies]
 ahash = { version = "0.8.11" }
-anyhow = "1.0.86"
+anyhow = "1.0.93"
 async-trait = "0.1.82"
 atone = "0.3.7"
 axum = "0.7.5"

@@ -1,10 +1,10 @@
 use crate::compat::index_conversion::index_converter::IndexConverter;
 use crate::state::system::PartitionState;
 use crate::streaming::batching::batch_accumulator::BatchAccumulator;
+use crate::streaming::iggy_storage::PartitionStorage;
 use crate::streaming::partitions::partition::{ConsumerOffset, Partition};
 use crate::streaming::persistence::persister::Persister;
 use crate::streaming::segments::segment::{Segment, INDEX_EXTENSION, LOG_EXTENSION};
-use crate::streaming::iggy_storage::PartitionStorage;
 use crate::streaming::utils::file;
 use anyhow::Context;
 use async_trait::async_trait;

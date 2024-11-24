@@ -1,14 +1,19 @@
 use crate::streaming::batching::batch_accumulator::BatchAccumulator;
 use crate::streaming::batching::batch_filter::BatchItemizer;
 use crate::streaming::batching::message_batch::{RetainedMessageBatch, RETAINED_BATCH_OVERHEAD};
+use crate::streaming::io::stream::message_stream::RetainedMessageStream;
 use crate::streaming::models::messages::RetainedMessage;
 use crate::streaming::segments::index::{Index, IndexRange};
 use crate::streaming::segments::segment::Segment;
 use crate::streaming::sizeable::Sizeable;
+use crate::streaming::storage::Storage;
 use bytes::buf::UninitSlice;
 use bytes::{BufMut, Bytes, BytesMut};
+use futures::{AsyncReadExt, StreamExt, TryStreamExt};
 use iggy::error::IggyError;
 use std::alloc::{self, Layout};
+use std::future;
+use std::io::BufReader;
 use std::slice::from_raw_parts;
 use std::sync::atomic::Ordering;
 use std::sync::Arc;
@@ -41,26 +46,26 @@ impl Segment {
         let end_offset = offset + (count - 1) as u64;
         // In case that the partition messages buffer is disabled, we need to check the unsaved messages buffer
         if self.unsaved_messages.is_none() {
-            return self.load_messages_from_disk(offset, end_offset).await;
+            return self.load_n_messages_from_file(offset, count).await;
         }
 
         let batch_accumulator = self.unsaved_messages.as_ref().unwrap();
         if batch_accumulator.is_empty() {
-            return self.load_messages_from_disk(offset, end_offset).await;
+            return self.load_n_messages_from_file(offset, count).await;
         }
 
         let first_offset = batch_accumulator.batch_base_offset();
         if end_offset < first_offset {
-            return self.load_messages_from_disk(offset, end_offset).await;
+            return self.load_n_messages_from_file(offset, count).await;
         }
 
         let last_offset = batch_accumulator.batch_max_offset();
         if offset >= first_offset && end_offset <= last_offset {
-            return Ok(self.load_messages_from_unsaved_buffer(offset, end_offset));
+            return self.load_n_messages_from_file(offset, count).await;
         }
 
         // Can this be somehow improved? maybe with chain iterators
-        let mut messages = self.load_messages_from_disk(offset, end_offset).await?;
+        let mut messages = self.load_n_messages_from_file(offset, count).await?;
         let mut buffered_messages = self.load_messages_from_unsaved_buffer(offset, last_offset);
         messages.append(&mut buffered_messages);
 
@@ -99,6 +104,61 @@ impl Segment {
     ) -> Vec<Arc<RetainedMessage>> {
         let batch_accumulator = self.unsaved_messages.as_ref().unwrap();
         batch_accumulator.get_messages_by_offset(start_offset, end_offset)
+    }
+
+    async fn load_n_messages_from_file(
+        &self,
+        start_offset: u64,
+        count: u32,
+    ) -> Result<Vec<Arc<RetainedMessage>>, IggyError> {
+        let end_offset = start_offset + (count - 1) as u64;
+        if let Some(indices) = &self.indexes {
+            let relative_start_offset = (start_offset - self.start_offset) as u32;
+            let relative_end_offset = (end_offset - self.start_offset) as u32;
+            let index_range = match self.load_highest_lower_bound_index(
+                indices,
+                relative_start_offset,
+                relative_end_offset,
+            ) {
+                Ok(range) => range,
+                Err(_) => {
+                    error!(
+                        "Cannot load messages from disk, index range not found: {} - {}.",
+                        start_offset, end_offset
+                    );
+                    return Ok(EMPTY_MESSAGES.into_iter().map(Arc::new).collect());
+                }
+            };
+            let start_position = index_range.start.position;
+            return self
+                .load_n_messages_from_disk(start_position, count, |msg| msg.offset >= start_offset)
+                .await;
+        }
+        Ok(EMPTY_MESSAGES.into_iter().map(Arc::new).collect())
+    }
+
+    async fn load_n_messages_from_disk<F>(
+        &self,
+        start_position: u32,
+        count: u32,
+        filter: F,
+    ) -> Result<Vec<Arc<RetainedMessage>>, IggyError>
+    where
+        F: Fn(&RetainedMessage) -> bool,
+    {
+        let reader = self
+            .new_storage
+            .read_blocks(start_position as _, self.size_bytes as u64)
+            .into_async_read();
+        let message_stream = RetainedMessageStream::new(reader, 4096);
+        let messages = message_stream
+            .try_filter(|msg| future::ready(filter(msg)))
+            .take(count as _)
+            .map_ok(Arc::new)
+            .try_collect()
+            .await?;
+
+        Ok(messages)
     }
 
     async fn load_messages_from_disk(
@@ -277,7 +337,7 @@ impl Segment {
         if has_remainder {
             self.unsaved_messages = Some(batch_accumulator);
         }
-        let mut bytes = unsafe  {Vec::from_raw_parts(ptr, adjusted_size as _, adjusted_size as _)};
+        let mut bytes = unsafe { Vec::from_raw_parts(ptr, adjusted_size as _, adjusted_size as _) };
         let diff = bytes.len() as u32 - batch_size;
         batch.extend2(&mut bytes);
         let saved_bytes = storage.write_batches(self.log_path.as_str(), bytes).await?;

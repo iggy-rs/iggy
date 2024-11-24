@@ -1,7 +1,6 @@
 use crate::streaming::segments::segment::Segment;
 use iggy::error::IggyError;
 use iggy::error::IggyError::InvalidOffset;
-use tracing::warn;
 
 #[derive(Debug, Eq, Clone, Copy, Default)]
 pub struct Index {
@@ -33,8 +32,7 @@ impl Segment {
         let ending_offset_idx = binary_search_index(indices, end_offset);
 
         match (starting_offset_idx, ending_offset_idx) {
-            (Some(starting_offset_idx), Some(ending_offset_idx)) =>
-            {
+            (Some(starting_offset_idx), Some(ending_offset_idx)) => {
                 // UGLY AS FOOOOOOOOOOOOOK, but will deal with it later on.
                 let end_idx = if ending_offset_idx == indices.len() - 1 {
                     ending_offset_idx
@@ -45,7 +43,7 @@ impl Segment {
                     start: indices[starting_offset_idx],
                     end: indices[end_idx],
                 })
-            },
+            }
             (Some(starting_offset_idx), None) => Ok(IndexRange {
                 start: indices[starting_offset_idx],
                 end: *indices.last().unwrap(),

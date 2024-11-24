@@ -155,10 +155,10 @@ impl Debug for dyn SegmentStorage {
 
 #[cfg(test)]
 pub(crate) mod tests {
+    use crate::streaming::iggy_storage::*;
     use crate::streaming::partitions::partition::Partition;
     use crate::streaming::segments::index::{Index, IndexRange};
     use crate::streaming::segments::segment::Segment;
-    use crate::streaming::iggy_storage::*;
     use crate::streaming::streams::stream::Stream;
     use crate::streaming::topics::topic::Topic;
     use async_trait::async_trait;

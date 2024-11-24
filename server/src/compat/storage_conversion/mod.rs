@@ -6,13 +6,13 @@ use crate::configs::system::SystemConfig;
 use crate::state::system::{PartitionState, StreamState, TopicState};
 use crate::state::State;
 use crate::streaming::batching::message_batch::RetainedMessageBatch;
+use crate::streaming::iggy_storage::{
+    PartitionStorage, SegmentStorage, StreamStorage, SystemInfoStorage, SystemStorage, TopicStorage,
+};
 use crate::streaming::partitions::partition::{ConsumerOffset, Partition};
 use crate::streaming::persistence::persister::Persister;
 use crate::streaming::segments::index::{Index, IndexRange};
 use crate::streaming::segments::segment::Segment;
-use crate::streaming::iggy_storage::{
-    PartitionStorage, SegmentStorage, StreamStorage, SystemInfoStorage, SystemStorage, TopicStorage,
-};
 use crate::streaming::streams::stream::Stream;
 use crate::streaming::systems::info::SystemInfo;
 use crate::streaming::topics::topic::Topic;

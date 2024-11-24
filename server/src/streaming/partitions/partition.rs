@@ -2,9 +2,9 @@ use crate::configs::system::SystemConfig;
 use crate::streaming::cache::buffer::SmartCache;
 use crate::streaming::cache::memory_tracker::CacheMemoryTracker;
 use crate::streaming::deduplication::message_deduplicator::MessageDeduplicator;
+use crate::streaming::iggy_storage::SystemStorage;
 use crate::streaming::models::messages::RetainedMessage;
 use crate::streaming::segments::segment::Segment;
-use crate::streaming::iggy_storage::SystemStorage;
 use dashmap::DashMap;
 use iggy::consumer::ConsumerKind;
 use iggy::utils::duration::IggyDuration;
@@ -176,8 +176,8 @@ impl Partition {
 #[cfg(test)]
 mod tests {
     use crate::configs::system::{CacheConfig, SystemConfig};
-    use crate::streaming::partitions::partition::Partition;
     use crate::streaming::iggy_storage::tests::get_test_system_storage;
+    use crate::streaming::partitions::partition::Partition;
     use iggy::utils::duration::IggyDuration;
     use iggy::utils::expiry::IggyExpiry;
     use iggy::utils::timestamp::IggyTimestamp;

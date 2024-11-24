@@ -52,7 +52,8 @@ impl RetainedMessageBatch {
         bytes[8..12].copy_from_slice(&self.length.to_le_bytes());
         bytes[12..16].copy_from_slice(&self.last_offset_delta.to_le_bytes());
         bytes[16..24].copy_from_slice(&self.max_timestamp.to_le_bytes());
-        bytes[24..self.length as usize + RETAINED_BATCH_OVERHEAD as usize].copy_from_slice(&self.bytes);
+        bytes[24..self.length as usize + RETAINED_BATCH_OVERHEAD as usize]
+            .copy_from_slice(&self.bytes);
     }
 
     pub fn extend(&self, bytes: &mut BytesMut) {

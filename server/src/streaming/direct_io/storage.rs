@@ -1,19 +1,34 @@
-use std::{alloc::{self, Layout}, io::{Read, Seek, SeekFrom, Write}, os::unix::fs::OpenOptionsExt};
+use std::{
+    alloc::{self, Layout},
+    io::{Read, Seek, SeekFrom, Write},
+    os::unix::fs::OpenOptionsExt,
+};
 
+use crate::streaming::batching::message_batch::{RetainedMessageBatch, RETAINED_BATCH_OVERHEAD};
 use bytes::{BufMut, Bytes, BytesMut};
 use iggy::error::IggyError;
+use tokio::{
+    fs::OpenOptions,
+    io::{AsyncReadExt, AsyncSeekExt, AsyncWriteExt, BufReader},
+    task::spawn_blocking,
+};
 use tracing::warn;
-use tokio::{fs::OpenOptions, io::{AsyncReadExt, AsyncSeekExt, AsyncWriteExt, BufReader}, task::spawn_blocking};
-use crate::streaming::batching::message_batch::{RetainedMessageBatch, RETAINED_BATCH_OVERHEAD};
 
 #[derive(Debug, Default)]
-pub struct DirectIOStorage {
-}
+pub struct DirectIOStorage {}
 
 impl DirectIOStorage {
-    pub async fn read_batches(&self, file_path: &str, start_position: u64, end_position: u64) -> Result<Vec<RetainedMessageBatch>, IggyError> {
+    pub async fn read_batches(
+        &self,
+        file_path: &str,
+        start_position: u64,
+        end_position: u64,
+    ) -> Result<Vec<RetainedMessageBatch>, IggyError> {
         //let mut file = OpenOptions::new().read(true).custom_flags(libc::O_DIRECT).open(file_path).await?;
-        let mut file = std::fs::File::options().read(true).custom_flags(libc::O_DIRECT).open(file_path)?;
+        let mut file = std::fs::File::options()
+            .read(true)
+            .custom_flags(libc::O_DIRECT)
+            .open(file_path)?;
         file.seek(SeekFrom::Start(start_position))?;
         let mut batches = Vec::new();
         let file_size = file.metadata()?.len();
@@ -33,14 +48,16 @@ impl DirectIOStorage {
         let layout = Layout::from_size_align(buf_size as _, sector_size as _).unwrap();
         let ptr = unsafe { alloc::alloc(layout) };
         // Not sure if this is required
-        let mut bytes = unsafe  {Vec::from_raw_parts(ptr, buf_size as _, buf_size as _)};
+        let mut bytes = unsafe { Vec::from_raw_parts(ptr, buf_size as _, buf_size as _) };
         let result = spawn_blocking(move || {
             if let Err(e) = file.read_exact(&mut bytes) {
                 warn!("error reading batch: {}", e);
             }
             Self::serialize_batches(bytes, &mut batches);
             Ok(batches)
-        }).await.unwrap();
+        })
+        .await
+        .unwrap();
         result
     }
 
@@ -98,7 +115,6 @@ impl DirectIOStorage {
                 );
                 break;
             }
-
             // Ergh....
             let payload = Bytes::copy_from_slice(&bytes[payload_start..payload_end]);
             read_bytes = payload_end + diff as usize;
@@ -114,14 +130,19 @@ impl DirectIOStorage {
     }
 
     pub async fn write_batches(&self, file_path: &str, bytes: Vec<u8>) -> Result<u32, IggyError> {
-        let mut std_file = std::fs::File::options().append(true).custom_flags(libc::O_DIRECT).open(file_path)?;
+        let mut std_file = std::fs::File::options()
+            .append(true)
+            .custom_flags(libc::O_DIRECT)
+            .open(file_path)?;
         //let mut file = OpenOptions::new().append(true).custom_flags(libc::O_DIRECT).open(file_path).await?;
         let size = bytes.len() as _;
         spawn_blocking(move || {
             if let Err(e) = std_file.write_all(&bytes) {
                 warn!("error writing: {}", e);
             }
-        }).await.unwrap();
+        })
+        .await
+        .unwrap();
         Ok(size)
     }
 }

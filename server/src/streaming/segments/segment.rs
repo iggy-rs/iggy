@@ -1,10 +1,12 @@
 use crate::configs::system::SystemConfig;
 use crate::streaming::batching::batch_accumulator::BatchAccumulator;
 use crate::streaming::direct_io::storage::DirectIOStorage;
-use crate::streaming::segments::index::Index;
 use crate::streaming::iggy_storage::SystemStorage;
+use crate::streaming::segments::index::Index;
+use crate::streaming::storage::storage::DmaStorage;
 use iggy::utils::expiry::IggyExpiry;
 use iggy::utils::timestamp::IggyTimestamp;
+use std::io::BufReader;
 use std::sync::atomic::AtomicU64;
 use std::sync::Arc;
 
@@ -38,6 +40,7 @@ pub struct Segment {
     pub(crate) indexes: Option<Vec<Index>>,
     pub(crate) storage: Arc<SystemStorage>,
     pub(crate) direct_io_storage: Arc<DirectIOStorage>,
+    pub(crate) new_storage: Arc<DmaStorage>,
 }
 
 impl Segment {
@@ -59,6 +62,7 @@ impl Segment {
         messages_count_of_parent_partition: Arc<AtomicU64>,
     ) -> Segment {
         let path = config.get_segment_path(stream_id, topic_id, partition_id, start_offset);
+        let block_size = 10 * 4096;
 
         Segment {
             stream_id,
@@ -81,6 +85,7 @@ impl Segment {
                 false => None,
             },
             direct_io_storage: Default::default(),
+            new_storage: Arc::new(DmaStorage::new(Self::get_log_path(&path), block_size)),
             unsaved_messages,
             is_closed: false,
             size_of_parent_stream,

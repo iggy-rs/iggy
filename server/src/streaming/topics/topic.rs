@@ -1,7 +1,7 @@
 use crate::configs::system::SystemConfig;
+use crate::streaming::iggy_storage::SystemStorage;
 use crate::streaming::partitions::partition::Partition;
 use crate::streaming::polling_consumer::PollingConsumer;
-use crate::streaming::iggy_storage::SystemStorage;
 use crate::streaming::topics::consumer_group::ConsumerGroup;
 use core::fmt;
 use iggy::compression::compression_algorithm::CompressionAlgorithm;

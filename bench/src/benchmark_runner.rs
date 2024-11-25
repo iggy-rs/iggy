@@ -1,4 +1,5 @@
 use crate::args::common::IggyBenchArgs;
+use crate::benchmark_params::BenchmarkParams;
 use crate::benchmark_result::BenchmarkResults;
 use crate::benchmarks::benchmark::Benchmarkable;
 use crate::server_starter::start_server_if_needed;
@@ -47,12 +48,17 @@ impl BenchmarkRunner {
 
         // Sleep just to see result prints after all the join handles are done and tcp connections are closed
         sleep(Duration::from_millis(10)).await;
-        let results: BenchmarkResults = results.into();
+
+        let results = BenchmarkResults { results };
         benchmark.display_settings();
-        results
-            .to_string()
-            .split('\n')
-            .for_each(|result| info!("{}", result));
+        info!("{results}");
+
+        if let Some(output_directory) = benchmark.args().output_directory() {
+            results.dump_to_toml(&output_directory);
+            let params = BenchmarkParams::from(benchmark.args());
+            params.dump_to_toml(&output_directory);
+        }
+
         Ok(())
     }
 }

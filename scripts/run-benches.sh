@@ -26,23 +26,25 @@ sleep 1
 
 # Start tcp send bench
 echo "Running iggy-bench send tcp..."
-send_results=$(target/release/iggy-bench send tcp | grep -e "Results: total throughput")
+send_results=$(target/release/iggy-bench send tcp | grep -e "Results:")
 sleep 1
-
-# Start tcp poll bench
-echo "Running iggy-bench poll tcp..."
-poll_results=$(target/release/iggy-bench poll tcp | grep -e "Results: total throughput")
-
-# Gracefully stop the server
-send_signal "iggy-server" "TERM"
 
 # Display results
 echo
 echo "Send results:"
 echo "${send_results}"
 echo
+
+# Start tcp poll bench
+echo "Running iggy-bench poll tcp..."
+poll_results=$(target/release/iggy-bench poll tcp | grep -e "Results: total throughput")
+
 echo "Poll results:"
 echo "${poll_results}"
 echo
+
+# Gracefully stop the server
+send_signal "iggy-server" "TERM"
+wait_for_process "iggy-server" 5
 
 exit 0

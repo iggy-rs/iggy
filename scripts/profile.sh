@@ -180,11 +180,11 @@ wait_for_process "iggy-server" 10
 # Display results
 echo
 echo "Send results:"
-grep -e "Results: total throughput" "${BENCH_SEND_LOG_FILE}"
+grep -e "Results: " "${BENCH_SEND_LOG_FILE}"
 
 echo
 echo "Poll results:"
-grep -e "Results: total throughput" "${BENCH_POLL_LOG_FILE}"
+grep -e "Results: " "${BENCH_POLL_LOG_FILE}"
 
 echo
 echo "Flamegraph svg (send) saved to ${FLAMEGRAPH_SEND_SVG}"

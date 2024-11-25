@@ -477,7 +477,6 @@ max_entries = 1000
 # Maximum age of ID entries in the deduplication cache in human-readable format.
 expiry = "1 m"
 
-
 # Recovery configuration in case of lost data
 [system.recovery]
 # Controls whether streams/topics/partitions should be recreated if the expected data for existing state is missing (boolean).

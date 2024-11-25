@@ -1,11 +1,14 @@
 use crate::args::simple::BenchmarkKind;
-use crate::benchmark_result::{BenchmarkResult, LatencyPercentiles};
+use crate::benchmark_result::BenchmarkResult;
+use crate::statistics::actor_statistics::BenchmarkActorStatistics;
+use crate::statistics::record::BenchmarkRecord;
 use iggy::client::MessageClient;
 use iggy::clients::client::IggyClient;
 use iggy::error::IggyError;
 use iggy::messages::send_messages::{Message, Partitioning};
 use iggy::utils::byte_size::IggyByteSize;
 use iggy::utils::duration::IggyDuration;
+use iggy::utils::sizeable::Sizeable;
 use integration::test_server::{login_root, ClientFactory};
 use std::str::FromStr;
 use std::sync::Arc;
@@ -18,10 +21,11 @@ pub struct Producer {
     producer_id: u32,
     stream_id: u32,
     partitions_count: u32,
-    messages_per_batch: u32,
     message_batches: u32,
+    messages_per_batch: u32,
     message_size: u32,
     warmup_time: IggyDuration,
+    output_directory: Option<String>,
 }
 
 impl Producer {
@@ -35,6 +39,7 @@ impl Producer {
         message_batches: u32,
         message_size: u32,
         warmup_time: IggyDuration,
+        output_directory: Option<String>,
     ) -> Self {
         Producer {
             client_factory,
@@ -45,13 +50,19 @@ impl Producer {
             message_batches,
             message_size,
             warmup_time,
+            output_directory,
         }
     }
 
     pub async fn run(&self) -> Result<BenchmarkResult, IggyError> {
         let topic_id: u32 = 1;
         let default_partition_id: u32 = 1;
-        let total_messages = (self.messages_per_batch * self.message_batches) as u64;
+        let partitions_count = self.partitions_count;
+        let message_batches = self.message_batches;
+        let messages_per_batch = self.messages_per_batch;
+        let message_size = self.message_size;
+
+        let total_messages = (messages_per_batch * message_batches) as u64;
         let client = self.client_factory.create_client().await;
         let client = IggyClient::create(client, None, None);
         login_root(&client).await;
@@ -59,94 +70,110 @@ impl Producer {
             "Producer #{} → preparing the test messages...",
             self.producer_id
         );
-        let payload = Self::create_payload(self.message_size);
-        let mut messages = Vec::with_capacity(self.messages_per_batch as usize);
-        for _ in 0..self.messages_per_batch {
+        let payload = Self::create_payload(message_size);
+        let mut batch_user_data_bytes = 0;
+        let mut batch_total_bytes = 0;
+        let mut messages = Vec::with_capacity(messages_per_batch as usize);
+        for _ in 0..messages_per_batch {
             let message = Message::from_str(&payload).unwrap();
+            batch_user_data_bytes += message.length as u64;
+            batch_total_bytes += message.get_size_bytes().as_bytes_u64();
             messages.push(message);
         }
+        let batch_user_data_bytes = batch_user_data_bytes;
+        let batch_total_bytes = batch_total_bytes;
 
         let stream_id = self.stream_id.try_into()?;
         let topic_id = topic_id.try_into()?;
-        let partitioning = match self.partitions_count {
+        let partitioning = match partitions_count {
             0 => panic!("Partition count must be greater than 0"),
             1 => Partitioning::partition_id(default_partition_id),
             2.. => Partitioning::balanced(),
         };
-        info!(
-            "Producer #{} → warming up for {}...",
-            self.producer_id, self.warmup_time
-        );
-        let warmup_end = Instant::now() + self.warmup_time.get_duration();
-        while Instant::now() < warmup_end {
-            client
-                .send_messages(&stream_id, &topic_id, &partitioning, &mut messages)
-                .await?;
+
+        if self.warmup_time.get_duration() != Duration::from_millis(0) {
+            info!(
+                "Producer #{} → warming up for {}...",
+                self.producer_id, self.warmup_time
+            );
+            let warmup_end = Instant::now() + self.warmup_time.get_duration();
+            while Instant::now() < warmup_end {
+                client
+                    .send_messages(&stream_id, &topic_id, &partitioning, &mut messages)
+                    .await?;
+            }
         }
 
         info!(
             "Producer #{} → sending {} messages in {} batches of {} messages...",
-            self.producer_id, total_messages, self.message_batches, self.messages_per_batch
+            self.producer_id, total_messages, message_batches, messages_per_batch
         );
 
         let start_timestamp = Instant::now();
-        let mut latencies: Vec<Duration> = Vec::with_capacity(self.message_batches as usize);
-        for _ in 0..self.message_batches {
-            let latency_start = Instant::now();
+        let mut latencies: Vec<Duration> = Vec::with_capacity(message_batches as usize);
+        let mut records: Vec<BenchmarkRecord> = Vec::with_capacity(message_batches as usize);
+        for i in 1..=message_batches {
+            let before_send = Instant::now();
             client
                 .send_messages(&stream_id, &topic_id, &partitioning, &mut messages)
                 .await?;
-            let latency_end = latency_start.elapsed();
-            latencies.push(latency_end);
+            let latency = before_send.elapsed();
+
+            let messages_processed = (i * messages_per_batch) as u64;
+            let batches_processed = i as u64;
+            let total_user_data_bytes = batches_processed * batch_user_data_bytes;
+            let total_bytes = batches_processed * batch_total_bytes;
+
+            latencies.push(latency);
+            records.push(BenchmarkRecord::new(
+                start_timestamp.elapsed().as_micros() as u64,
+                latency.as_micros() as u64,
+                messages_processed,
+                batches_processed,
+                total_user_data_bytes,
+                total_bytes,
+            ));
         }
-        let end_timestamp = Instant::now();
+        let statistics = BenchmarkActorStatistics::from_records(&records);
 
-        latencies.sort();
-        let last_idx = latencies.len() - 1;
-        let p50 = latencies[last_idx / 2];
-        let p90 = latencies[last_idx * 9 / 10];
-        let p95 = latencies[last_idx * 95 / 100];
-        let p99 = latencies[last_idx * 99 / 100];
-        let p999 = latencies[last_idx * 999 / 1000];
-        let latency_percentiles = LatencyPercentiles {
-            p50,
-            p90,
-            p95,
-            p99,
-            p999,
-        };
+        if let Some(output_directory) = &self.output_directory {
+            std::fs::create_dir_all(format!("{}/raw_data", output_directory)).unwrap();
 
-        let duration = end_timestamp - start_timestamp;
-        let average_latency: Duration = latencies.iter().sum::<Duration>() / latencies.len() as u32;
-        let total_size_bytes = IggyByteSize::from(total_messages * self.message_size as u64);
-        let average_throughput =
-            total_size_bytes.as_bytes_u64() as f64 / duration.as_secs_f64() / 1e6;
+            // Dump raw data to file
+            let results_file = format!(
+                "{}/raw_data/producer_{}_data.csv",
+                output_directory, self.producer_id
+            );
+            info!(
+                "Producer #{} → writing the results to {}...",
+                self.producer_id, results_file
+            );
 
-        info!(
-            "Producer #{} → sent {} messages in {} batches of {} messages in {:.2} s, total size: {}, average throughput: {:.2} MB/s, p50 latency: {:.2} ms, p90 latency: {:.2} ms, p95 latency: {:.2} ms, p99 latency: {:.2} ms, p999 latency: {:.2} ms, average latency: {:.2} ms",
+            let mut writer = csv::Writer::from_path(results_file).unwrap();
+            for sample in records {
+                writer.serialize(sample).unwrap();
+            }
+            writer.flush().unwrap();
+
+            // Dump summary to file
+            let summary_file = format!(
+                "{}/raw_data/producer_{}_summary.toml",
+                output_directory, self.producer_id
+            );
+            statistics.dump_to_toml(&summary_file);
+        }
+
+        Self::log_producer_statistics(
             self.producer_id,
             total_messages,
-            self.message_batches,
-            self.messages_per_batch,
-            duration.as_secs_f64(),
-            total_size_bytes.as_human_string(),
-            average_throughput,
-            p50.as_secs_f64() * 1000.0,
-            p90.as_secs_f64() * 1000.0,
-            p95.as_secs_f64() * 1000.0,
-            p99.as_secs_f64() * 1000.0,
-            p999.as_secs_f64() * 1000.0,
-            average_latency.as_secs_f64() * 1000.0
+            message_batches,
+            messages_per_batch,
+            &statistics,
         );
 
         Ok(BenchmarkResult {
             kind: BenchmarkKind::Send,
-            start_timestamp,
-            end_timestamp,
-            average_latency,
-            latency_percentiles,
-            total_size_bytes,
-            total_messages,
+            statistics,
         })
     }
 
@@ -158,5 +185,33 @@ impl Producer {
         }
 
         payload
+    }
+
+    fn log_producer_statistics(
+        producer_id: u32,
+        total_messages: u64,
+        message_batches: u32,
+        messages_per_batch: u32,
+        stats: &BenchmarkActorStatistics,
+    ) {
+        info!(
+            "Producer #{} → sent {} messages in {} batches of {} messages in {:.2} s, total size: {}, average throughput: {:.2} MB/s, \
+    p50 latency: {:.2} ms, p90 latency: {:.2} ms, p95 latency: {:.2} ms, p99 latency: {:.2} ms, p999 latency: {:.2} ms, \
+    average latency: {:.2} ms, median latency: {:.2} ms",
+            producer_id,
+            total_messages,
+            message_batches,
+            messages_per_batch,
+            stats.total_time_secs,
+            IggyByteSize::from(stats.total_bytes),
+            stats.throughput_megabytes_per_second,
+            stats.p50_latency_ms,
+            stats.p90_latency_ms,
+            stats.p95_latency_ms,
+            stats.p99_latency_ms,
+            stats.p999_latency_ms,
+            stats.avg_latency_ms,
+            stats.median_latency_ms
+        );
     }
 }

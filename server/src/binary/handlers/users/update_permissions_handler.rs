@@ -3,6 +3,7 @@ use crate::state::command::EntryCommand;
 use crate::streaming::session::Session;
 use crate::streaming::systems::system::SharedSystem;
 use anyhow::Result;
+use error_set::ResultContext;
 use iggy::error::IggyError;
 use iggy::users::update_permissions::UpdatePermissions;
 use tracing::{debug, instrument};
@@ -19,7 +20,10 @@ pub async fn handle(
         let mut system = system.write().await;
         system
             .update_permissions(session, &command.user_id, command.permissions.clone())
-            .await?;
+            .await
+            .with_error(|_| format!("USER_HANDLER - failed to update permissions for user_id: {}, session: {session}",
+                command.user_id
+            ))?;
     }
 
     let system = system.read().await;

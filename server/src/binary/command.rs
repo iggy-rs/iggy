@@ -21,6 +21,7 @@ use crate::binary::sender::Sender;
 use crate::command::ServerCommand;
 use crate::streaming::session::Session;
 use crate::streaming::systems::system::SharedSystem;
+use error_set::ResultContext;
 use iggy::error::IggyError;
 use tracing::{debug, error};
 
@@ -38,12 +39,16 @@ pub async fn handle(
         Err(error) => {
             error!("Command was not handled successfully, session: {session}, error: {error}.");
             if let IggyError::ClientNotFound(_) = error {
-                sender.send_error_response(error).await?;
+                sender.send_error_response(error).await.with_error(|_| {
+                    format!("BINARY - failed to send error response, session: {session}")
+                })?;
                 debug!("TCP error response was sent to: {session}.");
                 error!("Session: {session} will be deleted.");
                 Err(IggyError::ClientNotFound(session.client_id))
             } else {
-                sender.send_error_response(error).await?;
+                sender.send_error_response(error).await.with_error(|_| {
+                    format!("BINARY - failed to send error response, session: {session}")
+                })?;
                 debug!("TCP error response was sent to: {session}.");
                 Ok(())
             }

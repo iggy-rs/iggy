@@ -3,6 +3,7 @@ use crate::binary::sender::Sender;
 use crate::streaming::session::Session;
 use crate::streaming::systems::system::SharedSystem;
 use anyhow::Result;
+use error_set::ResultContext;
 use iggy::error::IggyError;
 use iggy::users::login_user::LoginUser;
 use tracing::{debug, instrument};
@@ -18,7 +19,13 @@ pub async fn handle(
     let system = system.read().await;
     let user = system
         .login_user(&command.username, &command.password, Some(session))
-        .await?;
+        .await
+        .with_error(|_| {
+            format!(
+                "USER_HANDLER - failed to login user with name: {}, session: {session}",
+                command.username
+            )
+        })?;
     let identity_info = mapper::map_identity_info(user.id);
     sender.send_ok_response(&identity_info).await?;
     Ok(())

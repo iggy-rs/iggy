@@ -42,14 +42,9 @@ async fn get_metrics(State(state): State<Arc<AppState>>) -> Result<String, Custo
     Ok(system.metrics.get_formatted_output())
 }
 
-async fn get_stats(
-    State(state): State<Arc<AppState>>,
-    Extension(identity): Extension<Identity>,
-) -> Result<Json<Stats>, CustomError> {
+async fn get_stats(State(state): State<Arc<AppState>>) -> Result<Json<Stats>, CustomError> {
     let system = state.system.read().await;
-    let stats = system
-        .get_stats(&Session::stateless(identity.user_id, identity.ip_address))
-        .await?;
+    let stats = system.get_stats().await?;
     Ok(Json(stats))
 }
 

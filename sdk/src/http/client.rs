@@ -20,6 +20,7 @@ const UNAUTHORIZED_PATHS: &[&str] = &[
     "/",
     "/metrics",
     "/ping",
+    "/stats",
     "/users/login",
     "/users/refresh-token",
     "/personal-access-tokens/login",

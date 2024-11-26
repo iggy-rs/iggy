@@ -30,7 +30,6 @@ GET {{url}}/metrics
 
 ###
 GET {{url}}/stats
-Authorization: Bearer {{access_token}}
 
 ###
 GET {{url}}/clients

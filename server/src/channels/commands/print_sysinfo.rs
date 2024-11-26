@@ -48,7 +48,7 @@ impl SysInfoPrinter {
 #[async_trait]
 impl ServerCommand<SysInfoPrintCommand> for SysInfoPrintExecutor {
     async fn execute(&mut self, system: &SharedSystem, _command: SysInfoPrintCommand) {
-        let stats = match system.read().await.get_stats_bypass_auth().await {
+        let stats = match system.read().await.get_stats().await {
             Ok(stats) => stats,
             Err(e) => {
                 error!("Failed to get system information. Error: {e}");

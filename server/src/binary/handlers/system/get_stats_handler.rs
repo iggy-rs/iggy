@@ -14,7 +14,7 @@ pub async fn handle(
 ) -> Result<(), IggyError> {
     debug!("session: {session}, command: {command}");
     let system = system.read().await;
-    let stats = system.get_stats(session).await?;
+    let stats = system.get_stats().await?;
     let bytes = mapper::map_stats(&stats);
     sender.send_ok_response(&bytes).await?;
     Ok(())

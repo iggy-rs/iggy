@@ -257,21 +257,32 @@ impl ConfigProvider for FileConfigProvider {
     async fn load_config(&self) -> Result<ServerConfig, ServerError> {
         println!("Loading config from path: '{}'...", self.path);
 
-        if !file_exists(&self.path) {
-            return Err(ServerError::CannotLoadConfiguration(format!(
-                "Cannot find configuration file at path: '{}'.",
-                self.path,
-            )));
+        // Include the default configuration from server.toml
+        let embedded_default_config = Toml::string(include_str!("../../../configs/server.toml"));
+
+        // Start with the default configuration
+        let mut config_builder = Figment::new().merge(embedded_default_config);
+
+        // If the server.toml file exists, merge it into the configuration
+        if file_exists(&self.path) {
+            println!("Found configuration file at path: '{}'.", self.path);
+            config_builder = config_builder.merge(Toml::file(&self.path));
+        } else {
+            println!(
+                "Configuration file not found at path: '{}'. Using default configuration from embedded server.toml.",
+                self.path
+            );
         }
 
-        let config_builder = Figment::new().merge(Toml::file(&self.path));
-        let custom_env_provider = CustomEnvProvider::new("IGGY_");
-        let config_result: Result<ServerConfig, figment::Error> =
-            config_builder.merge(custom_env_provider).extract();
+        // Merge environment variables into the configuration
+        config_builder = config_builder.merge(CustomEnvProvider::new("IGGY_"));
+
+        // Finally, attempt to extract the final configuration
+        let config_result: Result<ServerConfig, figment::Error> = config_builder.extract();
 
         match config_result {
             Ok(config) => {
-                println!("Config loaded from path: '{}'", self.path);
+                println!("Config loaded successfully.");
                 println!("Using Config: {config}");
                 Ok(config)
             }

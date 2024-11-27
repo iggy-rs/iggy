@@ -42,6 +42,7 @@ impl Benchmarkable for SendMessagesBenchmark {
             let args = args.clone();
             let start_stream_id = args.start_stream_id();
             let client_factory = client_factory.clone();
+            let output_directory = args.output_directory.clone();
 
             let parallel_producer_streams = !args.disable_parallel_producer_streams();
             let stream_id = match parallel_producer_streams {
@@ -58,6 +59,7 @@ impl Benchmarkable for SendMessagesBenchmark {
                 message_batches,
                 message_size,
                 warmup_time,
+                output_directory,
             );
             let future = Box::pin(async move { producer.run().await });
             futures.as_mut().unwrap().push(future);

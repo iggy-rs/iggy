@@ -82,11 +82,14 @@ impl Benchmarkable for ConsumerGroupBenchmark {
         let message_batches = self.args.message_batches();
         let warmup_time = self.args.warmup_time();
         let mut futures: BenchmarkFutures = Ok(Vec::with_capacity((consumers) as usize));
+        let output_directory = self.args.output_directory();
 
         for consumer_id in 1..=consumers {
             let consumer_group_id =
                 start_consumer_group_id + 1 + (consumer_id % consumer_groups_count);
             let stream_id = start_stream_id + 1 + (consumer_id % consumer_groups_count);
+            let output_directory = output_directory.clone();
+
             let consumer = Consumer::new(
                 self.client_factory.clone(),
                 consumer_id,
@@ -95,6 +98,7 @@ impl Benchmarkable for ConsumerGroupBenchmark {
                 messages_per_batch,
                 message_batches,
                 warmup_time,
+                output_directory,
             );
             let future = Box::pin(async move { consumer.run().await });
             futures.as_mut().unwrap().push(future);

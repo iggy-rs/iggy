@@ -2,13 +2,28 @@ use super::defaults::*;
 use super::props::BenchmarkTransportProps;
 use clap::{Parser, Subcommand};
 use integration::test_server::Transport;
+use serde::{Serialize, Serializer};
 use std::num::NonZeroU32;
 
-#[derive(Subcommand, Debug)]
+#[derive(Subcommand, Debug, Clone)]
 pub enum BenchmarkTransportCommand {
     Http(HttpArgs),
     Tcp(TcpArgs),
     Quic(QuicArgs),
+}
+
+impl Serialize for BenchmarkTransportCommand {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        let variant_str = match self {
+            BenchmarkTransportCommand::Http(_) => "http",
+            BenchmarkTransportCommand::Tcp(_) => "tcp",
+            BenchmarkTransportCommand::Quic(_) => "quic",
+        };
+        serializer.serialize_str(variant_str)
+    }
 }
 
 impl BenchmarkTransportProps for BenchmarkTransportCommand {
@@ -41,7 +56,7 @@ impl BenchmarkTransportProps for BenchmarkTransportCommand {
     }
 }
 
-#[derive(Parser, Debug)]
+#[derive(Parser, Debug, Clone)]
 pub struct HttpArgs {
     /// Address of the HTTP iggy-server
     #[arg(long, default_value_t = DEFAULT_HTTP_SERVER_ADDRESS.to_owned())]
@@ -74,7 +89,7 @@ impl BenchmarkTransportProps for HttpArgs {
     }
 }
 
-#[derive(Parser, Debug)]
+#[derive(Parser, Debug, Clone)]
 pub struct TcpArgs {
     /// Address of the TCP iggy-server
     #[arg(long, default_value_t = DEFAULT_TCP_SERVER_ADDRESS.to_owned())]
@@ -107,7 +122,7 @@ impl BenchmarkTransportProps for TcpArgs {
     }
 }
 
-#[derive(Parser, Debug)]
+#[derive(Parser, Debug, Clone)]
 pub struct QuicArgs {
     /// Address to which the QUIC client will bind
     #[arg(long, default_value_t = DEFAULT_QUIC_CLIENT_ADDRESS.to_owned())]

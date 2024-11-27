@@ -2,6 +2,7 @@ use crate::utils::byte_size::IggyByteSize;
 use crate::utils::topic_size::MaxTopicSize;
 use strum::{EnumDiscriminants, FromRepr, IntoStaticStr};
 use thiserror::Error;
+use tokio::task::JoinError;
 
 #[derive(Debug, Error, EnumDiscriminants, IntoStaticStr)]
 #[repr(u32)]
@@ -116,6 +117,8 @@ pub enum IggyError {
     AccessTokenMissing = 77,
     #[error("Invalid access token")]
     InvalidAccessToken = 78,
+    #[error("Failed to join the tokio handle")]
+    JoinHandle(#[from] JoinError) = 79,
     #[error("Client with ID: {0} was not found.")]
     ClientNotFound(u32) = 100,
     #[error("Invalid client ID")]

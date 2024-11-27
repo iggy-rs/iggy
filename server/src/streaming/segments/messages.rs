@@ -6,6 +6,7 @@ use crate::streaming::models::messages::RetainedMessage;
 use crate::streaming::segments::index::{Index, IndexRange};
 use crate::streaming::segments::segment::Segment;
 use crate::streaming::sizeable::Sizeable;
+use crate::streaming::storage::storage::TestStorage;
 use crate::streaming::storage::Storage;
 use bytes::buf::UninitSlice;
 use bytes::{BufMut, Bytes, BytesMut};
@@ -134,7 +135,21 @@ impl Segment {
                 .load_n_messages_from_disk(start_position, count, |msg| msg.offset >= start_offset)
                 .await;
         }
-        Ok(EMPTY_MESSAGES.into_iter().map(Arc::new).collect())
+
+        match self
+            .storage
+            .segment
+            .load_index_range(self, start_offset, end_offset)
+            .await?
+        {
+            Some(index_range) => {
+                self.load_n_messages_from_disk(index_range.start.position, count, |msg| {
+                    msg.offset >= start_offset
+                })
+                .await
+            }
+            None => Ok(EMPTY_MESSAGES.into_iter().map(Arc::new).collect()),
+        }
     }
 
     async fn load_n_messages_from_disk<F>(
@@ -159,92 +174,6 @@ impl Segment {
             .await?;
 
         Ok(messages)
-    }
-
-    async fn load_messages_from_disk(
-        &self,
-        start_offset: u64,
-        end_offset: u64,
-    ) -> Result<Vec<Arc<RetainedMessage>>, IggyError> {
-        trace!(
-            "Loading messages from disk, segment start offset: {}, end offset: {}, current offset: {}...",
-            start_offset,
-            end_offset,
-            self.current_offset
-        );
-
-        if start_offset > end_offset {
-            warn!(
-                "Cannot load messages from disk, invalid offset range: {} - {}.",
-                start_offset, end_offset
-            );
-            return Ok(EMPTY_MESSAGES.into_iter().map(Arc::new).collect());
-        }
-
-        if let Some(indices) = &self.indexes {
-            let relative_start_offset = (start_offset - self.start_offset) as u32;
-            let relative_end_offset = (end_offset - self.start_offset) as u32;
-            let index_range = match self.load_highest_lower_bound_index(
-                indices,
-                relative_start_offset,
-                relative_end_offset,
-            ) {
-                Ok(range) => range,
-                Err(_) => {
-                    error!(
-                        "Cannot load messages from disk, index range not found: {} - {}.",
-                        start_offset, end_offset
-                    );
-                    return Ok(EMPTY_MESSAGES.into_iter().map(Arc::new).collect());
-                }
-            };
-
-            return self
-                .load_messages_from_segment_file(&index_range, start_offset, end_offset)
-                .await;
-        }
-
-        match self
-            .storage
-            .segment
-            .load_index_range(self, start_offset, end_offset)
-            .await?
-        {
-            Some(index_range) => {
-                self.load_messages_from_segment_file(&index_range, start_offset, end_offset)
-                    .await
-            }
-            None => Ok(EMPTY_MESSAGES.into_iter().map(Arc::new).collect()),
-        }
-    }
-
-    async fn load_messages_from_segment_file(
-        &self,
-        index_range: &IndexRange,
-        start_offset: u64,
-        end_offset: u64,
-    ) -> Result<Vec<Arc<RetainedMessage>>, IggyError> {
-        let messages_count = (start_offset + end_offset) as usize;
-        let path = self.log_path.as_str();
-        let start_position = index_range.start.position;
-        let end_position = index_range.end.position;
-        let batch = self
-            .direct_io_storage
-            .read_batches(path, start_position as _, end_position as _)
-            .await?;
-        let messages = batch
-            .iter()
-            .to_messages_with_filter(messages_count, &|msg| {
-                msg.offset >= start_offset && msg.offset <= end_offset
-            });
-        trace!(
-            "Loaded {} messages from disk, segment start offset: {}, end offset: {}.",
-            messages.len(),
-            self.start_offset,
-            self.current_offset
-        );
-
-        Ok(messages.into_iter().map(Arc::new).collect())
     }
 
     pub async fn append_batch(

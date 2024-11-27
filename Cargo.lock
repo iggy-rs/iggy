@@ -2123,6 +2123,7 @@ dependencies = [
  "lazy_static",
  "libc",
  "passterm",
+ "pin-project",
  "quinn",
  "regex",
  "reqwest",

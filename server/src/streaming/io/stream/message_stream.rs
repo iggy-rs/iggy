@@ -7,7 +7,7 @@ use iggy::error::IggyError;
 use pin_project::pin_project;
 use std::{future::Future, pin::Pin, task::Poll};
 use tokio::task::yield_now;
-use tracing::warn;
+use tracing::{error, warn};
 
 pub struct RetainedMessageStream<R>
 where

@@ -3,7 +3,7 @@ use crate::server_error::ServerError;
 use crate::IGGY_ROOT_PASSWORD_ENV;
 use async_trait::async_trait;
 use figment::{
-    providers::{Format, Json, Toml},
+    providers::{Format, Toml},
     value::{Dict, Map as FigmentMap, Tag, Value as FigmentValue},
     Error, Figment, Metadata, Profile, Provider,
 };
@@ -264,16 +264,7 @@ impl ConfigProvider for FileConfigProvider {
             )));
         }
 
-        let config_builder = Figment::new();
-        let extension = self.path.split('.').last().unwrap_or("");
-        let config_builder = match extension {
-            "json" => config_builder.merge(Json::file(&self.path)),
-            "toml" => config_builder.merge(Toml::file(&self.path)),
-            e => {
-                return Err(ServerError::CannotLoadConfiguration(format!("Cannot load configuration: invalid file extension: {e}, only .json and .toml are supported.")));
-            }
-        };
-
+        let config_builder = Figment::new().merge(Toml::file(&self.path));
         let custom_env_provider = CustomEnvProvider::new("IGGY_");
         let config_result: Result<ServerConfig, figment::Error> =
             config_builder.merge(custom_env_provider).extract();

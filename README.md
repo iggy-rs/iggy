@@ -133,9 +133,11 @@ The official images can be found [here](https://hub.docker.com/r/iggyrs/iggy), s
 
 ## Configuration
 
-The default configuration can be found in `server.toml` (the default one) or `server.json` file in `configs` directory.
+The default configuration can be found in `server.toml` file in `configs` directory.
 
-The configuration file is loaded from the current working directory, but you can specify the path to the configuration file by setting `IGGY_CONFIG_PATH` environment variable, for example `export IGGY_CONFIG_PATH=configs/server.json` (or other command depending on OS).
+The configuration file is loaded from the current working directory, but you can specify the path to the configuration file by setting `IGGY_CONFIG_PATH` environment variable, for example `export IGGY_CONFIG_PATH=configs/server.toml` (or other command depending on OS).
+
+When config file is not found, the default values from embedded server.toml file are used.
 
 For the detailed documentation of the configuration file, please refer to the [configuration](https://docs.iggy.rs/server/configuration) section.
 
@@ -226,6 +228,7 @@ Iggy comes with the Rust SDK, which is available on [crates.io](https://crates.i
 The SDK provides both, low-level client for the specific transport, which includes the message sending and polling along with all the administrative actions such as managing the streams, topics, users etc., as well as the high-level client, which abstracts the low-level details and provides the easy-to-use API for both, message producers and consumers.
 
 You can find the more examples, including the multi-tenant one under the `examples` directory.
+
 ```rust
 // Create the Iggy client
 let client = IggyClient::from_connection_string("iggy://user:secret@localhost:8090")?;
@@ -246,17 +249,17 @@ producer.send(messages).await?;
 
 // Create a consumer for the given stream and one of its topics
 let mut consumer = client
-	.consumer_group("my_app", "dev01", "events")?
-	.auto_commit(AutoCommit::IntervalOrWhen(
-		IggyDuration::from_str("1s")?,
-		AutoCommitWhen::ConsumingAllMessages,
-	))
-	.create_consumer_group_if_not_exists()
-	.auto_join_consumer_group()
-	.polling_strategy(PollingStrategy::next())
-	.poll_interval(IggyDuration::from_str("1ms")?)
-	.batch_size(1000)
-	.build();
+    .consumer_group("my_app", "dev01", "events")?
+    .auto_commit(AutoCommit::IntervalOrWhen(
+        IggyDuration::from_str("1s")?,
+        AutoCommitWhen::ConsumingAllMessages,
+    ))
+    .create_consumer_group_if_not_exists()
+    .auto_join_consumer_group()
+    .polling_strategy(PollingStrategy::next())
+    .poll_interval(IggyDuration::from_str("1ms")?)
+    .batch_size(1000)
+    .build();
 
 consumer.init().await?;
 

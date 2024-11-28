@@ -12,6 +12,12 @@ pub struct DmaBuf {
     size: usize,
 }
 
+impl DmaBuf {
+    pub fn len(&self) -> usize {
+        self.size
+    }
+}
+
 // SAFETY: fuck safety.
 unsafe impl Send for DmaBuf {}
 unsafe impl Sync for DmaBuf {}

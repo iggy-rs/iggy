@@ -1,5 +1,5 @@
-use std::pin::Pin;
 use futures::task::Poll;
+use std::pin::Pin;
 
 use crate::streaming::{
     batching::message_batch::RETAINED_BATCH_OVERHEAD, models::messages::RetainedMessage,

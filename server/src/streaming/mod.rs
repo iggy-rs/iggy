@@ -3,7 +3,6 @@ pub mod cache;
 pub mod clients;
 mod deduplication;
 pub mod diagnostics;
-pub mod direct_io;
 pub mod iggy_storage;
 pub mod io;
 pub mod models;

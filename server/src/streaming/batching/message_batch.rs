@@ -47,7 +47,7 @@ impl RetainedMessageBatch {
         self.base_offset + self.last_offset_delta as u64
     }
 
-    pub fn extend2(&self, bytes: &mut Vec<u8>) {
+    pub fn extend2(&self, bytes: &mut [u8]) {
         bytes[0..8].copy_from_slice(&self.base_offset.to_le_bytes());
         bytes[8..12].copy_from_slice(&self.length.to_le_bytes());
         bytes[12..16].copy_from_slice(&self.last_offset_delta.to_le_bytes());

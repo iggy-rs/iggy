@@ -1,21 +1,25 @@
-use std::{marker::PhantomData, pin::Pin};
+use super::{LogReader, LogWriter};
+use crate::streaming::{io::buf::IoBuf, storage::Storage};
 use futures::task::Poll;
-use futures::{Stream, Future, FutureExt};
+use futures::{Future, FutureExt, Stream};
 use pin_project::pin_project;
-use crate::streaming::{storage::Storage, io::buf::IoBuf};
-use super::LogReader;
+use std::{marker::PhantomData, pin::Pin};
 
 #[derive(Debug)]
-pub struct Log<S, Buf> 
-    where Buf: IoBuf, S: Storage<Buf>
+pub struct Log<S, Buf>
+where
+    Buf: IoBuf,
+    S: Storage<Buf>,
 {
     storage: S,
     block_size: usize,
-    _phantom: PhantomData<Buf>
+    _phantom: PhantomData<Buf>,
 }
 
-impl<S, Buf> Log<S, Buf> 
-    where Buf: IoBuf, S: Storage<Buf>
+impl<S, Buf> Log<S, Buf>
+where
+    Buf: IoBuf,
+    S: Storage<Buf>,
 {
     pub fn new(storage: S, block_size: usize) -> Self {
         Self {
@@ -24,11 +28,12 @@ impl<S, Buf> Log<S, Buf>
             _phantom: PhantomData,
         }
     }
-
 }
 
-impl<S,Buf> LogReader<Buf> for Log<S,Buf> 
-    where Buf: IoBuf, S: Storage<Buf>
+impl<S, Buf> LogReader<Buf> for Log<S, Buf>
+where
+    Buf: IoBuf,
+    S: Storage<Buf>,
 {
     fn read_blocks(
         &self,
@@ -45,10 +50,25 @@ impl<S,Buf> LogReader<Buf> for Log<S,Buf>
     }
 }
 
+impl<S, Buf> LogWriter<Buf> for Log<S, Buf>
+where
+    Buf: IoBuf,
+    S: Storage<Buf>,
+{
+    fn write_block(
+        &mut self,
+        buf: Buf,
+    ) -> impl Future<Output = Result<u32, iggy::error::IggyError>> {
+        self.storage.write_sectors(buf)
+    }
+}
+
 #[pin_project]
 struct BlockStream<'a, S, Buf>
-    where Buf: IoBuf, S: Storage<Buf>, 
- {
+where
+    Buf: IoBuf,
+    S: Storage<Buf>,
+{
     position: u64,
     limit: u64,
     size: usize,
@@ -57,8 +77,10 @@ struct BlockStream<'a, S, Buf>
     future: Option<S::ReadResult>,
 }
 
-impl<'a, S, Buf> Stream for BlockStream<'a, S, Buf> 
-    where Buf: IoBuf, S: Storage<Buf>
+impl<'a, S, Buf> Stream for BlockStream<'a, S, Buf>
+where
+    Buf: IoBuf,
+    S: Storage<Buf>,
 {
     type Item = Result<Buf, std::io::Error>;
 
@@ -79,9 +101,7 @@ impl<'a, S, Buf> Stream for BlockStream<'a, S, Buf>
         } else {
             let buf_size = std::cmp::min(*this.size, (*this.limit - *this.position) as usize);
             let buf = Buf::with_capacity(buf_size);
-            let mut fut = this
-                .storage
-                .read_sectors(*this.position, buf);
+            let mut fut = this.storage.read_sectors(*this.position, buf);
             match fut.poll_unpin(cx) {
                 Poll::Ready(result) => {
                     *this.position += *this.size as u64;

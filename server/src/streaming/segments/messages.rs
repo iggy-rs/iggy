@@ -1,6 +1,8 @@
 use crate::streaming::batching::batch_accumulator::BatchAccumulator;
 use crate::streaming::batching::message_batch::{RetainedMessageBatch, RETAINED_BATCH_OVERHEAD};
-use crate::streaming::io::log::LogReader;
+use crate::streaming::io::buf::dma_buf::DmaBuf;
+use crate::streaming::io::buf::IoBuf;
+use crate::streaming::io::log::{LogReader, LogWriter};
 use crate::streaming::io::stream::message_stream::RetainedMessageStream;
 use crate::streaming::models::messages::RetainedMessage;
 use crate::streaming::segments::index::{Index, IndexRange};
@@ -8,7 +10,6 @@ use crate::streaming::segments::segment::Segment;
 use crate::streaming::sizeable::Sizeable;
 use futures::{StreamExt, TryStreamExt};
 use iggy::error::IggyError;
-use std::alloc::{self, Layout};
 use std::future;
 use std::sync::atomic::Ordering;
 use std::sync::Arc;
@@ -146,7 +147,7 @@ impl Segment {
         }
     }
 
-    async fn load_n_messages_from_disk<F>(
+    pub async fn load_n_messages_from_disk<F>(
         &self,
         start_position: u32,
         count: u32,
@@ -226,7 +227,6 @@ impl Segment {
 
     pub async fn persist_messages(&mut self, fsync: bool) -> Result<usize, IggyError> {
         let sector_size = 4096;
-        let storage = self.direct_io_storage.clone();
         let index_storage = self.storage.segment.clone();
         if self.unsaved_messages.is_none() {
             return Ok(0);
@@ -253,17 +253,13 @@ impl Segment {
         let batch_size = batch.get_size_bytes();
         let sectors = batch_size.div_ceil(sector_size);
         let adjusted_size = sector_size * sectors;
-        let layout = Layout::from_size_align(adjusted_size as _, sector_size as _).unwrap();
-        let ptr = unsafe { alloc::alloc(layout) };
-        unsafe { std::ptr::write_bytes(ptr, 0, adjusted_size as _) };
-        //let slice = unsafe {std::slice::from_raw_parts(ptr, adjusted_size as _)};
         if has_remainder {
             self.unsaved_messages = Some(batch_accumulator);
         }
-        let mut bytes = unsafe { Vec::from_raw_parts(ptr, adjusted_size as _, adjusted_size as _) };
+        let mut bytes = DmaBuf::with_capacity(adjusted_size as usize);
         let diff = bytes.len() as u32 - batch_size;
-        batch.extend2(&mut bytes);
-        let saved_bytes = storage.write_batches(self.log_path.as_str(), bytes).await?;
+        batch.extend2(bytes.as_mut());
+        let saved_bytes = self.log.write_block(bytes).await?;
         index_storage.save_index(&self.index_path, index).await?;
         self.last_index_position += adjusted_size;
         let size_increment = RETAINED_BATCH_OVERHEAD + diff;

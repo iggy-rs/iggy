@@ -5,6 +5,7 @@ use std::{
 
 use super::IoBuf;
 
+#[derive(Debug)]
 pub struct DmaBuf {
     data: ptr::NonNull<u8>,
     layout: Layout,
@@ -13,19 +14,7 @@ pub struct DmaBuf {
 
 // SAFETY: fuck safety.
 unsafe impl Send for DmaBuf {}
-
-impl DmaBuf {
-    pub fn new(size: usize) -> Self {
-        assert!(size > 0);
-        assert!(size % 512 == 0);
-        let layout =
-            Layout::from_size_align(size, 4096).expect("Falied to create layout for DmaBuf");
-        let data_ptr = unsafe { alloc::alloc(layout) };
-        let data = ptr::NonNull::new(data_ptr).expect("DmaBuf data_ptr is not null");
-
-        Self { data, layout, size }
-    }
-}
+unsafe impl Sync for DmaBuf {}
 
 impl Drop for DmaBuf {
     fn drop(&mut self) {
@@ -50,6 +39,17 @@ impl IoBuf for DmaBuf {
 
     fn as_bytes_mut(&mut self) -> &mut [u8] {
         unsafe { std::slice::from_raw_parts_mut(self.as_ptr_mut(), self.size) }
+    }
+
+    fn with_capacity(size: usize) -> Self {
+        assert!(size > 0);
+        assert!(size % 512 == 0);
+        let layout =
+            Layout::from_size_align(size, 4096).expect("Falied to create layout for DmaBuf");
+        let data_ptr = unsafe { alloc::alloc(layout) };
+        let data = ptr::NonNull::new(data_ptr).expect("DmaBuf data_ptr is not null");
+
+        Self { data, layout, size }
     }
 }
 

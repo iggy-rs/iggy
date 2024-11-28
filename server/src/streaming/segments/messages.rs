@@ -1,24 +1,18 @@
 use crate::streaming::batching::batch_accumulator::BatchAccumulator;
-use crate::streaming::batching::batch_filter::BatchItemizer;
 use crate::streaming::batching::message_batch::{RetainedMessageBatch, RETAINED_BATCH_OVERHEAD};
+use crate::streaming::io::log::LogReader;
 use crate::streaming::io::stream::message_stream::RetainedMessageStream;
 use crate::streaming::models::messages::RetainedMessage;
 use crate::streaming::segments::index::{Index, IndexRange};
 use crate::streaming::segments::segment::Segment;
 use crate::streaming::sizeable::Sizeable;
-use crate::streaming::storage::storage::TestStorage;
-use crate::streaming::storage::Storage;
-use bytes::buf::UninitSlice;
-use bytes::{BufMut, Bytes, BytesMut};
-use futures::{AsyncReadExt, StreamExt, TryStreamExt};
+use futures::{StreamExt, TryStreamExt};
 use iggy::error::IggyError;
 use std::alloc::{self, Layout};
 use std::future;
-use std::io::BufReader;
-use std::slice::from_raw_parts;
 use std::sync::atomic::Ordering;
 use std::sync::Arc;
-use tracing::{error, info, trace, warn};
+use tracing::{error, info, trace};
 
 const EMPTY_MESSAGES: Vec<RetainedMessage> = vec![];
 
@@ -162,7 +156,7 @@ impl Segment {
         F: Fn(&RetainedMessage) -> bool,
     {
         let reader = self
-            .new_storage
+            .log
             .read_blocks(start_position as _, self.size_bytes as u64)
             .into_async_read();
         let message_stream = RetainedMessageStream::new(reader, 4096);

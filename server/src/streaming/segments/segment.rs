@@ -2,6 +2,8 @@ use crate::configs::system::SystemConfig;
 use crate::streaming::batching::batch_accumulator::BatchAccumulator;
 use crate::streaming::direct_io::storage::DirectIOStorage;
 use crate::streaming::iggy_storage::SystemStorage;
+use crate::streaming::io::buf::dma_buf::DmaBuf;
+use crate::streaming::io::log::log::Log;
 use crate::streaming::segments::index::Index;
 use crate::streaming::storage::storage::DmaStorage;
 use iggy::utils::expiry::IggyExpiry;
@@ -40,7 +42,7 @@ pub struct Segment {
     pub(crate) indexes: Option<Vec<Index>>,
     pub(crate) storage: Arc<SystemStorage>,
     pub(crate) direct_io_storage: Arc<DirectIOStorage>,
-    pub(crate) new_storage: Arc<DmaStorage>,
+    pub(crate) log: Log<DmaStorage, DmaBuf>,
 }
 
 impl Segment {
@@ -63,6 +65,9 @@ impl Segment {
     ) -> Segment {
         let path = config.get_segment_path(stream_id, topic_id, partition_id, start_offset);
         let block_size = 10 * 4096;
+        let file_path = Self::get_log_path(&path).leak();
+        let dma_storage = DmaStorage::new(file_path);
+        let log = Log::new(dma_storage, block_size);
 
         Segment {
             stream_id,
@@ -85,7 +90,7 @@ impl Segment {
                 false => None,
             },
             direct_io_storage: Default::default(),
-            new_storage: Arc::new(DmaStorage::new(Self::get_log_path(&path), block_size)),
+            log,
             unsaved_messages,
             is_closed: false,
             size_of_parent_stream,

@@ -1,13 +1,12 @@
+use std::pin::Pin;
+use futures::task::Poll;
+
 use crate::streaming::{
     batching::message_batch::RETAINED_BATCH_OVERHEAD, models::messages::RetainedMessage,
 };
 use bytes::{BufMut, BytesMut};
 use futures::{AsyncBufRead, AsyncBufReadExt, AsyncReadExt, FutureExt, Stream};
 use iggy::error::IggyError;
-use pin_project::pin_project;
-use std::{future::Future, pin::Pin, task::Poll};
-use tokio::task::yield_now;
-use tracing::{error, warn};
 
 pub struct RetainedMessageStream<R>
 where

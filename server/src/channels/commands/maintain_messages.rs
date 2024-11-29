@@ -5,6 +5,7 @@ use crate::map_toggle_str;
 use crate::streaming::systems::system::SharedSystem;
 use crate::streaming::topics::topic::Topic;
 use async_trait::async_trait;
+use error_set::ResultContext;
 use flume::Sender;
 use iggy::error::IggyError;
 use iggy::locking::IggySharedMutFn;
@@ -211,7 +212,9 @@ async fn handle_expired_segments(
                 "Archiving expired segments for stream ID: {}, topic ID: {}",
                 topic.stream_id, topic.topic_id
             );
-            archive_segments(topic, &expired_segments, archiver.clone()).await?;
+            archive_segments(topic, &expired_segments, archiver.clone()).await.with_error(|_| {
+                format!("CHANNEL_COMMAND - failed to archive expired segments for stream ID: {}, topic ID: {}", topic.stream_id, topic.topic_id)
+            })?;
         } else {
             error!(
                 "Archiver is not enabled, yet archive_expired is set to true. Cannot archive expired segments for stream ID: {}, topic ID: {}",
@@ -317,7 +320,9 @@ async fn handle_oldest_segments(
             topic.stream_id,
             topic.topic_id,
         );
-        archive_segments(topic, &segments_to_archive, archiver.clone()).await?;
+        archive_segments(topic, &segments_to_archive, archiver.clone()).await.with_error(|_| {
+            format!("CHANNEL_COMMAND - failed to archive segments for stream ID: {}, topic ID: {}", topic.stream_id, topic.topic_id)
+        })?;
     }
 
     if topic.is_unlimited() {
@@ -486,7 +491,9 @@ async fn delete_segments(
                 let mut partition = partition.write().await;
                 let mut last_end_offset = 0;
                 for start_offset in &segment_to_delete.start_offsets {
-                    let deleted_segment = partition.delete_segment(*start_offset).await?;
+                    let deleted_segment = partition.delete_segment(*start_offset).await.with_error(|_| {
+                        format!("CHANNEL_COMMAND - failed to delete segment for stream ID: {}, topic ID: {}", topic.stream_id, topic.topic_id)
+                    })?;
                     last_end_offset = deleted_segment.end_offset;
                     segments_count += 1;
                     messages_count += deleted_segment.messages_count;
@@ -494,7 +501,9 @@ async fn delete_segments(
 
                 if partition.get_segments().is_empty() {
                     let start_offset = last_end_offset + 1;
-                    partition.add_persisted_segment(start_offset).await?;
+                    partition.add_persisted_segment(start_offset).await.with_error(|_| {
+                        format!("CHANNEL_COMMAND - failed to add persisted segment for stream ID: {}, topic ID: {}", topic.stream_id, topic.topic_id)
+                    })?;
                 }
             }
             Err(error) => {

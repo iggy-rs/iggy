@@ -17,6 +17,7 @@ use crate::streaming::streams::stream::Stream;
 use crate::streaming::systems::info::SystemInfo;
 use crate::streaming::topics::topic::Topic;
 use async_trait::async_trait;
+use error_set::ResultContext;
 use iggy::consumer::ConsumerKind;
 use iggy::error::IggyError;
 use iggy::utils::byte_size::IggyByteSize;
@@ -86,15 +87,19 @@ pub async fn init(
 
         let stream_id = stream_id.unwrap();
         let mut stream = Stream::empty(stream_id, "stream", config.clone(), noop_storage.clone());
-        streams::load(&config, &db, &mut stream).await?;
+        streams::load(&config, &db, &mut stream)
+            .await
+            .with_error(|_| format!("STORAGE_CONVERSION - failed to load stream, stream ID: {}", stream.stream_id))?;
         streams.push(stream);
     }
 
-    let users = users::load_all(&db).await?;
-    let personal_access_tokens = personal_access_tokens::load_all(&db).await?;
-    converter::convert(metadata, storage, streams, users, personal_access_tokens).await?;
+    let users = users::load_all(&db).await.with_error(|_| "STORAGE_CONVERSION - failed to load users".to_string())?;
+    let personal_access_tokens = personal_access_tokens::load_all(&db).await.with_error(|_| "STORAGE_CONVERSION - failed to load personal access tokens".to_string())?;
+    converter::convert(metadata, storage, streams, users, personal_access_tokens).await.with_error(|_| "STORAGE_CONVERSION - failed to convert storage to new format".to_string())?;
     let old_database_path = format!("{database_path}_old");
-    rename(&database_path, &old_database_path).await?;
+    rename(&database_path, &old_database_path)
+        .await
+        .with_error(|_| format!("STORAGE_CONVERSION - failed to rename database from {} to {}", database_path, old_database_path))?;
     info!("Storage migration has completed, new state log was cacreated and old database was moved to: {old_database_path} (now it can be safely deleted).");
     Ok(())
 }

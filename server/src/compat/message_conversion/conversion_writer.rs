@@ -1,4 +1,5 @@
 use crate::streaming::utils::file;
+use error_set::ResultContext;
 use iggy::error::IggyError;
 use tracing::trace;
 
@@ -38,9 +39,20 @@ impl<'w> ConversionWriter<'w> {
     }
 
     pub async fn create_alt_directories(&self) -> Result<(), IggyError> {
-        tokio::fs::File::create(&self.alt_log_path).await?;
-        tokio::fs::File::create(&self.alt_index_path).await?;
-        tokio::fs::File::create(&self.alt_time_index_path).await?;
+        tokio::fs::File::create(&self.alt_log_path)
+            .await
+            .with_error(|_| format!("MESSAGE_CONVERSION_WRITER - failed to create alt_log_path: {}", self.alt_log_path))?;
+        tokio::fs::File::create(&self.alt_index_path)
+            .await
+            .with_error(|_| format!("MESSAGE_CONVERSION_WRITER - failed to create alt_index_path: {}", self.alt_index_path))?;
+        tokio::fs::File::create(&self.alt_time_index_path)
+            .await
+            .with_error(|_| {
+                format!(
+                    "MESSAGE_CONVERSION_WRITER - failed to create alt_time_index_path: {}",
+                    self.alt_time_index_path
+                )
+            })?;
 
         trace!(
             "Created temporary files for conversion, log: {}, index: {}, time_index: {}",
@@ -75,23 +87,57 @@ impl<'w> ConversionWriter<'w> {
             .await
             .is_err()
         {
-            tokio::fs::create_dir_all(&log_backup_path[..log_path_last_idx]).await?;
+            tokio::fs::create_dir_all(&log_backup_path[..log_path_last_idx])
+                .await
+                .with_error(|_| {
+                    format!(
+                        "MESSAGE_CONVERSION_WRITER - failed to create directory for log backup: {}",
+                        log_backup_path
+                    )
+                })?;
         }
         if tokio::fs::metadata(&index_backup_path[..index_path_last_idx])
             .await
             .is_err()
         {
-            tokio::fs::create_dir_all(&index_backup_path[..index_path_last_idx]).await?;
+            tokio::fs::create_dir_all(&index_backup_path[..index_path_last_idx])
+                .await
+                .with_error(|_| {
+                    format!(
+                        "MESSAGE_CONVERSION_WRITER - failed to create directory for index backup: {}",
+                        index_backup_path
+                    )
+                })?;
         }
         if tokio::fs::metadata(&time_index_backup_path[..time_index_path_last_idx])
             .await
             .is_err()
         {
-            tokio::fs::create_dir_all(&time_index_backup_path[..time_index_path_last_idx]).await?;
+            tokio::fs::create_dir_all(&time_index_backup_path[..time_index_path_last_idx])
+                .await
+                .with_error(|_| {
+                    format!(
+                        "MESSAGE_CONVERSION_WRITER - failed to create directory for time index backup: {}",
+                        time_index_backup_path
+                    )
+                })?;
         }
-        file::rename(self.log_path, log_backup_path).await?;
-        file::rename(self.index_path, index_backup_path).await?;
-        file::rename(self.time_index_path, time_index_backup_path).await?;
+        file::rename(self.log_path, log_backup_path)
+            .await
+            .with_error(|_| format!("MESSAGE_CONVERSION_WRITER - failed to rename log file to backup: {}", self.log_path))?;
+        file::rename(self.index_path, index_backup_path)
+            .await
+            .with_error(|_| {
+                format!("MESSAGE_CONVERSION_WRITER - failed to rename index file to backup: {}", self.index_path)
+            })?;
+        file::rename(self.time_index_path, time_index_backup_path)
+            .await
+            .with_error(|_| {
+                format!(
+                    "MESSAGE_CONVERSION_WRITER - failed to rename time index file to backup: {}",
+                    self.time_index_path
+                )
+            })?;
 
         trace!(
             "Created backup of converted segment, log: {}, index: {}, time_index: {}",
@@ -103,9 +149,30 @@ impl<'w> ConversionWriter<'w> {
     }
 
     pub async fn replace_with_converted(&self) -> Result<(), IggyError> {
-        file::rename(&self.alt_log_path, self.log_path).await?;
-        file::rename(&self.alt_index_path, self.index_path).await?;
-        file::rename(&self.alt_time_index_path, self.time_index_path).await?;
+        file::rename(&self.alt_log_path, self.log_path)
+            .await
+            .with_error(|_| {
+                format!(
+                    "MESSAGE_CONVERSION_WRITER - failed to replace old log with converted: {}",
+                    self.alt_log_path
+                )
+            })?;
+        file::rename(&self.alt_index_path, self.index_path)
+            .await
+            .with_error(|_| {
+                format!(
+                    "MESSAGE_CONVERSION_WRITER - failed to replace old index with converted: {}",
+                    self.alt_index_path
+                )
+            })?;
+        file::rename(&self.alt_time_index_path, self.time_index_path)
+            .await
+            .with_error(|_| {
+                format!(
+                    "MESSAGE_CONVERSION_WRITER - failed to replace old time index with converted: {}",
+                    self.alt_time_index_path
+                )
+            })?;
 
         trace!("Replaced old segment with newly converted files");
         Ok(())

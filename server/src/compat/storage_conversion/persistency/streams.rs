@@ -3,6 +3,7 @@ use crate::configs::system::SystemConfig;
 use crate::streaming::streams::stream::Stream;
 use crate::streaming::topics::topic::Topic;
 use anyhow::Context;
+use error_set::ResultContext;
 use iggy::error::IggyError;
 use iggy::utils::timestamp::IggyTimestamp;
 use serde::{Deserialize, Serialize};
@@ -82,7 +83,11 @@ pub async fn load(config: &SystemConfig, db: &Db, stream: &mut Stream) -> Result
             stream.config.clone(),
             stream.storage.clone(),
         );
-        topics::load(config, db, &mut topic).await?;
+        topics::load(config, db, &mut topic).await.with_error(|_| format!(
+            "STORAGE_CONVERSION_PERSISTENCY - failed to load topic, stream ID: {}, topic ID: {}",
+            topic.stream_id,
+            topic.topic_id,
+        ))?;
         topics.push(topic);
     }
 

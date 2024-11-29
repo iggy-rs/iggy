@@ -5,6 +5,7 @@ use crate::streaming::personal_access_tokens::personal_access_token::PersonalAcc
 use crate::streaming::storage::SystemStorage;
 use crate::streaming::streams::stream::Stream;
 use crate::streaming::users::user::User;
+use error_set::ResultContext;
 use iggy::consumer_groups::create_consumer_group::CreateConsumerGroup;
 use iggy::error::IggyError;
 use iggy::locking::IggySharedMutFn;
@@ -36,13 +37,19 @@ pub async fn convert(
             .apply(
                 0,
                 EntryCommand::CreateUser(CreateUser {
-                    username: user.username,
+                    username: user.username.clone(),
                     password: user.password,
                     status: user.status,
                     permissions: user.permissions.clone(),
                 }),
             )
-            .await?;
+            .await
+            .with_error(|_| {
+                format!(
+                    "STORAGE_CONVERSION - failed to apply create user with username: {}",
+                    user.username,
+                )
+            })?;
     }
 
     info!(
@@ -61,16 +68,22 @@ pub async fn convert(
 
         state
             .apply(
-                personal_access_token.user_id,
+                personal_access_token.user_id.clone(),
                 EntryCommand::CreatePersonalAccessToken(CreatePersonalAccessTokenWithHash {
                     command: CreatePersonalAccessToken {
-                        name: personal_access_token.name,
+                        name: personal_access_token.name.clone(),
                         expiry,
                     },
                     hash: personal_access_token.token,
                 }),
             )
-            .await?;
+            .await
+            .with_error(|_| {
+                format!(
+                    "STORAGE_CONVERSION - failed to apply create personal access token, user ID: {}, personal_access_token_name: {}",
+                    personal_access_token.user_id, personal_access_token.name,
+                )
+            })?;
     }
 
     info!("Converting {} streams", streams.len());
@@ -109,7 +122,11 @@ pub async fn convert(
                         name: topic.name,
                     }),
                 )
-                .await?;
+                .await
+                .with_error(|_| format!(
+                    "STORAGE_CONVERSION - failed to create topic, stream ID: {}, topic ID: {}",
+                    topic.stream_id, topic.topic_id,
+                ))?;
 
             info!(
                 "Converting {} consumer groups for topic with ID: {}",
@@ -128,7 +145,11 @@ pub async fn convert(
                             name: group.name.to_owned(),
                         }),
                     )
-                    .await?;
+                    .await
+                    .with_error(|_| format!(
+                        "STORAGE_CONVERSION - failed to create consumer group, stream ID: {}, topic ID: {}, group ID: {}",
+                        stream.stream_id, topic.topic_id, group.group_id,
+                    ))?;
             }
 
             info!(
@@ -190,13 +211,21 @@ pub async fn convert(
                 info!("Converting {} consumer offsets for partition with ID: {} for stream with ID: {} and topic with ID: {}",
                     partition.consumer_offsets.len(), partition.partition_id, partition.stream_id, partition.topic_id);
                 for offset in partition.consumer_offsets.iter() {
-                    storage.partition.save_consumer_offset(&offset).await?;
+                    storage.partition.save_consumer_offset(&offset)
+                        .await
+                        .with_error(|_| format!("STORAGE_CONVERSION - failed to save consumer offsets, stream ID: {}, topic ID: {}, partition ID: {}",
+                            partition.stream_id, partition.topic_id, partition.partition_id,
+                        ))?;
                 }
 
                 info!("Converting {} consumer group offsets for partition with ID: {} for stream with ID: {} and topic with ID: {}",
                     partition.consumer_group_offsets.len(), partition.partition_id, partition.stream_id, partition.topic_id);
                 for offset in partition.consumer_group_offsets.iter() {
-                    storage.partition.save_consumer_offset(&offset).await?;
+                    storage.partition.save_consumer_offset(&offset)
+                        .await
+                        .with_error(|_| format!("STORAGE_CONVERSION - failed to save consumer group offsets, stream ID: {}, topic ID: {}, partition ID: {}",
+                            partition.stream_id, partition.topic_id, partition.partition_id,
+                        ))?;
                 }
             }
         }

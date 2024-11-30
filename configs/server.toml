@@ -342,7 +342,7 @@ path = "compatibility"
 # Determines whether to enforce file synchronization on state updates (boolean).
 # `true` ensures immediate writing of data to disk for durability.
 # `false` allows the OS to manage write operations, which can improve performance.
-enforce_fsync = false
+enforce_fsync = true
 
 # Runtime configuration.
 [system.runtime]
@@ -372,7 +372,7 @@ sysinfo_print_interval = "10 s"
 # Enables or disables the system cache.
 # `true` activates caching for frequently accessed data.
 # `false` disables caching, data is always read from the source.
-enabled = true
+enabled = false
 
 # Maximum size of the cache, e.g. "4GB".
 size = "4 GB"
@@ -444,12 +444,12 @@ validate_checksum = false
 # The threshold of buffered messages before triggering a save to disk (integer).
 # Specifies how many messages accumulate before persisting to storage.
 # Adjusting this can balance between write performance and data durability.
-messages_required_to_save = 5000
+messages_required_to_save = 1000
 
 # Segment configuration
 [system.segment]
 # Defines the soft limit for the size of a storage segment.
-# When a segment reaches this size, a new segment is created for subsequent data.
+# When a segment reaches this size (maximum 4 GB), a new segment is created for subsequent data.
 # Example: if `size` is set "1GB", the actual segment size may be 1GB + the size of remaining messages in received batch.
 size = "1 GB"
 # Configures the message time-based expiry setting.
@@ -476,6 +476,7 @@ enabled = false
 max_entries = 1000
 # Maximum age of ID entries in the deduplication cache in human-readable format.
 expiry = "1 m"
+
 
 # Recovery configuration in case of lost data
 [system.recovery]

@@ -51,7 +51,7 @@ async fn main() -> Result<(), ServerError> {
     // Workaround to ensure that the statistics are initialized before the server
     // loads streams and starts accepting connections. This is necessary to
     // have the correct statistics when the server starts.
-    system.write().await.get_stats_bypass_auth().await?;
+    system.write().await.get_stats().await?;
     system.write().await.init().await?;
 
     let _command_handler = ServerCommandHandler::new(system.clone(), &config)

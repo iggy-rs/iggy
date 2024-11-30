@@ -153,6 +153,7 @@ impl Args {
             tcp_heartbeat_interval: self.tcp_heartbeat_interval.clone(),
             tcp_tls_enabled: self.tcp_tls_enabled,
             tcp_tls_domain: self.tcp_tls_domain.clone(),
+            tcp_tls_ca_file: None,
             quic_client_address: self.quic_client_address.clone(),
             quic_server_address: self.quic_server_address.clone(),
             quic_server_name: self.quic_server_name.clone(),

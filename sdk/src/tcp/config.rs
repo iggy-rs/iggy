@@ -11,6 +11,8 @@ pub struct TcpClientConfig {
     pub tls_enabled: bool,
     /// The domain to use for TLS when connecting to the server.
     pub tls_domain: String,
+    /// The path to the CA file for TLS.
+    pub tls_ca_file: Option<String>,
     /// Whether to automatically login user after establishing connection.
     pub auto_login: AutoLogin,
     /// Whether to automatically reconnect when disconnected.
@@ -33,6 +35,7 @@ impl Default for TcpClientConfig {
             server_address: "127.0.0.1:8090".to_string(),
             tls_enabled: false,
             tls_domain: "localhost".to_string(),
+            tls_ca_file: None,
             heartbeat_interval: IggyDuration::from_str("5s").unwrap(),
             auto_login: AutoLogin::Disabled,
             reconnection: TcpClientReconnectionConfig::default(),
@@ -58,6 +61,7 @@ impl Default for TcpClientReconnectionConfig {
 /// - `reconnection`: Default is enabled unlimited retries and 1 second interval.
 /// - `tls_enabled`: Default is false.
 /// - `tls_domain`: Default is "localhost".
+/// - `tls_ca_file`: Default is None.
 #[derive(Debug, Default)]
 pub struct TcpClientConfigBuilder {
     config: TcpClientConfig,
@@ -106,6 +110,12 @@ impl TcpClientConfigBuilder {
     /// Sets the domain to use for TLS when connecting to the server.
     pub fn with_tls_domain(mut self, tls_domain: String) -> Self {
         self.config.tls_domain = tls_domain;
+        self
+    }
+
+    /// Sets the path to the CA file for TLS.
+    pub fn with_tls_ca_file(mut self, tls_ca_file: String) -> Self {
+        self.config.tls_ca_file = Some(tls_ca_file);
         self
     }
 

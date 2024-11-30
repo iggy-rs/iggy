@@ -3,6 +3,7 @@ use crate::command::{Command, CHANGE_PASSWORD_CODE};
 use crate::error::IggyError;
 use crate::identifier::Identifier;
 use crate::users::defaults::*;
+use crate::utils::sizeable::Sizeable;
 use crate::validatable::Validatable;
 use bytes::{BufMut, Bytes, BytesMut};
 use serde::{Deserialize, Serialize};
@@ -81,7 +82,7 @@ impl BytesSerializable for ChangePassword {
         }
 
         let user_id = Identifier::from_bytes(bytes.clone())?;
-        let mut position = user_id.get_size_bytes() as usize;
+        let mut position = user_id.get_size_bytes().as_bytes_usize();
         let current_password_length = bytes[position];
         position += 1;
         let current_password =
@@ -121,7 +122,7 @@ mod tests {
 
         let bytes = command.to_bytes();
         let user_id = Identifier::from_bytes(bytes.clone()).unwrap();
-        let mut position = user_id.get_size_bytes() as usize;
+        let mut position = user_id.get_size_bytes().as_bytes_usize();
         let current_password_length = bytes[position];
         position += 1;
         let current_password =

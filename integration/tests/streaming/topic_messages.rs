@@ -5,6 +5,7 @@ use iggy::messages::poll_messages::PollingStrategy;
 use iggy::messages::send_messages::{Message, Partitioning};
 use iggy::utils::byte_size::IggyByteSize;
 use iggy::utils::expiry::IggyExpiry;
+use iggy::utils::sizeable::Sizeable;
 use iggy::utils::topic_size::MaxTopicSize;
 use server::configs::resource_quota::MemoryResourceQuota;
 use server::configs::system::{CacheConfig, SystemConfig};
@@ -78,7 +79,10 @@ async fn assert_polling_messages(cache: CacheConfig, expect_enabled_cache: bool)
             from_utf8(&message.payload).unwrap(),
         ))
     }
-    let batch_size = messages.iter().map(|m| m.get_size_bytes() as u64).sum();
+    let batch_size = messages
+        .iter()
+        .map(|m| m.get_size_bytes())
+        .sum::<IggyByteSize>();
     topic
         .append_messages(batch_size, partitioning, messages)
         .await
@@ -119,7 +123,7 @@ async fn given_key_none_messages_should_be_appended_to_the_next_partition_using_
     let partitioning = Partitioning::balanced();
     for i in 1..=partitions_count * messages_per_partition_count {
         let payload = get_payload(i);
-        let batch_size = 16 + 4 + payload.len() as u64;
+        let batch_size = IggyByteSize::from(16 + 4 + payload.len() as u64);
         topic
             .append_messages(
                 batch_size,
@@ -144,7 +148,7 @@ async fn given_key_partition_id_messages_should_be_appended_to_the_chosen_partit
     let partitioning = Partitioning::partition_id(partition_id);
     for i in 1..=partitions_count * messages_per_partition_count {
         let payload = get_payload(i);
-        let batch_size = 16 + 4 + payload.len() as u64;
+        let batch_size = IggyByteSize::from(16 + 4 + payload.len() as u64);
         topic
             .append_messages(
                 batch_size,
@@ -173,7 +177,7 @@ async fn given_key_messages_key_messages_should_be_appended_to_the_calculated_pa
     for entity_id in 1..=partitions_count * messages_count {
         let payload = get_payload(entity_id);
         let partitioning = Partitioning::messages_key_u32(entity_id);
-        let batch_size = 16 + 4 + payload.len() as u64;
+        let batch_size = IggyByteSize::from(16 + 4 + payload.len() as u64);
         topic
             .append_messages(
                 batch_size,

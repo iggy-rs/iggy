@@ -6,6 +6,7 @@ use crate::streaming::persistence::persister::Persister;
 use crate::streaming::segments::index::{Index, IndexRange};
 use crate::streaming::segments::segment::Segment;
 use crate::streaming::sizeable::Sizeable;
+use crate::streaming::storage::SegmentStorage;
 use crate::streaming::utils::file;
 use crate::streaming::utils::head_tail_buf::HeadTailBuffer;
 use anyhow::Context;
@@ -14,6 +15,7 @@ use bytes::{BufMut, BytesMut};
 use iggy::error::IggyError;
 use iggy::utils::byte_size::IggyByteSize;
 use iggy::utils::checksum;
+use iggy::utils::sizeable::Sizeable;
 use std::io::SeekFrom;
 use std::path::Path;
 use std::sync::atomic::Ordering;
@@ -32,11 +34,8 @@ pub struct FileSegmentStorage {
 }
 
 impl FileSegmentStorage {
-    pub fn new(persister: Arc<dyn Persister>, fsync_persister: Arc<dyn Persister>) -> Self {
-        Self {
-            persister,
-            fsync_persister,
-        }
+    pub fn new(persister: Arc<dyn Persister>) -> Self {
+        Self { persister }
     }
 }
 
@@ -52,7 +51,7 @@ impl SegmentStorage for FileSegmentStorage {
         );
         let log_file = file::open(&segment.log_path).await?;
         let file_size = log_file.metadata().await.unwrap().len() as u64;
-        segment.size_bytes = file_size as _;
+        segment.size_bytes = IggyByteSize::from(file_size);
         segment.last_index_position = file_size as _;
 
         if segment.config.segment.cache_indexes {
@@ -149,15 +148,16 @@ impl SegmentStorage for FileSegmentStorage {
         );
         self.persister.delete(&segment.log_path).await?;
         self.persister.delete(&segment.index_path).await?;
+        let segment_size_bytes = segment.size_bytes.as_bytes_u64();
         segment
             .size_of_parent_stream
-            .fetch_sub(segment.size_bytes as u64, Ordering::SeqCst);
+            .fetch_sub(segment_size_bytes, Ordering::SeqCst);
         segment
             .size_of_parent_topic
-            .fetch_sub(segment.size_bytes as u64, Ordering::SeqCst);
+            .fetch_sub(segment_size_bytes, Ordering::SeqCst);
         segment
             .size_of_parent_partition
-            .fetch_sub(segment.size_bytes as u64, Ordering::SeqCst);
+            .fetch_sub(segment_size_bytes, Ordering::SeqCst);
         segment
             .messages_count_of_parent_stream
             .fetch_sub(segment_count_of_messages, Ordering::SeqCst);
@@ -195,18 +195,18 @@ impl SegmentStorage for FileSegmentStorage {
         size_bytes: u64,
     ) -> Result<Vec<RetainedMessageBatch>, IggyError> {
         let mut batches = Vec::new();
-        let mut total_size_bytes = 0;
+        let mut total_size_bytes = IggyByteSize::default();
         load_messages_by_size(segment, size_bytes, |batch| {
-            total_size_bytes += batch.get_size_bytes() as u64;
+            total_size_bytes += batch.get_size_bytes();
             batches.push(batch);
             Ok(())
         })
         .await?;
         let messages_count = batches.len();
         trace!(
-            "Loaded {} newest messages batches of total size {} bytes from disk.",
+            "Loaded {} newest messages batches of total size {} from disk.",
             messages_count,
-            total_size_bytes
+            total_size_bytes.as_human_string(),
         );
         Ok(batches)
     }
@@ -215,19 +215,13 @@ impl SegmentStorage for FileSegmentStorage {
         &self,
         segment: &Segment,
         batch: RetainedMessageBatch,
-        fsync: bool,
-    ) -> Result<u32, IggyError> {
+    ) -> Result<IggyByteSize, IggyError> {
         let batch_size = batch.get_size_bytes();
-        let mut bytes = BytesMut::with_capacity(batch_size as usize);
+        let mut bytes = BytesMut::with_capacity(batch_size.as_bytes_usize());
         batch.extend(&mut bytes);
 
-        let persister = if fsync {
-            &self.fsync_persister
-        } else {
-            &self.persister
-        };
-
-        if let Err(err) = persister
+        if let Err(err) = self
+            .persister
             .append(&segment.log_path, &bytes)
             .await
             .with_context(|| format!("Failed to save messages to segment: {}", segment.log_path))
@@ -521,7 +515,7 @@ async fn load_batches_by_range(
             batch_base_offset,
             last_offset_delta,
             max_timestamp,
-            batch_length,
+            IggyByteSize::from(batch_length as u64),
             payload.freeze(),
         );
         on_batch(batch)?;
@@ -541,7 +535,7 @@ async fn load_messages_by_size(
     }
 
     let threshold = file_size.saturating_sub(size_bytes);
-    let mut accumulated_size: u64 = 0;
+    let mut accumulated_size = IggyByteSize::default();
 
     let mut reader = BufReader::with_capacity(BUF_READER_CAPACITY_BYTES, file);
     loop {
@@ -574,10 +568,10 @@ async fn load_messages_by_size(
             batch_base_offset,
             last_offset_delta,
             max_timestamp,
-            batch_length,
+            IggyByteSize::from(batch_length as u64),
             payload.freeze(),
         );
-        let message_size = batch.get_size_bytes() as u64;
+        let message_size = batch.get_size_bytes();
         if accumulated_size >= threshold {
             on_batch(batch)?;
         }

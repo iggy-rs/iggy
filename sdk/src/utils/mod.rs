@@ -4,6 +4,7 @@ pub mod crypto;
 pub mod duration;
 pub mod expiry;
 pub mod personal_access_token_expiry;
+pub mod sizeable;
 pub mod text;
 pub mod timestamp;
 pub mod topic_size;

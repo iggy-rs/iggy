@@ -595,6 +595,7 @@ impl From<ConnectionString> for TcpClientConfig {
             auto_login: connection_string.auto_login,
             tls_enabled: connection_string.options.tls_enabled,
             tls_domain: connection_string.options.tls_domain,
+            tls_ca_file: None,
             reconnection: connection_string.options.reconnection,
             heartbeat_interval: connection_string.options.heartbeat_interval,
         }

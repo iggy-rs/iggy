@@ -1,5 +1,6 @@
 use crate::bytes_serializable::BytesSerializable;
 use crate::error::IggyError;
+use crate::utils::byte_size::IggyByteSize;
 use bytes::{BufMut, Bytes, BytesMut};
 use serde::{Deserialize, Serialize};
 use serde_with::base64::Base64;
@@ -623,7 +624,7 @@ impl BytesSerializable for HashMap<HeaderKey, HeaderValue> {
 }
 
 /// Returns the size in bytes of the specified headers.
-pub fn get_headers_size_bytes(headers: &Option<HashMap<HeaderKey, HeaderValue>>) -> u32 {
+pub fn get_headers_size_bytes(headers: &Option<HashMap<HeaderKey, HeaderValue>>) -> IggyByteSize {
     // Headers length field
     let mut size = 4;
     if let Some(headers) = headers {
@@ -632,7 +633,7 @@ pub fn get_headers_size_bytes(headers: &Option<HashMap<HeaderKey, HeaderValue>>)
             size += 4 + key.as_str().len() as u32 + 1 + 4 + value.value.len() as u32;
         }
     }
-    size
+    (size as u64).into()
 }
 
 #[cfg(test)]

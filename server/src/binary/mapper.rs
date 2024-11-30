@@ -12,6 +12,8 @@ use iggy::models::consumer_offset_info::ConsumerOffsetInfo;
 use iggy::models::messages::PolledMessages;
 use iggy::models::stats::Stats;
 use iggy::models::user_info::UserId;
+use iggy::utils::byte_size::IggyByteSize;
+use iggy::utils::sizeable::Sizeable;
 use tokio::sync::RwLock;
 
 pub fn map_stats(stats: &Stats) -> Bytes {
@@ -123,9 +125,9 @@ pub fn map_polled_messages(polled_messages: &PolledMessages) -> Bytes {
         .messages
         .iter()
         .map(|message| message.get_size_bytes())
-        .sum::<u32>();
+        .sum::<IggyByteSize>();
 
-    let mut bytes = BytesMut::with_capacity(20 + messages_size as usize);
+    let mut bytes = BytesMut::with_capacity(20 + messages_size.as_bytes_usize());
     bytes.put_u32_le(polled_messages.partition_id);
     bytes.put_u64_le(polled_messages.current_offset);
     bytes.put_u32_le(messages_count);
@@ -214,7 +216,7 @@ fn extend_topic(topic: &Topic, bytes: &mut BytesMut) {
     bytes.put_u8(topic.compression_algorithm.as_code());
     bytes.put_u64_le(topic.max_topic_size.into());
     bytes.put_u8(topic.replication_factor);
-    bytes.put_u64_le(topic.get_size().as_bytes_u64());
+    bytes.put_u64_le(topic.get_size_bytes().as_bytes_u64());
     bytes.put_u64_le(topic.get_messages_count());
     bytes.put_u8(topic.name.len() as u8);
     bytes.put_slice(topic.name.as_bytes());
@@ -225,7 +227,7 @@ fn extend_partition(partition: &Partition, bytes: &mut BytesMut) {
     bytes.put_u64_le(partition.created_at.into());
     bytes.put_u32_le(partition.get_segments().len() as u32);
     bytes.put_u64_le(partition.current_offset);
-    bytes.put_u64_le(partition.get_size_bytes());
+    bytes.put_u64_le(partition.get_size_bytes().as_bytes_u64());
     bytes.put_u64_le(partition.get_messages_count());
 }
 

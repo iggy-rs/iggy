@@ -3,7 +3,7 @@ use crate::server_error::ServerError;
 use crate::IGGY_ROOT_PASSWORD_ENV;
 use async_trait::async_trait;
 use figment::{
-    providers::{Format, Json, Toml},
+    providers::{Format, Toml},
     value::{Dict, Map as FigmentMap, Tag, Value as FigmentValue},
     Error, Figment, Metadata, Profile, Provider,
 };
@@ -257,30 +257,32 @@ impl ConfigProvider for FileConfigProvider {
     async fn load_config(&self) -> Result<ServerConfig, ServerError> {
         println!("Loading config from path: '{}'...", self.path);
 
-        if !file_exists(&self.path) {
-            return Err(ServerError::CannotLoadConfiguration(format!(
-                "Cannot find configuration file at path: '{}'.",
-                self.path,
-            )));
+        // Include the default configuration from server.toml
+        let embedded_default_config = Toml::string(include_str!("../../../configs/server.toml"));
+
+        // Start with the default configuration
+        let mut config_builder = Figment::new().merge(embedded_default_config);
+
+        // If the server.toml file exists, merge it into the configuration
+        if file_exists(&self.path) {
+            println!("Found configuration file at path: '{}'.", self.path);
+            config_builder = config_builder.merge(Toml::file(&self.path));
+        } else {
+            println!(
+                "Configuration file not found at path: '{}'. Using default configuration from embedded server.toml.",
+                self.path
+            );
         }
 
-        let config_builder = Figment::new();
-        let extension = self.path.split('.').last().unwrap_or("");
-        let config_builder = match extension {
-            "json" => config_builder.merge(Json::file(&self.path)),
-            "toml" => config_builder.merge(Toml::file(&self.path)),
-            e => {
-                return Err(ServerError::CannotLoadConfiguration(format!("Cannot load configuration: invalid file extension: {e}, only .json and .toml are supported.")));
-            }
-        };
+        // Merge environment variables into the configuration
+        config_builder = config_builder.merge(CustomEnvProvider::new("IGGY_"));
 
-        let custom_env_provider = CustomEnvProvider::new("IGGY_");
-        let config_result: Result<ServerConfig, figment::Error> =
-            config_builder.merge(custom_env_provider).extract();
+        // Finally, attempt to extract the final configuration
+        let config_result: Result<ServerConfig, figment::Error> = config_builder.extract();
 
         match config_result {
             Ok(config) => {
-                println!("Config loaded from path: '{}'", self.path);
+                println!("Config loaded successfully.");
                 println!("Using Config: {config}");
                 Ok(config)
             }

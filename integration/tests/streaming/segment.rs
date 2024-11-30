@@ -2,12 +2,13 @@ use crate::streaming::common::test_setup::TestSetup;
 use bytes::Bytes;
 use iggy::bytes_serializable::BytesSerializable;
 use iggy::models::messages::{MessageState, PolledMessage};
+use iggy::utils::byte_size::IggyByteSize;
 use iggy::utils::expiry::IggyExpiry;
 use iggy::utils::{checksum, timestamp::IggyTimestamp};
+use server::streaming::local_sizeable::LocalSizeable;
 use server::streaming::models::messages::RetainedMessage;
 use server::streaming::segments::segment;
 use server::streaming::segments::segment::{INDEX_EXTENSION, LOG_EXTENSION};
-use server::streaming::sizeable::Sizeable;
 use std::sync::atomic::AtomicU64;
 use std::sync::Arc;
 use tokio::fs;
@@ -155,7 +156,7 @@ async fn should_persist_and_load_segment_with_messages() {
     .await;
     let messages_count = 10;
     let mut messages = Vec::new();
-    let mut batch_size = 0u64;
+    let mut batch_size = IggyByteSize::default();
     for i in 0..messages_count {
         let message = create_message(i, "test", IggyTimestamp::now());
 
@@ -168,7 +169,7 @@ async fn should_persist_and_load_segment_with_messages() {
             headers: message.headers.map(|headers| headers.to_bytes()),
             payload: message.payload.clone(),
         });
-        batch_size += retained_message.get_size_bytes() as u64;
+        batch_size += retained_message.get_size_bytes();
         messages.push(retained_message);
     }
 
@@ -241,7 +242,7 @@ async fn given_all_expired_messages_segment_should_be_expired() {
     let messages_count = 10;
     let now = IggyTimestamp::now();
     let mut expired_timestamp = (now.as_micros() - 2 * message_expiry_ms).into();
-    let mut batch_size = 0u64;
+    let mut batch_size = IggyByteSize::default();
     let mut messages = Vec::new();
     for i in 0..messages_count {
         let message = create_message(i, "test", expired_timestamp);
@@ -256,7 +257,7 @@ async fn given_all_expired_messages_segment_should_be_expired() {
             headers: message.headers.map(|headers| headers.to_bytes()),
             payload: message.payload.clone(),
         });
-        batch_size += retained_message.get_size_bytes() as u64;
+        batch_size += retained_message.get_size_bytes();
         messages.push(retained_message);
     }
     segment
@@ -323,7 +324,7 @@ async fn given_at_least_one_not_expired_message_segment_should_not_be_expired() 
         payload: expired_message.payload.clone(),
     });
     let mut expired_messages = Vec::new();
-    let expired_message_size = expired_retained_message.get_size_bytes() as u64;
+    let expired_message_size = expired_retained_message.get_size_bytes();
     expired_messages.push(expired_retained_message);
 
     let mut not_expired_messages = Vec::new();
@@ -338,7 +339,7 @@ async fn given_at_least_one_not_expired_message_segment_should_not_be_expired() 
             .map(|headers| headers.to_bytes()),
         payload: not_expired_message.payload.clone(),
     });
-    let not_expired_message_size = not_expired_retained_message.get_size_bytes() as u64;
+    let not_expired_message_size = not_expired_retained_message.get_size_bytes();
     not_expired_messages.push(not_expired_retained_message);
 
     segment

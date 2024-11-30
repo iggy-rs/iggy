@@ -17,7 +17,6 @@ use crate::utils::duration::IggyDuration;
 #[async_trait::async_trait]
 impl<B: BinaryClient> SystemClient for B {
     async fn get_stats(&self) -> Result<Stats, IggyError> {
-        fail_if_not_authenticated(self).await?;
         let response = self.send_with_response(&GetStats {}).await?;
         mapper::map_stats(response)
     }

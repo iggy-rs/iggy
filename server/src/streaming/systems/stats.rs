@@ -1,4 +1,3 @@
-use crate::streaming::session::Session;
 use crate::streaming::systems::system::System;
 use iggy::locking::IggySharedMutFn;
 use iggy::models::stats::Stats;
@@ -17,13 +16,7 @@ fn sysinfo() -> &'static Mutex<SysinfoSystem> {
 }
 
 impl System {
-    pub async fn get_stats(&self, session: &Session) -> Result<Stats, IggyError> {
-        self.ensure_authenticated(session)?;
-        self.permissioner.get_stats(session.get_user_id())?;
-        self.get_stats_bypass_auth().await
-    }
-
-    pub async fn get_stats_bypass_auth(&self) -> Result<Stats, IggyError> {
+    pub async fn get_stats(&self) -> Result<Stats, IggyError> {
         let mut sys = sysinfo().lock().await;
         let process_id = std::process::id();
         sys.refresh_cpu_all();

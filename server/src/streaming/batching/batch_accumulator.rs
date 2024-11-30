@@ -1,13 +1,16 @@
 use super::message_batch::{RetainedMessageBatch, RETAINED_BATCH_OVERHEAD};
-use crate::streaming::{models::messages::RetainedMessage, sizeable::Sizeable};
+use crate::streaming::local_sizeable::LocalSizeable;
+use crate::streaming::models::messages::RetainedMessage;
 use bytes::BytesMut;
+use iggy::utils::byte_size::IggyByteSize;
+use iggy::utils::sizeable::Sizeable;
 use std::sync::Arc;
 use tracing::warn;
 
 #[derive(Debug, Clone)]
 pub struct BatchAccumulator {
     base_offset: u64,
-    current_size: u64,
+    current_size: IggyByteSize,
     current_offset: u64,
     current_timestamp: u64,
     capacity: u64,
@@ -18,7 +21,7 @@ impl BatchAccumulator {
     pub fn new(base_offset: u64, capacity: usize) -> Self {
         Self {
             base_offset,
-            current_size: 0,
+            current_size: IggyByteSize::from(0),
             current_offset: 0,
             current_timestamp: 0,
             capacity: capacity as u64,
@@ -26,7 +29,7 @@ impl BatchAccumulator {
         }
     }
 
-    pub fn append(&mut self, batch_size: u64, items: &[Arc<RetainedMessage>]) {
+    pub fn append(&mut self, batch_size: IggyByteSize, items: &[Arc<RetainedMessage>]) {
         assert!(!items.is_empty());
         self.current_size += batch_size;
         self.current_offset = items.last().unwrap().offset;
@@ -66,17 +69,13 @@ impl BatchAccumulator {
         self.base_offset
     }
 
-    pub fn get_size_bytes(&self) -> u64 {
-        self.current_size + RETAINED_BATCH_OVERHEAD as u64
-    }
-
     pub fn materialize_batch_and_maybe_update_state(&mut self) -> (bool, RetainedMessageBatch) {
         let batch_base_offset = self.base_offset;
         let batch_last_offset_delta = (self.current_offset - self.base_offset) as u32;
         let batch_max_timestamp = self.messages.last().unwrap().timestamp;
         let split_point = std::cmp::min(self.capacity as usize, self.messages.len());
         let (batch, remainder) = self.messages.as_slice().split_at(split_point);
-        let mut bytes = BytesMut::with_capacity(self.current_size as usize);
+        let mut bytes = BytesMut::with_capacity(self.current_size.as_bytes_u64() as usize);
         for message in batch {
             message.extend(&mut bytes);
         }
@@ -90,8 +89,8 @@ impl BatchAccumulator {
             self.base_offset = remainder.first().unwrap().offset;
             self.current_size = remainder
                 .iter()
-                .map(|msg| msg.get_size_bytes() as u64)
-                .sum();
+                .map(|msg| msg.get_size_bytes())
+                .sum::<IggyByteSize>();
             self.current_offset = remainder.last().unwrap().offset;
             self.current_timestamp = remainder.last().unwrap().timestamp;
             for message in remainder {
@@ -100,7 +99,7 @@ impl BatchAccumulator {
             self.messages = remaining_messages;
         }
         let batch_payload = bytes.freeze();
-        let batch_payload_len = batch_payload.len() as u32;
+        let batch_payload_len = IggyByteSize::from(batch_payload.len() as u64);
         let batch = RetainedMessageBatch::new(
             batch_base_offset,
             batch_last_offset_delta,
@@ -109,5 +108,11 @@ impl BatchAccumulator {
             batch_payload,
         );
         (has_remainder, batch)
+    }
+}
+
+impl Sizeable for BatchAccumulator {
+    fn get_size_bytes(&self) -> IggyByteSize {
+        self.current_size + RETAINED_BATCH_OVERHEAD.into()
     }
 }

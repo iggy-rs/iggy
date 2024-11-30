@@ -99,6 +99,14 @@ pub enum IggyError {
     RequestError(#[from] reqwest::Error) = 62,
     #[error("Client shutdown")]
     ClientShutdown = 63,
+    #[error("Invalid TLS domain")]
+    InvalidTlsDomain = 64,
+    #[error("Invalid TLS certificate path")]
+    InvalidTlsCertificatePath = 65,
+    #[error("Invalid TLS certificate")]
+    InvalidTlsCertificate = 66,
+    #[error("Failed to add certificate")]
+    FailedToAddCertificate = 67,
     #[error("Invalid encryption key")]
     InvalidEncryptionKey = 70,
     #[error("Cannot encrypt data")]

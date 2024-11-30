@@ -14,6 +14,7 @@ use iggy::models::personal_access_token::PersonalAccessTokenInfo;
 use iggy::models::stream::StreamDetails;
 use iggy::models::topic::TopicDetails;
 use iggy::models::user_info::{UserInfo, UserInfoDetails};
+use iggy::utils::sizeable::Sizeable;
 use tokio::sync::RwLock;
 
 pub fn map_stream(stream: &Stream) -> StreamDetails {
@@ -56,7 +57,7 @@ pub fn map_topics(topics: &[&Topic]) -> Vec<iggy::models::topic::Topic> {
             id: topic.topic_id,
             created_at: topic.created_at,
             name: topic.name.clone(),
-            size: topic.get_size(),
+            size: topic.get_size_bytes(),
             partitions_count: topic.get_partitions().len() as u32,
             messages_count: topic.get_messages_count(),
             message_expiry: topic.message_expiry,
@@ -75,7 +76,7 @@ pub async fn map_topic(topic: &Topic) -> TopicDetails {
         id: topic.topic_id,
         created_at: topic.created_at,
         name: topic.name.clone(),
-        size: topic.get_size(),
+        size: topic.get_size_bytes(),
         messages_count: topic.get_messages_count(),
         partitions_count: topic.get_partitions().len() as u32,
         partitions: Vec::new(),
@@ -93,7 +94,7 @@ pub async fn map_topic(topic: &Topic) -> TopicDetails {
                 created_at: partition.created_at,
                 segments_count: partition.get_segments().len() as u32,
                 current_offset: partition.current_offset,
-                size: partition.get_size_bytes().into(),
+                size: partition.get_size_bytes(),
                 messages_count: partition.get_messages_count(),
             });
     }

@@ -62,6 +62,8 @@ impl Benchmarkable for SendAndPollMessagesBenchmark {
         let message_size = self.args.message_size();
         let partitions_count = self.args.number_of_partitions();
         let warmup_time = self.args.warmup_time();
+        let output_directory = self.args.output_directory();
+
         let mut futures: BenchmarkFutures =
             Ok(Vec::with_capacity((producers + consumers) as usize));
         for producer_id in 1..=producers {
@@ -69,7 +71,7 @@ impl Benchmarkable for SendAndPollMessagesBenchmark {
                 true => start_stream_id + producer_id,
                 false => start_stream_id + 1,
             };
-
+            let output_directory = output_directory.clone();
             let producer = Producer::new(
                 self.client_factory.clone(),
                 producer_id,
@@ -79,6 +81,7 @@ impl Benchmarkable for SendAndPollMessagesBenchmark {
                 message_batches,
                 message_size,
                 warmup_time,
+                output_directory,
             );
             let future = Box::pin(async move { producer.run().await });
             futures.as_mut().unwrap().push(future);
@@ -89,6 +92,7 @@ impl Benchmarkable for SendAndPollMessagesBenchmark {
                 true => start_stream_id + consumer_id,
                 false => start_stream_id + 1,
             };
+            let output_directory = output_directory.clone();
             let consumer = Consumer::new(
                 self.client_factory.clone(),
                 consumer_id,
@@ -97,6 +101,7 @@ impl Benchmarkable for SendAndPollMessagesBenchmark {
                 messages_per_batch,
                 message_batches,
                 warmup_time,
+                output_directory,
             );
             let future = Box::pin(async move { consumer.run().await });
             futures.as_mut().unwrap().push(future);

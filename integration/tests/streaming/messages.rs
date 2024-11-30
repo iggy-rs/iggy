@@ -3,7 +3,9 @@ use bytes::Bytes;
 use iggy::bytes_serializable::BytesSerializable;
 use iggy::messages::send_messages::Message;
 use iggy::models::header::{HeaderKey, HeaderValue};
+use iggy::utils::byte_size::IggyByteSize;
 use iggy::utils::expiry::IggyExpiry;
+use iggy::utils::sizeable::Sizeable;
 use iggy::utils::timestamp::IggyTimestamp;
 use server::configs::system::{PartitionConfig, SystemConfig};
 use server::state::system::PartitionState;
@@ -103,14 +105,17 @@ async fn should_persist_messages_and_then_load_them_by_timestamp() {
     setup.create_partitions_directory(stream_id, topic_id).await;
     partition.persist().await.unwrap();
     let appendable_batch_info = AppendableBatchInfo::new(
-        messages.iter().map(|msg| msg.get_size_bytes() as u64).sum(),
+        messages
+            .iter()
+            .map(|msg| msg.get_size_bytes())
+            .sum::<IggyByteSize>(),
         partition.partition_id,
     );
     let appendable_batch_info_two = AppendableBatchInfo::new(
         messages_two
             .iter()
-            .map(|msg| msg.get_size_bytes() as u64)
-            .sum(),
+            .map(|msg| msg.get_size_bytes())
+            .sum::<IggyByteSize>(),
         partition.partition_id,
     );
     partition
@@ -218,7 +223,10 @@ async fn should_persist_messages_and_then_load_them_from_disk() {
     setup.create_partitions_directory(stream_id, topic_id).await;
     partition.persist().await.unwrap();
     let appendable_batch_info = AppendableBatchInfo::new(
-        messages.iter().map(|msg| msg.get_size_bytes() as u64).sum(),
+        messages
+            .iter()
+            .map(|msg| msg.get_size_bytes())
+            .sum::<IggyByteSize>(),
         partition.partition_id,
     );
     partition

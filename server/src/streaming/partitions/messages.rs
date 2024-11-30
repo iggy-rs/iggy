@@ -255,7 +255,7 @@ impl Partition {
         let mut remaining_size = size_bytes;
         let mut batches = Vec::new();
         for segment in self.segments.iter().rev() {
-            let segment_size_bytes = segment.size_bytes as u64;
+            let segment_size_bytes = segment.size_bytes.as_bytes_u64();
             if segment_size_bytes == 0 {
                 break;
             }
@@ -356,7 +356,7 @@ impl Partition {
         }
 
         let batch_size = appendable_batch_info.batch_size
-            + (POLLED_MESSAGE_METADATA * messages.len() as u32) as u64;
+            + ((POLLED_MESSAGE_METADATA * messages.len() as u32) as u64).into();
         let base_offset = if !self.should_increment_offset {
             0
         } else {
@@ -457,7 +457,9 @@ impl Partition {
 
 #[cfg(test)]
 mod tests {
+    use iggy::utils::byte_size::IggyByteSize;
     use iggy::utils::expiry::IggyExpiry;
+    use iggy::utils::sizeable::Sizeable;
     use std::sync::atomic::{AtomicU32, AtomicU64};
 
     use super::*;
@@ -471,7 +473,10 @@ mod tests {
         let messages = create_messages();
         let messages_count = messages.len() as u32;
         let appendable_batch_info = AppendableBatchInfo {
-            batch_size: messages.iter().map(|m| m.get_size_bytes() as u64).sum(),
+            batch_size: messages
+                .iter()
+                .map(|m| m.get_size_bytes())
+                .sum::<IggyByteSize>(),
             partition_id: partition.partition_id,
         };
         partition
@@ -493,7 +498,10 @@ mod tests {
         let messages_count = messages.len() as u32;
         let unique_messages_count = 3;
         let appendable_batch_info = AppendableBatchInfo {
-            batch_size: messages.iter().map(|m| m.get_size_bytes() as u64).sum(),
+            batch_size: messages
+                .iter()
+                .map(|m| m.get_size_bytes())
+                .sum::<IggyByteSize>(),
             partition_id: partition.partition_id,
         };
         partition

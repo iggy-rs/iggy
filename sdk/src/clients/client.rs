@@ -30,6 +30,7 @@ use crate::models::user_status::UserStatus;
 use crate::partitioner::Partitioner;
 use crate::snapshot::{SnapshotCompression, SystemSnapshotType};
 use crate::tcp::client::TcpClient;
+use crate::utils::byte_size::IggyByteSize;
 use crate::utils::crypto::Encryptor;
 use crate::utils::duration::IggyDuration;
 use crate::utils::expiry::IggyExpiry;
@@ -566,7 +567,7 @@ impl MessageClient for IggyClient {
             for message in &mut polled_messages.messages {
                 let payload = encryptor.decrypt(&message.payload)?;
                 message.payload = Bytes::from(payload);
-                message.length = message.payload.len() as u32;
+                message.length = IggyByteSize::from(message.payload.len() as u64);
             }
         }
 

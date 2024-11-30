@@ -10,6 +10,8 @@ use crate::streaming::segments::segment::Segment;
 use crate::streaming::sizeable::Sizeable;
 use futures::{StreamExt, TryStreamExt};
 use iggy::error::IggyError;
+use iggy::utils::byte_size::IggyByteSize;
+use iggy::utils::sizeable::Sizeable;
 use std::future;
 use std::sync::atomic::Ordering;
 use std::sync::Arc;
@@ -173,7 +175,7 @@ impl Segment {
 
     pub async fn append_batch(
         &mut self,
-        batch_size: u64,
+        batch_size: IggyByteSize,
         messages_count: u32,
         batch: &[Arc<RetainedMessage>],
     ) -> Result<(), IggyError> {
@@ -192,7 +194,8 @@ impl Segment {
         let curr_offset = batch_accumulator.batch_max_offset();
 
         self.current_offset = curr_offset;
-        self.size_bytes += batch_size as u32;
+        self.size_bytes += batch_size;
+        let batch_size = batch_size.as_bytes_u64();
         self.size_of_parent_stream
             .fetch_add(batch_size, Ordering::AcqRel);
         self.size_of_parent_topic

@@ -102,7 +102,6 @@ impl System {
 
         let state_persister = Self::resolve_persister(config.state.enforce_fsync);
         let partition_persister = Self::resolve_persister(config.partition.enforce_fsync);
-        let fsync_persister = Self::resolve_persister(true);
 
         let state = Arc::new(FileState::new(
             &config.get_state_log_path(),
@@ -112,7 +111,7 @@ impl System {
         ));
         Self::create(
             config.clone(),
-            SystemStorage::new(config, partition_persister, fsync_persister),
+            SystemStorage::new(config, partition_persister),
             state,
             encryptor,
             data_maintenance_config,

@@ -5,8 +5,6 @@ use crate::streaming::models::messages::RetainedMessage;
 use crate::streaming::persistence::persister::Persister;
 use crate::streaming::segments::index::{Index, IndexRange};
 use crate::streaming::segments::segment::Segment;
-use crate::streaming::sizeable::Sizeable;
-use crate::streaming::storage::SegmentStorage;
 use crate::streaming::utils::file;
 use crate::streaming::utils::head_tail_buf::HeadTailBuffer;
 use anyhow::Context;
@@ -30,7 +28,6 @@ const BUF_READER_CAPACITY_BYTES: usize = 512 * 1000;
 #[derive(Debug)]
 pub struct FileSegmentStorage {
     persister: Arc<dyn Persister>,
-    fsync_persister: Arc<dyn Persister>,
 }
 
 impl FileSegmentStorage {

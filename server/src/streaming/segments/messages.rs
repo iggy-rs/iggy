@@ -7,7 +7,6 @@ use crate::streaming::io::stream::message_stream::RetainedMessageStream;
 use crate::streaming::models::messages::RetainedMessage;
 use crate::streaming::segments::index::{Index, IndexRange};
 use crate::streaming::segments::segment::Segment;
-use crate::streaming::sizeable::Sizeable;
 use futures::{StreamExt, TryStreamExt};
 use iggy::error::IggyError;
 use iggy::utils::byte_size::IggyByteSize;
@@ -160,7 +159,7 @@ impl Segment {
     {
         let reader = self
             .log
-            .read_blocks(start_position as _, self.size_bytes as u64)
+            .read_blocks(start_position as _, self.size_bytes.as_bytes_u64())
             .into_async_read();
         let message_stream = RetainedMessageStream::new(reader, 4096);
         let messages = message_stream
@@ -253,18 +252,18 @@ impl Segment {
         );
 
         let (has_remainder, batch) = batch_accumulator.materialize_batch_and_maybe_update_state();
-        let batch_size = batch.get_size_bytes();
+        let batch_size = batch.get_size_bytes().as_bytes_u64();
         let sectors = batch_size.div_ceil(sector_size);
         let adjusted_size = sector_size * sectors;
         if has_remainder {
             self.unsaved_messages = Some(batch_accumulator);
         }
         let mut bytes = DmaBuf::with_capacity(adjusted_size as usize);
-        let diff = bytes.len() as u32 - batch_size;
+        let diff = bytes.len() as u64 - batch_size;
         batch.extend2(bytes.as_mut());
         let saved_bytes = self.log.write_block(bytes).await?;
         index_storage.save_index(&self.index_path, index).await?;
-        self.last_index_position += adjusted_size;
+        self.last_index_position += adjusted_size as u32;
         let size_increment = RETAINED_BATCH_OVERHEAD + diff;
         self.size_bytes += size_increment;
         self.size_of_parent_stream

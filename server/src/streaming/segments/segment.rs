@@ -4,7 +4,6 @@ use crate::streaming::iggy_storage::SystemStorage;
 use crate::streaming::io::buf::dma_buf::DmaBuf;
 use crate::streaming::io::log::log::Log;
 use crate::streaming::segments::index::Index;
-use crate::streaming::storage::SystemStorage;
 use iggy::utils::byte_size::IggyByteSize;
 use crate::streaming::storage::storage::DmaStorage;
 use iggy::utils::expiry::IggyExpiry;

@@ -23,7 +23,7 @@ pub async fn handle(
             &command.consumer,
             &command.stream_id,
             &command.topic_id,
-            command.partition_id.clone(),
+            command.partition_id,
             PollingArgs::new(command.strategy, command.count, command.auto_commit),
         )
         .await

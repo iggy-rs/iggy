@@ -2,6 +2,7 @@ use crate::configs::http::HttpJwtConfig;
 use crate::http::jwt::json_web_token::{GeneratedToken, JwtClaims, RevokedAccessToken};
 use crate::http::jwt::storage::TokenStorage;
 use crate::streaming::persistence::persister::Persister;
+use error_set::ResultContext;
 use iggy::error::IggyError;
 use iggy::locking::IggySharedMut;
 use iggy::locking::IggySharedMutFn;
@@ -72,14 +73,18 @@ impl JwtManager {
             audience: config.audience.clone(),
             access_token_expiry: config.access_token_expiry,
             not_before: config.not_before,
-            key: config.get_encoding_key()?,
+            key: config
+                .get_encoding_key()
+                .with_error(|_| "HTTP_JWT - failed to get encoding key")?,
             algorithm,
         };
         let validator = ValidatorOptions {
             valid_audiences: config.valid_audiences.clone(),
             valid_issuers: config.valid_issuers.clone(),
             clock_skew: config.clock_skew,
-            key: config.get_decoding_key()?,
+            key: config
+                .get_decoding_key()
+                .with_error(|_| "HTTP_JWT - failed to get decoding key")?,
         };
         JwtManager::new(persister, path, issuer, validator)
     }
@@ -130,7 +135,13 @@ impl JwtManager {
         );
         self.tokens_storage
             .delete_revoked_access_tokens(&tokens_to_delete)
-            .await?;
+            .await
+            .with_error(|_| {
+                format!(
+                    "HTTP_JWT - failed to delete revoked access tokens, IDs {:?}",
+                    tokens_to_delete
+                )
+            })?;
         let mut revoked_tokens = self.revoked_tokens.write().await;
         for id in tokens_to_delete {
             revoked_tokens.remove(&id);
@@ -194,8 +205,12 @@ impl JwtManager {
         }
 
         self.tokens_storage
-            .save_revoked_access_token(&RevokedAccessToken { id, expiry })
-            .await?;
+            .save_revoked_access_token(&RevokedAccessToken {
+                id: id.clone(),
+                expiry,
+            })
+            .await
+            .with_error(|_| format!("HTTP_JWT - failed to save revoked access token: {}", id))?;
         self.generate(jwt_claims.claims.sub)
     }
 
@@ -239,7 +254,13 @@ impl JwtManager {
                 id: token_id.to_string(),
                 expiry,
             })
-            .await?;
+            .await
+            .with_error(|_| {
+                format!(
+                    "HTTP_JWT - failed to save revoked access token: {}",
+                    token_id
+                )
+            })?;
         info!("Revoked access token with ID: {token_id}");
         Ok(())
     }

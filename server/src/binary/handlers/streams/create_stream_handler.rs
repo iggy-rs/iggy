@@ -18,7 +18,7 @@ pub async fn handle(
 ) -> Result<(), IggyError> {
     debug!("session: {session}, command: {command}");
     let response;
-    let stream_id = command.stream_id.clone();
+    let stream_id = command.stream_id;
 
     {
         let mut system = system.write().await;

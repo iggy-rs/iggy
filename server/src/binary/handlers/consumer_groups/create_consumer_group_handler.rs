@@ -42,7 +42,7 @@ pub async fn handle(
     let system = system.read().await;
     let stream_id = command.stream_id.clone();
     let topic_id = command.topic_id.clone();
-    let group_id = command.group_id.clone();
+    let group_id = command.group_id;
 
     system
         .state

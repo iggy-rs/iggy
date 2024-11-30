@@ -8,6 +8,7 @@ use axum::extract::{Path, State};
 use axum::http::StatusCode;
 use axum::routing::{delete, get};
 use axum::{Extension, Json, Router};
+use error_set::ResultContext;
 use iggy::identifier::Identifier;
 use iggy::models::topic::{Topic, TopicDetails};
 use iggy::topics::create_topic::CreateTopic;
@@ -41,13 +42,20 @@ async fn get_topic(
     Path((stream_id, topic_id)): Path<(String, String)>,
 ) -> Result<Json<TopicDetails>, CustomError> {
     let system = state.system.read().await;
-    let stream_id = Identifier::from_str_value(&stream_id)?;
-    let topic_id = Identifier::from_str_value(&topic_id)?;
-    let topic = system.find_topic(
-        &Session::stateless(identity.user_id, identity.ip_address),
-        &stream_id,
-        &topic_id,
-    );
+    let identity_stream_id = Identifier::from_str_value(&stream_id)?;
+    let identity_topic_id = Identifier::from_str_value(&topic_id)?;
+    let topic = system
+        .find_topic(
+            &Session::stateless(identity.user_id, identity.ip_address),
+            &identity_stream_id,
+            &identity_topic_id,
+        )
+        .with_error(|_| {
+            format!(
+                "HTTP - failed to find topic, stream ID: {}, topic ID: {}",
+                stream_id, topic_id
+            )
+        });
     if topic.is_err() {
         return Err(CustomError::ResourceNotFound);
     }
@@ -63,10 +71,12 @@ async fn get_topics(
 ) -> Result<Json<Vec<Topic>>, CustomError> {
     let stream_id = Identifier::from_str_value(&stream_id)?;
     let system = state.system.read().await;
-    let topics = system.find_topics(
-        &Session::stateless(identity.user_id, identity.ip_address),
-        &stream_id,
-    )?;
+    let topics = system
+        .find_topics(
+            &Session::stateless(identity.user_id, identity.ip_address),
+            &stream_id,
+        )
+        .with_error(|_| format!("HTTP - failed to find topic, stream ID: {}", stream_id))?;
     let topics = mapper::map_topics(&topics);
     Ok(Json(topics))
 }
@@ -95,7 +105,8 @@ async fn create_topic(
                 command.max_topic_size,
                 command.replication_factor,
             )
-            .await?;
+            .await
+            .with_error(|_| format!("HTTP - failed to create topic, stream ID: {}", stream_id))?;
         command.message_expiry = topic.message_expiry;
         command.max_topic_size = topic.max_topic_size;
         response = Json(mapper::map_topic(topic).await);
@@ -105,7 +116,13 @@ async fn create_topic(
     system
         .state
         .apply(identity.user_id, EntryCommand::CreateTopic(command))
-        .await?;
+        .await
+        .with_error(|_| {
+            format!(
+                "HTTP - failed to apply create topic, stream ID: {}",
+                stream_id
+            )
+        })?;
     Ok(response)
 }
 
@@ -132,7 +149,13 @@ async fn update_topic(
                 command.max_topic_size,
                 command.replication_factor,
             )
-            .await?;
+            .await
+            .with_error(|_| {
+                format!(
+                    "HTTP - failed to update topic, stream ID: {}, topic ID: {}",
+                    stream_id, topic_id
+                )
+            })?;
         command.message_expiry = topic.message_expiry;
         command.max_topic_size = topic.max_topic_size;
     }
@@ -141,7 +164,13 @@ async fn update_topic(
     system
         .state
         .apply(identity.user_id, EntryCommand::UpdateTopic(command))
-        .await?;
+        .await
+        .with_error(|_| {
+            format!(
+                "HTTP - failed to apply update topic, stream ID: {}, topic ID: {}",
+                stream_id, topic_id
+            )
+        })?;
     Ok(StatusCode::NO_CONTENT)
 }
 
@@ -151,17 +180,23 @@ async fn delete_topic(
     Extension(identity): Extension<Identity>,
     Path((stream_id, topic_id)): Path<(String, String)>,
 ) -> Result<StatusCode, CustomError> {
-    let stream_id = Identifier::from_str_value(&stream_id)?;
-    let topic_id = Identifier::from_str_value(&topic_id)?;
+    let identifier_stream_id = Identifier::from_str_value(&stream_id)?;
+    let identifier_topic_id = Identifier::from_str_value(&topic_id)?;
     {
         let mut system = state.system.write().await;
         system
             .delete_topic(
                 &Session::stateless(identity.user_id, identity.ip_address),
-                &stream_id,
-                &topic_id,
+                &identifier_stream_id,
+                &identifier_topic_id,
             )
-            .await?;
+            .await
+            .with_error(|_| {
+                format!(
+                    "HTTP - failed to delete topic, stream ID: {}, topic ID: {}",
+                    stream_id, topic_id
+                )
+            })?;
     }
 
     let system = state.system.read().await;
@@ -170,11 +205,17 @@ async fn delete_topic(
         .apply(
             identity.user_id,
             EntryCommand::DeleteTopic(DeleteTopic {
-                stream_id,
-                topic_id,
+                stream_id: identifier_stream_id,
+                topic_id: identifier_topic_id,
             }),
         )
-        .await?;
+        .await
+        .with_error(|_| {
+            format!(
+                "HTTP - failed to apply delete topic, stream ID: {}, topic ID: {}",
+                stream_id, topic_id
+            )
+        })?;
     Ok(StatusCode::NO_CONTENT)
 }
 
@@ -184,25 +225,37 @@ async fn purge_topic(
     Extension(identity): Extension<Identity>,
     Path((stream_id, topic_id)): Path<(String, String)>,
 ) -> Result<StatusCode, CustomError> {
-    let stream_id = Identifier::from_str_value(&stream_id)?;
-    let topic_id = Identifier::from_str_value(&topic_id)?;
+    let identifier_stream_id = Identifier::from_str_value(&stream_id)?;
+    let identifier_topic_id = Identifier::from_str_value(&topic_id)?;
     let system = state.system.read().await;
     system
         .purge_topic(
             &Session::stateless(identity.user_id, identity.ip_address),
-            &stream_id,
-            &topic_id,
+            &identifier_stream_id,
+            &identifier_topic_id,
         )
-        .await?;
+        .await
+        .with_error(|_| {
+            format!(
+                "HTTP - failed to purge topic, stream ID: {}, topic ID: {}",
+                stream_id, topic_id
+            )
+        })?;
     system
         .state
         .apply(
             identity.user_id,
             EntryCommand::PurgeTopic(PurgeTopic {
-                stream_id,
-                topic_id,
+                stream_id: identifier_stream_id,
+                topic_id: identifier_topic_id,
             }),
         )
-        .await?;
+        .await
+        .with_error(|_| {
+            format!(
+                "HTTP - failed to apply purge topic, stream ID: {}, topic ID: {}",
+                stream_id, topic_id
+            )
+        })?;
     Ok(StatusCode::NO_CONTENT)
 }

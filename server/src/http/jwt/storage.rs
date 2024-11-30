@@ -3,6 +3,7 @@ use crate::streaming::persistence::persister::Persister;
 use crate::streaming::utils::file;
 use anyhow::Context;
 use bytes::{BufMut, BytesMut};
+use error_set::ResultContext;
 use iggy::error::IggyError;
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -34,10 +35,24 @@ impl TokenStorage {
 
         info!("Loading revoked access tokens from: {}", self.path);
         let mut file = file.unwrap();
-        let file_size = file.metadata().await?.len() as usize;
+        let file_size = file
+            .metadata()
+            .await
+            .with_error(|_| {
+                format!(
+                    "HTTP_JWT - failed to read file metadata, path: {}",
+                    self.path
+                )
+            })?
+            .len() as usize;
         let mut buffer = BytesMut::with_capacity(file_size);
         buffer.put_bytes(0, file_size);
-        file.read_exact(&mut buffer).await?;
+        file.read_exact(&mut buffer).await.with_error(|_| {
+            format!(
+                "HTTP_JWT - failed to read file into buffer, path: {}",
+                self.path
+            )
+        })?;
 
         let tokens: HashMap<String, u64> = bincode::deserialize(&buffer)
             .with_context(|| "Failed to deserialize revoked access tokens")
@@ -65,12 +80,18 @@ impl TokenStorage {
         let bytes = bincode::serialize(&map)
             .with_context(|| "Failed to serialize revoked access tokens")
             .map_err(IggyError::CannotSerializeResource)?;
-        self.persister.overwrite(&self.path, &bytes).await?;
+        self.persister
+            .overwrite(&self.path, &bytes)
+            .await
+            .with_error(|_| format!("HTTP_JWT - failed to overwrite file, path: {}", self.path))?;
         Ok(())
     }
 
     pub async fn delete_revoked_access_tokens(&self, id: &[String]) -> Result<(), IggyError> {
-        let tokens = self.load_all_revoked_access_tokens().await?;
+        let tokens = self
+            .load_all_revoked_access_tokens()
+            .await
+            .with_error(|_| "HTTP_JWT - failed to load revoked access tokens")?;
         if tokens.is_empty() {
             return Ok(());
         }
@@ -86,7 +107,10 @@ impl TokenStorage {
         let bytes = bincode::serialize(&map)
             .with_context(|| "Failed to serialize revoked access tokens")
             .map_err(IggyError::CannotSerializeResource)?;
-        self.persister.overwrite(&self.path, &bytes).await?;
+        self.persister
+            .overwrite(&self.path, &bytes)
+            .await
+            .with_error(|_| format!("HTTP_JWT - failed to overwrite file, path: {}", self.path))?;
         Ok(())
     }
 }

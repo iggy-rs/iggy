@@ -18,7 +18,7 @@ pub async fn handle(
 ) -> Result<(), IggyError> {
     debug!("session: {session}, command: {command}");
     let stream_id = command.stream_id.clone();
-    let topic_id = command.topic_id.clone();
+    let topic_id = command.topic_id;
 
     let response;
     {

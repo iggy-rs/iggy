@@ -30,10 +30,16 @@ unsafe impl Sync for MessageSampler {}
 impl BinarySchemaSampler for MessageSampler {
     async fn try_sample(&self) -> Result<BinarySchema, CompatError> {
         let mut index_file = file::open(&self.index_path).await.with_error(|_| {
-            format!("MESSAGE_CONVERSION_SAMPLER - failed to open index file at path: {}", self.index_path)
+            format!(
+                "MESSAGE_CONVERSION_SAMPLER - failed to open index file at path: {}",
+                self.index_path
+            )
         })?;
         let mut log_file = file::open(&self.log_path).await.with_error(|_| {
-            format!("MESSAGE_CONVERSION_SAMPLER - failed to open log file at path: {}", self.log_path)
+            format!(
+                "MESSAGE_CONVERSION_SAMPLER - failed to open log file at path: {}",
+                self.log_path
+            )
         })?;
         let log_file_size = log_file.metadata().await.with_error(|_| {
             format!("MESSAGE_CONVERSION_SAMPLER - failed to retrieve metadata for log file at path: {}", self.log_path)
@@ -44,17 +50,26 @@ impl BinarySchemaSampler for MessageSampler {
         }
 
         let _ = index_file.read_u32_le().await.with_error(|_| {
-            format!("MESSAGE_CONVERSION_SAMPLER - failed to read the first index entry from file: {}", self.index_path)
+            format!(
+                "MESSAGE_CONVERSION_SAMPLER - failed to read the first index entry from file: {}",
+                self.index_path
+            )
         })?;
         let end_position = index_file.read_u32_le().await.with_error(|_| {
-            format!("MESSAGE_CONVERSION_SAMPLER - failed to read the second index entry from file: {}", self.index_path)
+            format!(
+                "MESSAGE_CONVERSION_SAMPLER - failed to read the second index entry from file: {}",
+                self.index_path
+            )
         })?;
 
         let buffer_size = end_position as usize;
         let mut buffer = BytesMut::with_capacity(buffer_size);
         buffer.put_bytes(0, buffer_size);
         let _ = log_file.read_exact(&mut buffer).await.with_error(|_| {
-            format!("MESSAGE_CONVERSION_SAMPLER - failed to read log file into buffer from path: {}", self.log_path)
+            format!(
+                "MESSAGE_CONVERSION_SAMPLER - failed to read log file into buffer from path: {}",
+                self.log_path
+            )
         })?;
 
         let message = MessageSnapshot::try_from(buffer.freeze())?;

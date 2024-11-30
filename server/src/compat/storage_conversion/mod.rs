@@ -89,17 +89,35 @@ pub async fn init(
         let mut stream = Stream::empty(stream_id, "stream", config.clone(), noop_storage.clone());
         streams::load(&config, &db, &mut stream)
             .await
-            .with_error(|_| format!("STORAGE_CONVERSION - failed to load stream, stream ID: {}", stream.stream_id))?;
+            .with_error(|_| {
+                format!(
+                    "STORAGE_CONVERSION - failed to load stream, stream ID: {}",
+                    stream.stream_id
+                )
+            })?;
         streams.push(stream);
     }
 
-    let users = users::load_all(&db).await.with_error(|_| "STORAGE_CONVERSION - failed to load users".to_string())?;
-    let personal_access_tokens = personal_access_tokens::load_all(&db).await.with_error(|_| "STORAGE_CONVERSION - failed to load personal access tokens".to_string())?;
-    converter::convert(metadata, storage, streams, users, personal_access_tokens).await.with_error(|_| "STORAGE_CONVERSION - failed to convert storage to new format".to_string())?;
+    let users = users::load_all(&db)
+        .await
+        .with_error(|_| "STORAGE_CONVERSION - failed to load users".to_string())?;
+    let personal_access_tokens = personal_access_tokens::load_all(&db)
+        .await
+        .with_error(|_| "STORAGE_CONVERSION - failed to load personal access tokens".to_string())?;
+    converter::convert(metadata, storage, streams, users, personal_access_tokens)
+        .await
+        .with_error(|_| {
+            "STORAGE_CONVERSION - failed to convert storage to new format".to_string()
+        })?;
     let old_database_path = format!("{database_path}_old");
     rename(&database_path, &old_database_path)
         .await
-        .with_error(|_| format!("STORAGE_CONVERSION - failed to rename database from {} to {}", database_path, old_database_path))?;
+        .with_error(|_| {
+            format!(
+                "STORAGE_CONVERSION - failed to rename database from {} to {}",
+                database_path, old_database_path
+            )
+        })?;
     info!("Storage migration has completed, new state log was cacreated and old database was moved to: {old_database_path} (now it can be safely deleted).");
     Ok(())
 }

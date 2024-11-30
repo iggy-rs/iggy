@@ -18,7 +18,7 @@ pub async fn handle(
     let system = system.read().await;
     let stream_id = command.stream_id.clone();
     let topic_id = command.topic_id.clone();
-    let partition_id = command.partition_id.clone();
+    let partition_id = command.partition_id;
     let fsync = command.fsync;
     system
         .flush_unsaved_buffer(session, stream_id, topic_id, partition_id, fsync)

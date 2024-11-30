@@ -227,7 +227,7 @@ pub async fn load(
                 "STORAGE_CONVERSION_PERSISTENCY - failed to load checksums for segment with stream ID: {}, topic ID: {}, partition ID: {}",
                 segment.stream_id,
                 segment.topic_id,
-                segment.partition_id,    
+                segment.partition_id,
             ))?;
             info!("Validated messages checksum for partition with ID: {} and segment with start offset: {}.", partition.partition_id, segment.start_offset);
         }
@@ -240,7 +240,7 @@ pub async fn load(
                 "STORAGE_CONVERSION_PERSISTENCY - failed to load message ids for segment with stream ID: {}, topic ID: {}, partition ID: {}",
                 segment.stream_id,
                 segment.topic_id,
-                segment.partition_id,    
+                segment.partition_id,
             ))?;
             for message_id in message_ids {
                 if message_deduplicator.try_insert(&message_id).await {

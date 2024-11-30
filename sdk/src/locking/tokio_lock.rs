@@ -10,8 +10,14 @@ impl<T> IggySharedMutFn<T> for IggyTokioRwLock<T>
 where
     T: Send + Sync,
 {
-    type ReadGuard<'a> = RwLockReadGuard<'a, T> where T: 'a;
-    type WriteGuard<'a> = RwLockWriteGuard<'a, T> where T: 'a;
+    type ReadGuard<'a>
+        = RwLockReadGuard<'a, T>
+    where
+        T: 'a;
+    type WriteGuard<'a>
+        = RwLockWriteGuard<'a, T>
+    where
+        T: 'a;
 
     fn new(data: T) -> Self {
         IggyTokioRwLock(Arc::new(TokioRwLock::new(data)))

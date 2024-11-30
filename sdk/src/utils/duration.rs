@@ -168,7 +168,7 @@ impl<'de> Deserialize<'de> for IggyDuration {
     }
 }
 
-impl<'de> Visitor<'de> for IggyDurationVisitor {
+impl Visitor<'_> for IggyDurationVisitor {
     type Value = IggyDuration;
 
     fn expecting(&self, formatter: &mut Formatter) -> std::fmt::Result {

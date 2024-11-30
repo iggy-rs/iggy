@@ -1,5 +1,6 @@
 use anyhow::Result;
 use clap::Parser;
+use dotenvy::dotenv;
 use figlet_rs::FIGfont;
 use server::args::Args;
 use server::channels::commands::archive_state::ArchiveStateExecutor;
@@ -30,6 +31,13 @@ async fn main() -> Result<(), ServerError> {
     let standard_font = FIGfont::standard().unwrap();
     let figure = standard_font.convert("Iggy Server");
     println!("{}", figure.unwrap());
+
+    if let Ok(path) = dotenv() {
+        println!(
+            "Loaded environment variables from .env file at path: {}",
+            path.display()
+        );
+    }
 
     let args = Args::parse();
     let config_provider = config_provider::resolve(&args.config_provider)?;

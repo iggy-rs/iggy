@@ -81,7 +81,7 @@ impl From<CompressionAlgorithm> for String {
 }
 struct CompressionKindVisitor;
 
-impl<'de> Visitor<'de> for CompressionKindVisitor {
+impl Visitor<'_> for CompressionKindVisitor {
     type Value = CompressionAlgorithm;
 
     fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {

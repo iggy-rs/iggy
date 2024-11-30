@@ -24,7 +24,7 @@ impl<'a> RetainedMessageBatchIterator<'a> {
 
 // TODO(numinex): Consider using FallibleIterator instead of this
 // https://crates.io/crates/fallible-iterator
-impl<'a> Iterator for RetainedMessageBatchIterator<'a> {
+impl Iterator for RetainedMessageBatchIterator<'_> {
     type Item = RetainedMessage;
     fn next(&mut self) -> Option<Self::Item> {
         if self.current_position < self.batch.length.as_bytes_u64() {

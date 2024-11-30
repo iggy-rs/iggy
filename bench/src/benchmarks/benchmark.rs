@@ -55,7 +55,6 @@ pub trait Benchmarkable {
     fn display_settings(&self);
 
     /// Below methods have common implementation for all benchmarks.
-
     /// Initializes the streams and topics for the benchmark.
     /// This method is called before the benchmark is executed.
     async fn init_streams(&self) -> Result<(), IggyError> {

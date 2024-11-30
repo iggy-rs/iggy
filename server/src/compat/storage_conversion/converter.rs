@@ -68,7 +68,7 @@ pub async fn convert(
 
         state
             .apply(
-                personal_access_token.user_id.clone(),
+                personal_access_token.user_id,
                 EntryCommand::CreatePersonalAccessToken(CreatePersonalAccessTokenWithHash {
                     command: CreatePersonalAccessToken {
                         name: personal_access_token.name.clone(),
@@ -123,10 +123,12 @@ pub async fn convert(
                     }),
                 )
                 .await
-                .with_error(|_| format!(
-                    "STORAGE_CONVERSION - failed to create topic, stream ID: {}, topic ID: {}",
-                    topic.stream_id, topic.topic_id,
-                ))?;
+                .with_error(|_| {
+                    format!(
+                        "STORAGE_CONVERSION - failed to create topic, stream ID: {}, topic ID: {}",
+                        topic.stream_id, topic.topic_id,
+                    )
+                })?;
 
             info!(
                 "Converting {} consumer groups for topic with ID: {}",

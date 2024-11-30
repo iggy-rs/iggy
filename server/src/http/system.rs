@@ -12,6 +12,7 @@ use axum::routing::{get, post};
 use axum::{Extension, Json, Router};
 use bytes::Bytes;
 use chrono::Local;
+use error_set::ResultContext;
 use iggy::locking::IggySharedMutFn;
 use iggy::models::client_info::{ClientInfo, ClientInfoDetails};
 use iggy::models::stats::Stats;
@@ -44,7 +45,10 @@ async fn get_metrics(State(state): State<Arc<AppState>>) -> Result<String, Custo
 
 async fn get_stats(State(state): State<Arc<AppState>>) -> Result<Json<Stats>, CustomError> {
     let system = state.system.read().await;
-    let stats = system.get_stats().await?;
+    let stats = system
+        .get_stats()
+        .await
+        .with_error(|_| format!("HTTP - failed to get stats, user ID: {}", identity.user_id))?;
     Ok(Json(stats))
 }
 
@@ -59,7 +63,8 @@ async fn get_client(
             &Session::stateless(identity.user_id, identity.ip_address),
             client_id,
         )
-        .await;
+        .await
+        .with_error(|_| format!("HTTP - failed to get client, user ID: {}", identity.user_id));
     if client.is_err() {
         return Err(CustomError::ResourceNotFound);
     }
@@ -77,7 +82,13 @@ async fn get_clients(
     let system = state.system.read().await;
     let clients = system
         .get_clients(&Session::stateless(identity.user_id, identity.ip_address))
-        .await?;
+        .await
+        .with_error(|_| {
+            format!(
+                "HTTP - failed to get clients, user ID: {}",
+                identity.user_id
+            )
+        })?;
     let clients = mapper::map_clients(&clients).await;
     Ok(Json(clients))
 }

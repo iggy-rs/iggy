@@ -7,6 +7,7 @@ use axum::extract::{Path, Query, State};
 use axum::http::StatusCode;
 use axum::routing::post;
 use axum::{Extension, Json, Router};
+use error_set::ResultContext;
 use iggy::identifier::Identifier;
 use iggy::partitions::create_partitions::CreatePartitions;
 use iggy::partitions::delete_partitions::DeletePartitions;
@@ -42,14 +43,26 @@ async fn create_partitions(
                 &command.topic_id,
                 command.partitions_count,
             )
-            .await?;
+            .await
+            .with_error(|_| {
+                format!(
+                    "HTTP - failed to create partitions, stream ID: {}, topic ID: {}",
+                    stream_id, topic_id
+                )
+            })?;
     }
 
     let system = state.system.read().await;
     system
         .state
         .apply(identity.user_id, EntryCommand::CreatePartitions(command))
-        .await?;
+        .await
+        .with_error(|_| {
+            format!(
+                "HTTP - failed to apply create partitions, stream ID: {}, topic ID: {}",
+                stream_id, topic_id
+            )
+        })?;
     Ok(StatusCode::CREATED)
 }
 
@@ -72,7 +85,13 @@ async fn delete_partitions(
                 &query.topic_id.clone(),
                 query.partitions_count,
             )
-            .await?;
+            .await
+            .with_error(|_| {
+                format!(
+                    "HTTP - failed to delete partitions, stream ID: {}, topic ID: {}",
+                    stream_id, topic_id
+                )
+            })?;
     }
 
     let system = state.system.read().await;
@@ -86,6 +105,12 @@ async fn delete_partitions(
                 partitions_count: query.partitions_count,
             }),
         )
-        .await?;
+        .await
+        .with_error(|_| {
+            format!(
+                "HTTP - failed to apply delete partitions, stream ID: {}, topic ID: {}",
+                stream_id, topic_id
+            )
+        })?;
     Ok(StatusCode::NO_CONTENT)
 }

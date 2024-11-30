@@ -21,8 +21,8 @@ pub async fn handle(
             command.consumer,
             &command.stream_id,
             &command.topic_id,
-            command.partition_id.clone(),
-            command.offset.clone(),
+            command.partition_id,
+            command.offset,
         )
         .await
         .with_error(|_| format!("CONSUMER_OFFSET_HANDLER - failed to store consumer offset for stream_id: {}, topic_id: {}, partition_id: {:?}, offset: {}, session: {}",

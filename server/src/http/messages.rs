@@ -8,6 +8,7 @@ use axum::extract::{Path, Query, State};
 use axum::http::StatusCode;
 use axum::routing::get;
 use axum::{Extension, Json, Router};
+use error_set::ResultContext;
 use iggy::consumer::Consumer;
 use iggy::identifier::Identifier;
 use iggy::messages::poll_messages::PollMessages;
@@ -51,7 +52,13 @@ async fn poll_messages(
             query.0.partition_id,
             PollingArgs::new(query.0.strategy, query.0.count, query.0.auto_commit),
         )
-        .await?;
+        .await
+        .with_error(|_| {
+            format!(
+                "HTTP - failed to poll messages, stream ID: {}, topic ID: {}, partition ID: {:?}",
+                stream_id, topic_id, query.0.partition_id
+            )
+        })?;
     Ok(Json(polled_messages))
 }
 
@@ -72,19 +79,25 @@ async fn send_messages(
     command.validate()?;
 
     let messages = command.messages;
-    let stream_id = command.stream_id;
-    let topic_id = command.topic_id;
+    let command_stream_id = command.stream_id;
+    let command_topic_id = command.topic_id;
     let partitioning = command.partitioning;
     let system = state.system.read().await;
     system
         .append_messages(
             &Session::stateless(identity.user_id, identity.ip_address),
-            stream_id,
-            topic_id,
+            command_stream_id,
+            command_topic_id,
             partitioning,
             messages,
         )
-        .await?;
+        .await
+        .with_error(|_| {
+            format!(
+                "HTTP - failed to append messages, stream ID: {}, topic ID: {}",
+                stream_id, topic_id
+            )
+        })?;
     Ok(StatusCode::CREATED)
 }
 

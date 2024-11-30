@@ -320,9 +320,14 @@ async fn handle_oldest_segments(
             topic.stream_id,
             topic.topic_id,
         );
-        archive_segments(topic, &segments_to_archive, archiver.clone()).await.with_error(|_| {
-            format!("CHANNEL_COMMAND - failed to archive segments for stream ID: {}, topic ID: {}", topic.stream_id, topic.topic_id)
-        })?;
+        archive_segments(topic, &segments_to_archive, archiver.clone())
+            .await
+            .with_error(|_| {
+                format!(
+                    "CHANNEL_COMMAND - failed to archive segments for stream ID: {}, topic ID: {}",
+                    topic.stream_id, topic.topic_id
+                )
+            })?;
     }
 
     if topic.is_unlimited() {

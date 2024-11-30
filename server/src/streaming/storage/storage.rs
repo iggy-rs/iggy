@@ -10,6 +10,8 @@ use std::{
 };
 use tokio::task::{spawn_blocking, JoinHandle};
 
+const O_DIRECT: i32 = 0x4000;
+
 #[derive(Debug, Clone)]
 pub struct DmaStorage {
     file_path: &'static str,
@@ -30,7 +32,7 @@ impl Storage<DmaBuf> for DmaStorage {
         let handle = spawn_blocking(move || {
             let file = std::fs::File::options()
                 .read(true)
-                .custom_flags(libc::O_DIRECT)
+                .custom_flags(O_DIRECT)
                 .open(file_path)
                 .unwrap();
             file.read_exact_at(buf.as_mut(), position)?;
@@ -43,13 +45,15 @@ impl Storage<DmaBuf> for DmaStorage {
     async fn write_sectors(&mut self, buf: DmaBuf) -> Result<u32, IggyError> {
         let mut std_file = std::fs::File::options()
             .append(true)
-            .custom_flags(libc::O_DIRECT)
+            .custom_flags(O_DIRECT)
             .open(self.file_path)?;
-        //let mut file = OpenOptions::new().append(true).custom_flags(libc::O_DIRECT).open(file_path).await?;
         let size = buf.as_ref().len() as _;
-        spawn_blocking(move || std_file.write_all(buf.as_ref()))
-            .await
-            .expect("write_sectors - Failed to join the task")?;
+        spawn_blocking(move || {
+            let buf = buf;
+            std_file.write_all(buf.as_ref())
+        })
+        .await
+        .expect("write_sectors - Failed to join the task")?;
         Ok(size)
     }
 }
@@ -65,7 +69,7 @@ impl Future for ReadSectors {
         let this = &mut self;
         match futures::ready!(Pin::new(&mut this.handle).poll(cx)) {
             Ok(result) => Poll::Ready(result),
-            Err(err) => panic!("read_sectors, failed to join the task, error : {}", err),
+            Err(err) => panic!("read_sectors, failed to join the task, error: {}", err),
         }
     }
 }

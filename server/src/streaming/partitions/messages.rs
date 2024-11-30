@@ -4,10 +4,10 @@ use crate::streaming::models::messages::RetainedMessage;
 use crate::streaming::partitions::partition::Partition;
 use crate::streaming::polling_consumer::PollingConsumer;
 use crate::streaming::segments::segment::Segment;
+use iggy::error::IggyError;
 use iggy::messages::send_messages::Message;
 use iggy::models::messages::POLLED_MESSAGE_METADATA;
 use iggy::utils::timestamp::IggyTimestamp;
-use iggy::{error::IggyError};
 use std::sync::{atomic::Ordering, Arc};
 use tracing::{trace, warn};
 
@@ -33,7 +33,7 @@ impl Partition {
         }
 
         let timestamp = timestamp.as_micros();
-        // TODO: Check cache, unsaved buffer and only if those don't contain our messages, 
+        // TODO: Check cache, unsaved buffer and only if those don't contain our messages,
         // then fetch from disk.
         let mut messages = None;
         if !self.config.segment.cache_indexes {
@@ -376,8 +376,7 @@ impl Partition {
                 }
                 let timestamp = IggyTimestamp::now().as_micros();
                 let message_offset = base_offset + messages_count as u64;
-                let message =
-                    Arc::new(RetainedMessage::new(message_offset, timestamp, message));
+                let message = Arc::new(RetainedMessage::new(message_offset, timestamp, message));
                 retained_messages.push(message.clone());
                 messages_count += 1;
             }
@@ -385,8 +384,7 @@ impl Partition {
             for message in messages {
                 let timestamp = IggyTimestamp::now().as_micros();
                 let message_offset = base_offset + messages_count as u64;
-                let message =
-                    Arc::new(RetainedMessage::new(message_offset, timestamp, message));
+                let message = Arc::new(RetainedMessage::new(message_offset, timestamp, message));
                 retained_messages.push(message.clone());
                 messages_count += 1;
             }

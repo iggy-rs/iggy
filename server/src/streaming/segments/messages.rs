@@ -57,7 +57,7 @@ impl Segment {
 
         let last_offset = batch_accumulator.batch_max_offset();
         if offset >= first_offset && end_offset <= last_offset {
-            return self.load_n_messages_from_file(offset, count).await;
+            return Ok(self.load_messages_from_unsaved_buffer(offset, end_offset));
         }
 
         // Can this be somehow improved? maybe with chain iterators

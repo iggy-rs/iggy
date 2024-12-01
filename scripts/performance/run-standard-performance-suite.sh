@@ -63,8 +63,11 @@ for (( i=0; i<${#SUITES[@]} ; i+=2 )) ; do
     # Start iggy-server
     echo "Starting iggy-server..."
     target/release/iggy-server &> /dev/null &
+    IGGY_SERVER_PID=$!
     sleep 2
-    echo
+
+    # Check if the server is running
+    exit_if_process_is_not_running "$IGGY_SERVER_PID"
 
     # Start send bench
     echo "Running ${SEND_BENCH}"

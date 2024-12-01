@@ -26,9 +26,8 @@ trap on_exit_bench EXIT
 echo "Building project..."
 cargo build --release
 
-# Remove old performance results
-echo "Cleaning old performance results..."
-rm -rf performance_results || true
+# Create a directory for the performance results
+(mkdir performance_results || true) &> /dev/null
 
 # Construct standard performance suites, each should process 8 GB of data
 STANDARD_SEND=$(construct_bench_command "$IGGY_BENCH_CMD" "send" 8 1000 1000 1000 tcp)        # 8 producers, 8 streams, 1000 byte messages, 1000 messages per batch, 1000 message batches, tcp

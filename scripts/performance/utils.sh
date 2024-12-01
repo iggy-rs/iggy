@@ -76,7 +76,9 @@ function construct_bench_command() {
     local streams=${count}
 
     local superdir
-    superdir="performance_results_$(get_git_iggy_server_tag_or_sha1 .)" || { echo "Failed to get git commit or tag."; exit 1; }
+    superdir="performance_results/$(get_git_iggy_server_tag_or_sha1 .)" || { echo "Failed to get git commit or tag."; exit 1; }
+    rm -rf "$superdir" || true
+    mkdir -p "$superdir" || { echo "Failed to create directory '$superdir'."; exit 1; }
     local output_directory="${superdir}/${type}_${count}${type:0:1}_${message_size}_${messages_per_batch}_${message_batches}_${protocol}"
 
     echo "$bench_command \

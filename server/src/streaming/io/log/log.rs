@@ -5,6 +5,8 @@ use futures::{Future, FutureExt, Stream};
 use pin_project::pin_project;
 use std::{marker::PhantomData, pin::Pin};
 
+use tracing::error;
+
 #[derive(Debug)]
 pub struct Log<S, Buf>
 where
@@ -100,7 +102,7 @@ where
             return Poll::Ready(Some(result));
         } else {
             let buf_size = std::cmp::min(*this.size, (*this.limit - *this.position) as usize);
-            let buf = Buf::with_capacity(buf_size);
+            let buf = Buf::new(buf_size);
             let mut fut = this.storage.read_sectors(*this.position, buf);
             match fut.poll_unpin(cx) {
                 Poll::Ready(result) => {

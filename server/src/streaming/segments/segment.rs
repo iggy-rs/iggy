@@ -4,8 +4,8 @@ use crate::streaming::iggy_storage::SystemStorage;
 use crate::streaming::io::buf::dma_buf::DmaBuf;
 use crate::streaming::io::log::log::Log;
 use crate::streaming::segments::index::Index;
-use iggy::utils::byte_size::IggyByteSize;
 use crate::streaming::storage::storage::DmaStorage;
+use iggy::utils::byte_size::IggyByteSize;
 use iggy::utils::expiry::IggyExpiry;
 use iggy::utils::timestamp::IggyTimestamp;
 use std::sync::atomic::AtomicU64;
@@ -62,7 +62,7 @@ impl Segment {
         messages_count_of_parent_partition: Arc<AtomicU64>,
     ) -> Segment {
         let path = config.get_segment_path(stream_id, topic_id, partition_id, start_offset);
-        let block_size = 10 * 4096;
+        let block_size = 100 * 4096;
         let file_path = Self::get_log_path(&path).leak();
         let dma_storage = DmaStorage::new(file_path);
         let log = Log::new(dma_storage, block_size);

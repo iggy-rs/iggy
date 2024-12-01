@@ -16,7 +16,6 @@ use crate::streaming::topics::topic::Topic;
 use async_trait::async_trait;
 use iggy::consumer::ConsumerKind;
 use iggy::error::IggyError;
-use iggy::utils::byte_size::IggyByteSize;
 use std::fmt::{Debug, Formatter};
 use std::sync::Arc;
 
@@ -61,21 +60,11 @@ pub trait SegmentStorage: Send + Sync {
     async fn load(&self, segment: &mut Segment) -> Result<(), IggyError>;
     async fn save(&self, segment: &Segment) -> Result<(), IggyError>;
     async fn delete(&self, segment: &Segment) -> Result<(), IggyError>;
-    async fn load_message_batches(
-        &self,
-        segment: &Segment,
-        index_range: &IndexRange,
-    ) -> Result<Vec<RetainedMessageBatch>, IggyError>;
     async fn load_newest_batches_by_size(
         &self,
         segment: &Segment,
         size_bytes: u64,
     ) -> Result<Vec<RetainedMessageBatch>, IggyError>;
-    async fn save_batches(
-        &self,
-        segment: &Segment,
-        batch: RetainedMessageBatch,
-    ) -> Result<IggyByteSize, IggyError>;
     async fn load_message_ids(&self, segment: &Segment) -> Result<Vec<u128>, IggyError>;
     async fn load_checksums(&self, segment: &Segment) -> Result<(), IggyError>;
     async fn load_all_indexes(&self, segment: &Segment) -> Result<Vec<Index>, IggyError>;

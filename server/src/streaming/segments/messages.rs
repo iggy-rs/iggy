@@ -1,11 +1,12 @@
 use crate::streaming::batching::batch_accumulator::BatchAccumulator;
-use crate::streaming::batching::message_batch::{RetainedMessageBatch, RETAINED_BATCH_OVERHEAD};
+use crate::streaming::batching::message_batch::RETAINED_BATCH_OVERHEAD;
+use crate::streaming::io;
 use crate::streaming::io::buf::dma_buf::DmaBuf;
 use crate::streaming::io::buf::IoBuf;
 use crate::streaming::io::log::{LogReader, LogWriter};
 use crate::streaming::io::stream::message_stream::RetainedMessageStream;
 use crate::streaming::models::messages::RetainedMessage;
-use crate::streaming::segments::index::{Index, IndexRange};
+use crate::streaming::segments::index::Index;
 use crate::streaming::segments::segment::Segment;
 use futures::{StreamExt, TryStreamExt};
 use iggy::error::IggyError;
@@ -72,26 +73,6 @@ impl Segment {
     pub async fn get_all_messages(&self) -> Result<Vec<Arc<RetainedMessage>>, IggyError> {
         self.get_messages(self.start_offset, self.get_messages_count() as u32)
             .await
-    }
-
-    pub async fn get_all_batches(&self) -> Result<Vec<RetainedMessageBatch>, IggyError> {
-        self.storage
-            .segment
-            .load_message_batches(self, &IndexRange::max_range())
-            .await
-    }
-
-    pub async fn get_newest_batches_by_size(
-        &self,
-        size_bytes: u64,
-    ) -> Result<Vec<RetainedMessageBatch>, IggyError> {
-        let messages = self
-            .storage
-            .segment
-            .load_newest_batches_by_size(self, size_bytes)
-            .await?;
-
-        Ok(messages)
     }
 
     fn load_messages_from_unsaved_buffer(
@@ -253,19 +234,18 @@ impl Segment {
 
         let (has_remainder, batch) = batch_accumulator.materialize_batch_and_maybe_update_state();
         let batch_size = batch.get_size_bytes().as_bytes_u64();
-        let sectors = batch_size.div_ceil(sector_size);
-        let adjusted_size = sector_size * sectors;
+        let adjusted_size = io::val_align_up(batch_size, sector_size);
         if has_remainder {
             self.unsaved_messages = Some(batch_accumulator);
         }
-        let mut bytes = DmaBuf::with_capacity(adjusted_size as usize);
+        let mut bytes = DmaBuf::new(adjusted_size as usize);
         let diff = bytes.len() as u64 - batch_size;
         batch.extend2(bytes.as_mut());
         let saved_bytes = self.log.write_block(bytes).await?;
         index_storage.save_index(&self.index_path, index).await?;
         self.last_index_position += adjusted_size as u32;
         let size_increment = RETAINED_BATCH_OVERHEAD + diff;
-        self.size_bytes += size_increment;
+        self.size_bytes += size_increment.into();
         self.size_of_parent_stream
             .fetch_add(size_increment as u64, Ordering::AcqRel);
         self.size_of_parent_topic

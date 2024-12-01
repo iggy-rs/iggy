@@ -47,7 +47,7 @@ impl IoBuf for DmaBuf {
         unsafe { std::slice::from_raw_parts_mut(self.as_ptr_mut(), self.size) }
     }
 
-    fn with_capacity(size: usize) -> Self {
+    fn new(size: usize) -> Self {
         assert!(size > 0);
         assert!(size % 512 == 0);
         let layout =

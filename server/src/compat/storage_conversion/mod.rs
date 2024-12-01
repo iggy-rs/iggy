@@ -19,7 +19,6 @@ use crate::streaming::topics::topic::Topic;
 use async_trait::async_trait;
 use iggy::consumer::ConsumerKind;
 use iggy::error::IggyError;
-use iggy::utils::byte_size::IggyByteSize;
 use std::path::Path;
 use std::sync::Arc;
 use tokio::fs::{read_dir, rename};
@@ -215,28 +214,12 @@ impl SegmentStorage for NoopSegmentStorage {
         Ok(())
     }
 
-    async fn load_message_batches(
-        &self,
-        _segment: &Segment,
-        _index_range: &IndexRange,
-    ) -> Result<Vec<RetainedMessageBatch>, IggyError> {
-        Ok(vec![])
-    }
-
     async fn load_newest_batches_by_size(
         &self,
         _segment: &Segment,
         _size: u64,
     ) -> Result<Vec<RetainedMessageBatch>, IggyError> {
         Ok(vec![])
-    }
-
-    async fn save_batches(
-        &self,
-        _segment: &Segment,
-        _batch: RetainedMessageBatch,
-    ) -> Result<IggyByteSize, IggyError> {
-        Ok(IggyByteSize::default())
     }
 
     async fn load_message_ids(&self, _segment: &Segment) -> Result<Vec<u128>, IggyError> {

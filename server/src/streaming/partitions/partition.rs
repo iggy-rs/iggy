@@ -8,7 +8,6 @@ use crate::streaming::segments::segment::Segment;
 use dashmap::DashMap;
 use iggy::consumer::ConsumerKind;
 use iggy::utils::byte_size::IggyByteSize;
-use iggy::utils::duration::IggyDuration;
 use iggy::utils::expiry::IggyExpiry;
 use iggy::utils::sizeable::Sizeable;
 use iggy::utils::timestamp::IggyTimestamp;

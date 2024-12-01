@@ -171,21 +171,6 @@ impl SegmentStorage for FileSegmentStorage {
         Ok(())
     }
 
-    async fn load_message_batches(
-        &self,
-        segment: &Segment,
-        index_range: &IndexRange,
-    ) -> Result<Vec<RetainedMessageBatch>, IggyError> {
-        let mut batches = Vec::new();
-        load_batches_by_range(segment, index_range, |batch| {
-            batches.push(batch);
-            Ok(())
-        })
-        .await?;
-        trace!("Loaded {} message batches from disk.", batches.len());
-        Ok(batches)
-    }
-
     async fn load_newest_batches_by_size(
         &self,
         segment: &Segment,
@@ -206,27 +191,6 @@ impl SegmentStorage for FileSegmentStorage {
             total_size_bytes.as_human_string(),
         );
         Ok(batches)
-    }
-
-    async fn save_batches(
-        &self,
-        segment: &Segment,
-        batch: RetainedMessageBatch,
-    ) -> Result<IggyByteSize, IggyError> {
-        let batch_size = batch.get_size_bytes();
-        let mut bytes = BytesMut::with_capacity(batch_size.as_bytes_usize());
-        batch.extend(&mut bytes);
-
-        if let Err(err) = self
-            .persister
-            .append(&segment.log_path, &bytes)
-            .await
-            .with_context(|| format!("Failed to save messages to segment: {}", segment.log_path))
-        {
-            return Err(IggyError::CannotSaveMessagesToSegment(err));
-        }
-
-        Ok(batch_size)
     }
 
     async fn load_message_ids(&self, segment: &Segment) -> Result<Vec<u128>, IggyError> {

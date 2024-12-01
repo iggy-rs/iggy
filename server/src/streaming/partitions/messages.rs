@@ -1,15 +1,18 @@
-use crate::streaming::batching::appendable_batch_info::AppendableBatchInfo;
-use crate::streaming::batching::iterator::IntoMessagesIterator;
+use crate::streaming::io::stream::message_stream::RetainedMessageStream;
 use crate::streaming::models::messages::RetainedMessage;
 use crate::streaming::partitions::partition::Partition;
 use crate::streaming::polling_consumer::PollingConsumer;
 use crate::streaming::segments::segment::Segment;
+use crate::streaming::{batching::appendable_batch_info::AppendableBatchInfo, io::log::LogReader};
+use futures::TryStreamExt;
 use iggy::error::IggyError;
 use iggy::messages::send_messages::Message;
 use iggy::models::messages::POLLED_MESSAGE_METADATA;
+use iggy::utils::sizeable::Sizeable;
 use iggy::utils::timestamp::IggyTimestamp;
+use std::future;
 use std::sync::{atomic::Ordering, Arc};
-use tracing::{trace, warn};
+use tracing::{error, trace, warn};
 
 const EMPTY_MESSAGES: Vec<RetainedMessage> = vec![];
 
@@ -253,37 +256,75 @@ impl Partition {
         }
 
         let mut remaining_size = size_bytes;
-        let mut batches = Vec::new();
+        let mut messages = Vec::new();
         for segment in self.segments.iter().rev() {
             let segment_size_bytes = segment.size_bytes.as_bytes_u64();
             if segment_size_bytes == 0 {
                 break;
             }
+
+            let segment_size = segment.size_bytes.as_bytes_u64();
+            error!("loading from segment with size: {}", segment_size);
             if segment_size_bytes > remaining_size {
+                error!("loading part of segment");
                 // Last segment is bigger than the remaining size, so we need to get the newest messages from it.
-                let partial_batches = segment
-                    .get_newest_batches_by_size(remaining_size)
-                    .await?
-                    .into_iter()
-                    .map(Arc::new);
-                batches.splice(..0, partial_batches);
+
+                // TODO: Once the batch accumulator is refactored to flush every n blocks,
+                // causing the on disk batch size to be deterministic,
+                // move to calculating the start_position, instead of brute force searching from the beginning.
+                let start_position = 0;
+                let reader = segment
+                    .log
+                    .read_blocks(start_position, segment_size)
+                    .into_async_read();
+                let complement = segment_size - remaining_size;
+                let message_stream = RetainedMessageStream::new(reader, 4096);
+                let mut accumulated_size = 0;
+                let collected_messages = message_stream
+                    .try_filter_map(|msg| {
+                        let size = msg.get_size_bytes();
+                        accumulated_size += size.as_bytes_u64();
+                        if accumulated_size >= complement {
+                            future::ready(Ok(Some(Arc::new(msg))))
+                        } else {
+                            future::ready(Ok(None))
+                        }
+                    })
+                    .try_collect::<Vec<_>>()
+                    .await?;
+                error!(
+                    "loaded: {} messages from partial segment",
+                    collected_messages.len()
+                );
+                messages.extend(collected_messages);
                 break;
             }
 
+            error!("loading entire segment");
             // Current segment is smaller than the remaining size, so we need to get all messages from it.
-            let segment_batches = segment.get_all_batches().await?.into_iter().map(Arc::new);
-            batches.splice(..0, segment_batches);
+            let start_position = 0;
+            let reader = segment
+                .log
+                .read_blocks(start_position, segment_size)
+                .into_async_read();
+            error!("created reader");
+            let message_stream = RetainedMessageStream::new(reader, 4096);
+            error!("created message stream");
+            let collected_messages = message_stream
+                .map_ok(Arc::new)
+                .try_collect::<Vec<_>>()
+                .await?;
+            error!(
+                "loaded {} messages from entire segment",
+                collected_messages.len()
+            );
+            messages.extend(collected_messages);
             remaining_size = remaining_size.saturating_sub(segment_size_bytes);
             if remaining_size == 0 {
                 break;
             }
         }
-        let mut retained_messages = Vec::new();
-        for batch in batches {
-            let messages = batch.into_messages_iter().map(Arc::new).collect::<Vec<_>>();
-            retained_messages.extend(messages);
-        }
-        Ok(retained_messages)
+        Ok(messages)
     }
 
     fn load_messages_from_cache(

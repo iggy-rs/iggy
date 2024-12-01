@@ -47,11 +47,12 @@ impl RetainedMessageBatch {
     }
 
     pub fn extend2(&self, bytes: &mut [u8]) {
+        let length = self.length.as_bytes_u64() as u32;
         bytes[0..8].copy_from_slice(&self.base_offset.to_le_bytes());
-        bytes[8..12].copy_from_slice(&self.length.to_le_bytes());
+        bytes[8..12].copy_from_slice(&length.to_le_bytes());
         bytes[12..16].copy_from_slice(&self.last_offset_delta.to_le_bytes());
         bytes[16..24].copy_from_slice(&self.max_timestamp.to_le_bytes());
-        bytes[24..self.length as usize + RETAINED_BATCH_OVERHEAD as usize]
+        bytes[24..(self.length.as_bytes_u64() + RETAINED_BATCH_OVERHEAD) as usize]
             .copy_from_slice(&self.bytes);
     }
 

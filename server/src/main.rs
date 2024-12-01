@@ -32,7 +32,11 @@ async fn main() -> Result<(), ServerError> {
     let figure = standard_font.convert("Iggy Server");
     println!("{}", figure.unwrap());
 
-    if let Ok(path) = dotenv() {
+    if let Ok(env_path) = std::env::var("IGGY_ENV_PATH") {
+        if dotenvy::from_path(&env_path).is_ok() {
+            println!("Loaded environment variables from path: {env_path}");
+        }
+    } else if let Ok(path) = dotenv() {
         println!(
             "Loaded environment variables from .env file at path: {}",
             path.display()

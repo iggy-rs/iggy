@@ -83,9 +83,6 @@ impl BatchAccumulator {
         let mut remaining_messages = Vec::with_capacity(remainder.len());
         let has_remainder = !remainder.is_empty();
         if has_remainder {
-            warn!("has remainder");
-        }
-        if has_remainder {
             self.base_offset = remainder.first().unwrap().offset;
             self.current_size = remainder
                 .iter()

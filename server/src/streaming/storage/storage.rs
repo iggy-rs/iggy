@@ -9,6 +9,7 @@ use std::{
     task::Poll,
 };
 use tokio::task::{spawn_blocking, JoinHandle};
+use tracing::error;
 
 const O_DIRECT: i32 = 0x4000;
 
@@ -27,14 +28,14 @@ impl Storage<DmaBuf> for DmaStorage {
     type ReadResult = ReadSectors;
 
     fn read_sectors(&self, position: u64, buf: DmaBuf) -> Self::ReadResult {
-        let mut buf = buf;
         let file_path = self.file_path;
+        let file = std::fs::File::options()
+            .read(true)
+            .custom_flags(O_DIRECT)
+            .open(file_path)
+            .unwrap();
         let handle = spawn_blocking(move || {
-            let file = std::fs::File::options()
-                .read(true)
-                .custom_flags(O_DIRECT)
-                .open(file_path)
-                .unwrap();
+            let mut buf = buf;
             file.read_exact_at(buf.as_mut(), position)?;
             drop(file);
             Ok(buf)

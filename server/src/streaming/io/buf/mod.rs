@@ -6,4 +6,5 @@ pub trait IoBuf: AsRef<[u8]> + AsMut<[u8]> {
     fn as_ptr_mut(&mut self) -> *mut u8;
     fn as_bytes(&self) -> &[u8];
     fn as_bytes_mut(&mut self) -> &mut [u8];
+    fn len(&self) -> usize;
 }

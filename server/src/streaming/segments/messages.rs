@@ -208,7 +208,8 @@ impl Segment {
         index
     }
 
-    pub async fn persist_messages(&mut self, fsync: bool) -> Result<usize, IggyError> {
+    pub async fn persist_messages(&mut self) -> Result<usize, IggyError> {
+        let test = &self.log;
         let sector_size = 4096;
         let index_storage = self.storage.segment.clone();
         if self.unsaved_messages.is_none() {

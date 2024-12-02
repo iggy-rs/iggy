@@ -62,7 +62,7 @@ impl Segment {
         messages_count_of_parent_partition: Arc<AtomicU64>,
     ) -> Segment {
         let path = config.get_segment_path(stream_id, topic_id, partition_id, start_offset);
-        let block_size = 100 * 4096;
+        let block_size = 1000 * 4096;
         let file_path = Self::get_log_path(&path).leak();
         let dma_storage = DmaStorage::new(file_path);
         let log = Log::new(dma_storage, block_size);

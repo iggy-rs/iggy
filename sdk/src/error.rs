@@ -151,6 +151,8 @@ pub enum IggyError {
     CannotParseBool(#[from] std::str::ParseBoolError) = 208,
     #[error("Cannot parse header kind from {0}")]
     CannotParseHeaderKind(String) = 209,
+    #[error("End of file")]
+    Eof = 210,
     #[error("HTTP response error, status: {0}, body: {1}")]
     HttpResponseError(u16, String) = 300,
     #[error("Request middleware error")]

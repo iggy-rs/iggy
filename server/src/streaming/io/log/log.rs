@@ -1,7 +1,7 @@
 use super::{LogReader, LogWriter};
 use crate::streaming::{io::buf::IoBuf, storage::Storage};
 use futures::task::Poll;
-use futures::{Future, FutureExt, Stream};
+use futures::{AsyncReadExt, Future, FutureExt, Stream};
 use pin_project::pin_project;
 use std::{marker::PhantomData, pin::Pin};
 
@@ -91,7 +91,7 @@ where
         cx: &mut std::task::Context<'_>,
     ) -> Poll<Option<Self::Item>> {
         let mut this = self.project();
-        if *this.position > *this.limit {
+        if *this.position >= *this.limit {
             return Poll::Ready(None);
         }
 
@@ -102,11 +102,12 @@ where
             return Poll::Ready(Some(result));
         } else {
             let buf_size = std::cmp::min(*this.size, (*this.limit - *this.position) as usize);
+            //*this.size = buf_size;
             let buf = Buf::new(buf_size);
             let mut fut = this.storage.read_sectors(*this.position, buf);
             match fut.poll_unpin(cx) {
                 Poll::Ready(result) => {
-                    *this.position += *this.size as u64;
+                    *this.position += buf_size as u64;
                     Poll::Ready(Some(result))
                 }
                 Poll::Pending => {

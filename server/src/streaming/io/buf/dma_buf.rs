@@ -47,6 +47,10 @@ impl IoBuf for DmaBuf {
         unsafe { std::slice::from_raw_parts_mut(self.as_ptr_mut(), self.size) }
     }
 
+    fn len(&self) -> usize {
+        self.size
+    }
+
     fn new(size: usize) -> Self {
         assert!(size > 0);
         assert!(size % 512 == 0);

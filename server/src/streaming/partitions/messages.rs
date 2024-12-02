@@ -12,7 +12,7 @@ use iggy::utils::sizeable::Sizeable;
 use iggy::utils::timestamp::IggyTimestamp;
 use std::future;
 use std::sync::{atomic::Ordering, Arc};
-use tracing::{error, trace, warn};
+use tracing::{trace, warn};
 
 const EMPTY_MESSAGES: Vec<RetainedMessage> = vec![];
 
@@ -250,7 +250,6 @@ impl Partition {
             size_bytes,
             self.partition_id
         );
-
         if self.segments.is_empty() {
             return Ok(EMPTY_MESSAGES.into_iter().map(Arc::new).collect());
         }
@@ -264,9 +263,7 @@ impl Partition {
             }
 
             let segment_size = segment.size_bytes.as_bytes_u64();
-            error!("loading from segment with size: {}", segment_size);
             if segment_size_bytes > remaining_size {
-                error!("loading part of segment");
                 // Last segment is bigger than the remaining size, so we need to get the newest messages from it.
 
                 // TODO: Once the batch accumulator is refactored to flush every n blocks,
@@ -282,44 +279,35 @@ impl Partition {
                 let mut accumulated_size = 0;
                 let collected_messages = message_stream
                     .try_filter_map(|msg| {
-                        let size = msg.get_size_bytes();
-                        accumulated_size += size.as_bytes_u64();
-                        if accumulated_size >= complement {
-                            future::ready(Ok(Some(Arc::new(msg))))
+                        let msg_size = msg.get_size_bytes().as_bytes_u64();
+                        accumulated_size += msg_size;
+
+                        if accumulated_size < complement {
+                            return future::ready(Ok(None));
                         } else {
-                            future::ready(Ok(None))
+                            return future::ready(Ok(Some(Arc::new(msg))));
                         }
                     })
                     .try_collect::<Vec<_>>()
                     .await?;
-                error!(
-                    "loaded: {} messages from partial segment",
-                    collected_messages.len()
-                );
-                messages.extend(collected_messages);
+                messages.splice(0.., collected_messages);
                 break;
             }
 
-            error!("loading entire segment");
             // Current segment is smaller than the remaining size, so we need to get all messages from it.
             let start_position = 0;
             let reader = segment
                 .log
                 .read_blocks(start_position, segment_size)
                 .into_async_read();
-            error!("created reader");
             let message_stream = RetainedMessageStream::new(reader, 4096);
-            error!("created message stream");
             let collected_messages = message_stream
                 .map_ok(Arc::new)
                 .try_collect::<Vec<_>>()
                 .await?;
-            error!(
-                "loaded {} messages from entire segment",
-                collected_messages.len()
-            );
+
             messages.extend(collected_messages);
-            remaining_size = remaining_size.saturating_sub(segment_size_bytes);
+            remaining_size = remaining_size.saturating_sub(segment_size);
             if remaining_size == 0 {
                 break;
             }
@@ -465,7 +453,7 @@ impl Partition {
                     self.partition_id
                 );
 
-                last_segment.persist_messages(false).await?;
+                last_segment.persist_messages().await?;
                 self.unsaved_messages_count = 0;
             }
         }
@@ -489,7 +477,7 @@ impl Partition {
         // Make sure all of the messages from the accumulator are persisted
         // no leftover from one round trip.
         while last_segment.unsaved_messages.is_some() {
-            last_segment.persist_messages(false).await?;
+            last_segment.persist_messages().await?;
         }
         self.unsaved_messages_count = 0;
         Ok(())

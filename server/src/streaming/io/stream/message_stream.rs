@@ -85,6 +85,9 @@ where
                         return Poll::Pending;
                     }
                 };
+                if n == 0 {
+                    return Poll::Ready(Err(IggyError::Eof));
+                }
                 read_offset += n;
             }
             Poll::Ready(Ok(()))
@@ -99,7 +102,10 @@ where
                             if let Err(e) =
                                 futures::ready!(read_exact(Reading::Header, &mut buf[read..], cx))
                             {
-                                return Some(Err(e.into())).into();
+                                match e {
+                                    IggyError::Eof => return Poll::Ready(None),
+                                    _ => return Some(Err(e.into())).into(),
+                                }
                             }
 
                             //TODO: maybe we could use more of those fields ??
@@ -113,7 +119,10 @@ where
                         if let Err(e) =
                             futures::ready!(read_exact(Reading::Length, &mut buf[read..], cx))
                         {
-                            return Some(Err(e.into())).into();
+                            match e {
+                                IggyError::Eof => return Poll::Ready(None),
+                                _ => return Some(Err(e.into())).into(),
+                            }
                         }
                         let length = u32::from_le_bytes(buf[0..4].try_into().unwrap());
                         *this.message_length = length;
@@ -123,7 +132,10 @@ where
                         if let Err(e) =
                             futures::ready!(read_exact(Reading::Message, &mut payload, cx))
                         {
-                            return Some(Err(e.into())).into();
+                            match e {
+                                IggyError::Eof => return Poll::Ready(None),
+                                _ => return Some(Err(e.into())).into(),
+                            }
                         }
                         *this.read_bytes += length as u64 + 4;
                         if this.read_bytes >= this.batch_length {
@@ -150,7 +162,10 @@ where
                         if let Err(e) =
                             futures::ready!(read_exact(Reading::Message, &mut buf[read..], cx))
                         {
-                            return Some(Err(e.into())).into();
+                            match e {
+                                IggyError::Eof => return Poll::Ready(None),
+                                _ => return Some(Err(e.into())).into(),
+                            }
                         }
                         *this.read_bytes += *this.message_length as u64 + 4;
                         if this.read_bytes >= this.batch_length {
@@ -180,7 +195,10 @@ where
         if !*this.header_read {
             let mut buf = [0u8; RETAINED_BATCH_OVERHEAD as _];
             if let Err(e) = futures::ready!(read_exact(Reading::Header, &mut buf, cx)) {
-                return Some(Err(e.into())).into();
+                match e {
+                    IggyError::Eof => return Poll::Ready(None),
+                    _ => return Some(Err(e.into())).into(),
+                }
             }
 
             //TODO: maybe we could use more of those fields ??
@@ -193,7 +211,10 @@ where
 
         let mut buf = [0u8; 4];
         if let Err(e) = futures::ready!(read_exact(Reading::Length, &mut buf, cx)) {
-            return Some(Err(e.into())).into();
+            match e {
+                IggyError::Eof => return Poll::Ready(None),
+                _ => return Some(Err(e.into())).into(),
+            }
         }
         let length = u32::from_le_bytes(buf[0..4].try_into().unwrap());
         *this.message_length = length;
@@ -201,7 +222,10 @@ where
         let mut payload = BytesMut::with_capacity(length as _);
         payload.put_bytes(0, length as _);
         if let Err(e) = futures::ready!(read_exact(Reading::Message, &mut payload, cx)) {
-            return Some(Err(e.into())).into();
+            match e {
+                IggyError::Eof => return Poll::Ready(None),
+                _ => return Some(Err(e.into())).into(),
+            }
         }
         *this.read_bytes += length as u64 + 4;
         if this.read_bytes >= this.batch_length {

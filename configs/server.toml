@@ -272,7 +272,7 @@ enabled = true
 enforce_fsync = true
 
 # Interval for running the message saver.
-interval = "1min"
+interval = "30 s"
 
 # Personal access token configuration.
 [personal_access_token]

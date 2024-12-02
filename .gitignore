@@ -8,3 +8,4 @@ bench_*
 /rust-clippy-results.sarif
 /Cross.toml
 /performance_results*
+.env

@@ -188,7 +188,7 @@ impl Validatable<ServerError> for ArchiverConfig {
             return Ok(());
         }
 
-        return match self.kind {
+        match self.kind {
             ArchiverKind::Disk => {
                 if self.disk.is_none() {
                     return Err(ServerError::InvalidConfiguration(
@@ -245,7 +245,7 @@ impl Validatable<ServerError> for ArchiverConfig {
                 }
                 Ok(())
             }
-        };
+        }
     }
 }
 

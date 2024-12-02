@@ -178,7 +178,7 @@ impl<'de> Deserialize<'de> for IggyExpiry {
 
 struct IggyExpiryVisitor;
 
-impl<'de> Visitor<'de> for IggyExpiryVisitor {
+impl Visitor<'_> for IggyExpiryVisitor {
     type Value = IggyExpiry;
 
     fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {

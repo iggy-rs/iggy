@@ -54,7 +54,7 @@ impl FromStr for MemoryResourceQuota {
 
 struct ResourceQuotaVisitor;
 
-impl<'de> Visitor<'de> for ResourceQuotaVisitor {
+impl Visitor<'_> for ResourceQuotaVisitor {
     type Value = MemoryResourceQuota;
 
     fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {

@@ -5,7 +5,6 @@ use futures::{Future, FutureExt, Stream};
 use pin_project::pin_project;
 use std::{marker::PhantomData, pin::Pin};
 
-
 #[derive(Debug)]
 pub struct Log<S, Buf>
 where

@@ -9,7 +9,6 @@ use bytes::{BufMut, BytesMut};
 use futures::{AsyncBufRead, AsyncBufReadExt, AsyncReadExt, FutureExt, Stream};
 use iggy::error::IggyError;
 
-
 #[pin_project]
 pub struct RetainedMessageStream<R>
 where

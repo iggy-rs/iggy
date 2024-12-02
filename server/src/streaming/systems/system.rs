@@ -235,16 +235,16 @@ impl System {
 
     #[instrument(skip_all)]
     pub async fn shutdown(&mut self) -> Result<(), IggyError> {
-        self.persist_messages(true).await?;
+        self.persist_messages().await?;
         Ok(())
     }
 
     #[instrument(skip_all)]
-    pub async fn persist_messages(&self, fsync: bool) -> Result<usize, IggyError> {
+    pub async fn persist_messages(&self) -> Result<usize, IggyError> {
         trace!("Saving buffered messages on disk...");
         let mut saved_messages_number = 0;
         for stream in self.streams.values() {
-            saved_messages_number += stream.persist_messages(fsync).await?;
+            saved_messages_number += stream.persist_messages().await?;
         }
 
         Ok(saved_messages_number)

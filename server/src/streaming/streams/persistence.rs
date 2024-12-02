@@ -20,10 +20,10 @@ impl Stream {
         self.storage.stream.delete(self).await
     }
 
-    pub async fn persist_messages(&self, fsync: bool) -> Result<usize, IggyError> {
+    pub async fn persist_messages(&self) -> Result<usize, IggyError> {
         let mut saved_messages_number = 0;
         for topic in self.get_topics() {
-            saved_messages_number += topic.persist_messages(fsync).await?;
+            saved_messages_number += topic.persist_messages().await?;
         }
 
         Ok(saved_messages_number)

@@ -1,11 +1,10 @@
 use super::{LogReader, LogWriter};
 use crate::streaming::{io::buf::IoBuf, storage::Storage};
 use futures::task::Poll;
-use futures::{AsyncReadExt, Future, FutureExt, Stream};
+use futures::{Future, FutureExt, Stream};
 use pin_project::pin_project;
 use std::{marker::PhantomData, pin::Pin};
 
-use tracing::error;
 
 #[derive(Debug)]
 pub struct Log<S, Buf>

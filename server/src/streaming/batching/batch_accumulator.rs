@@ -5,7 +5,6 @@ use bytes::BytesMut;
 use iggy::utils::byte_size::IggyByteSize;
 use iggy::utils::sizeable::Sizeable;
 use std::sync::Arc;
-use tracing::warn;
 
 #[derive(Debug, Clone)]
 pub struct BatchAccumulator {

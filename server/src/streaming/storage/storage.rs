@@ -9,7 +9,6 @@ use std::{
     task::Poll,
 };
 use tokio::task::{spawn_blocking, JoinHandle};
-use tracing::error;
 
 const O_DIRECT: i32 = 0x4000;
 

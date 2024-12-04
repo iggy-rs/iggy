@@ -270,8 +270,7 @@ impl Partition {
                 // causing the on disk batch size to be deterministic,
                 // move to calculating the start_position, instead of brute force searching from the beginning.
                 let start_position = 0;
-                let reader = segment
-                    .log
+                let reader = segment.log
                     .read_blocks(start_position, segment_size)
                     .into_async_read();
                 let complement = segment_size - remaining_size;
@@ -296,8 +295,8 @@ impl Partition {
 
             // Current segment is smaller than the remaining size, so we need to get all messages from it.
             let start_position = 0;
-            let reader = segment
-                .log
+            let reader = 
+                segment.log
                 .read_blocks(start_position, segment_size)
                 .into_async_read();
             let message_stream = RetainedMessageStream::new(reader, 4096);

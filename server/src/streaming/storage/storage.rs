@@ -1,25 +1,29 @@
 use super::Storage;
-use crate::streaming::io::buf::dma_buf::DmaBuf;
+use crate::streaming::io::buf::dma_buf::{AreczekDmaBuf, DmaBuf};
 use iggy::error::IggyError;
 use std::{
     future::Future,
     io::Write,
     os::unix::fs::{FileExt, OpenOptionsExt},
     pin::Pin,
+    sync::RwLock,
     task::Poll,
 };
-use tokio::task::{spawn_blocking, JoinHandle};
+use tokio::{task::{spawn_blocking, JoinHandle}};
+use  lazy_lru::LruCache;
 
 const O_DIRECT: i32 = 0x4000;
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct DmaStorage {
     file_path: &'static str,
+    pub cache: RwLock<LruCache<u64, AreczekDmaBuf>>
 }
 
 impl DmaStorage {
     pub fn new(file_path: &'static str) -> Self {
-        Self { file_path }
+        let cache  = RwLock::new(LruCache::new(15));
+        Self { file_path, cache }
     }
 }
 
@@ -55,6 +59,16 @@ impl Storage<DmaBuf> for DmaStorage {
         .await
         .expect("write_sectors - Failed to join the task")?;
         Ok(size)
+    }
+
+    fn get_from_cache(&self, position: &u64) -> Option<AreczekDmaBuf> {
+        let cache = self.cache.read().unwrap();
+        let val = cache.get(position);
+        return val.cloned();
+    }
+
+    fn put_into_cache(&self, position: u64, buf: AreczekDmaBuf) {
+        self.cache.write().unwrap().put(position, buf);
     }
 }
 

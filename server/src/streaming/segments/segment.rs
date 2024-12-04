@@ -8,6 +8,7 @@ use crate::streaming::storage::storage::DmaStorage;
 use iggy::utils::byte_size::IggyByteSize;
 use iggy::utils::expiry::IggyExpiry;
 use iggy::utils::timestamp::IggyTimestamp;
+use tokio::sync::Mutex;
 use std::sync::atomic::AtomicU64;
 use std::sync::Arc;
 

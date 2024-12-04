@@ -1,9 +1,21 @@
 use std::{
     alloc::{self, Layout},
     ptr,
+    sync::Arc,
 };
 
 use super::IoBuf;
+
+#[derive(Debug)]
+pub struct AreczekDmaBuf {
+    inner: Arc<DmaBuf>,
+}
+
+impl Clone for AreczekDmaBuf {
+    fn clone(&self) -> Self {
+        Self { inner: self.inner.clone() }
+    }
+}
 
 #[derive(Debug)]
 pub struct DmaBuf {
@@ -15,6 +27,40 @@ pub struct DmaBuf {
 impl DmaBuf {
     pub fn len(&self) -> usize {
         self.size
+    }
+}
+
+impl IoBuf for AreczekDmaBuf {
+    fn new(size: usize) -> Self {
+        let buf = DmaBuf::new(size);
+        let inner = Arc::new(buf);
+        Self { inner }
+    }
+
+    fn as_ptr(&self) -> *const u8 {
+        self.inner.as_ptr()
+    }
+
+    fn as_ptr_mut(&mut self) -> *mut u8 {
+        let this = Arc::get_mut(&mut self.inner).unwrap();
+        this.as_ptr_mut()
+    }
+
+    fn as_bytes(&self) -> &[u8] {
+        self.inner.as_bytes()
+    }
+
+    fn as_bytes_mut(&mut self) -> &mut [u8] {
+        let this = Arc::get_mut(&mut self.inner).unwrap();
+        this.as_bytes_mut()
+    }
+
+    fn len(&self) -> usize {
+        self.inner.len()
+    }
+
+    fn into_areczek(self) -> AreczekDmaBuf {
+        unimplemented!()
     }
 }
 
@@ -61,6 +107,11 @@ impl IoBuf for DmaBuf {
 
         Self { data, layout, size }
     }
+
+    fn into_areczek(self) -> AreczekDmaBuf {
+        let inner = Arc::new(self);
+        AreczekDmaBuf { inner }
+    }
 }
 
 impl AsRef<[u8]> for DmaBuf {
@@ -72,5 +123,17 @@ impl AsRef<[u8]> for DmaBuf {
 impl AsMut<[u8]> for DmaBuf {
     fn as_mut(&mut self) -> &mut [u8] {
         self.as_bytes_mut()
+    }
+}
+
+impl AsRef<[u8]> for AreczekDmaBuf {
+    fn as_ref(&self) -> &[u8] {
+        self.inner.as_bytes()
+    }
+}
+
+impl AsMut<[u8]> for AreczekDmaBuf {
+    fn as_mut(&mut self) -> &mut [u8] {
+        &mut []
     }
 }

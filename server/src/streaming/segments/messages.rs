@@ -138,8 +138,8 @@ impl Segment {
     where
         F: Fn(&RetainedMessage) -> bool,
     {
-        let reader = self
-            .log
+        let reader = 
+            self.log
             .read_blocks(start_position as _, self.size_bytes.as_bytes_u64())
             .into_async_read();
         let message_stream = RetainedMessageStream::new(reader, 4096);

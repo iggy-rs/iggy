@@ -1,4 +1,4 @@
-use super::io::buf::IoBuf;
+use super::io::buf::{IoBuf, dma_buf::AreczekDmaBuf};
 use futures::Future;
 use iggy::error::IggyError;
 
@@ -15,4 +15,7 @@ where
     // this method is called.
     fn write_sectors(&mut self, buf: Buf) -> impl Future<Output = Result<u32, IggyError>>;
     fn read_sectors(&self, position: u64, buf: Buf) -> Self::ReadResult;
+
+    fn get_from_cache(&self, position: &u64) -> Option<AreczekDmaBuf>;
+    fn put_into_cache(&self, position: u64, buf: AreczekDmaBuf);
 }

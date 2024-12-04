@@ -29,9 +29,10 @@ dotenvy = { version = "0.15.7" }
 figlet-rs = "0.1.5"
 figment = { version = "0.10.18", features = ["toml", "env"] }
 flume = "0.11.0"
-futures = "0.3.30"
+futures = { version = "0.3.30" }
 iggy = { path = "../sdk" }
 jsonwebtoken = "9.3.0"
+lazy-lru = "0.1.3"
 log = "0.4.20"
 moka = { version = "0.12.5", features = ["future"] }
 openssl = { version = "0.10.66", features = ["vendored"] }
@@ -53,6 +54,7 @@ opentelemetry_sdk = { version = "0.26.0", features = [
     "trace",
     "tokio",
 ] }
+pin-project = "1.1.7"
 prometheus-client = "0.22.2"
 quinn = { version = "0.11.5" }
 rcgen = "0.13.1"

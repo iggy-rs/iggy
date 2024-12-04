@@ -1,5 +1,5 @@
 use crate::state::system::StreamState;
-use crate::streaming::storage::StreamStorage;
+use crate::streaming::iggy_storage::StreamStorage;
 use crate::streaming::streams::stream::Stream;
 use crate::streaming::topics::topic::Topic;
 use async_trait::async_trait;

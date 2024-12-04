@@ -6,20 +6,19 @@ use crate::configs::system::SystemConfig;
 use crate::state::system::{PartitionState, StreamState, TopicState};
 use crate::state::State;
 use crate::streaming::batching::message_batch::RetainedMessageBatch;
+use crate::streaming::iggy_storage::{
+    PartitionStorage, SegmentStorage, StreamStorage, SystemInfoStorage, SystemStorage, TopicStorage,
+};
 use crate::streaming::partitions::partition::{ConsumerOffset, Partition};
 use crate::streaming::persistence::persister::Persister;
 use crate::streaming::segments::index::{Index, IndexRange};
 use crate::streaming::segments::segment::Segment;
-use crate::streaming::storage::{
-    PartitionStorage, SegmentStorage, StreamStorage, SystemInfoStorage, SystemStorage, TopicStorage,
-};
 use crate::streaming::streams::stream::Stream;
 use crate::streaming::systems::info::SystemInfo;
 use crate::streaming::topics::topic::Topic;
 use async_trait::async_trait;
 use iggy::consumer::ConsumerKind;
 use iggy::error::IggyError;
-use iggy::utils::byte_size::IggyByteSize;
 use std::path::Path;
 use std::sync::Arc;
 use tokio::fs::{read_dir, rename};
@@ -215,28 +214,12 @@ impl SegmentStorage for NoopSegmentStorage {
         Ok(())
     }
 
-    async fn load_message_batches(
-        &self,
-        _segment: &Segment,
-        _index_range: &IndexRange,
-    ) -> Result<Vec<RetainedMessageBatch>, IggyError> {
-        Ok(vec![])
-    }
-
     async fn load_newest_batches_by_size(
         &self,
         _segment: &Segment,
         _size: u64,
     ) -> Result<Vec<RetainedMessageBatch>, IggyError> {
         Ok(vec![])
-    }
-
-    async fn save_batches(
-        &self,
-        _segment: &Segment,
-        _batch: RetainedMessageBatch,
-    ) -> Result<IggyByteSize, IggyError> {
-        Ok(IggyByteSize::default())
     }
 
     async fn load_message_ids(&self, _segment: &Segment) -> Result<Vec<u128>, IggyError> {

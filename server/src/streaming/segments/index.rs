@@ -32,10 +32,18 @@ impl Segment {
         let ending_offset_idx = binary_search_index(indices, end_offset);
 
         match (starting_offset_idx, ending_offset_idx) {
-            (Some(starting_offset_idx), Some(ending_offset_idx)) => Ok(IndexRange {
-                start: indices[starting_offset_idx],
-                end: indices[ending_offset_idx],
-            }),
+            (Some(starting_offset_idx), Some(ending_offset_idx)) => {
+                // UGLY AS FOOOOOOOOOOOOOK, but will deal with it later on.
+                let end_idx = if ending_offset_idx == indices.len() - 1 {
+                    ending_offset_idx
+                } else {
+                    ending_offset_idx + 1
+                };
+                Ok(IndexRange {
+                    start: indices[starting_offset_idx],
+                    end: indices[end_idx],
+                })
+            }
             (Some(starting_offset_idx), None) => Ok(IndexRange {
                 start: indices[starting_offset_idx],
                 end: *indices.last().unwrap(),
@@ -79,7 +87,7 @@ impl IndexRange {
 mod tests {
     use super::*;
     use crate::configs::system::{SegmentConfig, SystemConfig};
-    use crate::streaming::storage::tests::get_test_system_storage;
+    use crate::streaming::iggy_storage::tests::get_test_system_storage;
     use iggy::utils::expiry::IggyExpiry;
     use std::sync::atomic::AtomicU64;
     use std::sync::Arc;
@@ -103,6 +111,7 @@ mod tests {
             topic_id,
             partition_id,
             start_offset,
+            None,
             config,
             storage,
             IggyExpiry::NeverExpire,

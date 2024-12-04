@@ -505,7 +505,7 @@ impl IggyConsumer {
                 )
                 .await;
 
-            if let Ok(polled_messages) = polled_messages {
+            if let Ok(mut polled_messages) = polled_messages {
                 if polled_messages.messages.is_empty() {
                     return Ok(polled_messages);
                 }
@@ -522,12 +522,17 @@ impl IggyConsumer {
                     last_consumed_offset.insert(partition_id, AtomicU64::new(0));
                 }
 
-                if has_consumed_offset && consumed_offset >= polled_messages.messages[0].offset {
-                    return Ok(PolledMessages {
-                        messages: EMPTY_MESSAGES,
-                        current_offset: polled_messages.current_offset,
-                        partition_id,
-                    });
+                if has_consumed_offset {
+                    polled_messages
+                        .messages
+                        .retain(|message| message.offset > consumed_offset);
+                    if polled_messages.messages.is_empty() {
+                        return Ok(PolledMessages {
+                            messages: EMPTY_MESSAGES,
+                            current_offset: polled_messages.current_offset,
+                            partition_id,
+                        });
+                    }
                 }
 
                 let stored_offset;

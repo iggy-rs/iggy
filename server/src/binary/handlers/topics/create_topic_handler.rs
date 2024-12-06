@@ -1,4 +1,5 @@
 use crate::binary::mapper;
+use crate::binary::handlers::topics::COMPONENT;
 use crate::binary::sender::Sender;
 use crate::state::command::EntryCommand;
 use crate::streaming::session::Session;
@@ -36,7 +37,7 @@ pub async fn handle(
                 command.replication_factor,
             )
             .await
-            .with_error(|_| format!("TOPIC_HANDLER - failed to create topic for stream_id: {stream_id}, topic_id: {:?}",
+            .with_error(|_| format!("{COMPONENT} - failed to create topic for stream_id: {stream_id}, topic_id: {:?}",
                 topic_id
             ))?;
         command.message_expiry = topic.message_expiry;
@@ -50,7 +51,7 @@ pub async fn handle(
         .apply(session.get_user_id(), EntryCommand::CreateTopic(command))
         .await
         .with_error(|_| format!(
-            "TOPIC_HANDLER - failed to apply create topic for stream_id: {stream_id}, topic_id: {:?}",
+            "{COMPONENT} - failed to apply create topic for stream_id: {stream_id}, topic_id: {:?}",
             topic_id
         ))?;
     sender.send_ok_response(&response).await?;

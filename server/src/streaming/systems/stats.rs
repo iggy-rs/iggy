@@ -1,5 +1,7 @@
 use crate::streaming::session::Session;
+use crate::streaming::systems::COMPONENT;
 use crate::streaming::systems::system::System;
+use error_set::ResultContext;
 use iggy::error::IggyError;
 use iggy::locking::IggySharedMutFn;
 use iggy::models::stats::Stats;
@@ -19,7 +21,14 @@ fn sysinfo() -> &'static Mutex<SysinfoSystem> {
 impl System {
     pub async fn get_stats(&self, session: &Session) -> Result<Stats, IggyError> {
         self.ensure_authenticated(session)?;
-        self.permissioner.get_stats(session.get_user_id())?;
+        self.permissioner
+            .get_stats(session.get_user_id())
+            .with_error(|_| {
+                format!(
+                    "{COMPONENT} - permission denied to get stats for user with id: {}",
+                    session.get_user_id(),
+                )
+            })?;
         self.get_stats_bypass_auth().await
     }
 

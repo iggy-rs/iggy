@@ -1,4 +1,5 @@
 use crate::configs::http::HttpJwtConfig;
+use crate::http::jwt::COMPONENT;
 use crate::http::jwt::json_web_token::{GeneratedToken, JwtClaims, RevokedAccessToken};
 use crate::http::jwt::storage::TokenStorage;
 use crate::streaming::persistence::persister::Persister;
@@ -75,7 +76,7 @@ impl JwtManager {
             not_before: config.not_before,
             key: config
                 .get_encoding_key()
-                .with_error(|_| "HTTP_JWT - failed to get encoding key")?,
+                .with_error(|_| format!("{COMPONENT} - failed to get encoding key"))?,
             algorithm,
         };
         let validator = ValidatorOptions {
@@ -84,7 +85,7 @@ impl JwtManager {
             clock_skew: config.clock_skew,
             key: config
                 .get_decoding_key()
-                .with_error(|_| "HTTP_JWT - failed to get decoding key")?,
+                .with_error(|_| format!("{COMPONENT} - failed to get decoding key"))?,
         };
         JwtManager::new(persister, path, issuer, validator)
     }
@@ -138,7 +139,7 @@ impl JwtManager {
             .await
             .with_error(|_| {
                 format!(
-                    "HTTP_JWT - failed to delete revoked access tokens, IDs {:?}",
+                    "{COMPONENT} - failed to delete revoked access tokens, IDs {:?}",
                     tokens_to_delete
                 )
             })?;
@@ -210,7 +211,7 @@ impl JwtManager {
                 expiry,
             })
             .await
-            .with_error(|_| format!("HTTP_JWT - failed to save revoked access token: {}", id))?;
+            .with_error(|_| format!("{COMPONENT} - failed to save revoked access token: {}", id))?;
         self.generate(jwt_claims.claims.sub)
     }
 
@@ -257,7 +258,7 @@ impl JwtManager {
             .await
             .with_error(|_| {
                 format!(
-                    "HTTP_JWT - failed to save revoked access token: {}",
+                    "{COMPONENT} - failed to save revoked access token: {}",
                     token_id
                 )
             })?;

@@ -1,3 +1,4 @@
+use crate::http::COMPONENT;
 use crate::http::error::CustomError;
 use crate::http::jwt::json_web_token::Identity;
 use crate::http::shared::AppState;
@@ -46,7 +47,7 @@ async fn create_partitions(
             .await
             .with_error(|_| {
                 format!(
-                    "HTTP - failed to create partitions, stream ID: {}, topic ID: {}",
+                    "{COMPONENT} - failed to create partitions, stream ID: {}, topic ID: {}",
                     stream_id, topic_id
                 )
             })?;
@@ -59,7 +60,7 @@ async fn create_partitions(
         .await
         .with_error(|_| {
             format!(
-                "HTTP - failed to apply create partitions, stream ID: {}, topic ID: {}",
+                "{COMPONENT} - failed to apply create partitions, stream ID: {}, topic ID: {}",
                 stream_id, topic_id
             )
         })?;
@@ -88,7 +89,7 @@ async fn delete_partitions(
             .await
             .with_error(|_| {
                 format!(
-                    "HTTP - failed to delete partitions, stream ID: {}, topic ID: {}",
+                    "{COMPONENT} - failed to delete partitions, stream ID: {}, topic ID: {}",
                     stream_id, topic_id
                 )
             })?;
@@ -108,7 +109,7 @@ async fn delete_partitions(
         .await
         .with_error(|_| {
             format!(
-                "HTTP - failed to apply delete partitions, stream ID: {}, topic ID: {}",
+                "{COMPONENT} - failed to apply delete partitions, stream ID: {}, topic ID: {}",
                 stream_id, topic_id
             )
         })?;

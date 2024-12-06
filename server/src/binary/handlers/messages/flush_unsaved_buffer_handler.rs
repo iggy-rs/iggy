@@ -1,4 +1,5 @@
 use crate::binary::sender::Sender;
+use crate::binary::handlers::messages::COMPONENT;
 use crate::streaming::session::Session;
 use crate::streaming::systems::system::SharedSystem;
 use anyhow::Result;
@@ -25,7 +26,7 @@ pub async fn handle(
         .await
         .with_error(|_| {
             format!(
-                "MESSAGE_HANDLER - failed to flush unsaved buffer for stream_id: {}, topic_id: {}, partition_id: {}, session: {}",
+                "{COMPONENT} - failed to flush unsaved buffer for stream_id: {}, topic_id: {}, partition_id: {}, session: {}",
                 command.stream_id, command.topic_id, command.partition_id, session
             )
         })?;

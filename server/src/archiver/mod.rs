@@ -8,6 +8,8 @@ use serde::{Deserialize, Serialize};
 use std::fmt::{Debug, Formatter};
 use std::str::FromStr;
 
+pub const COMPONENT: &str = "ARCHIVER";
+
 #[derive(Debug, Serialize, Deserialize, PartialEq, Default, Display, Copy, Clone)]
 #[serde(rename_all = "lowercase")]
 pub enum ArchiverKind {

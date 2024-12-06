@@ -1,3 +1,4 @@
+use crate::http::COMPONENT;
 use crate::http::error::CustomError;
 use crate::http::jwt::json_web_token::Identity;
 use crate::http::shared::AppState;
@@ -55,7 +56,7 @@ async fn poll_messages(
         .await
         .with_error(|_| {
             format!(
-                "HTTP - failed to poll messages, stream ID: {}, topic ID: {}, partition ID: {:?}",
+                "{COMPONENT} - failed to poll messages, stream ID: {}, topic ID: {}, partition ID: {:?}",
                 stream_id, topic_id, query.0.partition_id
             )
         })?;
@@ -94,7 +95,7 @@ async fn send_messages(
         .await
         .with_error(|_| {
             format!(
-                "HTTP - failed to append messages, stream ID: {}, topic ID: {}",
+                "{COMPONENT} - failed to append messages, stream ID: {}, topic ID: {}",
                 stream_id, topic_id
             )
         })?;

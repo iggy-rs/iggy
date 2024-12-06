@@ -1,4 +1,5 @@
 use crate::binary::mapper;
+use crate::binary::handlers::streams::COMPONENT;
 use crate::binary::sender::Sender;
 use crate::streaming::session::Session;
 use crate::streaming::systems::system::SharedSystem;
@@ -17,7 +18,7 @@ pub async fn handle(
     debug!("session: {session}, command: {command}");
     let system = system.read().await;
     let streams = system.find_streams(session).with_error(|_| {
-        format!("STREAM_HANDLER - failed to find streams for session: {session}")
+        format!("{COMPONENT} - failed to find streams for session: {session}")
     })?;
     let response = mapper::map_streams(&streams);
     sender.send_ok_response(&response).await?;

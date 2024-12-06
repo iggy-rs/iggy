@@ -2,8 +2,10 @@ use crate::streaming::batching::appendable_batch_info::AppendableBatchInfo;
 use crate::streaming::batching::iterator::IntoMessagesIterator;
 use crate::streaming::models::messages::RetainedMessage;
 use crate::streaming::partitions::partition::Partition;
+use crate::streaming::partitions::COMPONENT;
 use crate::streaming::polling_consumer::PollingConsumer;
 use crate::streaming::segments::segment::Segment;
+use error_set::ResultContext;
 use iggy::messages::send_messages::Message;
 use iggy::models::messages::POLLED_MESSAGE_METADATA;
 use iggy::utils::timestamp::IggyTimestamp;
@@ -45,7 +47,11 @@ impl Partition {
                     .as_ref()
                     .segment
                     .try_load_time_index_for_timestamp(segment, timestamp)
-                    .await?;
+                    .await
+                    .with_error(|_| format!(
+                        "{COMPONENT} - failed to load time index for timestamp, partition: {}, segment start offset: {}, timestamp: {}",
+                        self, segment.start_offset, timestamp,
+                    ))?;
                 if time_index.is_none() {
                     continue;
                 } else {
@@ -83,7 +89,11 @@ impl Partition {
         if found_index.timestamp == timestamp {
             return Ok(self
                 .get_messages_by_offset(start_offset, count)
-                .await?
+                .await
+                .with_error(|_| format!(
+                    "{COMPONENT} - failed to get messages by offset, partition: {}, timestamp: {}, start offset: {}, count: {}",
+                    self, timestamp, start_offset, count,
+                ))?
                 .into_iter()
                 .filter(|msg| msg.timestamp >= timestamp)
                 .take(count as usize)
@@ -97,7 +107,11 @@ impl Partition {
         );
         Ok(self
             .get_messages_by_offset(start_offset, adjusted_count)
-            .await?
+            .await
+            .with_error(|_| format!(
+                "{COMPONENT} - failed to get messages by offset, patititon: {}, timestamp: {}, start offset: {}",
+                self, timestamp, start_offset,
+            ))?
             .into_iter()
             .filter(|msg| msg.timestamp >= timestamp)
             .take(count as usize)
@@ -248,7 +262,10 @@ impl Partition {
     ) -> Result<Vec<Arc<RetainedMessage>>, IggyError> {
         let mut messages = Vec::with_capacity(segments.len());
         for segment in segments {
-            let segment_messages = segment.get_messages(offset, count).await?;
+            let segment_messages = segment.get_messages(offset, count).await.with_error(|_| format!(
+                "{COMPONENT} - failed to get messages from segment, segment: {}, offset: {}, count: {}",
+                segment, offset, count,
+            ))?;
             for message in segment_messages {
                 messages.push(message);
             }
@@ -305,7 +322,11 @@ impl Partition {
                 // Last segment is bigger than the remaining size, so we need to get the newest messages from it.
                 let partial_batches = segment
                     .get_newest_batches_by_size(remaining_size)
-                    .await?
+                    .await
+                    .with_error(|_| format!(
+                        "{COMPONENT} - failed to get newest batches by size, segment: {}, remaining size: {}",
+                        segment, remaining_size,
+                    ))?
                     .into_iter()
                     .map(Arc::new);
                 batches.splice(..0, partial_batches);
@@ -313,7 +334,9 @@ impl Partition {
             }
 
             // Current segment is smaller than the remaining size, so we need to get all messages from it.
-            let segment_batches = segment.get_all_batches().await?.into_iter().map(Arc::new);
+            let segment_batches = segment.get_all_batches().await.with_error(|_| format!(
+                "{COMPONENT} - failed to retrieve all batches from segment: {segment}",
+            ))?.into_iter().map(Arc::new);
             batches.splice(..0, segment_batches);
             remaining_size = remaining_size.saturating_sub(segment_size_bytes);
             if remaining_size == 0 {
@@ -390,7 +413,10 @@ impl Partition {
                     "Current segment is closed, creating new segment with start offset: {} for partition with ID: {}...",
                     start_offset, self.partition_id
                 );
-                self.add_persisted_segment(start_offset).await?;
+                self.add_persisted_segment(start_offset).await.with_error(|_| format!(
+                    "{COMPONENT} - failed to add persisted segment, partition: {}, start offset: {}",
+                    self, start_offset,
+                ))?;
             }
         }
 
@@ -466,7 +492,10 @@ impl Partition {
             let last_segment = self.segments.last_mut().ok_or(IggyError::SegmentNotFound)?;
             last_segment
                 .append_batch(batch_size, messages_count, &retained_messages)
-                .await?;
+                .await
+                .with_error(|_| format!(
+                    "{COMPONENT} - failed to append batch into last segment: {last_segment}",
+                ))?;
         }
 
         if let Some(cache) = &mut self.cache {

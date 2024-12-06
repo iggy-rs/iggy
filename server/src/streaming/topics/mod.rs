@@ -7,3 +7,5 @@ pub mod persistence;
 pub mod segments;
 pub mod storage;
 pub mod topic;
+
+pub const COMPONENT: &str = "STREAMING_TOPICS";

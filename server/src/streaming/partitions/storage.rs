@@ -6,8 +6,10 @@ use crate::streaming::persistence::persister::Persister;
 use crate::streaming::segments::segment::{Segment, LOG_EXTENSION};
 use crate::streaming::storage::PartitionStorage;
 use crate::streaming::utils::file;
+use crate::streaming::partitions::COMPONENT;
 use anyhow::Context;
 use async_trait::async_trait;
+use error_set::ResultContext;
 use iggy::consumer::ConsumerKind;
 use iggy::error::IggyError;
 use std::path::Path;
@@ -46,7 +48,10 @@ impl PartitionStorage for FilePartitionStorage {
         let dir_entries = fs::read_dir(&partition.partition_path).await;
         if let Err(err) = fs::read_dir(&partition.partition_path)
                 .await
-                .with_context(|| format!("Failed to read partition with ID: {} for stream with ID: {} and topic with ID: {} and path: {}", partition.partition_id, partition.stream_id, partition.topic_id, partition.partition_path))
+                .with_context(|| format!(
+                    "{COMPONENT} - failed to read partition with ID: {} for stream with ID: {} and topic with ID: {} and path: {}",
+                    partition.partition_id, partition.stream_id, partition.topic_id, partition.partition_path,
+                ))
             {
                 return Err(IggyError::CannotReadPartitions(err));
             }
@@ -106,7 +111,9 @@ impl PartitionStorage for FilePartitionStorage {
                     Ok(schema) => {
                         // Found old format, need to convert it
                         info!("Detected changes in binary schema for partition with ID: {} and segment with start offset: {}", partition.partition_id, start_offset);
-                        segment.convert_segment_from_schema(schema).await?;
+                        segment.convert_segment_from_schema(schema).await.with_error(|_| format!(
+                            "{COMPONENT} - failed to convert segment from schema, segment: {segment}, start offset: {start_offset}",
+                        ))?;
                     }
                     Err(err) if idx + 1 == samplers_count => {
                         // Didn't find any message format, return an error
@@ -121,7 +128,9 @@ impl PartitionStorage for FilePartitionStorage {
                 }
             }
 
-            segment.load().await?;
+            segment.load().await.with_error(|_| format!(
+                "{COMPONENT} - failed to load segment: {segment}",
+            ))?;
             let capacity = partition.config.partition.messages_required_to_save;
             if !segment.is_closed {
                 segment.unsaved_messages = Some(BatchAccumulator::new(
@@ -145,7 +154,9 @@ impl PartitionStorage for FilePartitionStorage {
             let mut unique_message_ids_count = 0;
             if let Some(message_deduplicator) = &partition.message_deduplicator {
                 info!("Loading unique message IDs for partition with ID: {} and segment with start offset: {}...", partition.partition_id, segment.start_offset);
-                let message_ids = segment.storage.segment.load_message_ids(&segment).await?;
+                let message_ids = segment.storage.segment.load_message_ids(&segment).await.with_error(|_| format!(
+                    "{COMPONENT} - failed to load message ids, segment: {segment}",
+                ))?;
                 for message_id in message_ids {
                     if message_deduplicator.try_insert(&message_id).await {
                         unique_message_ids_count += 1;
@@ -191,7 +202,9 @@ impl PartitionStorage for FilePartitionStorage {
             partition.current_offset = last_segment.current_offset;
         }
 
-        partition.load_consumer_offsets().await?;
+        partition.load_consumer_offsets().await.with_error(|_| format!(
+            "{COMPONENT} - failed to load consumer offsets, partition: {partition}",
+        ))?;
         info!(
             "Loaded partition with ID: {} for stream with ID: {} and topic with ID: {}, current offset: {}.",
             partition.partition_id, partition.stream_id, partition.topic_id, partition.current_offset
@@ -260,7 +273,9 @@ impl PartitionStorage for FilePartitionStorage {
         }
 
         for segment in partition.get_segments() {
-            segment.persist().await?;
+            segment.persist().await.with_error(|_| format!(
+                "{COMPONENT} - failed to persist segment: {segment}",
+            ))?;
         }
 
         info!("Saved partition with start ID: {} for stream with ID: {} and topic with ID: {}, path: {}.", partition.partition_id, partition.stream_id, partition.topic_id, partition.partition_path);
@@ -316,7 +331,11 @@ impl PartitionStorage for FilePartitionStorage {
     async fn save_consumer_offset(&self, offset: &ConsumerOffset) -> Result<(), IggyError> {
         self.persister
             .overwrite(&offset.path, &offset.offset.to_le_bytes())
-            .await?;
+            .await
+            .with_error(|_| format!(
+                "{COMPONENT} - failed to ovewrite consumer offset with value: {}, kind: {}, consumer ID: {}, path: {}",
+                offset.offset, offset.kind, offset.consumer_id, offset.path,
+            ))?;
         trace!(
             "Stored consumer offset value: {} for {} with ID: {}, path: {}",
             offset.offset,
@@ -366,8 +385,8 @@ impl PartitionStorage for FilePartitionStorage {
 
             let path = path.unwrap().to_string();
             let consumer_id = consumer_id.unwrap();
-            let mut file = file::open(&path).await?;
-            let offset = file.read_u64_le().await?;
+            let mut file = file::open(&path).await.with_error(|_| format!("{COMPONENT} - failed to open offset file, path: {path}"))?;
+            let offset = file.read_u64_le().await.with_error(|_| format!("{COMPONENT} - failed to read consumer offset from file, path: {path}"))?;
 
             consumer_offsets.push(ConsumerOffset {
                 kind,

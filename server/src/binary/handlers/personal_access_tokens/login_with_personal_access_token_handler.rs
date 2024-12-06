@@ -1,5 +1,6 @@
 use crate::binary::mapper;
 use crate::binary::sender::Sender;
+use crate::binary::handlers::personal_access_tokens::COMPONENT;
 use crate::streaming::session::Session;
 use crate::streaming::systems::system::SharedSystem;
 use anyhow::Result;
@@ -22,7 +23,7 @@ pub async fn handle(
         .await
         .with_error(|_| {
             format!(
-                "PERSONAL_ACCESS_TOKEN_HANDLER - failed to login with personal access token: {}, session: {session}",
+                "{COMPONENT} - failed to login with personal access token: {}, session: {session}",
                 command.token
             )
         })?;

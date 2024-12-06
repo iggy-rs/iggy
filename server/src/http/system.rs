@@ -1,3 +1,4 @@
+use crate::http::COMPONENT;
 use crate::configs::http::HttpMetricsConfig;
 use crate::http::error::CustomError;
 use crate::http::jwt::json_web_token::Identity;
@@ -13,7 +14,7 @@ use iggy::models::client_info::{ClientInfo, ClientInfoDetails};
 use iggy::models::stats::Stats;
 use std::sync::Arc;
 
-const NAME: &str = "Iggy HTTP";
+const NAME: &str = "Iggy {COMPONENT}";
 const PONG: &str = "pong";
 
 pub fn router(state: Arc<AppState>, metrics_config: &HttpMetricsConfig) -> Router {
@@ -43,7 +44,7 @@ async fn get_stats(
     let stats = system
         .get_stats(&Session::stateless(identity.user_id, identity.ip_address))
         .await
-        .with_error(|_| format!("HTTP - failed to get stats, user ID: {}", identity.user_id))?;
+        .with_error(|_| format!("{COMPONENT} - failed to get stats, user ID: {}", identity.user_id))?;
     Ok(Json(stats))
 }
 
@@ -59,7 +60,7 @@ async fn get_client(
             client_id,
         )
         .await
-        .with_error(|_| format!("HTTP - failed to get client, user ID: {}", identity.user_id));
+        .with_error(|_| format!("{COMPONENT} - failed to get client, user ID: {}", identity.user_id));
     if client.is_err() {
         return Err(CustomError::ResourceNotFound);
     }
@@ -80,7 +81,7 @@ async fn get_clients(
         .await
         .with_error(|_| {
             format!(
-                "HTTP - failed to get clients, user ID: {}",
+                "{COMPONENT} - failed to get clients, user ID: {}",
                 identity.user_id
             )
         })?;

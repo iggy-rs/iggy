@@ -1,5 +1,6 @@
 use crate::binary::mapper;
 use crate::binary::sender::Sender;
+use crate::binary::handlers::personal_access_tokens::COMPONENT;
 use crate::state::command::EntryCommand;
 use crate::state::models::CreatePersonalAccessTokenWithHash;
 use crate::streaming::personal_access_tokens::personal_access_token::PersonalAccessToken;
@@ -28,7 +29,7 @@ pub async fn handle(
             .await
             .with_error(|_| {
                 format!(
-                    "PERSONAL_ACCESS_TOKEN_HANDLER - failed to create personal access token with name: {}, session: {session}",
+                    "{COMPONENT} - failed to create personal access token with name: {}, session: {session}",
                     command.name
                 )
             })?;
@@ -52,7 +53,7 @@ pub async fn handle(
         .await
         .with_error(|_| {
             format!(
-                "PERSONAL_ACCESS_TOKEN_HANDLER - failed to create personal access token with name: {}, session: {session}",
+                "{COMPONENT} - failed to create personal access token with name: {}, session: {session}",
                 command.name
             )
         })?;

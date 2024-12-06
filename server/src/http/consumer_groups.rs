@@ -1,3 +1,4 @@
+use crate::http::COMPONENT;
 use crate::http::error::CustomError;
 use crate::http::jwt::json_web_token::Identity;
 use crate::http::mapper;
@@ -48,7 +49,7 @@ async fn get_consumer_group(
         )
         .with_error(|_| {
             format!(
-                "HTTP - failed to get consumer group, stream ID: {}, topic ID: {}, group ID: {}",
+                "{COMPONENT} - failed to get consumer group, stream ID: {}, topic ID: {}, group ID: {}",
                 stream_id, topic_id, group_id,
             )
         });
@@ -101,7 +102,7 @@ async fn create_consumer_group(
                 &command.name,
             )
             .await
-            .with_error(|_| format!("HTTP - failed to create consumer group, stream ID: {}, topic ID: {}, group ID: {:?}", stream_id, topic_id, command.group_id))?;
+            .with_error(|_| format!("{COMPONENT} - failed to create consumer group, stream ID: {}, topic ID: {}, group ID: {:?}", stream_id, topic_id, command.group_id))?;
         let consumer_group = consumer_group.read().await;
         consumer_group_details = mapper::map_consumer_group(&consumer_group).await;
     }
@@ -134,7 +135,7 @@ async fn delete_consumer_group(
                 &identifier_group_id,
             )
             .await
-            .with_error(|_| format!("HTTP - failed to delete consumer group, stream ID: {}, topic ID: {}, group ID: {}", stream_id, topic_id, group_id))?;
+            .with_error(|_| format!("{COMPONENT} - failed to delete consumer group, stream ID: {}, topic ID: {}, group ID: {}", stream_id, topic_id, group_id))?;
     }
 
     let system = state.system.read().await;

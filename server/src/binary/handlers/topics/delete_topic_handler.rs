@@ -1,4 +1,5 @@
 use crate::binary::sender::Sender;
+use crate::binary::handlers::topics::COMPONENT;
 use crate::state::command::EntryCommand;
 use crate::streaming::session::Session;
 use crate::streaming::systems::system::SharedSystem;
@@ -25,7 +26,7 @@ pub async fn handle(
             .delete_topic(session, &command.stream_id, &command.topic_id)
             .await
             .with_error(|_| format!(
-                "TOPIC_HANDLER - failed to delete topic for stream_id: {stream_id}, topic_id: {topic_id}",
+                "{COMPONENT} - failed to delete topic for stream_id: {stream_id}, topic_id: {topic_id}",
             ))?;
     }
 
@@ -35,7 +36,7 @@ pub async fn handle(
         .apply(session.get_user_id(), EntryCommand::DeleteTopic(command))
         .await
         .with_error(|_| format!(
-            "TOPIC_HANDLER - failed to apply delete topic for stream_id: {stream_id}, topic_id: {topic_id}",
+            "{COMPONENT} - failed to apply delete topic for stream_id: {stream_id}, topic_id: {topic_id}",
         ))?;
     sender.send_empty_ok_response().await?;
     Ok(())

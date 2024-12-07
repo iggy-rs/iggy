@@ -1,5 +1,5 @@
-use crate::binary::sender::Sender;
 use crate::binary::handlers::messages::COMPONENT;
+use crate::binary::sender::Sender;
 use crate::streaming::session::Session;
 use crate::streaming::systems::system::SharedSystem;
 use anyhow::Result;

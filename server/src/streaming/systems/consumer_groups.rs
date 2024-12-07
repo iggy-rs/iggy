@@ -1,6 +1,6 @@
 use crate::streaming::session::Session;
-use crate::streaming::systems::COMPONENT;
 use crate::streaming::systems::system::System;
+use crate::streaming::systems::COMPONENT;
 use crate::streaming::topics::consumer_group::ConsumerGroup;
 use error_set::ResultContext;
 use iggy::error::IggyError;

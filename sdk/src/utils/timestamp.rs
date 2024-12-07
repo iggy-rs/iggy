@@ -105,7 +105,7 @@ impl<'de> Deserialize<'de> for IggyTimestamp {
 }
 struct IggyTimestampVisitor;
 
-impl<'de> Visitor<'de> for IggyTimestampVisitor {
+impl Visitor<'_> for IggyTimestampVisitor {
     type Value = IggyTimestamp;
 
     fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {

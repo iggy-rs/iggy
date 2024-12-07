@@ -1,5 +1,5 @@
-use crate::binary::mapper;
 use crate::binary::handlers::streams::COMPONENT;
+use crate::binary::mapper;
 use crate::binary::sender::Sender;
 use crate::state::command::EntryCommand;
 use crate::streaming::session::Session;

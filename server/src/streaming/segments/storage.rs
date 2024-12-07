@@ -5,8 +5,6 @@ use crate::streaming::persistence::persister::Persister;
 use crate::streaming::segments::index::{Index, IndexRange};
 use crate::streaming::segments::segment::Segment;
 use crate::streaming::segments::COMPONENT;
-use crate::streaming::segments::time_index::TimeIndex;
-use crate::streaming::sizeable::Sizeable;
 use crate::streaming::storage::SegmentStorage;
 use crate::streaming::utils::file;
 use crate::streaming::utils::head_tail_buf::HeadTailBuffer;
@@ -17,6 +15,7 @@ use error_set::ResultContext;
 use iggy::error::IggyError;
 use iggy::utils::byte_size::IggyByteSize;
 use iggy::utils::checksum;
+use iggy::utils::sizeable::Sizeable;
 use std::io::SeekFrom;
 use std::path::Path;
 use std::sync::atomic::Ordering;
@@ -25,9 +24,7 @@ use tokio::io::{AsyncReadExt, AsyncSeekExt, BufReader};
 use tracing::{error, info, trace, warn};
 
 const EMPTY_INDEXES: Vec<Index> = vec![];
-const EMPTY_TIME_INDEXES: Vec<TimeIndex> = vec![];
-pub(crate) const INDEX_SIZE: u32 = 8;
-pub(crate) const TIME_INDEX_SIZE: u32 = 12;
+pub const INDEX_SIZE: u32 = 16; // offset: 4 bytes, position: 4 bytes, timestamp: 8 bytes
 const BUF_READER_CAPACITY_BYTES: usize = 512 * 1000;
 
 #[derive(Debug)]
@@ -58,7 +55,7 @@ impl SegmentStorage for FileSegmentStorage {
             )
         })?;
         let file_size = log_file.metadata().await.unwrap().len() as u64;
-        segment.size_bytes = file_size as _;
+        segment.size_bytes = IggyByteSize::from(file_size);
         segment.last_index_position = file_size as _;
 
         if segment.config.segment.cache_indexes {
@@ -72,6 +69,13 @@ impl SegmentStorage for FileSegmentStorage {
                         format!("{COMPONENT} - failed to load indexes, segment: {}", segment)
                     })?,
             );
+            let last_index_offset = if segment.indexes.as_ref().unwrap().is_empty() {
+                0_u64
+            } else {
+                segment.indexes.as_ref().unwrap().last().unwrap().offset as u64
+            };
+
+            segment.current_offset = segment.start_offset + last_index_offset;
             info!(
                 "Loaded {} indexes for segment with start offset: {} and partition with ID: {} for topic with ID: {} and stream with ID: {}.",
                 segment.indexes.as_ref().unwrap().len(),
@@ -82,46 +86,6 @@ impl SegmentStorage for FileSegmentStorage {
             );
         }
 
-        if segment.config.segment.cache_time_indexes {
-            let time_indexes = self.load_all_time_indexes(segment).await.with_error(|_| {
-                format!(
-                    "{COMPONENT} - failed to load timde indexes, segment: {}",
-                    segment
-                )
-            })?;
-            if !time_indexes.is_empty() {
-                let last_index = time_indexes.last().unwrap();
-                segment.current_offset = segment.start_offset + last_index.relative_offset as u64;
-                segment.time_indexes = Some(time_indexes);
-            }
-
-            info!(
-                "Loaded {} time indexes for segment with start offset: {} and partition with ID: {} for topic with ID: {} and stream with ID: {}.",
-                segment.time_indexes.as_ref().unwrap().len(),
-                segment.start_offset,
-                segment.partition_id,
-                segment.topic_id,
-                segment.stream_id
-            );
-        } else {
-            let last_time_index = self.load_last_time_index(segment).await.with_error(|_| {
-                format!(
-                    "{COMPONENT} - failed to load last time index, segment: {}",
-                    segment
-                )
-            })?;
-            if let Some(last_index) = last_time_index {
-                segment.current_offset = segment.start_offset + last_index.relative_offset as u64;
-                info!(
-                "Loaded last time index for segment with start offset: {} and partition with ID: {} for topic with ID: {} and stream with ID: {}.",
-                segment.start_offset,
-                segment.partition_id,
-                segment.topic_id,
-                segment.stream_id
-            );
-            }
-        }
-
         if segment.is_full().await {
             segment.is_closed = true;
         }
@@ -129,7 +93,7 @@ impl SegmentStorage for FileSegmentStorage {
         let messages_count = segment.get_messages_count();
 
         info!(
-            "Loaded segment log file of size {} for start offset {}, current offset: {}, and partition with ID: {} for topic with ID: {} and stream with ID: {}.",
+            "Loaded segment with log file of size {} ({messages_count} messages) for start offset {}, current offset: {}, and partition with ID: {} for topic with ID: {} and stream with ID: {}.",
             IggyByteSize::from(file_size), segment.start_offset, segment.current_offset, segment.partition_id, segment.topic_id, segment.stream_id
         );
 
@@ -167,18 +131,6 @@ impl SegmentStorage for FileSegmentStorage {
         {
             return Err(IggyError::CannotCreateSegmentLogFile(
                 segment.log_path.clone(),
-            ));
-        }
-
-        if !Path::new(&segment.time_index_path).exists()
-            && self
-                .persister
-                .overwrite(&segment.time_index_path, &[])
-                .await
-                .is_err()
-        {
-            return Err(IggyError::CannotCreateSegmentTimeIndexFile(
-                segment.time_index_path.clone(),
             ));
         }
 
@@ -222,27 +174,19 @@ impl SegmentStorage for FileSegmentStorage {
             .with_error(|_| {
                 format!(
                     "{COMPONENT} - failed to delete index file, path: {}",
-                    segment.log_path
+                    segment.index_path
                 )
             })?;
-        self.persister
-            .delete(&segment.time_index_path)
-            .await
-            .with_error(|_| {
-                format!(
-                    "{COMPONENT} - failed to delete time index file, path: {}",
-                    segment.log_path
-                )
-            })?;
+        let segment_size_bytes = segment.size_bytes.as_bytes_u64();
         segment
             .size_of_parent_stream
-            .fetch_sub(segment.size_bytes as u64, Ordering::SeqCst);
+            .fetch_sub(segment_size_bytes, Ordering::SeqCst);
         segment
             .size_of_parent_topic
-            .fetch_sub(segment.size_bytes as u64, Ordering::SeqCst);
+            .fetch_sub(segment_size_bytes, Ordering::SeqCst);
         segment
             .size_of_parent_partition
-            .fetch_sub(segment.size_bytes as u64, Ordering::SeqCst);
+            .fetch_sub(segment_size_bytes, Ordering::SeqCst);
         segment
             .messages_count_of_parent_stream
             .fetch_sub(segment_count_of_messages, Ordering::SeqCst);
@@ -286,9 +230,9 @@ impl SegmentStorage for FileSegmentStorage {
         size_bytes: u64,
     ) -> Result<Vec<RetainedMessageBatch>, IggyError> {
         let mut batches = Vec::new();
-        let mut total_size_bytes = 0;
+        let mut total_size_bytes = IggyByteSize::default();
         load_messages_by_size(segment, size_bytes, |batch| {
-            total_size_bytes += batch.get_size_bytes() as u64;
+            total_size_bytes += batch.get_size_bytes();
             batches.push(batch);
             Ok(())
         })
@@ -301,9 +245,9 @@ impl SegmentStorage for FileSegmentStorage {
         })?;
         let messages_count = batches.len();
         trace!(
-            "Loaded {} newest messages batches of total size {} bytes from disk.",
+            "Loaded {} newest messages batches of total size {} from disk.",
             messages_count,
-            total_size_bytes
+            total_size_bytes.as_human_string(),
         );
         Ok(batches)
     }
@@ -312,9 +256,9 @@ impl SegmentStorage for FileSegmentStorage {
         &self,
         segment: &Segment,
         batch: RetainedMessageBatch,
-    ) -> Result<u32, IggyError> {
+    ) -> Result<IggyByteSize, IggyError> {
         let batch_size = batch.get_size_bytes();
-        let mut bytes = BytesMut::with_capacity(batch_size as usize);
+        let mut bytes = BytesMut::with_capacity(batch_size.as_bytes_usize());
         batch.extend(&mut bytes);
 
         if let Err(err) = self
@@ -413,9 +357,16 @@ impl SegmentStorage for FileSegmentStorage {
                     offset, &error
                 )
             })?;
+            let timestamp = reader.read_u64_le().await.inspect_err(|error| {
+                error!(
+                    "Cannot read timestamp from index file for offset: {}. Error: {}",
+                    offset, &error
+                )
+            })?;
             indexes.push(Index {
-                relative_offset: offset,
+                offset,
                 position,
+                timestamp,
             });
         }
 
@@ -488,25 +439,30 @@ impl SegmentStorage for FileSegmentStorage {
 
         let mut reader = BufReader::with_capacity(BUF_READER_CAPACITY_BYTES, file);
         loop {
-            let relative_offset = reader
+            let offset = reader
                 .read_u32_le()
                 .await
-                .with_error(|_| format!("{COMPONENT} - failed to read index's relative offset"))?;
+                .with_error(|_| format!("{COMPONENT} - failed to load index's offset"))?;
             let position = reader
                 .read_u32_le()
                 .await
-                .with_error(|_| format!("{COMPONENT} - failed to read index position"))?;
+                .with_error(|_| format!("{COMPONENT} - failed to load index's position"))?;
+            let timestamp = reader
+                .read_u64_le()
+                .await
+                .with_error(|_| format!("{COMPONENT} - failed to load index's timestamp"))?;
             read_bytes += INDEX_SIZE;
             let idx = Index {
-                relative_offset,
+                offset,
                 position,
+                timestamp,
             };
             idx_pred.push(idx);
 
-            if relative_offset >= relative_start_offset {
+            if offset >= relative_start_offset {
                 index_range.start = idx_pred.tail().unwrap_or_default();
             }
-            if relative_offset >= relative_end_offset {
+            if offset >= relative_end_offset {
                 index_range.end = idx;
                 break;
             }
@@ -528,8 +484,9 @@ impl SegmentStorage for FileSegmentStorage {
 
     async fn save_index(&self, index_path: &str, index: Index) -> Result<(), IggyError> {
         let mut bytes = BytesMut::with_capacity(INDEX_SIZE as usize);
-        bytes.put_u32_le(index.relative_offset);
+        bytes.put_u32_le(index.offset);
         bytes.put_u32_le(index.position);
+        bytes.put_u64_le(index.timestamp);
         if let Err(err) = self
             .persister
             .append(index_path, &bytes)
@@ -542,16 +499,16 @@ impl SegmentStorage for FileSegmentStorage {
         Ok(())
     }
 
-    async fn try_load_time_index_for_timestamp(
+    async fn try_load_index_for_timestamp(
         &self,
         segment: &Segment,
         timestamp: u64,
-    ) -> Result<Option<TimeIndex>, IggyError> {
+    ) -> Result<Option<Index>, IggyError> {
         trace!("Loading time indexes from file...");
-        let file = file::open(&segment.time_index_path).await.with_error(|_| {
+        let file = file::open(&segment.index_path).await.with_error(|_| {
             format!(
-                "{COMPONENT} - failed to open segment's time index file, path: {}",
-                segment.time_index_path
+                "{COMPONENT} - failed to open segment's index file, path: {}",
+                segment.index_path
             )
         })?;
         let file_size = file
@@ -559,134 +516,37 @@ impl SegmentStorage for FileSegmentStorage {
             .await
             .with_error(|_| {
                 format!(
-                    "{COMPONENT} - failed to load time index's metadata, path: {}",
-                    segment.time_index_path
+                    "{COMPONENT} - failed to load index's metadata, path: {}",
+                    segment.index_path
                 )
             })?
             .len() as usize;
         if file_size == 0 {
             trace!("Time index file is empty.");
-            return Ok(Some(TimeIndex::default()));
+            return Ok(Some(Index::default()));
         }
 
         let mut reader = BufReader::with_capacity(BUF_READER_CAPACITY_BYTES, file);
         let mut read_bytes = 0;
         let mut idx_pred = HeadTailBuffer::new();
         loop {
-            let offset = reader
-                .read_u32_le()
-                .await
-                .with_error(|_| format!("{COMPONENT} - failed to read time index's offset"))?;
-            let time = reader
-                .read_u64_le()
-                .await
-                .with_error(|_| format!("{COMPONENT} - failed to read time index's timestamp"))?;
-            let idx = TimeIndex {
-                relative_offset: offset,
+            let offset = reader.read_u32_le().await?;
+            let position = reader.read_u32_le().await?;
+            let time = reader.read_u64_le().await?;
+            let idx = Index {
+                offset,
+                position,
                 timestamp: time,
             };
             idx_pred.push(idx);
             if time >= timestamp {
                 return Ok(idx_pred.tail());
             }
-            read_bytes += TIME_INDEX_SIZE as usize;
+            read_bytes += INDEX_SIZE as usize;
             if read_bytes == file_size {
                 return Ok(None);
             }
         }
-    }
-
-    async fn load_all_time_indexes(&self, segment: &Segment) -> Result<Vec<TimeIndex>, IggyError> {
-        trace!("Loading time indexes from file...");
-        let file = file::open(&segment.time_index_path).await?;
-        let file_size = file.metadata().await?.len() as usize;
-        if file_size == 0 {
-            trace!("Time index file is empty.");
-            return Ok(EMPTY_TIME_INDEXES);
-        }
-
-        let indexes_count = file_size / TIME_INDEX_SIZE as usize;
-        let mut indexes = Vec::with_capacity(indexes_count);
-        let mut reader = BufReader::with_capacity(BUF_READER_CAPACITY_BYTES, file);
-        for idx_num in 0..indexes_count {
-            let offset = reader.read_u32_le().await.with_error(|_| {
-                format!("{COMPONENT} - cannot read offset from index file for offset: {idx_num}")
-            })?;
-            let timestamp = reader.read_u64().await.with_error(|_| {
-                format!("{COMPONENT} - cannot read timestamp from index file for offset: {idx_num}")
-            })?;
-            indexes.push(TimeIndex {
-                relative_offset: offset,
-                timestamp,
-            });
-        }
-        if indexes.len() != indexes_count {
-            error!(
-                "Loaded {} time indexes from disk, expected {}.",
-                indexes.len(),
-                indexes_count
-            );
-        }
-
-        trace!("Loaded {} time indexes from file.", indexes_count);
-
-        Ok(indexes)
-    }
-
-    async fn load_last_time_index(
-        &self,
-        segment: &Segment,
-    ) -> Result<Option<TimeIndex>, IggyError> {
-        trace!("Loading last time index from file...");
-        let mut file = file::open(&segment.time_index_path).await.with_error(|_| {
-            format!(
-                "{COMPONENT} - failed to open time index file, path: {}",
-                segment.time_index_path
-            )
-        })?;
-        let file_size = file
-            .metadata()
-            .await
-            .with_error(|_| {
-                format!(
-                    "{COMPONENT} - failed to load time index's metadata, path: {}",
-                    segment.time_index_path
-                )
-            })?
-            .len() as usize;
-        if file_size == 0 {
-            trace!("Time index file is empty.");
-            return Ok(None);
-        }
-
-        let last_index_position = file_size - TIME_INDEX_SIZE as usize;
-        file.seek(SeekFrom::Start(last_index_position as u64))
-            .await?;
-        let index_offset = file.read_u32_le().await.with_error(|_| format!("{COMPONENT} - failed to read time index offset, path: {}", segment.time_index_path))?;
-        let timestamp = file.read_u64_le().await.with_error(|_| format!("{COMPONENT} - failed to read time index timestamp, path: {}", segment.time_index_path))?;
-        let index = TimeIndex {
-            relative_offset: index_offset,
-            timestamp,
-        };
-
-        trace!("Loaded last time index from file: {:?}", index);
-        Ok(Some(index))
-    }
-
-    async fn save_time_index(&self, index_path: &str, index: TimeIndex) -> Result<(), IggyError> {
-        let mut bytes = BytesMut::with_capacity(TIME_INDEX_SIZE as usize);
-        bytes.put_u32_le(index.relative_offset);
-        bytes.put_u64_le(index.timestamp);
-        if let Err(err) = self
-            .persister
-            .append(index_path, &bytes)
-            .await
-            .with_context(|| format!("Failed to save TimeIndex to segment: {}", index_path))
-        {
-            return Err(IggyError::CannotSaveTimeIndexToSegment(err));
-        }
-
-        Ok(())
     }
 }
 
@@ -704,16 +564,21 @@ async fn load_batches_by_range(
     trace!(
         "Loading message batches by index range: {} [{}] - {} [{}], file size: {file_size}",
         index_range.start.position,
-        index_range.start.relative_offset,
+        index_range.start.offset,
         index_range.end.position,
-        index_range.end.relative_offset
+        index_range.end.offset
     );
 
     let mut reader = BufReader::with_capacity(BUF_READER_CAPACITY_BYTES, file);
     reader
         .seek(SeekFrom::Start(index_range.start.position as u64))
         .await
-        .with_error(|err| format!("{COMPONENT} - failed to seek to position {}", index_range.start.position))?;
+        .with_error(|_| {
+            format!(
+                "{COMPONENT} - failed to seek to position {}",
+                index_range.start.position
+            )
+        })?;
 
     let mut read_bytes = index_range.start.position as u64;
     let mut last_batch_to_read = false;
@@ -735,7 +600,7 @@ async fn load_batches_by_range(
             .map_err(|_| IggyError::CannotReadMaxTimestamp)?;
 
         let last_offset = batch_base_offset + (last_offset_delta as u64);
-        let index_last_offset = index_range.end.relative_offset as u64 + segment.start_offset;
+        let index_last_offset = index_range.end.offset as u64 + segment.start_offset;
 
         let payload_len = batch_length as usize;
         let mut payload = BytesMut::with_capacity(payload_len);
@@ -754,7 +619,7 @@ async fn load_batches_by_range(
             batch_base_offset,
             last_offset_delta,
             max_timestamp,
-            batch_length,
+            IggyByteSize::from(batch_length as u64),
             payload.freeze(),
         );
         on_batch(batch).with_error(|_| format!(
@@ -777,7 +642,7 @@ async fn load_messages_by_size(
     }
 
     let threshold = file_size.saturating_sub(size_bytes);
-    let mut accumulated_size: u64 = 0;
+    let mut accumulated_size = IggyByteSize::default();
 
     let mut reader = BufReader::with_capacity(BUF_READER_CAPACITY_BYTES, file);
     loop {
@@ -810,10 +675,10 @@ async fn load_messages_by_size(
             batch_base_offset,
             last_offset_delta,
             max_timestamp,
-            batch_length,
+            IggyByteSize::from(batch_length as u64),
             payload.freeze(),
         );
-        let message_size = batch.get_size_bytes() as u64;
+        let message_size = batch.get_size_bytes();
         if accumulated_size >= threshold {
             on_batch(batch)?;
         }

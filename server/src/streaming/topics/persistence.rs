@@ -1,6 +1,6 @@
 use crate::state::system::TopicState;
-use crate::streaming::topics::COMPONENT;
 use crate::streaming::topics::topic::Topic;
+use crate::streaming::topics::COMPONENT;
 use error_set::ResultContext;
 use iggy::error::IggyError;
 use iggy::locking::IggySharedMutFn;
@@ -19,7 +19,12 @@ impl Topic {
     pub async fn delete(&self) -> Result<(), IggyError> {
         for partition in self.get_partitions() {
             let partition = partition.read().await;
-            partition.delete().await.with_error(|_| format!("{COMPONENT} - failed to delete partition with id: {}", partition.partition_id))?;
+            partition.delete().await.with_error(|_| {
+                format!(
+                    "{COMPONENT} - failed to delete partition with id: {}",
+                    partition.partition_id
+                )
+            })?;
         }
 
         self.storage.topic.delete(self).await

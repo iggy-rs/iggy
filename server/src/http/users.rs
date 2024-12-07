@@ -1,9 +1,9 @@
-use crate::http::COMPONENT;
 use crate::http::error::CustomError;
 use crate::http::jwt::json_web_token::Identity;
 use crate::http::mapper;
 use crate::http::mapper::map_generated_access_token_to_identity_info;
 use crate::http::shared::AppState;
+use crate::http::COMPONENT;
 use crate::state::command::EntryCommand;
 use crate::streaming::session::Session;
 use crate::streaming::utils::crypto;
@@ -70,7 +70,12 @@ async fn get_users(
     let users = system
         .get_users(&Session::stateless(identity.user_id, identity.ip_address))
         .await
-        .with_error(|_| format!("{COMPONENT} - failed to get users, user ID: {}", identity.user_id))?;
+        .with_error(|_| {
+            format!(
+                "{COMPONENT} - failed to get users, user ID: {}",
+                identity.user_id
+            )
+        })?;
     let users = mapper::map_users(&users);
     Ok(Json(users))
 }
@@ -154,7 +159,12 @@ async fn update_user(
         .state
         .apply(identity.user_id, EntryCommand::UpdateUser(command))
         .await
-        .with_error(|_| format!("{COMPONENT} - failed to apply update user, user ID: {}", user_id))?;
+        .with_error(|_| {
+            format!(
+                "{COMPONENT} - failed to apply update user, user ID: {}",
+                user_id
+            )
+        })?;
     Ok(StatusCode::NO_CONTENT)
 }
 
@@ -176,7 +186,12 @@ async fn update_permissions(
                 command.permissions.clone(),
             )
             .await
-            .with_error(|_| format!("{COMPONENT} - failed to update permissions, user ID: {}", user_id))?;
+            .with_error(|_| {
+                format!(
+                    "{COMPONENT} - failed to update permissions, user ID: {}",
+                    user_id
+                )
+            })?;
     }
 
     let system = state.system.read().await;
@@ -212,7 +227,12 @@ async fn change_password(
                 &command.new_password,
             )
             .await
-            .with_error(|_| format!("{COMPONENT} - failed to change password, user ID: {}", user_id))?;
+            .with_error(|_| {
+                format!(
+                    "{COMPONENT} - failed to change password, user ID: {}",
+                    user_id
+                )
+            })?;
     }
 
     // For the security of the system, we hash the password before storing it in metadata.
@@ -265,7 +285,12 @@ async fn delete_user(
             }),
         )
         .await
-        .with_error(|_| format!("{COMPONENT} - failed to apply delete user, user ID: {}", user_id))?;
+        .with_error(|_| {
+            format!(
+                "{COMPONENT} - failed to apply delete user, user ID: {}",
+                user_id
+            )
+        })?;
     Ok(StatusCode::NO_CONTENT)
 }
 
@@ -279,7 +304,12 @@ async fn login_user(
     let user = system
         .login_user(&command.username, &command.password, None)
         .await
-        .with_error(|_| format!("{COMPONENT} - failed to login, username: {}", command.username))?;
+        .with_error(|_| {
+            format!(
+                "{COMPONENT} - failed to login, username: {}",
+                command.username
+            )
+        })?;
     let tokens = state.jwt_manager.generate(user.id)?;
     Ok(Json(map_generated_access_token_to_identity_info(tokens)))
 }
@@ -293,7 +323,12 @@ async fn logout_user(
     system
         .logout_user(&Session::stateless(identity.user_id, identity.ip_address))
         .await
-        .with_error(|_| format!("{COMPONENT} - failed to logout, user ID: {}", identity.user_id))?;
+        .with_error(|_| {
+            format!(
+                "{COMPONENT} - failed to logout, user ID: {}",
+                identity.user_id
+            )
+        })?;
     state
         .jwt_manager
         .revoke_token(&identity.token_id, identity.token_expiry)

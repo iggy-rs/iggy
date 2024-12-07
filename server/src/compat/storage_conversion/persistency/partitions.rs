@@ -1,8 +1,8 @@
+use crate::compat::storage_conversion::persistency::COMPONENT;
 use crate::configs::system::SystemConfig;
 use crate::streaming::batching::batch_accumulator::BatchAccumulator;
 use crate::streaming::partitions::partition::{ConsumerOffset, Partition};
 use crate::streaming::segments::segment::{Segment, LOG_EXTENSION};
-use crate::compat::storage_conversion::persistency::COMPONENT;
 use anyhow::Context;
 use error_set::ResultContext;
 use iggy::consumer::ConsumerKind;

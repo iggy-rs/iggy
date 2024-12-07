@@ -324,7 +324,10 @@ impl SystemState {
                     let user_id = find_user_id(
                         &users,
                         &entry.user_id.try_into().with_error(|_| {
-                            format!("{COMPONENT} - failed to find user, user ID: {}", entry.user_id)
+                            format!(
+                                "{COMPONENT} - failed to find user, user ID: {}",
+                                entry.user_id
+                            )
                         })?,
                     );
                     let user = users
@@ -354,7 +357,10 @@ impl SystemState {
                     let user_id = find_user_id(
                         &users,
                         &entry.user_id.try_into().with_error(|_| {
-                            format!("{COMPONENT} - failed to find user, user ID: {}", entry.user_id)
+                            format!(
+                                "{COMPONENT} - failed to find user, user ID: {}",
+                                entry.user_id
+                            )
                         })?,
                     );
                     let user = users

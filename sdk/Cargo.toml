@@ -1,6 +1,6 @@
 [package]
 name = "iggy"
-version = "0.6.30"
+version = "0.6.51"
 description = "Iggy is the persistent message streaming platform written in Rust, supporting QUIC, TCP and HTTP transport protocols, capable of processing millions of messages per second."
 edition = "2021"
 license = "MIT"
@@ -40,22 +40,24 @@ humantime = "2.1.0"
 keyring = { version = "3.2.0", optional = true, features = ["sync-secret-service", "vendored"] }
 lazy_static = "1.4.0"
 passterm = { version = "2.0.1", optional = true }
+pem = { version = "3.0.4" }
 quinn = { version = "0.11.5" }
 regex = "1.10.4"
-reqwest = { version = "0.12.7", default-features = false, features = ["json", "rustls-tls"] }
-reqwest-middleware = { version = "0.3.2", features = ["json"] }
-reqwest-retry = "0.6.1"
+reqwest = { version = "0.12.9", default-features = false, features = ["json", "rustls-tls"] }
+reqwest-middleware = { version = "0.4.0", features = ["json"] }
+reqwest-retry = "0.7.0"
 rustls = { version = "0.23.10", features = ["ring"] }
 serde = { version = "1.0.210", features = ["derive", "rc"] }
 serde_json = "1.0.127"
 serde_with = { version = "3.8.1", features = ["base64"] }
 strum = { version = "0.26.2", features = ["derive"] }
-thiserror = "1.0.61"
-tokio = { version = "1.40.0", features = ["full"] }
-tokio-native-tls = "0.3.1"
+thiserror = "2.0.3"
+tokio = { version = "1.40.1", features = ["full"] }
+tokio-rustls = { version = "0.26.0" }
 toml = "0.8.14"
 tracing = { version = "0.1.40" }
 uuid = { version = "1.1.0", features = ["v7", "fast-rng", "zerocopy"] }
+webpki-roots = { version = "0.26.6" }
 
 [build-dependencies]
 convert_case = "0.6.0"

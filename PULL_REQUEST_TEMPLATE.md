@@ -9,11 +9,14 @@ To help us incorporate your changes efficiently, please adhere to the following 
 
 ## General Coding Remarks
 
-- **Code Linting**: Run `rustfmt` to ensure your code adheres to the project's style.
+- **Code Formatting**: Run `cargo fmt` to ensure your code adheres to the project's style.
+- **Code Linting**: Run `cargo clippy --all-targets --all-features -- -D warnings` to make sure your code is lint-free.
 - **Unit Testing**: Write or update unit tests to cover your changes.
 - **Integration Testing**: Write or update integration tests to cover your changes.
 - **Project Structure**: Follow the `iggy` project's structure and coding style.
 - **Build Integrity**: Ensure your code compiles and runs error-free.
+- **Check unused dependencies**: Run `cargo machete` to make sure no unused dependencies made their way into your changeset.
+- **Sort dependencies**: Run `cargo sort --workspace` so that the content of the toml files stay ordered.
 
 ## Commit Message Rules
 

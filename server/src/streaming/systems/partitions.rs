@@ -1,6 +1,6 @@
 use crate::streaming::session::Session;
-use crate::streaming::systems::COMPONENT;
 use crate::streaming::systems::system::System;
+use crate::streaming::systems::COMPONENT;
 use error_set::ResultContext;
 use iggy::error::IggyError;
 use iggy::identifier::Identifier;
@@ -28,8 +28,20 @@ impl System {
             ))?;
         }
 
-        let topic = self.get_stream_mut(stream_id)?.get_topic_mut(topic_id).with_error(|_| format!("{COMPONENT} - failed to get mutable reference to stream with id: {stream_id}"))?;
-        topic.add_persisted_partitions(partitions_count).await.with_error(|_| format!("{COMPONENT} - failed to add persisted partitions, topic: {topic}"))?;
+        let topic = self
+            .get_stream_mut(stream_id)?
+            .get_topic_mut(topic_id)
+            .with_error(|_| {
+                format!(
+                    "{COMPONENT} - failed to get mutable reference to stream with id: {stream_id}"
+                )
+            })?;
+        topic
+            .add_persisted_partitions(partitions_count)
+            .await
+            .with_error(|_| {
+                format!("{COMPONENT} - failed to add persisted partitions, topic: {topic}")
+            })?;
         topic.reassign_consumer_groups().await;
         self.metrics.increment_partitions(partitions_count);
         self.metrics.increment_segments(partitions_count);
@@ -58,8 +70,20 @@ impl System {
             ))?;
         }
 
-        let topic = self.get_stream_mut(stream_id)?.get_topic_mut(topic_id).with_error(|_| format!("{COMPONENT} - failed to get mutable reference to stream with id: {stream_id}"))?;
-        let partitions = topic.delete_persisted_partitions(partitions_count).await.with_error(|_| format!("{COMPONENT} - failed to delete persisted partitions, topic: {topic}"))?;
+        let topic = self
+            .get_stream_mut(stream_id)?
+            .get_topic_mut(topic_id)
+            .with_error(|_| {
+                format!(
+                    "{COMPONENT} - failed to get mutable reference to stream with id: {stream_id}"
+                )
+            })?;
+        let partitions = topic
+            .delete_persisted_partitions(partitions_count)
+            .await
+            .with_error(|_| {
+                format!("{COMPONENT} - failed to delete persisted partitions, topic: {topic}")
+            })?;
         topic.reassign_consumer_groups().await;
         if let Some(partitions) = partitions {
             self.metrics.decrement_partitions(partitions_count);

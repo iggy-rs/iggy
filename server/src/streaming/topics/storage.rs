@@ -2,8 +2,8 @@ use crate::state::system::TopicState;
 use crate::streaming::partitions::partition::Partition;
 use crate::streaming::storage::TopicStorage;
 use crate::streaming::topics::consumer_group::ConsumerGroup;
-use crate::streaming::topics::COMPONENT;
 use crate::streaming::topics::topic::Topic;
+use crate::streaming::topics::COMPONENT;
 use anyhow::Context;
 use async_trait::async_trait;
 use error_set::ResultContext;
@@ -153,7 +153,9 @@ impl TopicStorage for FileTopicStorage {
                     topic.segments_count_of_parent_stream.clone(),
                     partition_state.created_at,
                 );
-                partition.persist().await.with_error(|_| format!("{COMPONENT} - failed to persist partiton: {partition}"))?;
+                partition.persist().await.with_error(|_| {
+                    format!("{COMPONENT} - failed to persist partiton: {partition}")
+                })?;
                 partition.segments.clear();
                 unloaded_partitions.push(partition);
                 info!(
@@ -207,7 +209,12 @@ impl TopicStorage for FileTopicStorage {
                 .insert(consumer_group.group_id, RwLock::new(consumer_group));
         }
 
-        topic.load_messages_from_disk_to_cache().await.with_error(|_| format!("{COMPONENT} - failed to load messages from disk to cache, topic: {topic}"))?;
+        topic
+            .load_messages_from_disk_to_cache()
+            .await
+            .with_error(|_| {
+                format!("{COMPONENT} - failed to load messages from disk to cache, topic: {topic}")
+            })?;
         info!("Loaded topic {topic}");
 
         Ok(())
@@ -237,7 +244,9 @@ impl TopicStorage for FileTopicStorage {
         );
         for (_, partition) in topic.partitions.iter() {
             let partition = partition.write().await;
-            partition.persist().await.with_error(|_| format!("{COMPONENT} - failed to persist partition: {partition}"))?;
+            partition.persist().await.with_error(|_| {
+                format!("{COMPONENT} - failed to persist partition, topic: {topic}")
+            })?;
         }
 
         info!("Saved topic {topic}");

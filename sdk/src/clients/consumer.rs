@@ -6,6 +6,7 @@ use crate::identifier::{IdKind, Identifier};
 use crate::locking::{IggySharedMut, IggySharedMutFn};
 use crate::messages::poll_messages::{PollingKind, PollingStrategy};
 use crate::models::messages::{PolledMessage, PolledMessages};
+use crate::utils::byte_size::IggyByteSize;
 use crate::utils::crypto::Encryptor;
 use crate::utils::duration::IggyDuration;
 use crate::utils::timestamp::IggyTimestamp;
@@ -259,6 +260,7 @@ impl IggyConsumer {
                     offset,
                     &last_stored_offsets,
                 )
+                .await
             }
         });
 
@@ -503,7 +505,7 @@ impl IggyConsumer {
                 )
                 .await;
 
-            if let Ok(polled_messages) = polled_messages {
+            if let Ok(mut polled_messages) = polled_messages {
                 if polled_messages.messages.is_empty() {
                     return Ok(polled_messages);
                 }
@@ -520,12 +522,17 @@ impl IggyConsumer {
                     last_consumed_offset.insert(partition_id, AtomicU64::new(0));
                 }
 
-                if has_consumed_offset && consumed_offset >= polled_messages.messages[0].offset {
-                    return Ok(PolledMessages {
-                        messages: EMPTY_MESSAGES,
-                        current_offset: polled_messages.current_offset,
-                        partition_id,
-                    });
+                if has_consumed_offset {
+                    polled_messages
+                        .messages
+                        .retain(|message| message.offset > consumed_offset);
+                    if polled_messages.messages.is_empty() {
+                        return Ok(PolledMessages {
+                            messages: EMPTY_MESSAGES,
+                            current_offset: polled_messages.current_offset,
+                            partition_id,
+                        });
+                    }
                 }
 
                 let stored_offset;
@@ -760,7 +767,7 @@ impl Stream for IggyConsumer {
 
                                 let payload = payload.unwrap();
                                 message.payload = Bytes::from(payload);
-                                message.length = message.payload.len() as u32;
+                                message.length = IggyByteSize::from(message.payload.len() as u64);
                             }
                         }
 

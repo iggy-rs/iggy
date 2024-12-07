@@ -62,17 +62,8 @@ error_set!(
     };
 
     CompatError = {
-        #[display("Invalid message offset, when performing format conversion")]
-        InvalidMessageOffsetFormatConversion,
-
-        #[display("Invalid batch base offset, when performing format conversion")]
-        InvalidBatchBaseOffsetFormatConversion,
-
-        #[display("Cannot read message, when performing format conversion")]
-        InvalidMessageFieldFormatConversionSampling,
-
-        #[display("Cannot read message batch, when performing format conversion")]
-        CannotReadMessageBatchFormatConversion,
+        #[display("Index migration error")]
+        IndexMigrationError,
     } || IoError || CommonError;
 
     CommonError = {

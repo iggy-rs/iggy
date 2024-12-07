@@ -1,5 +1,5 @@
-use crate::binary::sender::Sender;
 use crate::binary::handlers::streams::COMPONENT;
+use crate::binary::sender::Sender;
 use crate::state::command::EntryCommand;
 use crate::streaming::session::Session;
 use crate::streaming::systems::system::SharedSystem;
@@ -24,9 +24,7 @@ pub async fn handle(
         .purge_stream(session, &command.stream_id)
         .await
         .with_error(|_| {
-            format!(
-                "{COMPONENT} - failed to purge stream with id: {stream_id}, session: {session}"
-            )
+            format!("{COMPONENT} - failed to purge stream with id: {stream_id}, session: {session}")
         })?;
 
     system

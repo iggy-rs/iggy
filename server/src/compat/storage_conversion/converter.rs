@@ -1,3 +1,4 @@
+use crate::compat::storage_conversion::COMPONENT;
 use crate::state::command::EntryCommand;
 use crate::state::models::CreatePersonalAccessTokenWithHash;
 use crate::state::State;
@@ -5,7 +6,6 @@ use crate::streaming::personal_access_tokens::personal_access_token::PersonalAcc
 use crate::streaming::storage::SystemStorage;
 use crate::streaming::streams::stream::Stream;
 use crate::streaming::users::user::User;
-use crate::compat::storage_conversion::COMPONENT;
 use error_set::ResultContext;
 use iggy::consumer_groups::create_consumer_group::CreateConsumerGroup;
 use iggy::error::IggyError;

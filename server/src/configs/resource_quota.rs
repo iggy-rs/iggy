@@ -14,15 +14,15 @@ pub enum MemoryResourceQuota {
 impl MemoryResourceQuota {
     /// Converts the resource quota into bytes.
     /// NOTE: This is a blocking operation and it's slow. Don't use it in the hot path.
-    pub fn into(self) -> u64 {
+    pub fn into(self) -> IggyByteSize {
         match self {
-            MemoryResourceQuota::Bytes(byte) => byte.as_bytes_u64(),
+            MemoryResourceQuota::Bytes(byte) => byte,
             MemoryResourceQuota::Percentage(percentage) => {
                 let mut sys = System::new_all();
                 sys.refresh_all();
 
                 let total_memory = sys.total_memory();
-                (total_memory as f64 * (percentage as f64 / 100.0)) as u64
+                IggyByteSize::from((total_memory as f64 * (percentage as f64 / 100.0)) as u64)
             }
         }
     }
@@ -54,7 +54,7 @@ impl FromStr for MemoryResourceQuota {
 
 struct ResourceQuotaVisitor;
 
-impl<'de> Visitor<'de> for ResourceQuotaVisitor {
+impl Visitor<'_> for ResourceQuotaVisitor {
     type Value = MemoryResourceQuota;
 
     fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
@@ -134,7 +134,9 @@ mod tests {
 
     #[test]
     fn test_serialize() {
-        let quota: u64 = MemoryResourceQuota::Bytes(IggyByteSize::from_str("4GB").unwrap()).into();
+        let quota: u64 = MemoryResourceQuota::Bytes(IggyByteSize::from_str("4GB").unwrap())
+            .into()
+            .as_bytes_u64();
         let serialized = serde_json::to_string(&quota).unwrap();
         assert_eq!(serialized, json!(4000000000u32).to_string());
 

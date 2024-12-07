@@ -71,11 +71,7 @@ impl Display for Stream {
         write!(
             f,
             "Stream {{ stream_id: {}, name: {}, path: {}, topic_path: {}, created_at: {} }}",
-            self.stream_id,
-            self.name,
-            self.path,
-            self.topics_path,
-            self.created_at,
+            self.stream_id, self.name, self.path, self.topics_path, self.created_at,
         )
     }
 }

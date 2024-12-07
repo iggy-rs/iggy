@@ -1,5 +1,5 @@
-use crate::streaming::utils::file;
 use crate::streaming::persistence::COMPONENT;
+use crate::streaming::utils::file;
 use async_trait::async_trait;
 use error_set::ResultContext;
 use iggy::error::IggyError;
@@ -86,9 +86,9 @@ impl Persister for FileWithSyncPersister {
         file.write_all(bytes)
             .await
             .with_error(|_| format!("{COMPONENT} - failed to write data to file: {path}"))?;
-        file.sync_all()
-            .await
-            .with_error(|_| format!("{COMPONENT} - failed to sync file after overwriting: {path}"))?;
+        file.sync_all().await.with_error(|_| {
+            format!("{COMPONENT} - failed to sync file after overwriting: {path}")
+        })?;
         Ok(())
     }
 

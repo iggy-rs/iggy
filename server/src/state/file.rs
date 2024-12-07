@@ -103,9 +103,12 @@ impl State for FileState {
             return Err(IggyError::StateFileNotFound);
         }
 
-        let file = file::open(&self.path)
-            .await
-            .with_error(|_| format!("{COMPONENT} - failed to open state file, path: {}", self.path))?;
+        let file = file::open(&self.path).await.with_error(|_| {
+            format!(
+                "{COMPONENT} - failed to open state file, path: {}",
+                self.path
+            )
+        })?;
         let file_size = file
             .metadata()
             .await
@@ -224,8 +227,9 @@ impl State for FileState {
             entry_command.put_u32_le(command_length as u32);
             entry_command.extend(command_payload);
             let command = entry_command.freeze();
-            EntryCommand::from_bytes(command.clone())
-                .with_error(|_| format!("{COMPONENT} - failed to parse entry command from bytes"))?;
+            EntryCommand::from_bytes(command.clone()).with_error(|_| {
+                format!("{COMPONENT} - failed to parse entry command from bytes")
+            })?;
             let calculated_checksum = StateEntry::calculate_checksum(
                 index, term, leader_id, version, flags, timestamp, user_id, &context, &command,
             );

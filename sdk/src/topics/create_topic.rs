@@ -5,6 +5,7 @@ use crate::error::IggyError;
 use crate::identifier::Identifier;
 use crate::topics::{MAX_NAME_LENGTH, MAX_PARTITIONS_COUNT};
 use crate::utils::expiry::IggyExpiry;
+use crate::utils::sizeable::Sizeable;
 use crate::utils::text;
 use crate::utils::topic_size::MaxTopicSize;
 use crate::validatable::Validatable;
@@ -121,7 +122,7 @@ impl BytesSerializable for CreateTopic {
         }
         let mut position = 0;
         let stream_id = Identifier::from_bytes(bytes.clone())?;
-        position += stream_id.get_size_bytes() as usize;
+        position += stream_id.get_size_bytes().as_bytes_usize();
         let topic_id = u32::from_le_bytes(bytes[position..position + 4].try_into()?);
         let topic_id = if topic_id == 0 { None } else { Some(topic_id) };
         let partitions_count = u32::from_le_bytes(bytes[position + 4..position + 8].try_into()?);
@@ -190,7 +191,7 @@ mod tests {
         let bytes = command.to_bytes();
         let mut position = 0;
         let stream_id = Identifier::from_bytes(bytes.clone()).unwrap();
-        position += stream_id.get_size_bytes() as usize;
+        position += stream_id.get_size_bytes().as_bytes_usize();
         let topic_id = u32::from_le_bytes(bytes[position..position + 4].try_into().unwrap());
         let partitions_count =
             u32::from_le_bytes(bytes[position + 4..position + 8].try_into().unwrap());

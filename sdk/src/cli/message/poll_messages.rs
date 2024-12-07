@@ -7,6 +7,7 @@ use crate::messages::poll_messages::{PollMessages, PollingStrategy};
 use crate::messages::send_messages::Message;
 use crate::models::header::{HeaderKey, HeaderKind};
 use crate::models::messages::PolledMessages;
+use crate::utils::sizeable::Sizeable;
 use crate::utils::timestamp::IggyTimestamp;
 use crate::utils::{byte_size::IggyByteSize, duration::IggyDuration};
 use anyhow::Context;
@@ -192,7 +193,7 @@ impl CliCommand for PollMessagesCmd {
         if let Some(output_file) = &self.output_file {
             event!(target: PRINT_TARGET, Level::INFO, "Storing messages to {output_file} binary file");
 
-            let mut saved_size = 0;
+            let mut saved_size = IggyByteSize::default();
             let mut file = tokio::fs::OpenOptions::new()
                 .append(true)
                 .create(true)
@@ -213,7 +214,8 @@ impl CliCommand for PollMessagesCmd {
                     .with_context(|| format!("Problem writing message to file: {output_file}"))?;
             }
 
-            event!(target: PRINT_TARGET, Level::INFO, "Stored {message_count_message} of total size {saved_size} B to {output_file} binary file");
+            let saved_size_str = saved_size.as_human_string();
+            event!(target: PRINT_TARGET, Level::INFO, "Stored {message_count_message} of total size {saved_size_str} to {output_file} binary file");
         } else {
             let message_header_keys = self.create_message_header_keys(&messages);
 

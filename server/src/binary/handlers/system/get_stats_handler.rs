@@ -1,5 +1,5 @@
-use crate::binary::mapper;
 use crate::binary::handlers::system::COMPONENT;
+use crate::binary::mapper;
 use crate::binary::sender::Sender;
 use crate::streaming::session::Session;
 use crate::streaming::systems::system::SharedSystem;
@@ -17,7 +17,7 @@ pub async fn handle(
     debug!("session: {session}, command: {command}");
     let system = system.read().await;
     let stats = system
-        .get_stats(session)
+        .get_stats()
         .await
         .with_error(|_| format!("{COMPONENT} - failed to get stats, session: {session}"))?;
     let bytes = mapper::map_stats(&stats);

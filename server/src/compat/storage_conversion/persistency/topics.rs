@@ -105,22 +105,27 @@ pub async fn load(config: &SystemConfig, db: &Db, topic: &mut Topic) -> Result<(
             topic.segments_count_of_parent_stream.clone(),
             IggyTimestamp::zero(),
         );
-        partitions::load(config, db, &mut partition).await.with_error(|_| format!(
+        partitions::load(config, db, &mut partition)
+            .await
+            .with_error(|_| {
+                format!(
             "{COMPONENT} - failed to load partition, stream ID: {}, topic ID: {}, partition ID: {}",
             partition.stream_id,
             partition.topic_id,
             partition.partition_id,
-        ))?;
+        )
+            })?;
         topic
             .partitions
             .insert(partition.partition_id, IggySharedMut::new(partition));
     }
 
-    let consumer_groups = load_consumer_groups(db, topic).await.with_error(|_| format!(
-        "{COMPONENT} - failed to load consumer groups, stream ID: {}, topic_id: {}",
-        topic.stream_id,
-        topic.topic_id,
-    ))?;
+    let consumer_groups = load_consumer_groups(db, topic).await.with_error(|_| {
+        format!(
+            "{COMPONENT} - failed to load consumer groups, stream ID: {}, topic_id: {}",
+            topic.stream_id, topic.topic_id,
+        )
+    })?;
     topic.consumer_groups = consumer_groups
         .into_iter()
         .map(|group| (group.group_id, RwLock::new(group)))

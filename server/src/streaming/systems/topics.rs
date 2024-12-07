@@ -1,6 +1,6 @@
 use crate::streaming::session::Session;
-use crate::streaming::systems::COMPONENT;
 use crate::streaming::systems::system::System;
+use crate::streaming::systems::COMPONENT;
 use crate::streaming::topics::topic::Topic;
 use error_set::ResultContext;
 use iggy::compression::compression_algorithm::CompressionAlgorithm;
@@ -101,14 +101,23 @@ impl System {
                 replication_factor.unwrap_or(1),
             )
             .await
-            .with_error(|_| format!("{COMPONENT} - failed to create topic, stream ID: {stream_id}"))?;
+            .with_error(|_| {
+                format!("{COMPONENT} - failed to create topic, stream ID: {stream_id}")
+            })?;
 
         self.metrics.increment_topics(1);
         self.metrics.increment_partitions(partitions_count);
         self.metrics.increment_segments(partitions_count);
 
-        self.get_stream(stream_id).with_error(|_| format!("{COMPONENT} - failed to get stream with id: {stream_id}"))?
-            .get_topic(&created_topic_id.try_into()?).with_error(|_| format!("{COMPONENT} - failed to get topic with id: {}", created_topic_id))
+        self.get_stream(stream_id)
+            .with_error(|_| format!("{COMPONENT} - failed to get stream with id: {stream_id}"))?
+            .get_topic(&created_topic_id.try_into()?)
+            .with_error(|_| {
+                format!(
+                    "{COMPONENT} - failed to get topic with id: {}",
+                    created_topic_id
+                )
+            })
     }
 
     #[allow(clippy::too_many_arguments)]
@@ -125,7 +134,11 @@ impl System {
     ) -> Result<&Topic, IggyError> {
         self.ensure_authenticated(session)?;
         {
-            let topic = self.find_topic(session, stream_id, topic_id).with_error(|_| format!("{COMPONENT} - failed to find topic with id: {topic_id}"))?;
+            let topic = self
+                .find_topic(session, stream_id, topic_id)
+                .with_error(|_| {
+                    format!("{COMPONENT} - failed to find topic with id: {topic_id}")
+                })?;
             self.permissioner.update_topic(
                 session.get_user_id(),
                 topic.stream_id,
@@ -150,13 +163,20 @@ impl System {
                 replication_factor.unwrap_or(1),
             )
             .await
-            .with_error(|_| format!("{COMPONENT} - failed to update topic, stream ID: {}, topic ID: {}", stream_id, topic_id))?;
+            .with_error(|_| {
+                format!(
+                    "{COMPONENT} - failed to update topic, stream ID: {}, topic ID: {}",
+                    stream_id, topic_id
+                )
+            })?;
 
         // TODO: if message_expiry is changed, we need to check if we need to purge messages based on the new expiry
         // TODO: if max_size_bytes is changed, we need to check if we need to purge messages based on the new size
         // TODO: if replication_factor is changed, we need to do `something`
-        self.get_stream(stream_id).with_error(|_| format!("{COMPONENT} - failed to get stream with id: {stream_id}"))?
-            .get_topic(topic_id).with_error(|_| format!("{COMPONENT} - failed to get topic with id: {topic_id}"))
+        self.get_stream(stream_id)
+            .with_error(|_| format!("{COMPONENT} - failed to get stream with id: {stream_id}"))?
+            .get_topic(topic_id)
+            .with_error(|_| format!("{COMPONENT} - failed to get topic with id: {topic_id}"))
     }
 
     pub async fn delete_topic(
@@ -168,7 +188,11 @@ impl System {
         self.ensure_authenticated(session)?;
         let stream_id_value;
         {
-            let topic = self.find_topic(session, stream_id, topic_id).with_error(|_| format!("{COMPONENT} - failed to find topic with id: {topic_id}"))?;
+            let topic = self
+                .find_topic(session, stream_id, topic_id)
+                .with_error(|_| {
+                    format!("{COMPONENT} - failed to find topic with id: {topic_id}")
+                })?;
             self.permissioner.delete_topic(
                 session.get_user_id(),
                 topic.stream_id,
@@ -209,7 +233,9 @@ impl System {
         stream_id: &Identifier,
         topic_id: &Identifier,
     ) -> Result<(), IggyError> {
-        let topic = self.find_topic(session, stream_id, topic_id).with_error(|_| format!("{COMPONENT} - failed to find topic with id: {topic_id}"))?;
+        let topic = self
+            .find_topic(session, stream_id, topic_id)
+            .with_error(|_| format!("{COMPONENT} - failed to find topic with id: {topic_id}"))?;
         self.permissioner
             .purge_topic(session.get_user_id(), topic.stream_id, topic.topic_id)
             .with_error(|_| {
@@ -220,6 +246,9 @@ impl System {
                     topic.topic_id,
                 )
             })?;
-        topic.purge().await.with_error(|_| format!("{COMPONENT} - failed to purge topic with id: {topic_id}"))
+        topic
+            .purge()
+            .await
+            .with_error(|_| format!("{COMPONENT} - failed to purge topic with id: {topic_id}"))
     }
 }

@@ -1,3 +1,6 @@
+use iggy::utils::byte_size::IggyByteSize;
+use iggy::utils::duration::IggyDuration;
+
 use crate::configs::http::{
     HttpConfig, HttpCorsConfig, HttpJwtConfig, HttpMetricsConfig, HttpTlsConfig,
 };
@@ -15,6 +18,9 @@ use crate::configs::system::{
 };
 use crate::configs::tcp::{TcpConfig, TcpTlsConfig};
 use std::sync::Arc;
+use std::time::Duration;
+
+use super::tcp::TcpSocketConfig;
 
 static_toml::static_toml! {
     // static_toml crate always starts from CARGO_MANIFEST_DIR (in this case iggy-server root directory)
@@ -119,7 +125,9 @@ impl Default for TcpConfig {
         TcpConfig {
             enabled: SERVER_CONFIG.tcp.enabled,
             address: SERVER_CONFIG.tcp.address.parse().unwrap(),
+            ipv6: SERVER_CONFIG.tcp.ipv_6,
             tls: TcpTlsConfig::default(),
+            socket: TcpSocketConfig::default(),
         }
     }
 }
@@ -130,6 +138,19 @@ impl Default for TcpTlsConfig {
             enabled: SERVER_CONFIG.tcp.tls.enabled,
             certificate: SERVER_CONFIG.tcp.tls.certificate.parse().unwrap(),
             password: SERVER_CONFIG.tcp.tls.password.parse().unwrap(),
+        }
+    }
+}
+
+impl Default for TcpSocketConfig {
+    fn default() -> TcpSocketConfig {
+        TcpSocketConfig {
+            override_defaults: false,
+            recv_buffer_size: IggyByteSize::from(100_000_u64),
+            send_buffer_size: IggyByteSize::from(100_000_u64),
+            keepalive: false,
+            nodelay: false,
+            linger: IggyDuration::new(Duration::new(0, 0)),
         }
     }
 }
@@ -414,7 +435,6 @@ impl Default for SegmentConfig {
         SegmentConfig {
             size: SERVER_CONFIG.system.segment.size.parse().unwrap(),
             cache_indexes: SERVER_CONFIG.system.segment.cache_indexes,
-            cache_time_indexes: SERVER_CONFIG.system.segment.cache_time_indexes,
             message_expiry: SERVER_CONFIG.system.segment.message_expiry.parse().unwrap(),
             archive_expired: SERVER_CONFIG.system.segment.archive_expired,
         }

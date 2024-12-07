@@ -10,7 +10,6 @@ use crate::streaming::partitions::partition::{ConsumerOffset, Partition};
 use crate::streaming::persistence::persister::Persister;
 use crate::streaming::segments::index::{Index, IndexRange};
 use crate::streaming::segments::segment::Segment;
-use crate::streaming::segments::time_index::TimeIndex;
 use crate::streaming::storage::{
     PartitionStorage, SegmentStorage, StreamStorage, SystemInfoStorage, SystemStorage, TopicStorage,
 };
@@ -21,6 +20,7 @@ use async_trait::async_trait;
 use error_set::ResultContext;
 use iggy::consumer::ConsumerKind;
 use iggy::error::IggyError;
+use iggy::utils::byte_size::IggyByteSize;
 use std::path::Path;
 use std::sync::Arc;
 use tokio::fs::{read_dir, rename};
@@ -260,8 +260,8 @@ impl SegmentStorage for NoopSegmentStorage {
         &self,
         _segment: &Segment,
         _batch: RetainedMessageBatch,
-    ) -> Result<u32, IggyError> {
-        Ok(0)
+    ) -> Result<IggyByteSize, IggyError> {
+        Ok(IggyByteSize::default())
     }
 
     async fn load_message_ids(&self, _segment: &Segment) -> Result<Vec<u128>, IggyError> {
@@ -289,26 +289,11 @@ impl SegmentStorage for NoopSegmentStorage {
         Ok(())
     }
 
-    async fn try_load_time_index_for_timestamp(
+    async fn try_load_index_for_timestamp(
         &self,
         _segment: &Segment,
         _timestamp: u64,
-    ) -> Result<Option<TimeIndex>, IggyError> {
+    ) -> Result<Option<Index>, IggyError> {
         Ok(None)
-    }
-
-    async fn load_all_time_indexes(&self, _segment: &Segment) -> Result<Vec<TimeIndex>, IggyError> {
-        Ok(vec![])
-    }
-
-    async fn load_last_time_index(
-        &self,
-        _segment: &Segment,
-    ) -> Result<Option<TimeIndex>, IggyError> {
-        Ok(None)
-    }
-
-    async fn save_time_index(&self, _index_path: &str, _index: TimeIndex) -> Result<(), IggyError> {
-        Ok(())
     }
 }

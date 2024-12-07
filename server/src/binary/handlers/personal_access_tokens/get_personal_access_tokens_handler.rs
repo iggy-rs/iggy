@@ -1,6 +1,6 @@
+use crate::binary::handlers::personal_access_tokens::COMPONENT;
 use crate::binary::mapper;
 use crate::binary::sender::Sender;
-use crate::binary::handlers::personal_access_tokens::COMPONENT;
 use crate::streaming::session::Session;
 use crate::streaming::systems::system::SharedSystem;
 use error_set::ResultContext;
@@ -19,7 +19,9 @@ pub async fn handle(
     let personal_access_tokens = system
         .get_personal_access_tokens(session)
         .await
-        .with_error(|_| format!("{COMPONENT} - failed to get personal access tokens with session: {session}"))?;
+        .with_error(|_| {
+            format!("{COMPONENT} - failed to get personal access tokens with session: {session}")
+        })?;
     let personal_access_tokens = mapper::map_personal_access_tokens(&personal_access_tokens);
     sender.send_ok_response(&personal_access_tokens).await?;
     Ok(())

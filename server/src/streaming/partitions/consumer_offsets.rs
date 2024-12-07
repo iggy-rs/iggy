@@ -79,7 +79,12 @@ impl Partition {
                 .partition
                 .save_consumer_offset(&consumer_offset)
                 .await
-                .with_error(|_| format!("{COMPONENT} - failed to save consumer offset, consumer ID: {}, offset: {}", consumer_id, offset))?;
+                .with_error(|_| {
+                    format!(
+                        "{COMPONENT} - failed to save consumer offset, consumer ID: {}, offset: {}",
+                        consumer_id, offset
+                    )
+                })?;
             return Ok(());
         }
 
@@ -92,7 +97,12 @@ impl Partition {
             .partition
             .save_consumer_offset(&consumer_offset)
             .await
-            .with_error(|_| format!("{COMPONENT} - failed to save new consumer offset, consumer ID: {}, offset: {}", consumer_id, offset))?;
+            .with_error(|_| {
+                format!(
+                    "{COMPONENT} - failed to save new consumer offset, consumer ID: {}, offset: {}",
+                    consumer_id, offset
+                )
+            })?;
         consumer_offsets.insert(consumer_id, consumer_offset);
         Ok(())
     }
@@ -106,7 +116,9 @@ impl Partition {
             );
         self.load_consumer_offsets_from_storage(ConsumerKind::Consumer)
             .await
-            .with_error(|_| format!("{COMPONENT} - failed to load consumer offsets from storage"))?;
+            .with_error(|_| {
+                format!("{COMPONENT} - failed to load consumer offsets from storage")
+            })?;
         self.load_consumer_offsets_from_storage(ConsumerKind::ConsumerGroup)
             .await
     }
@@ -124,7 +136,9 @@ impl Partition {
             .partition
             .load_consumer_offsets(kind, path)
             .await
-            .with_error(|_| format!("{COMPONENT} - failed to load consumer offsets, kind: {kind}, path: {path}"))?;
+            .with_error(|_| {
+                format!("{COMPONENT} - failed to load consumer offsets, kind: {kind}, path: {path}")
+            })?;
         let consumer_offsets = self.get_consumer_offsets(kind);
         for consumer_offset in loaded_consumer_offsets {
             self.log_consumer_offset(&consumer_offset);

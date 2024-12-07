@@ -1,10 +1,10 @@
 use crate::archiver::ArchiverKind;
-use crate::configs::COMPONENT;
 use crate::configs::config_provider::ConfigProvider;
 use crate::configs::http::HttpConfig;
 use crate::configs::quic::QuicConfig;
 use crate::configs::system::SystemConfig;
 use crate::configs::tcp::TcpConfig;
+use crate::configs::COMPONENT;
 use crate::server_error::ConfigError;
 use derive_more::Display;
 use error_set::ResultContext;

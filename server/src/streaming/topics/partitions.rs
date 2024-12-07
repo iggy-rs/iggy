@@ -1,6 +1,6 @@
 use crate::streaming::partitions::partition::Partition;
-use crate::streaming::topics::COMPONENT;
 use crate::streaming::topics::topic::Topic;
+use crate::streaming::topics::COMPONENT;
 use error_set::ResultContext;
 use iggy::error::IggyError;
 use iggy::locking::IggySharedMut;
@@ -54,11 +54,18 @@ impl Topic {
     }
 
     pub async fn add_persisted_partitions(&mut self, count: u32) -> Result<Vec<u32>, IggyError> {
-        let partition_ids = self.add_partitions(count).with_error(|_| format!("{COMPONENT} - failed to add partitions, count: {count}"))?;
+        let partition_ids = self
+            .add_partitions(count)
+            .with_error(|_| format!("{COMPONENT} - failed to add partitions, count: {count}"))?;
         for partition_id in &partition_ids {
             let partition = self.partitions.get(partition_id).unwrap();
             let partition = partition.read().await;
-            partition.persist().await.with_error(|_| format!("{COMPONENT} - failed to persist partiton with id: {}", partition.partition_id))?;
+            partition.persist().await.with_error(|_| {
+                format!(
+                    "{COMPONENT} - failed to persist partiton with id: {}",
+                    partition.partition_id
+                )
+            })?;
         }
         Ok(partition_ids)
     }
@@ -84,7 +91,12 @@ impl Topic {
             let partition_messages_count = partition.get_messages_count();
             segments_count += partition.get_segments_count();
             messages_count += partition_messages_count;
-            partition.delete().await.with_error(|_| format!("{COMPONENT} - failed to delete partiton with id: {}", partition.partition_id))?;
+            partition.delete().await.with_error(|_| {
+                format!(
+                    "{COMPONENT} - failed to delete partiton with id: {}",
+                    partition.partition_id
+                )
+            })?;
         }
         Ok(Some(DeletedPartitions {
             segments_count,

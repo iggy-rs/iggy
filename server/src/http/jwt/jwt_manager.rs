@@ -1,7 +1,7 @@
 use crate::configs::http::HttpJwtConfig;
-use crate::http::jwt::COMPONENT;
 use crate::http::jwt::json_web_token::{GeneratedToken, JwtClaims, RevokedAccessToken};
 use crate::http::jwt::storage::TokenStorage;
+use crate::http::jwt::COMPONENT;
 use crate::streaming::persistence::persister::Persister;
 use error_set::ResultContext;
 use iggy::error::IggyError;

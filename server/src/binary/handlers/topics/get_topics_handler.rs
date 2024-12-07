@@ -1,5 +1,5 @@
-use crate::binary::mapper;
 use crate::binary::handlers::topics::COMPONENT;
+use crate::binary::mapper;
 use crate::binary::sender::Sender;
 use crate::streaming::session::Session;
 use crate::streaming::systems::system::SharedSystem;

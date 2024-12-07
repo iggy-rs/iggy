@@ -86,10 +86,9 @@ pub async fn load(config: &SystemConfig, db: &Db, stream: &mut Stream) -> Result
         );
         topics::load(config, db, &mut topic).await.with_error(|_| {
             format!(
-            "{COMPONENT} - failed to load topic, stream ID: {}, topic ID: {}",
-            topic.stream_id,
-            topic.topic_id,
-        )
+                "{COMPONENT} - failed to load topic, stream ID: {}, topic ID: {}",
+                topic.stream_id, topic.topic_id,
+            )
         })?;
         topics.push(topic);
     }

@@ -48,7 +48,7 @@ impl SysInfoPrinter {
 #[async_trait]
 impl ServerCommand<SysInfoPrintCommand> for SysInfoPrintExecutor {
     async fn execute(&mut self, system: &SharedSystem, _command: SysInfoPrintCommand) {
-        let stats = match system.read().await.get_stats_bypass_auth().await {
+        let stats = match system.read().await.get_stats().await {
             Ok(stats) => stats,
             Err(e) => {
                 error!("Failed to get system information. Error: {e}");
@@ -60,7 +60,7 @@ impl ServerCommand<SysInfoPrintCommand> for SysInfoPrintExecutor {
             / stats.total_memory.as_bytes_u64() as f64)
             * 100f64;
 
-        info!("CPU: {:.2}% / {:.2}% (IggyUsage/Total), Mem: {:.2}% / {} / {} / {} (Free/IggyUsage/TotalUsed/Total), Clients: {}, Messages processed: {}, Read: {}, Written: {}, Run Time: {} s",
+        info!("CPU: {:.2}% / {:.2}% (IggyUsage/Total), Mem: {:.2}% / {} / {} / {} (Free/IggyUsage/TotalUsed/Total), Clients: {}, Messages processed: {}, Read: {}, Written: {}, Uptime: {}",
               stats.cpu_usage,
               stats.total_cpu_usage,
               free_memory_percent,

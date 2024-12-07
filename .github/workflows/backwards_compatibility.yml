@@ -74,12 +74,15 @@ jobs:
     runs-on: ubuntu-latest
     needs: check_commit_message
     if: ${{ needs.check_commit_message.outputs.should_skip != 'true' }}
+    env:
+      BRANCH_NAME: ${{ github.head_ref || github.ref_name }}
     steps:
       - run: echo "${{ needs.check_commit_message.outputs.should_skip == 'true' }}"
 
-      - uses: actions/checkout@v4
+      - name: Checkout code (origin/master)
+        uses: actions/checkout@v4
         with:
-          ref: ${{ github.ref }}
+          ref: master
           fetch-depth: 0
 
       - name: Cache cargo & target directories
@@ -87,39 +90,8 @@ jobs:
         with:
           key: "v2"
 
-      - name: Build (PR)
-        run: cargo build
-
-      - uses: JarvusInnovations/background-action@v1
-        name: Run iggy-server in background (PR)
-        with:
-          run: |
-            target/debug/iggy-server &
-          wait-on: tcp:localhost:8090
-          wait-for: 1m
-          log-output: true
-          log-output-if: true
-          tail: true
-
-      - name: Run send bench (PR)
-        timeout-minutes: 1
-        run: target/debug/iggy-bench --warmup-time 0 --verbose send --message-batches 25 --messages-per-batch 25 tcp
-
-      - name: Stop iggy-server
-        timeout-minutes: 1
-        run: pkill iggy-server && while pgrep -l iggy-server; do sleep 1; done;
-
-      - name: Print iggy-server logs (PR)
-        run: cat local_data/logs/iggy*
-
-      - name: Remove iggy-server logs (PR)
-        run: rm local_data/logs/iggy*
-
-      - name: Reset to origin/master
-        run: git reset --hard origin/master
-
-      - name: Build (origin/master)
-        run: cargo build
+      - name: Build iggy-server (origin/master)
+        run: IGGY_CI_BUILD=true cargo build
 
       - uses: JarvusInnovations/background-action@v1
         name: Run iggy-server in background (origin/master)
@@ -129,21 +101,63 @@ jobs:
           wait-on: tcp:localhost:8090
           wait-for: 1m
           log-output: true
-          log-output-if: true
+          log-output-if: timeout
           tail: true
-
-      - name: Run poll bench (origin/master)
-        timeout-minutes: 1
-        run: target/debug/iggy-bench --warmup-time 0 --verbose poll --message-batches 25 --messages-per-batch 25 tcp
 
       - name: Run send bench (origin/master)
         timeout-minutes: 1
-        run: target/debug/iggy-bench --warmup-time 0 --verbose send --message-batches 25 --messages-per-batch 25 tcp
+        run: target/debug/iggy-bench --warmup-time 0 --verbose send --message-batches 50 --messages-per-batch 100 tcp
 
-      - name: Stop iggy-server
+      - name: Run poll bench (origin/master)
+        timeout-minutes: 1
+        run: target/debug/iggy-bench --warmup-time 0 --verbose poll --message-batches 50 --messages-per-batch 100 tcp
+
+      - name: Stop iggy-server (origin/master)
+        timeout-minutes: 1
+        run: pkill -15 iggy-server && while pgrep -l iggy-server; do sleep 2; done;
+
+      - name: Print iggy-server logs (origin/master)
+        run: cat local_data/logs/iggy*
+
+      - name: Remove iggy-server logs (origin/master)
+        run: rm local_data/logs/iggy*
+
+      - name: Copy local_data directory (origin/master)
+        run: cp -r local_data ..
+
+      - name: Checkout code (PR)
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ github.event.pull_request.head.repo.full_name }}
+          ref: ${{ github.event.pull_request.head.ref }}
+          fetch-depth: 0
+          clean: false
+
+      - name: Build iggy-server (PR)
+        run: IGGY_CI_BUILD=true cargo build
+
+      - name: Restore local_data directory (PR)
+        run: cp -r ../local_data .
+
+      - uses: JarvusInnovations/background-action@v1
+        name: Run iggy-server in background (PR)
+        with:
+          run: |
+            target/debug/iggy-server &
+          wait-on: tcp:localhost:8090
+          wait-for: 1m
+          log-output: true
+          log-output-if: timeout
+          tail: true
+
+      - name: Run poll bench (PR)
+        timeout-minutes: 1
+        run: target/debug/iggy-bench --warmup-time 0 --verbose poll --message-batches 50 --messages-per-batch 100 tcp
+
+      - name: Stop iggy-server (PR)
         timeout-minutes: 1
         run: pkill iggy-server && while pgrep -l iggy-server; do sleep 1; done;
 
-      - name: Print server logs (origin/master)
+      - name: Print server logs (PR)
         run: cat local_data/logs/iggy*
 

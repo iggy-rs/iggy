@@ -1,5 +1,6 @@
 use anyhow::Result;
 use clap::Parser;
+use dotenvy::dotenv;
 use figlet_rs::FIGfont;
 use server::args::Args;
 use server::channels::commands::archive_state::ArchiveStateExecutor;
@@ -31,6 +32,17 @@ async fn main() -> Result<(), ServerError> {
     let figure = standard_font.convert("Iggy Server");
     println!("{}", figure.unwrap());
 
+    if let Ok(env_path) = std::env::var("IGGY_ENV_PATH") {
+        if dotenvy::from_path(&env_path).is_ok() {
+            println!("Loaded environment variables from path: {env_path}");
+        }
+    } else if let Ok(path) = dotenv() {
+        println!(
+            "Loaded environment variables from .env file at path: {}",
+            path.display()
+        );
+    }
+
     let args = Args::parse();
     let config_provider = config_provider::resolve(&args.config_provider)?;
     let config = ServerConfig::load(config_provider.as_ref()).await?;
@@ -51,7 +63,7 @@ async fn main() -> Result<(), ServerError> {
     // Workaround to ensure that the statistics are initialized before the server
     // loads streams and starts accepting connections. This is necessary to
     // have the correct statistics when the server starts.
-    system.write().await.get_stats_bypass_auth().await?;
+    system.write().await.get_stats().await?;
     system.write().await.init().await?;
 
     let _command_handler = ServerCommandHandler::new(system.clone(), &config)

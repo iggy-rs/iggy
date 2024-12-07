@@ -84,7 +84,12 @@ impl TokenStorage {
         self.persister
             .overwrite(&self.path, &bytes)
             .await
-            .with_error(|_| format!("{COMPONENT} - failed to overwrite file, path: {}", self.path))?;
+            .with_error(|_| {
+                format!(
+                    "{COMPONENT} - failed to overwrite file, path: {}",
+                    self.path
+                )
+            })?;
         Ok(())
     }
 
@@ -111,7 +116,12 @@ impl TokenStorage {
         self.persister
             .overwrite(&self.path, &bytes)
             .await
-            .with_error(|_| format!("{COMPONENT} - failed to overwrite file, path: {}", self.path))?;
+            .with_error(|_| {
+                format!(
+                    "{COMPONENT} - failed to overwrite file, path: {}",
+                    self.path
+                )
+            })?;
         Ok(())
     }
 }

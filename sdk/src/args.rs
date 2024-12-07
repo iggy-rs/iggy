@@ -227,6 +227,9 @@ pub struct Args {
     /// The optional TLS domain for the TCP transport
     pub tcp_tls_domain: String,
 
+    /// The optional CA file for the TCP transport
+    pub tcp_tls_ca_file: Option<String>,
+
     /// The optional client address for the QUIC transport
     pub quic_client_address: String,
 
@@ -316,6 +319,7 @@ impl Default for Args {
             tcp_heartbeat_interval: "5s".to_string(),
             tcp_tls_enabled: false,
             tcp_tls_domain: "localhost".to_string(),
+            tcp_tls_ca_file: None,
             quic_client_address: "127.0.0.1:0".to_string(),
             quic_server_address: "127.0.0.1:8080".to_string(),
             quic_server_name: "localhost".to_string(),

@@ -1,9 +1,8 @@
 use crate::streaming::batching::appendable_batch_info::AppendableBatchInfo;
 use crate::streaming::models::messages::RetainedMessage;
 use crate::streaming::polling_consumer::PollingConsumer;
-use crate::streaming::sizeable::Sizeable;
-use crate::streaming::topics::COMPONENT;
 use crate::streaming::topics::topic::Topic;
+use crate::streaming::topics::COMPONENT;
 use crate::streaming::utils::file::folder_size;
 use crate::streaming::utils::hash;
 use error_set::ResultContext;
@@ -12,7 +11,9 @@ use iggy::locking::IggySharedMutFn;
 use iggy::messages::poll_messages::{PollingKind, PollingStrategy};
 use iggy::messages::send_messages::{Message, Partitioning, PartitioningKind};
 use iggy::models::messages::PolledMessages;
+use iggy::utils::byte_size::IggyByteSize;
 use iggy::utils::expiry::IggyExpiry;
+use iggy::utils::sizeable::Sizeable;
 use iggy::utils::timestamp::IggyTimestamp;
 use std::collections::HashMap;
 use std::sync::atomic::Ordering;
@@ -73,7 +74,7 @@ impl Topic {
 
     pub async fn append_messages(
         &self,
-        batch_size: u64,
+        batch_size: IggyByteSize,
         partitioning: Partitioning,
         messages: Vec<Message>,
     ) -> Result<(), IggyError> {
@@ -178,7 +179,9 @@ impl Topic {
         let path = self.config.get_system_path();
 
         // TODO: load data from database instead of calculating the size on disk
-        let total_size_on_disk_bytes = folder_size(&path).await.with_error(|_| format!("{COMPONENT} - failed to get folder size, path: {path}"))?;
+        let total_size_on_disk_bytes = folder_size(&path)
+            .await
+            .with_error(|_| format!("{COMPONENT} - failed to get folder size, path: {path}"))?;
 
         for partition_lock in self.partitions.values_mut() {
             let mut partition = partition_lock.write().await;
@@ -208,15 +211,19 @@ impl Topic {
             // Fetch data from disk proportional to the partition size
             // eg. 12 partitions, each has 300 MB, cache limit is 500 MB, so there is total 3600 MB of data on SSD.
             // 500 MB * (300 / 3600 MB) ~= 41.6 MB to load from cache (assuming all partitions have the same size on disk)
-            let size_to_fetch_from_disk = (cache_limit_bytes as f64
-                * (partition_size_bytes as f64 / total_size_on_disk_bytes as f64))
+            let size_to_fetch_from_disk = (cache_limit_bytes.as_bytes_u64() as f64
+                * (partition_size_bytes.as_bytes_u64() as f64
+                    / total_size_on_disk_bytes.as_bytes_u64() as f64))
                 as u64;
             let messages = partition
                 .get_newest_messages_by_size(size_to_fetch_from_disk as u64)
                 .await
                 .with_error(|_| format!("{COMPONENT} - failed to get newest messages by size: {size_to_fetch_from_disk}"))?;
 
-            let sum: u64 = messages.iter().map(|m| m.get_size_bytes() as u64).sum();
+            let sum = messages
+                .iter()
+                .map(|m| m.get_size_bytes())
+                .sum::<IggyByteSize>();
             if !Self::cache_integrity_check(&messages) {
                 warn!(
                    "Cache integrity check failed for partition ID: {}, topic ID: {}, stream ID: {}, offset: 0 to {}. Emptying cache...",
@@ -311,7 +318,10 @@ mod tests {
 
         for entity_id in 1..=messages_count {
             let messages = vec![Message::new(Some(entity_id as u128), Bytes::new(), None)];
-            let batch_size = messages.iter().map(|msg| msg.get_size_bytes() as u64).sum();
+            let batch_size = messages
+                .iter()
+                .map(|msg| msg.get_size_bytes())
+                .sum::<IggyByteSize>();
             topic
                 .append_messages(batch_size, partitioning.clone(), messages)
                 .await
@@ -340,7 +350,10 @@ mod tests {
         for entity_id in 1..=messages_count {
             let partitioning = Partitioning::messages_key_u32(entity_id);
             let messages = vec![Message::new(Some(entity_id as u128), Bytes::new(), None)];
-            let batch_size = messages.iter().map(|msg| msg.get_size_bytes() as u64).sum();
+            let batch_size = messages
+                .iter()
+                .map(|msg| msg.get_size_bytes())
+                .sum::<IggyByteSize>();
             topic
                 .append_messages(batch_size, partitioning, messages)
                 .await

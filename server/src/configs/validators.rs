@@ -6,9 +6,9 @@ use super::server::{
 };
 use super::system::CompressionConfig;
 use crate::archiver::ArchiverKind;
-use crate::configs::COMPONENT;
 use crate::configs::server::{PersonalAccessTokenConfig, ServerConfig};
 use crate::configs::system::{CacheConfig, SegmentConfig};
+use crate::configs::COMPONENT;
 use crate::server_error::ConfigError;
 use crate::streaming::segments::segment;
 use error_set::ResultContext;
@@ -25,17 +25,17 @@ impl Validatable<ConfigError> for ServerConfig {
         self.data_maintenance
             .validate()
             .with_error(|_| format!("{COMPONENT} - failed to validate data maintenance config"))?;
-        self.personal_access_token
-            .validate()
-            .with_error(|_| format!("CONFIGF - failed to validate personal access token config"))?;
+        self.personal_access_token.validate().with_error(|_| {
+            format!("{COMPONENT} - failed to validate personal access token config")
+        })?;
         self.system
             .segment
             .validate()
-            .with_error(|_| format!("CONFIGF - failed to validate segment config"))?;
+            .with_error(|_| format!("{COMPONENT} - failed to validate segment config"))?;
         self.system
             .cache
             .validate()
-            .with_error(|_| format!("CONFIGF - failed to validate cache config"))?;
+            .with_error(|_| format!("{COMPONENT} - failed to validate cache config"))?;
         self.system
             .compression
             .validate()
@@ -116,9 +116,9 @@ impl Validatable<ConfigError> for CacheConfig {
         );
         let total_memory = sys.total_memory();
         let free_memory = sys.free_memory();
-        let cache_percentage = (limit_bytes as f64 / total_memory as f64) * 100.0;
+        let cache_percentage = (limit_bytes.as_bytes_u64() as f64 / total_memory as f64) * 100.0;
 
-        let pretty_cache_limit = IggyByteSize::from(limit_bytes).as_human_string();
+        let pretty_cache_limit = limit_bytes.as_human_string();
         let pretty_total_memory = IggyByteSize::from(total_memory).as_human_string();
         let pretty_free_memory = IggyByteSize::from(free_memory).as_human_string();
 
@@ -148,7 +148,7 @@ impl Validatable<ConfigError> for CacheConfig {
 
 impl Validatable<ConfigError> for SegmentConfig {
     fn validate(&self) -> Result<(), ConfigError> {
-        if self.size.as_bytes_u64() as u32 > segment::MAX_SIZE_BYTES {
+        if self.size > segment::MAX_SIZE_BYTES {
             return Err(ConfigError::InvalidConfiguration);
         }
 
@@ -171,9 +171,9 @@ impl Validatable<ConfigError> for DataMaintenanceConfig {
         self.archiver
             .validate()
             .with_error(|_| format!("{COMPONENT} - failed to validate archiver config"))?;
-        self.messages
-            .validate()
-            .with_error(|_| format!("{COMPONENT} - failed to validate messages maintenance config"))?;
+        self.messages.validate().with_error(|_| {
+            format!("{COMPONENT} - failed to validate messages maintenance config")
+        })?;
         self.state
             .validate()
             .with_error(|_| format!("{COMPONENT} - failed to validate state maintenance config"))?;
@@ -187,7 +187,7 @@ impl Validatable<ConfigError> for ArchiverConfig {
             return Ok(());
         }
 
-        return match self.kind {
+        match self.kind {
             ArchiverKind::Disk => {
                 if self.disk.is_none() {
                     return Err(ConfigError::InvalidConfiguration);
@@ -228,7 +228,7 @@ impl Validatable<ConfigError> for ArchiverConfig {
                 }
                 Ok(())
             }
-        };
+        }
     }
 }
 

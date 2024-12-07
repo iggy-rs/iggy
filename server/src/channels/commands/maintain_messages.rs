@@ -449,11 +449,7 @@ async fn archive_segments(
                     }
 
                     let segment = segment.unwrap();
-                    let files = [
-                        segment.index_path.as_ref(),
-                        segment.time_index_path.as_ref(),
-                        segment.log_path.as_ref(),
-                    ];
+                    let files = [segment.index_path.as_ref(), segment.log_path.as_ref()];
                     if let Err(error) = archiver.archive(&files, None).await {
                         error!(
                             "Failed to archive segment with start offset: {} for stream ID: {}, topic ID: {}, partition ID: {}. Error: {}",

@@ -139,6 +139,11 @@ impl TcpClientBuilder {
         self
     }
 
+    pub fn with_tls_ca_file(mut self, tls_ca_file: String) -> Self {
+        self.config = self.config.with_tls_ca_file(tls_ca_file);
+        self
+    }
+
     /// Builds the parent `IggyClient` with TCP configuration.
     pub fn build(self) -> Result<IggyClient, IggyError> {
         let client = TcpClient::create(Arc::new(self.config.build()))?;

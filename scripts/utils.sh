@@ -54,6 +54,17 @@ function send_signal() {
     fi
 }
 
+# Function to exit with error if a process with the given PID is running
+exit_if_process_is_not_running() {
+    local pid="$1"
+
+    if kill -0 "$pid" 2>/dev/null; then
+        return 0  # Process is running
+    else
+        exit 1  # Process is not running
+    fi
+}
+
 # Exit hook for profile.sh
 function on_exit_profile() {
     # Gracefully stop the server

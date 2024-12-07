@@ -5,6 +5,7 @@ pub mod info;
 pub mod messages;
 pub mod partitions;
 pub mod personal_access_tokens;
+pub mod snapshot;
 pub mod stats;
 pub mod storage;
 pub mod streams;

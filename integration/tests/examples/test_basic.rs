@@ -7,7 +7,7 @@ struct TestBasic<'a> {
     expected_consumer_output: Vec<&'a str>,
 }
 
-impl<'a> IggyExampleTestCase for TestBasic<'a> {
+impl IggyExampleTestCase for TestBasic<'_> {
     fn verify_log_output(&self, producer_stdout: &str, consumer_stdout: &str) {
         verify_stdout_contains_expected_logs(
             producer_stdout,

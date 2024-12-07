@@ -5,6 +5,8 @@ use crate::identifier::Identifier;
 use crate::messages::{MAX_HEADERS_SIZE, MAX_PAYLOAD_SIZE};
 use crate::models::header;
 use crate::models::header::{HeaderKey, HeaderValue};
+use crate::utils::byte_size::IggyByteSize;
+use crate::utils::sizeable::Sizeable;
 use crate::validatable::Validatable;
 use bytes::{BufMut, Bytes, BytesMut};
 use serde::{Deserialize, Serialize};
@@ -199,10 +201,11 @@ impl Partitioning {
             value: partitioning.value.clone(),
         }
     }
+}
 
-    /// Get the size of the partitioning in bytes.
-    pub fn get_size_bytes(&self) -> u32 {
-        2 + u32::from(self.length)
+impl Sizeable for Partitioning {
+    fn get_size_bytes(&self) -> IggyByteSize {
+        IggyByteSize::from(u64::from(self.length) + 2)
     }
 }
 
@@ -286,11 +289,12 @@ impl Message {
             headers,
         }
     }
+}
 
-    /// Get the size of the message in bytes.
-    pub fn get_size_bytes(&self) -> u32 {
+impl Sizeable for Message {
+    fn get_size_bytes(&self) -> IggyByteSize {
         // ID + Length + Payload + Headers
-        16 + 4 + self.payload.len() as u32 + header::get_headers_size_bytes(&self.headers)
+        header::get_headers_size_bytes(&self.headers) + (16 + 4 + self.payload.len() as u64).into()
     }
 }
 
@@ -358,7 +362,7 @@ impl BytesSerializable for Partitioning {
 
 impl BytesSerializable for Message {
     fn to_bytes(&self) -> Bytes {
-        let mut bytes = BytesMut::with_capacity(self.get_size_bytes() as usize);
+        let mut bytes = BytesMut::with_capacity(self.get_size_bytes().as_bytes_usize());
         bytes.put_u128_le(self.id);
         if let Some(headers) = &self.headers {
             let headers_bytes = headers.to_bytes();
@@ -420,12 +424,18 @@ pub(crate) fn as_bytes(
     partitioning: &Partitioning,
     messages: &[Message],
 ) -> Bytes {
-    let messages_size = messages.iter().map(Message::get_size_bytes).sum::<u32>();
+    let messages_size = messages
+        .iter()
+        .map(Message::get_size_bytes)
+        .sum::<IggyByteSize>();
     let key_bytes = partitioning.to_bytes();
     let stream_id_bytes = stream_id.to_bytes();
     let topic_id_bytes = topic_id.to_bytes();
     let mut bytes = BytesMut::with_capacity(
-        stream_id_bytes.len() + topic_id_bytes.len() + key_bytes.len() + messages_size as usize,
+        stream_id_bytes.len()
+            + topic_id_bytes.len()
+            + key_bytes.len()
+            + messages_size.as_bytes_usize(),
     );
     bytes.put_slice(&stream_id_bytes);
     bytes.put_slice(&topic_id_bytes);
@@ -473,17 +483,17 @@ impl BytesSerializable for SendMessages {
 
         let mut position = 0;
         let stream_id = Identifier::from_bytes(bytes.clone())?;
-        position += stream_id.get_size_bytes() as usize;
+        position += stream_id.get_size_bytes().as_bytes_usize();
         let topic_id = Identifier::from_bytes(bytes.slice(position..))?;
-        position += topic_id.get_size_bytes() as usize;
+        position += topic_id.get_size_bytes().as_bytes_usize();
         let key = Partitioning::from_bytes(bytes.slice(position..))?;
-        position += key.get_size_bytes() as usize;
+        position += key.get_size_bytes().as_bytes_usize();
         let messages_payloads = bytes.slice(position..);
         position = 0;
         let mut messages = Vec::new();
         while position < messages_payloads.len() {
             let message = Message::from_bytes(messages_payloads.slice(position..))?;
-            position += message.get_size_bytes() as usize;
+            position += message.get_size_bytes().as_bytes_usize();
             messages.push(message);
         }
 
@@ -562,11 +572,11 @@ mod tests {
 
         let mut position = 0;
         let stream_id = Identifier::from_bytes(bytes.clone()).unwrap();
-        position += stream_id.get_size_bytes() as usize;
+        position += stream_id.get_size_bytes().as_bytes_usize();
         let topic_id = Identifier::from_bytes(bytes.slice(position..)).unwrap();
-        position += topic_id.get_size_bytes() as usize;
+        position += topic_id.get_size_bytes().as_bytes_usize();
         let key = Partitioning::from_bytes(bytes.slice(position..)).unwrap();
-        position += key.get_size_bytes() as usize;
+        position += key.get_size_bytes().as_bytes_usize();
         let messages = bytes.slice(position..);
         let command_messages = command
             .messages
@@ -618,7 +628,7 @@ mod tests {
         let mut messages = Vec::new();
         while position < messages_payloads.len() {
             let message = Message::from_bytes(messages_payloads.slice(position..)).unwrap();
-            position += message.get_size_bytes() as usize;
+            position += message.get_size_bytes().as_bytes_usize();
             messages.push(message);
         }
 

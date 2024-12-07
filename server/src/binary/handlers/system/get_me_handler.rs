@@ -1,3 +1,4 @@
+use crate::binary::handlers::system::COMPONENT;
 use crate::binary::mapper;
 use crate::binary::sender::Sender;
 use crate::streaming::session::Session;
@@ -21,7 +22,7 @@ pub async fn handle(
         let client = system
             .get_client(session, session.client_id)
             .await
-            .with_error(|_| format!("SYSTEM_HANDLER - failed to get client, session: {session}"))?;
+            .with_error(|_| format!("{COMPONENT} - failed to get client, session: {session}"))?;
         {
             let client = client.read().await;
             bytes = mapper::map_client(&client);

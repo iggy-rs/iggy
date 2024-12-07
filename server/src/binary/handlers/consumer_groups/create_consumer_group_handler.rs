@@ -1,3 +1,4 @@
+use crate::binary::handlers::consumer_groups::COMPONENT;
 use crate::binary::mapper;
 use crate::binary::sender::Sender;
 use crate::state::command::EntryCommand;
@@ -31,7 +32,7 @@ pub async fn handle(
             .await
             .with_error(|_| {
                 format!(
-                    "CONSUMER_GROUP_HANDLER - failed to create consumer group for stream_id: {}, topic_id: {}, group_id: {:?}, session: {:?}",
+                    "{COMPONENT} - failed to create consumer group for stream_id: {}, topic_id: {}, group_id: {:?}, session: {:?}",
                     command.stream_id, command.topic_id, command.group_id, session
                 )
             })?;
@@ -53,7 +54,7 @@ pub async fn handle(
         .await
         .with_error(|_| {
             format!(
-                "CONSUMER_GROUP_HANDLER - failed to apply create consumer group for stream_id: {}, topic_id: {}, group_id: {:?}, session: {}",
+                "{COMPONENT} - failed to apply create consumer group for stream_id: {}, topic_id: {}, group_id: {:?}, session: {}",
                 stream_id, topic_id, group_id, session
             )
         })?;

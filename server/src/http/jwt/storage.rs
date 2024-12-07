@@ -1,4 +1,5 @@
 use crate::http::jwt::json_web_token::RevokedAccessToken;
+use crate::http::jwt::COMPONENT;
 use crate::streaming::persistence::persister::Persister;
 use crate::streaming::utils::file;
 use anyhow::Context;
@@ -40,7 +41,7 @@ impl TokenStorage {
             .await
             .with_error(|_| {
                 format!(
-                    "HTTP_JWT - failed to read file metadata, path: {}",
+                    "{COMPONENT} - failed to read file metadata, path: {}",
                     self.path
                 )
             })?
@@ -49,7 +50,7 @@ impl TokenStorage {
         buffer.put_bytes(0, file_size);
         file.read_exact(&mut buffer).await.with_error(|_| {
             format!(
-                "HTTP_JWT - failed to read file into buffer, path: {}",
+                "{COMPONENT} - failed to read file into buffer, path: {}",
                 self.path
             )
         })?;
@@ -83,7 +84,12 @@ impl TokenStorage {
         self.persister
             .overwrite(&self.path, &bytes)
             .await
-            .with_error(|_| format!("HTTP_JWT - failed to overwrite file, path: {}", self.path))?;
+            .with_error(|_| {
+                format!(
+                    "{COMPONENT} - failed to overwrite file, path: {}",
+                    self.path
+                )
+            })?;
         Ok(())
     }
 
@@ -91,7 +97,7 @@ impl TokenStorage {
         let tokens = self
             .load_all_revoked_access_tokens()
             .await
-            .with_error(|_| "HTTP_JWT - failed to load revoked access tokens")?;
+            .with_error(|_| "{COMPONENT} - failed to load revoked access tokens")?;
         if tokens.is_empty() {
             return Ok(());
         }
@@ -110,7 +116,12 @@ impl TokenStorage {
         self.persister
             .overwrite(&self.path, &bytes)
             .await
-            .with_error(|_| format!("HTTP_JWT - failed to overwrite file, path: {}", self.path))?;
+            .with_error(|_| {
+                format!(
+                    "{COMPONENT} - failed to overwrite file, path: {}",
+                    self.path
+                )
+            })?;
         Ok(())
     }
 }

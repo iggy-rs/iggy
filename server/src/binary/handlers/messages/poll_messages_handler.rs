@@ -1,3 +1,4 @@
+use crate::binary::handlers::messages::COMPONENT;
 use crate::binary::mapper;
 use crate::binary::sender::Sender;
 use crate::streaming::session::Session;
@@ -28,7 +29,7 @@ pub async fn handle(
         )
         .await
         .with_error(|_| format!(
-            "MESSAGE_HANDLER - failed to poll messages for consumer: {}, stream_id: {}, topic_id: {}, partition_id: {:?}, session: {}",
+            "{COMPONENT} - failed to poll messages for consumer: {}, stream_id: {}, topic_id: {}, partition_id: {:?}, session: {}",
             command.consumer, command.stream_id, command.topic_id, command.partition_id, session
         ))?;
     let messages = mapper::map_polled_messages(&messages);

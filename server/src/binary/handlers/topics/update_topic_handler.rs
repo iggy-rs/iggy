@@ -1,3 +1,4 @@
+use crate::binary::handlers::topics::COMPONENT;
 use crate::binary::sender::Sender;
 use crate::state::command::EntryCommand;
 use crate::streaming::session::Session;
@@ -32,7 +33,7 @@ pub async fn handle(
             )
             .await
             .with_error(|_| format!(
-                "TOPIC_HANDLER - failed to update topic with id: {}, stream_id: {}, session: {session}",
+                "{COMPONENT} - failed to update topic with id: {}, stream_id: {}, session: {session}",
                 command.topic_id, command.stream_id
             ))?;
         command.message_expiry = topic.message_expiry;
@@ -48,7 +49,7 @@ pub async fn handle(
         .apply(session.get_user_id(), EntryCommand::UpdateTopic(command))
         .await
         .with_error(|_| format!(
-            "TOPIC_HANDLER - failed to apply update topic with id: {}, stream_id: {}, session: {session}",
+            "{COMPONENT} - failed to apply update topic with id: {}, stream_id: {}, session: {session}",
             topic_id, stream_id
         ))?;
     sender.send_empty_ok_response().await?;

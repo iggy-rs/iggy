@@ -3,6 +3,7 @@ use crate::http::jwt::json_web_token::Identity;
 use crate::http::mapper;
 use crate::http::mapper::map_generated_access_token_to_identity_info;
 use crate::http::shared::AppState;
+use crate::http::COMPONENT;
 use crate::state::command::EntryCommand;
 use crate::state::models::CreatePersonalAccessTokenWithHash;
 use crate::streaming::personal_access_tokens::personal_access_token::PersonalAccessToken;
@@ -48,7 +49,7 @@ async fn get_personal_access_tokens(
         .await
         .with_error(|_| {
             format!(
-                "HTTP - failed to get personal access tokens, user ID: {}",
+                "{COMPONENT} - failed to get personal access tokens, user ID: {}",
                 identity.user_id
             )
         })?;
@@ -75,7 +76,7 @@ async fn create_personal_access_token(
             .await
             .with_error(|_| {
                 format!(
-                    "HTTP - failed to create personal access token, user ID: {}",
+                    "{COMPONENT} - failed to create personal access token, user ID: {}",
                     identity.user_id
                 )
             })?;
@@ -95,7 +96,7 @@ async fn create_personal_access_token(
         .await
         .with_error(|_| {
             format!(
-                "HTTP - failed to apply create personal access token with hash, user ID: {}",
+                "{COMPONENT} - failed to apply create personal access token with hash, user ID: {}",
                 identity.user_id
             )
         })?;
@@ -118,7 +119,7 @@ async fn delete_personal_access_token(
             .await
             .with_error(|_| {
                 format!(
-                    "HTTP - failed to delete personal access token, user ID: {}",
+                    "{COMPONENT} - failed to delete personal access token, user ID: {}",
                     identity.user_id
                 )
             })?;
@@ -134,7 +135,7 @@ async fn delete_personal_access_token(
         .await
         .with_error(|_| {
             format!(
-                "HTTP - failed to apply delete personal access token, user ID: {}",
+                "{COMPONENT} - failed to apply delete personal access token, user ID: {}",
                 identity.user_id
             )
         })?;
@@ -151,7 +152,7 @@ async fn login_with_personal_access_token(
     let user = system
         .login_with_personal_access_token(&command.token, None)
         .await
-        .with_error(|_| "HTTP - failed to login with personal access token")?;
+        .with_error(|_| "{COMPONENT} - failed to login with personal access token")?;
     let tokens = state.jwt_manager.generate(user.id)?;
     Ok(Json(map_generated_access_token_to_identity_info(tokens)))
 }

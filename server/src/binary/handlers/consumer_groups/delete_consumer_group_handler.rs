@@ -1,3 +1,4 @@
+use crate::binary::handlers::consumer_groups::COMPONENT;
 use crate::binary::sender::Sender;
 use crate::state::command::EntryCommand;
 use crate::streaming::session::Session;
@@ -26,7 +27,7 @@ pub async fn handle(
                 &command.group_id,
             )
             .await.with_error(|_| format!(
-                "CONSUMER_GROUP_HANDLER - failed to delete consumer group for stream_id: {}, topic_id: {}, group_id: {:?}, session: {}",
+                "{COMPONENT} - failed to delete consumer group for stream_id: {}, topic_id: {}, group_id: {:?}, session: {}",
                 command.stream_id, command.topic_id, command.group_id, session
             ))?;
     }
@@ -45,7 +46,7 @@ pub async fn handle(
         .await
         .with_error(|_| {
             format!(
-                "CONSUMER_GROUP_HANDLER - failed to apply delete consumer group for stream_id: {}, topic_id: {}, group_id: {:?}, session: {}",
+                "{COMPONENT} - failed to apply delete consumer group for stream_id: {}, topic_id: {}, group_id: {:?}, session: {}",
                 stream_id, topic_id, group_id, session
             )
         })?;

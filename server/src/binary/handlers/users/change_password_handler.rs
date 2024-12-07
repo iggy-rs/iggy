@@ -1,3 +1,4 @@
+use crate::binary::handlers::users::COMPONENT;
 use crate::binary::sender::Sender;
 use crate::state::command::EntryCommand;
 use crate::streaming::session::Session;
@@ -29,7 +30,7 @@ pub async fn handle(
             .await
             .with_error(|_| {
                 format!(
-                    "USER_HANDLER - failed to change password for user_id: {}, session: {session}",
+                    "{COMPONENT} - failed to change password for user_id: {}, session: {session}",
                     command.user_id
                 )
             })?;
@@ -50,9 +51,9 @@ pub async fn handle(
         .await
         .with_error(|_| {
             format!(
-            "USER_HANDLER - failed to apply change password for user_id: {}, session: {session}",
-            command.user_id
-        )
+                "{COMPONENT} - failed to apply change password for user_id: {}, session: {session}",
+                command.user_id
+            )
         })?;
     sender.send_empty_ok_response().await?;
     Ok(())

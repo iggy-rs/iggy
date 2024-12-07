@@ -1,5 +1,7 @@
+use crate::streaming::persistence::COMPONENT;
 use crate::streaming::utils::file;
 use async_trait::async_trait;
+use error_set::ResultContext;
 use iggy::error::IggyError;
 use std::fmt::Debug;
 use tokio::fs;
@@ -35,19 +37,29 @@ unsafe impl Sync for FileWithSyncPersister {}
 #[async_trait]
 impl Persister for FilePersister {
     async fn append(&self, path: &str, bytes: &[u8]) -> Result<(), IggyError> {
-        let mut file = file::append(path).await?;
-        file.write_all(bytes).await?;
+        let mut file = file::append(path)
+            .await
+            .with_error(|_| format!("{COMPONENT} - failed to append to file: {path}"))?;
+        file.write_all(bytes)
+            .await
+            .with_error(|_| format!("{COMPONENT} - failed to write data to file: {path}"))?;
         Ok(())
     }
 
     async fn overwrite(&self, path: &str, bytes: &[u8]) -> Result<(), IggyError> {
-        let mut file = file::overwrite(path).await?;
-        file.write_all(bytes).await?;
+        let mut file = file::overwrite(path)
+            .await
+            .with_error(|_| format!("{COMPONENT} - failed to overwrite file: {path}"))?;
+        file.write_all(bytes)
+            .await
+            .with_error(|_| format!("{COMPONENT} - failed to write data to file: {path}"))?;
         Ok(())
     }
 
     async fn delete(&self, path: &str) -> Result<(), IggyError> {
-        fs::remove_file(path).await?;
+        fs::remove_file(path)
+            .await
+            .with_error(|_| format!("{COMPONENT} - failed to delete file: {path}"))?;
         Ok(())
     }
 }
@@ -55,21 +67,35 @@ impl Persister for FilePersister {
 #[async_trait]
 impl Persister for FileWithSyncPersister {
     async fn append(&self, path: &str, bytes: &[u8]) -> Result<(), IggyError> {
-        let mut file = file::append(path).await?;
-        file.write_all(bytes).await?;
-        file.sync_all().await?;
+        let mut file = file::append(path)
+            .await
+            .with_error(|_| format!("{COMPONENT} - failed to append to file: {path}"))?;
+        file.write_all(bytes)
+            .await
+            .with_error(|_| format!("{COMPONENT} - failed to write data to file: {path}"))?;
+        file.sync_all()
+            .await
+            .with_error(|_| format!("{COMPONENT} - failed to sync file after appending: {path}"))?;
         Ok(())
     }
 
     async fn overwrite(&self, path: &str, bytes: &[u8]) -> Result<(), IggyError> {
-        let mut file = file::overwrite(path).await?;
-        file.write_all(bytes).await?;
-        file.sync_all().await?;
+        let mut file = file::overwrite(path)
+            .await
+            .with_error(|_| format!("{COMPONENT} - failed to overwrite file: {path}"))?;
+        file.write_all(bytes)
+            .await
+            .with_error(|_| format!("{COMPONENT} - failed to write data to file: {path}"))?;
+        file.sync_all().await.with_error(|_| {
+            format!("{COMPONENT} - failed to sync file after overwriting: {path}")
+        })?;
         Ok(())
     }
 
     async fn delete(&self, path: &str) -> Result<(), IggyError> {
-        fs::remove_file(path).await?;
+        fs::remove_file(path)
+            .await
+            .with_error(|_| format!("{COMPONENT} - failed to delete file: {path}"))?;
         Ok(())
     }
 }

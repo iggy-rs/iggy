@@ -8,6 +8,7 @@ use super::system::CompressionConfig;
 use crate::archiver::ArchiverKind;
 use crate::configs::server::{PersonalAccessTokenConfig, ServerConfig};
 use crate::configs::system::{CacheConfig, SegmentConfig};
+use crate::configs::COMPONENT;
 use crate::server_error::ConfigError;
 use crate::streaming::segments::segment;
 use error_set::ResultContext;
@@ -23,25 +24,25 @@ impl Validatable<ConfigError> for ServerConfig {
     fn validate(&self) -> Result<(), ConfigError> {
         self.data_maintenance
             .validate()
-            .with_error(|_| "CONFIG - failed to validate data maintenance config")?;
-        self.personal_access_token
-            .validate()
-            .with_error(|_| "CONFIGF - failed to validate personal access token config")?;
+            .with_error(|_| format!("{COMPONENT} - failed to validate data maintenance config"))?;
+        self.personal_access_token.validate().with_error(|_| {
+            format!("{COMPONENT} - failed to validate personal access token config")
+        })?;
         self.system
             .segment
             .validate()
-            .with_error(|_| "CONFIGF - failed to validate segment config")?;
+            .with_error(|_| format!("{COMPONENT} - failed to validate segment config"))?;
         self.system
             .cache
             .validate()
-            .with_error(|_| "CONFIGF - failed to validate cache config")?;
+            .with_error(|_| format!("{COMPONENT} - failed to validate cache config"))?;
         self.system
             .compression
             .validate()
-            .with_error(|_| "CONFIG - failed to validate compression config")?;
+            .with_error(|_| format!("{COMPONENT} - failed to validate compression config"))?;
         self.telemetry
             .validate()
-            .with_error(|_| "CONFIG - failed to validate telemetry config")?;
+            .with_error(|_| format!("{COMPONENT} - failed to validate telemetry config"))?;
 
         let topic_size = match self.system.topic.max_size {
             MaxTopicSize::Custom(size) => Ok(size.as_bytes_u64()),
@@ -169,13 +170,13 @@ impl Validatable<ConfigError> for DataMaintenanceConfig {
     fn validate(&self) -> Result<(), ConfigError> {
         self.archiver
             .validate()
-            .with_error(|_| "CONFIG - failed to validate archiver config")?;
-        self.messages
-            .validate()
-            .with_error(|_| "CONFIG - failed to validate messages maintenance config")?;
+            .with_error(|_| format!("{COMPONENT} - failed to validate archiver config"))?;
+        self.messages.validate().with_error(|_| {
+            format!("{COMPONENT} - failed to validate messages maintenance config")
+        })?;
         self.state
             .validate()
-            .with_error(|_| "CONFIG - failed to validate state maintenance config")?;
+            .with_error(|_| format!("{COMPONENT} - failed to validate state maintenance config"))?;
         Ok(())
     }
 }

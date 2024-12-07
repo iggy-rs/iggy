@@ -1,3 +1,4 @@
+use crate::binary::handlers::consumer_groups::COMPONENT;
 use crate::binary::mapper;
 use crate::binary::sender::Sender;
 use crate::streaming::session::Session;
@@ -20,7 +21,7 @@ pub async fn handle(
         .get_consumer_groups(session, &command.stream_id, &command.topic_id)
         .with_error(|_| {
             format!(
-                "CONSUMER_GROUP_HANDLER - failed on getting consumer groups for stream_id: {}, topic_id: {}, session: {}",
+                "{COMPONENT} - failed on getting consumer groups for stream_id: {}, topic_id: {}, session: {}",
                 command.stream_id, command.topic_id, session
             )
         })?;

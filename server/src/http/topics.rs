@@ -2,6 +2,7 @@ use crate::http::error::CustomError;
 use crate::http::jwt::json_web_token::Identity;
 use crate::http::mapper;
 use crate::http::shared::AppState;
+use crate::http::COMPONENT;
 use crate::state::command::EntryCommand;
 use crate::streaming::session::Session;
 use axum::extract::{Path, State};
@@ -52,7 +53,7 @@ async fn get_topic(
         )
         .with_error(|_| {
             format!(
-                "HTTP - failed to find topic, stream ID: {}, topic ID: {}",
+                "{COMPONENT} - failed to find topic, stream ID: {}, topic ID: {}",
                 stream_id, topic_id
             )
         });
@@ -76,7 +77,12 @@ async fn get_topics(
             &Session::stateless(identity.user_id, identity.ip_address),
             &stream_id,
         )
-        .with_error(|_| format!("HTTP - failed to find topic, stream ID: {}", stream_id))?;
+        .with_error(|_| {
+            format!(
+                "{COMPONENT} - failed to find topic, stream ID: {}",
+                stream_id
+            )
+        })?;
     let topics = mapper::map_topics(&topics);
     Ok(Json(topics))
 }
@@ -106,7 +112,12 @@ async fn create_topic(
                 command.replication_factor,
             )
             .await
-            .with_error(|_| format!("HTTP - failed to create topic, stream ID: {}", stream_id))?;
+            .with_error(|_| {
+                format!(
+                    "{COMPONENT} - failed to create topic, stream ID: {}",
+                    stream_id
+                )
+            })?;
         command.message_expiry = topic.message_expiry;
         command.max_topic_size = topic.max_topic_size;
         response = Json(mapper::map_topic(topic).await);
@@ -119,7 +130,7 @@ async fn create_topic(
         .await
         .with_error(|_| {
             format!(
-                "HTTP - failed to apply create topic, stream ID: {}",
+                "{COMPONENT} - failed to apply create topic, stream ID: {}",
                 stream_id
             )
         })?;
@@ -152,7 +163,7 @@ async fn update_topic(
             .await
             .with_error(|_| {
                 format!(
-                    "HTTP - failed to update topic, stream ID: {}, topic ID: {}",
+                    "{COMPONENT} - failed to update topic, stream ID: {}, topic ID: {}",
                     stream_id, topic_id
                 )
             })?;
@@ -167,7 +178,7 @@ async fn update_topic(
         .await
         .with_error(|_| {
             format!(
-                "HTTP - failed to apply update topic, stream ID: {}, topic ID: {}",
+                "{COMPONENT} - failed to apply update topic, stream ID: {}, topic ID: {}",
                 stream_id, topic_id
             )
         })?;
@@ -193,7 +204,7 @@ async fn delete_topic(
             .await
             .with_error(|_| {
                 format!(
-                    "HTTP - failed to delete topic, stream ID: {}, topic ID: {}",
+                    "{COMPONENT} - failed to delete topic, stream ID: {}, topic ID: {}",
                     stream_id, topic_id
                 )
             })?;
@@ -212,7 +223,7 @@ async fn delete_topic(
         .await
         .with_error(|_| {
             format!(
-                "HTTP - failed to apply delete topic, stream ID: {}, topic ID: {}",
+                "{COMPONENT} - failed to apply delete topic, stream ID: {}, topic ID: {}",
                 stream_id, topic_id
             )
         })?;
@@ -237,7 +248,7 @@ async fn purge_topic(
         .await
         .with_error(|_| {
             format!(
-                "HTTP - failed to purge topic, stream ID: {}, topic ID: {}",
+                "{COMPONENT} - failed to purge topic, stream ID: {}, topic ID: {}",
                 stream_id, topic_id
             )
         })?;
@@ -253,7 +264,7 @@ async fn purge_topic(
         .await
         .with_error(|_| {
             format!(
-                "HTTP - failed to apply purge topic, stream ID: {}, topic ID: {}",
+                "{COMPONENT} - failed to apply purge topic, stream ID: {}, topic ID: {}",
                 stream_id, topic_id
             )
         })?;

@@ -1,4 +1,4 @@
-use crate::archiver::Archiver;
+use crate::archiver::{Archiver, COMPONENT};
 use crate::configs::server::DiskArchiverConfig;
 use crate::server_error::ArchiverError;
 use async_trait::async_trait;
@@ -69,10 +69,10 @@ impl Archiver for DiskArchiver {
             fs::create_dir_all(destination.parent().unwrap())
                 .await
                 .with_error(|err| {
-                    format!("ARCHIVER - failed to create file: {file} at path: {destination_path} with error: {err}",)
+                    format!("{COMPONENT} - failed to create file: {file} at path: {destination_path} with error: {err}",)
                 })?;
             fs::copy(source, destination).await.with_error(|err| {
-                format!("ARCHIVER - failed to copy file: {file} to destination: {destination_path} with error: {err}")
+                format!("{COMPONENT} - failed to copy file: {file} to destination: {destination_path} with error: {err}")
             })?;
             debug!("Archived file: {file} at: {destination_path}");
         }

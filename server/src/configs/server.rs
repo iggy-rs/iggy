@@ -4,6 +4,7 @@ use crate::configs::http::HttpConfig;
 use crate::configs::quic::QuicConfig;
 use crate::configs::system::SystemConfig;
 use crate::configs::tcp::TcpConfig;
+use crate::configs::COMPONENT;
 use crate::server_error::ConfigError;
 use derive_more::Display;
 use error_set::ResultContext;
@@ -153,10 +154,10 @@ impl ServerConfig {
         let server_config = config_provider
             .load_config()
             .await
-            .with_error(|_| "CONFIG - failed to load config provider config".to_string())?;
+            .with_error(|_| format!("{COMPONENT} - failed to load config provider config"))?;
         server_config
             .validate()
-            .with_error(|_| "CONFIG - failed to validate server config".to_string())?;
+            .with_error(|_| format!("{COMPONENT} - failed to validate server config"))?;
         Ok(server_config)
     }
 }

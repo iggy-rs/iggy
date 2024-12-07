@@ -1,3 +1,4 @@
+use crate::binary::handlers::users::COMPONENT;
 use crate::binary::sender::Sender;
 use crate::state::command::EntryCommand;
 use crate::streaming::session::Session;
@@ -28,7 +29,7 @@ pub async fn handle(
             .await
             .with_error(|_| {
                 format!(
-                    "USER_HANDLER - failed to update user with user_id: {}, session: {session}",
+                    "{COMPONENT} - failed to update user with user_id: {}, session: {session}",
                     command.user_id
                 )
             })?;
@@ -43,7 +44,7 @@ pub async fn handle(
         .await
         .with_error(|_| {
             format!(
-                "USER_HANDLER - failed to apply update user with user_id: {}, session: {session}",
+                "{COMPONENT} - failed to apply update user with user_id: {}, session: {session}",
                 user_id
             )
         })?;

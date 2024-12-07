@@ -1,3 +1,4 @@
+use crate::compat::storage_conversion::persistency::COMPONENT;
 use crate::configs::system::SystemConfig;
 use crate::streaming::batching::batch_accumulator::BatchAccumulator;
 use crate::streaming::partitions::partition::{ConsumerOffset, Partition};
@@ -132,7 +133,7 @@ pub async fn load(
     )
     .await
     .with_error(|_| format!(
-        "STORAGE_CONVERSION_PERSISTENCY - failed to load consumer offsets for cosumer, stream ID: {}, topic ID: {}, partition ID: {}",
+        "{COMPONENT} - failed to load consumer offsets for cosumer, stream ID: {}, topic ID: {}, partition ID: {}",
         partition.stream_id,
         partition.topic_id,
         partition.partition_id),
@@ -148,7 +149,7 @@ pub async fn load(
     )
     .await
     .with_error(|_| format!(
-        "STORAGE_CONVERSION_PERSISTENCY - failed to load consumer offsets for group, stream ID: {}, topic ID: {}, partition ID: {}",
+        "{COMPONENT} - failed to load consumer offsets for group, stream ID: {}, topic ID: {}, partition ID: {}",
         partition.stream_id,
         partition.topic_id,
         partition.partition_id),
@@ -203,7 +204,7 @@ pub async fn load(
         );
 
         segment.load().await.with_error(|_| format!(
-            "STORAGE_CONVERSION_PERSISTENCY - failed to load segment with stream ID: {}, topic ID: {}, partition ID: {}",
+            "{COMPONENT} - failed to load segment with stream ID: {}, topic ID: {}, partition ID: {}",
             segment.stream_id,
             segment.topic_id,
             segment.partition_id,
@@ -224,7 +225,7 @@ pub async fn load(
         if partition.config.partition.validate_checksum {
             info!("Validating messages checksum for partition with ID: {} and segment with start offset: {}...", partition.partition_id, segment.start_offset);
             segment.storage.segment.load_checksums(&segment).await.with_error(|_| format!(
-                "STORAGE_CONVERSION_PERSISTENCY - failed to load checksums for segment with stream ID: {}, topic ID: {}, partition ID: {}",
+                "{COMPONENT} - failed to load checksums for segment with stream ID: {}, topic ID: {}, partition ID: {}",
                 segment.stream_id,
                 segment.topic_id,
                 segment.partition_id,
@@ -237,7 +238,7 @@ pub async fn load(
         if let Some(message_deduplicator) = &partition.message_deduplicator {
             info!("Loading unique message IDs for partition with ID: {} and segment with start offset: {}...", partition.partition_id, segment.start_offset);
             let message_ids = segment.storage.segment.load_message_ids(&segment).await.with_error(|_| format!(
-                "STORAGE_CONVERSION_PERSISTENCY - failed to load message ids for segment with stream ID: {}, topic ID: {}, partition ID: {}",
+                "{COMPONENT} - failed to load message ids for segment with stream ID: {}, topic ID: {}, partition ID: {}",
                 segment.stream_id,
                 segment.topic_id,
                 segment.partition_id,
@@ -288,7 +289,7 @@ pub async fn load(
     }
 
     partition.load_consumer_offsets().await.with_error(|_| format!(
-        "STORAGE_CONVERSION_PERSISTENCY - failed to load consumere offsets for stream ID: {}, topic ID: {}, partiton ID: {}",
+        "{COMPONENT} - failed to load consumere offsets for stream ID: {}, topic ID: {}, partiton ID: {}",
         partition.stream_id,
         partition.topic_id,
         partition.partition_id,

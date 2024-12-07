@@ -1,3 +1,4 @@
+use crate::binary::handlers::streams::COMPONENT;
 use crate::binary::mapper;
 use crate::binary::sender::Sender;
 use crate::state::command::EntryCommand;
@@ -27,7 +28,7 @@ pub async fn handle(
             .await
             .with_error(|_| {
                 format!(
-                    "STREAM_HANDLER - failed to create stream with id: {:?}, session: {session}",
+                    "{COMPONENT} - failed to create stream with id: {:?}, session: {session}",
                     stream_id
                 )
             })?;
@@ -41,7 +42,7 @@ pub async fn handle(
         .await
         .with_error(|_| {
             format!(
-                "STREAM_HANDLER - failed to apply create stream for id: {:?}, session: {session}",
+                "{COMPONENT} - failed to apply create stream for id: {:?}, session: {session}",
                 stream_id
             )
         })?;

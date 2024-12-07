@@ -1,3 +1,4 @@
+use crate::binary::handlers::users::COMPONENT;
 use crate::binary::mapper;
 use crate::binary::sender::Sender;
 use crate::streaming::session::Session;
@@ -22,7 +23,7 @@ pub async fn handle(
         .await
         .with_error(|_| {
             format!(
-                "USER_HANDLER - failed to login user with name: {}, session: {session}",
+                "{COMPONENT} - failed to login user with name: {}, session: {session}",
                 command.username
             )
         })?;

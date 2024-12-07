@@ -1,3 +1,4 @@
+use crate::binary::handlers::users::COMPONENT;
 use crate::binary::sender::Sender;
 use crate::streaming::session::Session;
 use crate::streaming::systems::system::SharedSystem;
@@ -19,7 +20,7 @@ pub async fn handle(
     system
         .logout_user(session)
         .await
-        .with_error(|_| format!("USER_HANDLER - failed to logout user, session: {session}"))?;
+        .with_error(|_| format!("{COMPONENT} - failed to logout user, session: {session}"))?;
     session.clear_user_id();
     sender.send_empty_ok_response().await?;
     Ok(())

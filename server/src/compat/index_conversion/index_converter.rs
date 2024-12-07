@@ -1,9 +1,11 @@
 use std::path::Path;
 use std::time::Duration;
 
+use crate::compat::index_conversion::COMPONENT;
 use crate::streaming::utils::file;
 use crate::{server_error::CompatError, streaming::segments::storage::INDEX_SIZE};
 use bytes::{BufMut, BytesMut};
+use error_set::ResultContext;
 use tokio::fs::OpenOptions;
 use tokio::io::{AsyncReadExt, AsyncWriteExt, BufReader, BufWriter};
 use tokio::time::{sleep, timeout};
@@ -65,6 +67,7 @@ impl IndexConverter {
             let timestamp = timestamp_result?;
 
             if relative_offset != time_relative_offset {
+                error!("{COMPONENT} - mismatched relative offsets in normal index: {relative_offset} vs time index: {time_relative_offset}");
                 return Err(CompatError::IndexMigrationError);
             }
 
@@ -84,14 +87,18 @@ impl IndexConverter {
         file::remove(&self.index_path).await?;
         file::remove(&self.time_index_path).await?;
 
-        let dir_path = Path::new(&self.index_path)
-            .parent()
-            .ok_or(CompatError::IndexMigrationError)?;
+        let dir_path = Path::new(&self.index_path).parent().ok_or({
+            error!("{COMPONENT} - failed to get parent directory of index file");
+            CompatError::IndexMigrationError
+        })?;
 
         let dir = OpenOptions::new().read(true).open(dir_path).await?;
 
         dir.sync_all()
             .await
+            .with_error(|error| {
+                format!("{COMPONENT} - failed to sync data for directory, error: {error}")
+            })
             .map_err(|_| CompatError::IndexMigrationError)?;
 
         let wait_duration = Duration::from_secs(2);

@@ -1,6 +1,8 @@
 use crate::streaming::session::Session;
 use crate::streaming::systems::system::System;
+use crate::streaming::systems::COMPONENT;
 use crate::streaming::topics::topic::Topic;
+use error_set::ResultContext;
 use iggy::compression::compression_algorithm::CompressionAlgorithm;
 use iggy::error::IggyError;
 use iggy::identifier::Identifier;
@@ -16,11 +18,21 @@ impl System {
         topic_id: &Identifier,
     ) -> Result<&Topic, IggyError> {
         self.ensure_authenticated(session)?;
-        let stream = self.find_stream(session, stream_id)?;
+        let stream = self
+            .find_stream(session, stream_id)
+            .with_error(|_| format!("{COMPONENT} - failed to find stream with id: {stream_id}"))?;
         let topic = stream.get_topic(topic_id);
         if let Ok(topic) = topic {
             self.permissioner
-                .get_topic(session.get_user_id(), stream.stream_id, topic.topic_id)?;
+                .get_topic(session.get_user_id(), stream.stream_id, topic.topic_id)
+                .with_error(|_| {
+                    format!(
+                        "{COMPONENT} - permission denied to get topic for user with id: {}, stream ID: {}, topic ID: {}",
+                        session.get_user_id(),
+                        stream.stream_id,
+                        topic.topic_id,
+                    )
+                })?;
             return Ok(topic);
         }
 
@@ -33,9 +45,18 @@ impl System {
         stream_id: &Identifier,
     ) -> Result<Vec<&Topic>, IggyError> {
         self.ensure_authenticated(session)?;
-        let stream = self.get_stream(stream_id)?;
+        let stream = self
+            .get_stream(stream_id)
+            .with_error(|_| format!("{COMPONENT} - failed to get stream with id: {stream_id}"))?;
         self.permissioner
-            .get_topics(session.get_user_id(), stream.stream_id)?;
+            .get_topics(session.get_user_id(), stream.stream_id)
+            .with_error(|_| {
+                format!(
+                    "{COMPONENT} - permission denied to get topics for user with id: {}, stream ID: {}",
+                    session.get_user_id(),
+                    stream.stream_id,
+                )
+            })?;
         Ok(stream.get_topics())
     }
 
@@ -54,9 +75,18 @@ impl System {
     ) -> Result<&Topic, IggyError> {
         self.ensure_authenticated(session)?;
         {
-            let stream = self.get_stream(stream_id)?;
+            let stream = self.get_stream(stream_id).with_error(|_| {
+                format!("{COMPONENT} - failed to get stream with id: {stream_id}")
+            })?;
             self.permissioner
-                .create_topic(session.get_user_id(), stream.stream_id)?;
+                .create_topic(session.get_user_id(), stream.stream_id)
+                .with_error(|_| {
+                    format!(
+                        "{COMPONENT} - permission denied to create topic for user with id: {}, stream ID: {}",
+                        session.get_user_id(),
+                        stream.stream_id,
+                    )
+                })?;
         }
 
         let created_topic_id = self
@@ -70,14 +100,24 @@ impl System {
                 max_topic_size,
                 replication_factor.unwrap_or(1),
             )
-            .await?;
+            .await
+            .with_error(|_| {
+                format!("{COMPONENT} - failed to create topic, stream ID: {stream_id}")
+            })?;
 
         self.metrics.increment_topics(1);
         self.metrics.increment_partitions(partitions_count);
         self.metrics.increment_segments(partitions_count);
 
-        self.get_stream(stream_id)?
+        self.get_stream(stream_id)
+            .with_error(|_| format!("{COMPONENT} - failed to get stream with id: {stream_id}"))?
             .get_topic(&created_topic_id.try_into()?)
+            .with_error(|_| {
+                format!(
+                    "{COMPONENT} - failed to get topic with id: {}",
+                    created_topic_id
+                )
+            })
     }
 
     #[allow(clippy::too_many_arguments)]
@@ -94,12 +134,23 @@ impl System {
     ) -> Result<&Topic, IggyError> {
         self.ensure_authenticated(session)?;
         {
-            let topic = self.find_topic(session, stream_id, topic_id)?;
+            let topic = self
+                .find_topic(session, stream_id, topic_id)
+                .with_error(|_| {
+                    format!("{COMPONENT} - failed to find topic with id: {topic_id}")
+                })?;
             self.permissioner.update_topic(
                 session.get_user_id(),
                 topic.stream_id,
                 topic.topic_id,
-            )?;
+            ).with_error(|_| {
+                format!(
+                    "{COMPONENT} - permission denied to update topic for user with id: {}, stream ID: {}, topic ID: {}",
+                    session.get_user_id(),
+                    topic.stream_id,
+                    topic.topic_id,
+                )
+            })?;
         }
 
         self.get_stream_mut(stream_id)?
@@ -111,12 +162,21 @@ impl System {
                 max_topic_size,
                 replication_factor.unwrap_or(1),
             )
-            .await?;
+            .await
+            .with_error(|_| {
+                format!(
+                    "{COMPONENT} - failed to update topic, stream ID: {}, topic ID: {}",
+                    stream_id, topic_id
+                )
+            })?;
 
         // TODO: if message_expiry is changed, we need to check if we need to purge messages based on the new expiry
         // TODO: if max_size_bytes is changed, we need to check if we need to purge messages based on the new size
         // TODO: if replication_factor is changed, we need to do `something`
-        self.get_stream(stream_id)?.get_topic(topic_id)
+        self.get_stream(stream_id)
+            .with_error(|_| format!("{COMPONENT} - failed to get stream with id: {stream_id}"))?
+            .get_topic(topic_id)
+            .with_error(|_| format!("{COMPONENT} - failed to get topic with id: {topic_id}"))
     }
 
     pub async fn delete_topic(
@@ -128,19 +188,31 @@ impl System {
         self.ensure_authenticated(session)?;
         let stream_id_value;
         {
-            let topic = self.find_topic(session, stream_id, topic_id)?;
+            let topic = self
+                .find_topic(session, stream_id, topic_id)
+                .with_error(|_| {
+                    format!("{COMPONENT} - failed to find topic with id: {topic_id}")
+                })?;
             self.permissioner.delete_topic(
                 session.get_user_id(),
                 topic.stream_id,
                 topic.topic_id,
-            )?;
+            ).with_error(|_| {
+                format!(
+                    "{COMPONENT} - permission denied to delete topic for user with id: {}, stream ID: {}, topic ID: {}",
+                    session.get_user_id(),
+                    topic.stream_id,
+                    topic.topic_id,
+                )
+            })?;
             stream_id_value = topic.stream_id;
         }
 
         let topic = self
             .get_stream_mut(stream_id)?
             .delete_topic(topic_id)
-            .await?;
+            .await
+            .with_error(|_| format!("{COMPONENT} - failed to delete topic, stream ID: {stream_id}, topic ID: {topic_id}"))?;
 
         self.metrics.decrement_topics(1);
         self.metrics
@@ -161,9 +233,22 @@ impl System {
         stream_id: &Identifier,
         topic_id: &Identifier,
     ) -> Result<(), IggyError> {
-        let topic = self.find_topic(session, stream_id, topic_id)?;
+        let topic = self
+            .find_topic(session, stream_id, topic_id)
+            .with_error(|_| format!("{COMPONENT} - failed to find topic with id: {topic_id}"))?;
         self.permissioner
-            .purge_topic(session.get_user_id(), topic.stream_id, topic.topic_id)?;
-        topic.purge().await
+            .purge_topic(session.get_user_id(), topic.stream_id, topic.topic_id)
+            .with_error(|_| {
+                format!(
+                    "{COMPONENT} - permission denied to purge topic for user with id: {}, stream ID: {}, topic ID: {}",
+                    session.get_user_id(),
+                    topic.stream_id,
+                    topic.topic_id,
+                )
+            })?;
+        topic
+            .purge()
+            .await
+            .with_error(|_| format!("{COMPONENT} - failed to purge topic with id: {topic_id}"))
     }
 }

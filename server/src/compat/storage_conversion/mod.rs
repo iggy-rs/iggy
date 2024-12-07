@@ -26,6 +26,8 @@ use std::sync::Arc;
 use tokio::fs::{read_dir, rename};
 use tracing::{error, info};
 
+pub const COMPONENT: &str = "STORAGE_CONVERSION";
+
 pub async fn init(
     config: Arc<SystemConfig>,
     metadata: Arc<dyn State>,

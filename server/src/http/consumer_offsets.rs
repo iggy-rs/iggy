@@ -1,6 +1,7 @@
 use crate::http::error::CustomError;
 use crate::http::jwt::json_web_token::Identity;
 use crate::http::shared::AppState;
+use crate::http::COMPONENT;
 use crate::streaming::session::Session;
 use axum::extract::{Path, Query, State};
 use axum::http::StatusCode;
@@ -44,7 +45,7 @@ async fn get_consumer_offset(
             query.0.partition_id,
         )
         .await
-        .with_error(|_| format!("HTTP - failed to get consumer offset, stream ID: {}, topic ID: {}, patition ID: {:?}", stream_id, topic_id, query.0.partition_id));
+        .with_error(|_| format!("{COMPONENT} - failed to get consumer offset, stream ID: {}, topic ID: {}, patition ID: {:?}", stream_id, topic_id, query.0.partition_id));
     if offset.is_err() {
         return Err(CustomError::ResourceNotFound);
     }
@@ -73,6 +74,6 @@ async fn store_consumer_offset(
             command.0.offset,
         )
         .await
-        .with_error(|_| format!("HTTP - failed to store consumer offset, stream ID: {}, topic ID: {}, partition ID: {:?}", stream_id, topic_id, command.0.partition_id))?;
+        .with_error(|_| format!("{COMPONENT} - failed to store consumer offset, stream ID: {}, topic ID: {}, partition ID: {:?}", stream_id, topic_id, command.0.partition_id))?;
     Ok(StatusCode::NO_CONTENT)
 }

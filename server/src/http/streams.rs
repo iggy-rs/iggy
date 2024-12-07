@@ -2,6 +2,7 @@ use crate::http::error::CustomError;
 use crate::http::jwt::json_web_token::Identity;
 use crate::http::mapper;
 use crate::http::shared::AppState;
+use crate::http::COMPONENT;
 use crate::streaming::session::Session;
 use axum::extract::{Path, State};
 use axum::http::StatusCode;
@@ -59,7 +60,7 @@ async fn get_streams(
         .find_streams(&Session::stateless(identity.user_id, identity.ip_address))
         .with_error(|_| {
             format!(
-                "HTTP - failed to find streams, user ID: {}",
+                "{COMPONENT} - failed to find streams, user ID: {}",
                 identity.user_id
             )
         })?;
@@ -86,7 +87,7 @@ async fn create_stream(
             .await
             .with_error(|_| {
                 format!(
-                    "HTTP - failed to create stream, stream ID: {:?}",
+                    "{COMPONENT} - failed to create stream, stream ID: {:?}",
                     command.stream_id
                 )
             })?;
@@ -101,7 +102,7 @@ async fn create_stream(
         .await
         .with_error(|_| {
             format!(
-                "HTTP - failed to apply create stream, stream ID: {:?}",
+                "{COMPONENT} - failed to apply create stream, stream ID: {:?}",
                 stream_id
             )
         })?;
@@ -126,7 +127,12 @@ async fn update_stream(
                 &command.name,
             )
             .await
-            .with_error(|_| format!("HTTP - failed to update stream, stream ID: {}", stream_id))?;
+            .with_error(|_| {
+                format!(
+                    "{COMPONENT} - failed to update stream, stream ID: {}",
+                    stream_id
+                )
+            })?;
     }
 
     let system = state.system.read().await;
@@ -136,7 +142,7 @@ async fn update_stream(
         .await
         .with_error(|_| {
             format!(
-                "HTTP - failed to apply update stream, stream ID: {}",
+                "{COMPONENT} - failed to apply update stream, stream ID: {}",
                 stream_id
             )
         })?;
@@ -158,7 +164,12 @@ async fn delete_stream(
                 &identifier_stream_id,
             )
             .await
-            .with_error(|_| format!("HTTP - failed to delete stream, stream ID: {}", stream_id))?;
+            .with_error(|_| {
+                format!(
+                    "{COMPONENT} - failed to delete stream, stream ID: {}",
+                    stream_id
+                )
+            })?;
     }
 
     let system = state.system.read().await;
@@ -173,7 +184,7 @@ async fn delete_stream(
         .await
         .with_error(|_| {
             format!(
-                "HTTP - failed to apply delete stream, stream ID: {}",
+                "{COMPONENT} - failed to apply delete stream, stream ID: {}",
                 stream_id
             )
         })?;
@@ -194,7 +205,12 @@ async fn purge_stream(
             &identifier_stream_id,
         )
         .await
-        .with_error(|_| format!("HTTP - failed to purge stream, stream ID: {}", stream_id))?;
+        .with_error(|_| {
+            format!(
+                "{COMPONENT} - failed to purge stream, stream ID: {}",
+                stream_id
+            )
+        })?;
     system
         .state
         .apply(
@@ -206,7 +222,7 @@ async fn purge_stream(
         .await
         .with_error(|_| {
             format!(
-                "HTTP - failed to apply purge stream, stream ID: {}",
+                "{COMPONENT} - failed to apply purge stream, stream ID: {}",
                 stream_id
             )
         })?;

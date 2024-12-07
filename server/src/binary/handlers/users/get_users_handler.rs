@@ -1,3 +1,4 @@
+use crate::binary::handlers::users::COMPONENT;
 use crate::binary::mapper;
 use crate::binary::sender::Sender;
 use crate::streaming::session::Session;
@@ -18,7 +19,7 @@ pub async fn handle(
     let users = system
         .get_users(session)
         .await
-        .with_error(|_| format!("USER_HANDLER - failed to get users, session: {session}"))?;
+        .with_error(|_| format!("{COMPONENT} - failed to get users, session: {session}"))?;
     let users = mapper::map_users(&users);
     sender.send_ok_response(&users).await?;
     Ok(())

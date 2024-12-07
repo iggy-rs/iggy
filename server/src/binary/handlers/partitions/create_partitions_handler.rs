@@ -1,3 +1,4 @@
+use crate::binary::handlers::partitions::COMPONENT;
 use crate::binary::sender::Sender;
 use crate::state::command::EntryCommand;
 use crate::streaming::session::Session;
@@ -28,7 +29,7 @@ pub async fn handle(
             .await
             .with_error(|_| {
                 format!(
-                    "PARTITIONS_HANDLER - failed to create partitions for stream_id: {}, topic_id: {}, session: {}",
+                    "{COMPONENT} - failed to create partitions for stream_id: {}, topic_id: {}, session: {}",
                     command.stream_id, command.topic_id, session
                 )
             })?;
@@ -47,7 +48,7 @@ pub async fn handle(
         .await
         .with_error(|_| {
             format!(
-                "PARTITIONS_HANDLER - failed to apply create partitions for stream_id: {}, topic_id: {}, session: {}",
+                "{COMPONENT} - failed to apply create partitions for stream_id: {}, topic_id: {}, session: {}",
                 stream_id, topic_id, session
             )
         })?;

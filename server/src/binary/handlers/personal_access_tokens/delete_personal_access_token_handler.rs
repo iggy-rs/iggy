@@ -1,3 +1,4 @@
+use crate::binary::handlers::personal_access_tokens::COMPONENT;
 use crate::binary::sender::Sender;
 use crate::state::command::EntryCommand;
 use crate::streaming::session::Session;
@@ -24,7 +25,7 @@ pub async fn handle(
             .delete_personal_access_token(session, &command.name)
             .await
             .with_error(|_| {format!(
-                "PERSONAL_ACCESS_TOKEN_HANDLER - failed to delete personal access token with name: {token_name}, session: {session}"
+                "{COMPONENT} - failed to delete personal access token with name: {token_name}, session: {session}"
             )})?;
     }
 
@@ -37,7 +38,7 @@ pub async fn handle(
         )
         .await
         .with_error(|_| {format!(
-            "PERSONAL_ACCESS_TOKEN_HANDLER - failed to apply delete personal access token with name: {token_name}, session: {session}"
+            "{COMPONENT} - failed to apply delete personal access token with name: {token_name}, session: {session}"
         )})?;
     sender.send_empty_ok_response().await?;
     Ok(())

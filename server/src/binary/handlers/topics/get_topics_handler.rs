@@ -1,3 +1,4 @@
+use crate::binary::handlers::topics::COMPONENT;
 use crate::binary::mapper;
 use crate::binary::sender::Sender;
 use crate::streaming::session::Session;
@@ -20,7 +21,7 @@ pub async fn handle(
         .find_topics(session, &command.stream_id)
         .with_error(|_| {
             format!(
-                "TOPIC_HANDLER - failed to find topics, stream_id: {}, session: {session}",
+                "{COMPONENT} - failed to find topics, stream_id: {}, session: {session}",
                 command.stream_id
             )
         })?;

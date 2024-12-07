@@ -1,3 +1,4 @@
+use crate::binary::handlers::users::COMPONENT;
 use crate::binary::sender::Sender;
 use crate::state::command::EntryCommand;
 use crate::streaming::session::Session;
@@ -23,7 +24,7 @@ pub async fn handle(
             .await
             .with_error(|_| {
                 format!(
-                    "USER_HANDLER - failed to delete user with id: {}, session: {session}",
+                    "{COMPONENT} - failed to delete user with id: {}, session: {session}",
                     command.user_id
                 )
             })?;
@@ -37,7 +38,7 @@ pub async fn handle(
         .await
         .with_error(|_| {
             format!(
-                "USER_HANDLER - failed to apply delete user with id: {}, session: {session}",
+                "{COMPONENT} - failed to apply delete user with id: {}, session: {session}",
                 user_id
             )
         })?;

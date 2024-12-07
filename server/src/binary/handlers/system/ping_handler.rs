@@ -1,3 +1,4 @@
+use crate::binary::handlers::system::COMPONENT;
 use crate::binary::sender::Sender;
 use crate::streaming::session::Session;
 use crate::streaming::systems::system::SharedSystem;
@@ -20,7 +21,7 @@ pub async fn handle(
     let client_manager = system.client_manager.read().await;
     let client = client_manager
         .get_client(session.client_id)
-        .with_error(|_| format!("SYSTEM_HANDLER - failed to get clients, session: {session}"))?;
+        .with_error(|_| format!("{COMPONENT} - failed to get clients, session: {session}"))?;
     let mut client = client.write().await;
     let now = IggyTimestamp::now();
     client.last_heartbeat = now;

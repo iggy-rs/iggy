@@ -1,4 +1,5 @@
 use crate::binary::sender::Sender;
+use crate::binary::handlers::streams::COMPONENT;
 use crate::state::command::EntryCommand;
 use crate::streaming::session::Session;
 use crate::streaming::systems::system::SharedSystem;
@@ -24,7 +25,7 @@ pub async fn handle(
         .await
         .with_error(|_| {
             format!(
-                "STREAM_HANDLER - failed to purge stream with id: {stream_id}, session: {session}"
+                "{COMPONENT} - failed to purge stream with id: {stream_id}, session: {session}"
             )
         })?;
 
@@ -33,7 +34,7 @@ pub async fn handle(
         .apply(session.get_user_id(), EntryCommand::PurgeStream(command))
         .await
         .with_error(|_| {
-            format!("STREAM_HANDLER - failed to apply purge stream with id: {stream_id}, session: {session}")
+            format!("{COMPONENT} - failed to apply purge stream with id: {stream_id}, session: {session}")
         })?;
     sender.send_empty_ok_response().await?;
     Ok(())

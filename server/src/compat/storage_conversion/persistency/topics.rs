@@ -1,4 +1,5 @@
 use crate::compat::storage_conversion::persistency::partitions;
+use crate::compat::storage_conversion::persistency::COMPONENT;
 use crate::configs::system::SystemConfig;
 use crate::streaming::partitions::partition::Partition;
 use crate::streaming::topics::consumer_group::ConsumerGroup;
@@ -105,7 +106,7 @@ pub async fn load(config: &SystemConfig, db: &Db, topic: &mut Topic) -> Result<(
             IggyTimestamp::zero(),
         );
         partitions::load(config, db, &mut partition).await.with_error(|_| format!(
-            "STORAGE_CONVERSION_PERSISTENCY - failed to load partition, stream ID: {}, topic ID: {}, partition ID: {}",
+            "{COMPONENT} - failed to load partition, stream ID: {}, topic ID: {}, partition ID: {}",
             partition.stream_id,
             partition.topic_id,
             partition.partition_id,
@@ -116,7 +117,7 @@ pub async fn load(config: &SystemConfig, db: &Db, topic: &mut Topic) -> Result<(
     }
 
     let consumer_groups = load_consumer_groups(db, topic).await.with_error(|_| format!(
-        "STORAGE_CONVERSION_PERSISTENCY - failed to load consumer groups, stream ID: {}, topic_id: {}",
+        "{COMPONENT} - failed to load consumer groups, stream ID: {}, topic_id: {}",
         topic.stream_id,
         topic.topic_id,
     ))?;

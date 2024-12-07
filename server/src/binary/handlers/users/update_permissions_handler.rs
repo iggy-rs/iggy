@@ -1,4 +1,5 @@
 use crate::binary::sender::Sender;
+use crate::binary::handlers::users::COMPONENT;
 use crate::state::command::EntryCommand;
 use crate::streaming::session::Session;
 use crate::streaming::systems::system::SharedSystem;
@@ -21,7 +22,7 @@ pub async fn handle(
         system
             .update_permissions(session, &command.user_id, command.permissions.clone())
             .await
-            .with_error(|_| format!("USER_HANDLER - failed to update permissions for user_id: {}, session: {session}",
+            .with_error(|_| format!("{COMPONENT} - failed to update permissions for user_id: {}, session: {session}",
                 command.user_id
             ))?;
     }

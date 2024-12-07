@@ -3,6 +3,7 @@ use crate::streaming::partitions::partition::Partition;
 use crate::streaming::polling_consumer::PollingConsumer;
 use crate::streaming::storage::SystemStorage;
 use crate::streaming::topics::consumer_group::ConsumerGroup;
+use crate::streaming::topics::COMPONENT;
 use core::fmt;
 use iggy::compression::compression_algorithm::CompressionAlgorithm;
 use iggy::consumer::{Consumer, ConsumerKind};
@@ -238,14 +239,18 @@ impl Topic {
 
 impl fmt::Display for Topic {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "ID: {}, ", self.topic_id)?;
-        write!(f, "stream ID: {}, ", self.stream_id)?;
-        write!(f, "name: {}, ", self.name)?;
-        write!(f, "path: {}, ", self.path)?;
-        write!(f, "partitions count: {}, ", self.partitions.len())?;
-        write!(f, "message expiry: {}, ", self.message_expiry)?;
-        write!(f, "max topic size: {}, ", self.max_topic_size)?;
-        write!(f, "replication factor: {}, ", self.replication_factor)
+        write!(
+            f,
+            "Topic {{ id: {}, stream_id: {}, name: {}, path: {}, partitions: {}, message_expire: {}, max_topic_size: {}, replication_factor: {} }}",
+            self.topic_id,
+            self.stream_id,
+            self.name,
+            self.path,
+            self.partitions.len(),
+            self.message_expiry,
+            self.max_topic_size,
+            self.replication_factor,
+        )
     }
 }
 

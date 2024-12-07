@@ -1,4 +1,5 @@
 use crate::archiver::ArchiverKind;
+use crate::configs::COMPONENT;
 use crate::configs::config_provider::ConfigProvider;
 use crate::configs::http::HttpConfig;
 use crate::configs::quic::QuicConfig;
@@ -153,10 +154,10 @@ impl ServerConfig {
         let server_config = config_provider
             .load_config()
             .await
-            .with_error(|_| "CONFIG - failed to load config provider config".to_string())?;
+            .with_error(|_| format!("{COMPONENT} - failed to load config provider config"))?;
         server_config
             .validate()
-            .with_error(|_| "CONFIG - failed to validate server config".to_string())?;
+            .with_error(|_| format!("{COMPONENT} - failed to validate server config"))?;
         Ok(server_config)
     }
 }

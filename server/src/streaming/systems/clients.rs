@@ -1,6 +1,8 @@
 use crate::streaming::clients::client_manager::{Client, Transport};
 use crate::streaming::session::Session;
+use crate::streaming::systems::COMPONENT;
 use crate::streaming::systems::system::System;
+use error_set::ResultContext;
 use iggy::error::IggyError;
 use iggy::identifier::Identifier;
 use iggy::locking::IggySharedMut;
@@ -56,23 +58,29 @@ impl System {
         }
     }
 
+    // TODO change errir message for permissiioner
     pub async fn get_client(
         &self,
         session: &Session,
         client_id: u32,
     ) -> Result<IggySharedMut<Client>, IggyError> {
         self.ensure_authenticated(session)?;
-        self.permissioner.get_client(session.get_user_id())?;
+        self.permissioner.get_client(session.get_user_id())
+            .with_error(|_| format!("{COMPONENT} - failed to get client by user ID: {}", session.get_user_id()))?;
+        
         let client_manager = self.client_manager.read().await;
         client_manager.get_client(client_id)
+            .with_error(|_| format!("{COMPONENT} - failed to get client with ID {}", client_id))
     }
-
+    
     pub async fn get_clients(
         &self,
         session: &Session,
     ) -> Result<Vec<IggySharedMut<Client>>, IggyError> {
         self.ensure_authenticated(session)?;
-        self.permissioner.get_clients(session.get_user_id())?;
+        self.permissioner.get_clients(session.get_user_id())
+            .with_error(|_| format!("{COMPONENT} - failed to get clients by user ID {}", session.get_user_id()))?;
+        
         let client_manager = self.client_manager.read().await;
         Ok(client_manager.get_clients())
     }

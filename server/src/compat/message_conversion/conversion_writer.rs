@@ -1,4 +1,5 @@
 use crate::streaming::utils::file;
+use crate::compat::message_conversion::COMPONENT;
 use error_set::ResultContext;
 use iggy::error::IggyError;
 use tracing::trace;
@@ -43,7 +44,7 @@ impl<'w> ConversionWriter<'w> {
             .await
             .with_error(|_| {
                 format!(
-                    "MESSAGE_CONVERSION_WRITER - failed to create alt_log_path: {}",
+                    "{COMPONENT} - failed to create alt_log_path: {}",
                     self.alt_log_path
                 )
             })?;
@@ -51,7 +52,7 @@ impl<'w> ConversionWriter<'w> {
             .await
             .with_error(|_| {
                 format!(
-                    "MESSAGE_CONVERSION_WRITER - failed to create alt_index_path: {}",
+                    "{COMPONENT} - failed to create alt_index_path: {}",
                     self.alt_index_path
                 )
             })?;
@@ -59,7 +60,7 @@ impl<'w> ConversionWriter<'w> {
             .await
             .with_error(|_| {
                 format!(
-                    "MESSAGE_CONVERSION_WRITER - failed to create alt_time_index_path: {}",
+                    "{COMPONENT} - failed to create alt_time_index_path: {}",
                     self.alt_time_index_path
                 )
             })?;
@@ -101,7 +102,7 @@ impl<'w> ConversionWriter<'w> {
                 .await
                 .with_error(|_| {
                     format!(
-                        "MESSAGE_CONVERSION_WRITER - failed to create directory for log backup: {}",
+                        "{COMPONENT} - failed to create directory for log backup: {}",
                         log_backup_path
                     )
                 })?;
@@ -114,7 +115,7 @@ impl<'w> ConversionWriter<'w> {
                 .await
                 .with_error(|_| {
                     format!(
-                        "MESSAGE_CONVERSION_WRITER - failed to create directory for index backup: {}",
+                        "{COMPONENT} - failed to create directory for index backup: {}",
                         index_backup_path
                     )
                 })?;
@@ -127,7 +128,7 @@ impl<'w> ConversionWriter<'w> {
                 .await
                 .with_error(|_| {
                     format!(
-                        "MESSAGE_CONVERSION_WRITER - failed to create directory for time index backup: {}",
+                        "{COMPONENT} - failed to create directory for time index backup: {}",
                         time_index_backup_path
                     )
                 })?;
@@ -136,7 +137,7 @@ impl<'w> ConversionWriter<'w> {
             .await
             .with_error(|_| {
                 format!(
-                    "MESSAGE_CONVERSION_WRITER - failed to rename log file to backup: {}",
+                    "{COMPONENT} - failed to rename log file to backup: {}",
                     self.log_path
                 )
             })?;
@@ -144,7 +145,7 @@ impl<'w> ConversionWriter<'w> {
             .await
             .with_error(|_| {
                 format!(
-                    "MESSAGE_CONVERSION_WRITER - failed to rename index file to backup: {}",
+                    "{COMPONENT} - failed to rename index file to backup: {}",
                     self.index_path
                 )
             })?;
@@ -152,7 +153,7 @@ impl<'w> ConversionWriter<'w> {
             .await
             .with_error(|_| {
                 format!(
-                    "MESSAGE_CONVERSION_WRITER - failed to rename time index file to backup: {}",
+                    "{COMPONENT} - failed to rename time index file to backup: {}",
                     self.time_index_path
                 )
             })?;
@@ -171,7 +172,7 @@ impl<'w> ConversionWriter<'w> {
             .await
             .with_error(|_| {
                 format!(
-                    "MESSAGE_CONVERSION_WRITER - failed to replace old log with converted: {}",
+                    "{COMPONENT} - failed to replace old log with converted: {}",
                     self.alt_log_path
                 )
             })?;
@@ -179,7 +180,7 @@ impl<'w> ConversionWriter<'w> {
             .await
             .with_error(|_| {
                 format!(
-                    "MESSAGE_CONVERSION_WRITER - failed to replace old index with converted: {}",
+                    "{COMPONENT} - failed to replace old index with converted: {}",
                     self.alt_index_path
                 )
             })?;
@@ -187,7 +188,7 @@ impl<'w> ConversionWriter<'w> {
             .await
             .with_error(|_| {
                 format!(
-                    "MESSAGE_CONVERSION_WRITER - failed to replace old time index with converted: {}",
+                    "{COMPONENT} - failed to replace old time index with converted: {}",
                     self.alt_time_index_path
                 )
             })?;

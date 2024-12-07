@@ -1,6 +1,8 @@
 use crate::streaming::partitions::partition::{ConsumerOffset, Partition};
+use crate::streaming::partitions::COMPONENT;
 use crate::streaming::polling_consumer::PollingConsumer;
 use dashmap::DashMap;
+use error_set::ResultContext;
 use iggy::consumer::ConsumerKind;
 use iggy::error::IggyError;
 use tracing::trace;
@@ -51,11 +53,13 @@ impl Partition {
         match consumer {
             PollingConsumer::Consumer(consumer_id, _) => {
                 self.store_offset(ConsumerKind::Consumer, consumer_id, offset)
-                    .await?;
+                    .await
+                    .with_error(|_| format!("{COMPONENT} - failed to store consumer offset, consumer ID: {}, offset: {}", consumer_id, offset))?;
             }
             PollingConsumer::ConsumerGroup(consumer_id, _) => {
                 self.store_offset(ConsumerKind::ConsumerGroup, consumer_id, offset)
-                    .await?;
+                    .await
+                    .with_error(|_| format!("{COMPONENT} - failed to store consumer group offset, consumer ID: {}, offset: {}", consumer_id, offset))?;
             }
         };
 
@@ -74,7 +78,8 @@ impl Partition {
             self.storage
                 .partition
                 .save_consumer_offset(&consumer_offset)
-                .await?;
+                .await
+                .with_error(|_| format!("{COMPONENT} - failed to save consumer offset, consumer ID: {}, offset: {}", consumer_id, offset))?;
             return Ok(());
         }
 
@@ -86,7 +91,8 @@ impl Partition {
         self.storage
             .partition
             .save_consumer_offset(&consumer_offset)
-            .await?;
+            .await
+            .with_error(|_| format!("{COMPONENT} - failed to save new consumer offset, consumer ID: {}, offset: {}", consumer_id, offset))?;
         consumer_offsets.insert(consumer_id, consumer_offset);
         Ok(())
     }
@@ -99,7 +105,8 @@ impl Partition {
                 self.stream_id
             );
         self.load_consumer_offsets_from_storage(ConsumerKind::Consumer)
-            .await?;
+            .await
+            .with_error(|_| format!("{COMPONENT} - failed to load consumer offsets from storage"))?;
         self.load_consumer_offsets_from_storage(ConsumerKind::ConsumerGroup)
             .await
     }
@@ -116,7 +123,8 @@ impl Partition {
             .storage
             .partition
             .load_consumer_offsets(kind, path)
-            .await?;
+            .await
+            .with_error(|_| format!("{COMPONENT} - failed to load consumer offsets, kind: {kind}, path: {path}"))?;
         let consumer_offsets = self.get_consumer_offsets(kind);
         for consumer_offset in loaded_consumer_offsets {
             self.log_consumer_offset(&consumer_offset);

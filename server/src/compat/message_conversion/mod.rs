@@ -7,3 +7,5 @@ pub(crate) mod samplers;
 pub(crate) mod schema_sampler;
 pub(crate) mod snapshots;
 pub(crate) mod streams;
+
+pub const COMPONENT: &str = "MESSAGE_CONVERSION_WRITER";

@@ -1,3 +1,4 @@
+use crate::http::COMPONENT;
 use crate::http::error::CustomError;
 use crate::http::jwt::json_web_token::Identity;
 use crate::http::mapper;
@@ -52,7 +53,7 @@ async fn get_user(
             &Session::stateless(identity.user_id, identity.ip_address),
             &identifier_user_id,
         )
-        .with_error(|_| format!("HTTP - failed to find user, user ID: {}", user_id));
+        .with_error(|_| format!("{COMPONENT} - failed to find user, user ID: {}", user_id));
     if user.is_err() {
         return Err(CustomError::ResourceNotFound);
     }
@@ -69,7 +70,7 @@ async fn get_users(
     let users = system
         .get_users(&Session::stateless(identity.user_id, identity.ip_address))
         .await
-        .with_error(|_| format!("HTTP - failed to get users, user ID: {}", identity.user_id))?;
+        .with_error(|_| format!("{COMPONENT} - failed to get users, user ID: {}", identity.user_id))?;
     let users = mapper::map_users(&users);
     Ok(Json(users))
 }
@@ -95,7 +96,7 @@ async fn create_user(
             .await
             .with_error(|_| {
                 format!(
-                    "HTTP - failed to create user, username: {}",
+                    "{COMPONENT} - failed to create user, username: {}",
                     command.username
                 )
             })?;
@@ -118,7 +119,7 @@ async fn create_user(
         .await
         .with_error(|_| {
             format!(
-                "HTTP - failed to apply create user, username: {}",
+                "{COMPONENT} - failed to apply create user, username: {}",
                 command.username
             )
         })?;
@@ -145,7 +146,7 @@ async fn update_user(
                 command.status,
             )
             .await
-            .with_error(|_| format!("HTTP - failed to update user, user ID: {}", user_id))?;
+            .with_error(|_| format!("{COMPONENT} - failed to update user, user ID: {}", user_id))?;
     }
 
     let system = state.system.read().await;
@@ -153,7 +154,7 @@ async fn update_user(
         .state
         .apply(identity.user_id, EntryCommand::UpdateUser(command))
         .await
-        .with_error(|_| format!("HTTP - failed to apply update user, user ID: {}", user_id))?;
+        .with_error(|_| format!("{COMPONENT} - failed to apply update user, user ID: {}", user_id))?;
     Ok(StatusCode::NO_CONTENT)
 }
 
@@ -175,7 +176,7 @@ async fn update_permissions(
                 command.permissions.clone(),
             )
             .await
-            .with_error(|_| format!("HTTP - failed to update permissions, user ID: {}", user_id))?;
+            .with_error(|_| format!("{COMPONENT} - failed to update permissions, user ID: {}", user_id))?;
     }
 
     let system = state.system.read().await;
@@ -185,7 +186,7 @@ async fn update_permissions(
         .await
         .with_error(|_| {
             format!(
-                "HTTP - failed to apply update permissions, user ID: {}",
+                "{COMPONENT} - failed to apply update permissions, user ID: {}",
                 user_id
             )
         })?;
@@ -211,7 +212,7 @@ async fn change_password(
                 &command.new_password,
             )
             .await
-            .with_error(|_| format!("HTTP - failed to change password, user ID: {}", user_id))?;
+            .with_error(|_| format!("{COMPONENT} - failed to change password, user ID: {}", user_id))?;
     }
 
     // For the security of the system, we hash the password before storing it in metadata.
@@ -229,7 +230,7 @@ async fn change_password(
         .await
         .with_error(|_| {
             format!(
-                "HTTP - failed to apply change password, user ID: {}",
+                "{COMPONENT} - failed to apply change password, user ID: {}",
                 user_id
             )
         })?;
@@ -251,7 +252,7 @@ async fn delete_user(
                 &identifier_user_id,
             )
             .await
-            .with_error(|_| format!("HTTP - failed to delete user, user ID: {}", user_id))?;
+            .with_error(|_| format!("{COMPONENT} - failed to delete user, user ID: {}", user_id))?;
     }
 
     let system = state.system.read().await;
@@ -264,7 +265,7 @@ async fn delete_user(
             }),
         )
         .await
-        .with_error(|_| format!("HTTP - failed to apply delete user, user ID: {}", user_id))?;
+        .with_error(|_| format!("{COMPONENT} - failed to apply delete user, user ID: {}", user_id))?;
     Ok(StatusCode::NO_CONTENT)
 }
 
@@ -278,7 +279,7 @@ async fn login_user(
     let user = system
         .login_user(&command.username, &command.password, None)
         .await
-        .with_error(|_| format!("HTTP - failed to login, username: {}", command.username))?;
+        .with_error(|_| format!("{COMPONENT} - failed to login, username: {}", command.username))?;
     let tokens = state.jwt_manager.generate(user.id)?;
     Ok(Json(map_generated_access_token_to_identity_info(tokens)))
 }
@@ -292,14 +293,14 @@ async fn logout_user(
     system
         .logout_user(&Session::stateless(identity.user_id, identity.ip_address))
         .await
-        .with_error(|_| format!("HTTP - failed to logout, user ID: {}", identity.user_id))?;
+        .with_error(|_| format!("{COMPONENT} - failed to logout, user ID: {}", identity.user_id))?;
     state
         .jwt_manager
         .revoke_token(&identity.token_id, identity.token_expiry)
         .await
         .with_error(|_| {
             format!(
-                "HTTP - failed to revoke token, user ID: {}",
+                "{COMPONENT} - failed to revoke token, user ID: {}",
                 identity.user_id
             )
         })?;
@@ -314,7 +315,7 @@ async fn refresh_token(
         .jwt_manager
         .refresh_token(&command.token)
         .await
-        .with_error(|_| "HTTP - failed to refresh token")?;
+        .with_error(|_| "{COMPONENT} - failed to refresh token")?;
     Ok(Json(map_generated_access_token_to_identity_info(token)))
 }
 

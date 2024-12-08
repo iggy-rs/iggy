@@ -1,6 +1,8 @@
 use crate::binary::sender::Sender;
+use crate::quic::COMPONENT;
 use async_trait::async_trait;
 use bytes::{BufMut, BytesMut};
+use error_set::ResultContext;
 use iggy::error::IggyError;
 use quinn::{RecvStream, SendStream};
 use std::mem::size_of;
@@ -56,8 +58,11 @@ impl QuicSender {
         let length = (payload.len() as u32).to_le_bytes();
         self.send
             .write_all(&[status, &length, payload].as_slice().concat())
-            .await?;
-        self.send.finish()?;
+            .await
+            .with_error(|_| format!("{COMPONENT} - failed to write buffer to the stream"))?;
+        self.send
+            .finish()
+            .with_error(|_| format!("{COMPONENT} - failed to finish send stream"))?;
         debug!("Sent response with status: {:?}", status);
         Ok(())
     }

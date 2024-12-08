@@ -10,3 +10,5 @@ pub mod defaults;
 pub mod displays;
 pub mod resource_quota;
 pub mod validators;
+
+pub const COMPONENT: &str = "CONFIG";

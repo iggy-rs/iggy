@@ -10,6 +10,8 @@ pub mod file;
 pub mod models;
 pub mod system;
 
+pub const COMPONENT: &str = "STATE";
+
 #[async_trait]
 pub trait State: Send + Sync + Debug {
     async fn init(&self) -> Result<Vec<StateEntry>, IggyError>;

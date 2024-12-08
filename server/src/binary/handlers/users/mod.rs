@@ -7,3 +7,5 @@ pub mod login_user_handler;
 pub mod logout_user_handler;
 pub mod update_permissions_handler;
 pub mod update_user_handler;
+
+pub const COMPONENT: &str = "USER_HANDLER";

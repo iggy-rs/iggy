@@ -1,7 +1,7 @@
 use crate::binary::command;
 use crate::command::ServerCommand;
 use crate::quic::quic_sender::QuicSender;
-use crate::server_error::ServerError;
+use crate::server_error::ConnectionError;
 use crate::streaming::clients::client_manager::Transport;
 use crate::streaming::session::Session;
 use crate::streaming::systems::system::SharedSystem;
@@ -48,7 +48,7 @@ pub fn start(endpoint: Endpoint, system: SharedSystem) {
 async fn handle_connection(
     incoming_connection: quinn::Connecting,
     system: SharedSystem,
-) -> Result<(), ServerError> {
+) -> Result<(), ConnectionError> {
     let connection = incoming_connection.await?;
     let address = connection.remote_address();
     info!("Client has connected: {address}");
@@ -79,7 +79,7 @@ async fn accept_stream(
     connection: &Connection,
     system: &SharedSystem,
     client_id: u32,
-) -> Result<Option<BiStream>, ServerError> {
+) -> Result<Option<BiStream>, ConnectionError> {
     match connection.accept_bi().await {
         Err(quinn::ConnectionError::ApplicationClosed { .. }) => {
             info!("Connection closed");

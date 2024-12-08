@@ -3,6 +3,7 @@ use crate::http::jwt::json_web_token::Identity;
 use crate::http::mapper;
 use crate::http::mapper::map_generated_access_token_to_identity_info;
 use crate::http::shared::AppState;
+use crate::http::COMPONENT;
 use crate::state::command::EntryCommand;
 use crate::state::models::CreatePersonalAccessTokenWithHash;
 use crate::streaming::personal_access_tokens::personal_access_token::PersonalAccessToken;
@@ -11,6 +12,7 @@ use axum::extract::{Path, State};
 use axum::http::StatusCode;
 use axum::routing::{delete, get, post};
 use axum::{Extension, Json, Router};
+use error_set::ResultContext;
 use iggy::models::identity_info::IdentityInfo;
 use iggy::models::personal_access_token::{PersonalAccessTokenInfo, RawPersonalAccessToken};
 use iggy::personal_access_tokens::create_personal_access_token::CreatePersonalAccessToken;
@@ -44,7 +46,13 @@ async fn get_personal_access_tokens(
     let system = state.system.read().await;
     let personal_access_tokens = system
         .get_personal_access_tokens(&Session::stateless(identity.user_id, identity.ip_address))
-        .await?;
+        .await
+        .with_error(|_| {
+            format!(
+                "{COMPONENT} - failed to get personal access tokens, user ID: {}",
+                identity.user_id
+            )
+        })?;
     let personal_access_tokens = mapper::map_personal_access_tokens(&personal_access_tokens);
     Ok(Json(personal_access_tokens))
 }
@@ -65,7 +73,13 @@ async fn create_personal_access_token(
                 &command.name,
                 command.expiry,
             )
-            .await?;
+            .await
+            .with_error(|_| {
+                format!(
+                    "{COMPONENT} - failed to create personal access token, user ID: {}",
+                    identity.user_id
+                )
+            })?;
     }
 
     let system = state.system.read().await;
@@ -79,7 +93,13 @@ async fn create_personal_access_token(
                 hash: token_hash,
             }),
         )
-        .await?;
+        .await
+        .with_error(|_| {
+            format!(
+                "{COMPONENT} - failed to apply create personal access token with hash, user ID: {}",
+                identity.user_id
+            )
+        })?;
     Ok(Json(RawPersonalAccessToken { token }))
 }
 
@@ -96,7 +116,13 @@ async fn delete_personal_access_token(
                 &Session::stateless(identity.user_id, identity.ip_address),
                 &name,
             )
-            .await?;
+            .await
+            .with_error(|_| {
+                format!(
+                    "{COMPONENT} - failed to delete personal access token, user ID: {}",
+                    identity.user_id
+                )
+            })?;
     }
 
     let system = state.system.read().await;
@@ -106,7 +132,13 @@ async fn delete_personal_access_token(
             identity.user_id,
             EntryCommand::DeletePersonalAccessToken(DeletePersonalAccessToken { name }),
         )
-        .await?;
+        .await
+        .with_error(|_| {
+            format!(
+                "{COMPONENT} - failed to apply delete personal access token, user ID: {}",
+                identity.user_id
+            )
+        })?;
     Ok(StatusCode::NO_CONTENT)
 }
 
@@ -119,7 +151,8 @@ async fn login_with_personal_access_token(
     let system = state.system.read().await;
     let user = system
         .login_with_personal_access_token(&command.token, None)
-        .await?;
+        .await
+        .with_error(|_| "{COMPONENT} - failed to login with personal access token")?;
     let tokens = state.jwt_manager.generate(user.id)?;
     Ok(Json(map_generated_access_token_to_identity_info(tokens)))
 }

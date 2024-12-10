@@ -1,10 +1,14 @@
 use crate::configs::system::SystemConfig;
 use crate::streaming::batching::batch_accumulator::BatchAccumulator;
+use crate::streaming::iggy_storage::SystemStorage;
+use crate::streaming::io::buf::dma_buf::DmaBuf;
+use crate::streaming::io::log::log::Log;
 use crate::streaming::segments::index::Index;
-use crate::streaming::storage::SystemStorage;
+use crate::streaming::storage::storage::DmaStorage;
 use iggy::utils::byte_size::IggyByteSize;
 use iggy::utils::expiry::IggyExpiry;
 use iggy::utils::timestamp::IggyTimestamp;
+use tokio::sync::Mutex;
 use std::sync::atomic::AtomicU64;
 use std::sync::Arc;
 
@@ -37,6 +41,7 @@ pub struct Segment {
     pub(crate) config: Arc<SystemConfig>,
     pub(crate) indexes: Option<Vec<Index>>,
     pub(crate) storage: Arc<SystemStorage>,
+    pub(crate) log: Log<DmaStorage, DmaBuf>,
 }
 
 impl Segment {
@@ -46,6 +51,7 @@ impl Segment {
         topic_id: u32,
         partition_id: u32,
         start_offset: u64,
+        unsaved_messages: Option<BatchAccumulator>,
         config: Arc<SystemConfig>,
         storage: Arc<SystemStorage>,
         message_expiry: IggyExpiry,
@@ -57,6 +63,10 @@ impl Segment {
         messages_count_of_parent_partition: Arc<AtomicU64>,
     ) -> Segment {
         let path = config.get_segment_path(stream_id, topic_id, partition_id, start_offset);
+        let block_size = 1000 * 4096;
+        let file_path = Self::get_log_path(&path).leak();
+        let dma_storage = DmaStorage::new(file_path);
+        let log = Log::new(dma_storage, block_size);
 
         Segment {
             stream_id,
@@ -78,7 +88,8 @@ impl Segment {
                 true => Some(Vec::new()),
                 false => None,
             },
-            unsaved_messages: None,
+            log,
+            unsaved_messages,
             is_closed: false,
             size_of_parent_stream,
             size_of_parent_partition,
@@ -138,7 +149,7 @@ impl Segment {
 mod tests {
     use super::*;
     use crate::configs::system::SegmentConfig;
-    use crate::streaming::storage::tests::get_test_system_storage;
+    use crate::streaming::iggy_storage::tests::get_test_system_storage;
     use iggy::utils::duration::IggyDuration;
 
     #[tokio::test]
@@ -165,6 +176,7 @@ mod tests {
             topic_id,
             partition_id,
             start_offset,
+            None,
             config,
             storage,
             message_expiry,
@@ -219,6 +231,7 @@ mod tests {
             topic_id,
             partition_id,
             start_offset,
+            None,
             config,
             storage,
             message_expiry,

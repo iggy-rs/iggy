@@ -2,13 +2,12 @@ use crate::configs::system::SystemConfig;
 use crate::streaming::cache::buffer::SmartCache;
 use crate::streaming::cache::memory_tracker::CacheMemoryTracker;
 use crate::streaming::deduplication::message_deduplicator::MessageDeduplicator;
+use crate::streaming::iggy_storage::SystemStorage;
 use crate::streaming::models::messages::RetainedMessage;
 use crate::streaming::segments::segment::Segment;
-use crate::streaming::storage::SystemStorage;
 use dashmap::DashMap;
 use iggy::consumer::ConsumerKind;
 use iggy::utils::byte_size::IggyByteSize;
-use iggy::utils::duration::IggyDuration;
 use iggy::utils::expiry::IggyExpiry;
 use iggy::utils::sizeable::Sizeable;
 use iggy::utils::timestamp::IggyTimestamp;
@@ -31,7 +30,6 @@ pub struct Partition {
     pub unsaved_messages_count: u32,
     pub should_increment_offset: bool,
     pub created_at: IggyTimestamp,
-    pub avg_timestamp_delta: IggyDuration,
     pub messages_count_of_parent_stream: Arc<AtomicU64>,
     pub messages_count_of_parent_topic: Arc<AtomicU64>,
     pub messages_count: Arc<AtomicU64>,
@@ -134,7 +132,6 @@ impl Partition {
             config,
             storage,
             created_at,
-            avg_timestamp_delta: IggyDuration::default(),
             size_of_parent_stream,
             size_of_parent_topic,
             size_bytes: Arc::new(AtomicU64::new(0)),
@@ -150,6 +147,7 @@ impl Partition {
                 topic_id,
                 partition_id,
                 0,
+                None,
                 partition.config.clone(),
                 partition.storage.clone(),
                 partition.message_expiry,
@@ -179,8 +177,8 @@ impl Sizeable for Partition {
 #[cfg(test)]
 mod tests {
     use crate::configs::system::{CacheConfig, SystemConfig};
+    use crate::streaming::iggy_storage::tests::get_test_system_storage;
     use crate::streaming::partitions::partition::Partition;
-    use crate::streaming::storage::tests::get_test_system_storage;
     use iggy::utils::duration::IggyDuration;
     use iggy::utils::expiry::IggyExpiry;
     use iggy::utils::timestamp::IggyTimestamp;

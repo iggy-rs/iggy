@@ -6,7 +6,7 @@ use iggy::utils::byte_size::IggyByteSize;
 use iggy::utils::sizeable::Sizeable;
 use std::sync::Arc;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct BatchAccumulator {
     base_offset: u64,
     current_size: IggyByteSize,

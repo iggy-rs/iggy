@@ -71,7 +71,7 @@ async fn get_topics(
     Ok(Json(topics))
 }
 
-#[instrument(skip_all, fields(iggy_user_id = identity.user_id, iggy_stream_id = stream_id))]
+#[instrument(skip_all, name = "trace_create_topic", fields(iggy_user_id = identity.user_id, iggy_stream_id = stream_id))]
 async fn create_topic(
     State(state): State<Arc<AppState>>,
     Extension(identity): Extension<Identity>,
@@ -109,7 +109,7 @@ async fn create_topic(
     Ok(response)
 }
 
-#[instrument(skip_all, fields(iggy_user_id = identity.user_id, iggy_stream_id = stream_id, iggy_topic_id = topic_id))]
+#[instrument(skip_all, name = "trace_update_topic", fields(iggy_user_id = identity.user_id, iggy_stream_id = stream_id, iggy_topic_id = topic_id))]
 async fn update_topic(
     State(state): State<Arc<AppState>>,
     Extension(identity): Extension<Identity>,
@@ -145,7 +145,7 @@ async fn update_topic(
     Ok(StatusCode::NO_CONTENT)
 }
 
-#[instrument(skip_all, fields(iggy_user_id = identity.user_id, iggy_stream_id = stream_id, iggy_topic_id = topic_id))]
+#[instrument(skip_all, name = "trace_delete_topic", fields(iggy_user_id = identity.user_id, iggy_stream_id = stream_id, iggy_topic_id = topic_id))]
 async fn delete_topic(
     State(state): State<Arc<AppState>>,
     Extension(identity): Extension<Identity>,
@@ -178,7 +178,7 @@ async fn delete_topic(
     Ok(StatusCode::NO_CONTENT)
 }
 
-#[instrument(skip_all, fields(iggy_user_id = identity.user_id, iggy_stream_id = stream_id, iggy_topic_id = topic_id))]
+#[instrument(skip_all, name = "trace_purge_topic", fields(iggy_user_id = identity.user_id, iggy_stream_id = stream_id, iggy_topic_id = topic_id))]
 async fn purge_topic(
     State(state): State<Arc<AppState>>,
     Extension(identity): Extension<Identity>,

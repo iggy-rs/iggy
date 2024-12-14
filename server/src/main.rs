@@ -25,7 +25,7 @@ use tokio::time::Instant;
 use tracing::{info, instrument};
 
 #[tokio::main]
-#[instrument(skip_all)]
+#[instrument(skip_all, name = "trace_start_server")]
 async fn main() -> Result<(), ServerError> {
     let startup_timestamp = Instant::now();
     let standard_font = FIGfont::standard().unwrap();

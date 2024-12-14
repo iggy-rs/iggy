@@ -7,7 +7,7 @@ use iggy::error::IggyError;
 use iggy::topics::update_topic::UpdateTopic;
 use tracing::{debug, instrument};
 
-#[instrument(skip_all, fields(iggy_user_id = session.get_user_id(), iggy_client_id = session.client_id, iggy_stream_id = command.stream_id.as_string(), iggy_topic_id = command.topic_id.as_string()))]
+#[instrument(skip_all, name = "trace_update_topic", fields(iggy_user_id = session.get_user_id(), iggy_client_id = session.client_id, iggy_stream_id = command.stream_id.as_string(), iggy_topic_id = command.topic_id.as_string()))]
 pub async fn handle(
     mut command: UpdateTopic,
     sender: &mut dyn Sender,

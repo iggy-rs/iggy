@@ -60,7 +60,7 @@ impl PersonalAccessTokenCleaner {
 
 #[async_trait]
 impl ServerCommand<CleanPersonalAccessTokensCommand> for CleanPersonalAccessTokensExecutor {
-    #[instrument(skip_all)]
+    #[instrument(skip_all, name = "trace_clean_personal_access_tokens")]
     async fn execute(&mut self, system: &SharedSystem, _command: CleanPersonalAccessTokensCommand) {
         // TODO: System write lock, investigate if it's necessary.
         let mut system = system.write().await;

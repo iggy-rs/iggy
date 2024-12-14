@@ -10,7 +10,7 @@ use iggy::error::IggyError;
 use iggy::personal_access_tokens::create_personal_access_token::CreatePersonalAccessToken;
 use tracing::{debug, instrument};
 
-#[instrument(skip_all, fields(iggy_user_id = session.get_user_id(), iggy_client_id = session.client_id))]
+#[instrument(skip_all, name = "trace_create_personal_access_token", fields(iggy_user_id = session.get_user_id(), iggy_client_id = session.client_id))]
 pub async fn handle(
     command: CreatePersonalAccessToken,
     sender: &mut dyn Sender,

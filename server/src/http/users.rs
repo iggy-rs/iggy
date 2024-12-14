@@ -70,7 +70,7 @@ async fn get_users(
     Ok(Json(users))
 }
 
-#[instrument(skip_all, fields(iggy_user_id = identity.user_id))]
+#[instrument(skip_all, name = "trace_create_user", fields(iggy_user_id = identity.user_id))]
 async fn create_user(
     State(state): State<Arc<AppState>>,
     Extension(identity): Extension<Identity>,
@@ -110,7 +110,7 @@ async fn create_user(
     Ok(response)
 }
 
-#[instrument(skip_all, fields(iggy_user_id = identity.user_id, iggy_updated_user_id = user_id))]
+#[instrument(skip_all, name = "trace_update_user", fields(iggy_user_id = identity.user_id, iggy_updated_user_id = user_id))]
 async fn update_user(
     State(state): State<Arc<AppState>>,
     Extension(identity): Extension<Identity>,
@@ -139,7 +139,7 @@ async fn update_user(
     Ok(StatusCode::NO_CONTENT)
 }
 
-#[instrument(skip_all, fields(iggy_user_id = identity.user_id, iggy_updated_user_id = user_id))]
+#[instrument(skip_all, name = "trace_update_permissions", fields(iggy_user_id = identity.user_id, iggy_updated_user_id = user_id))]
 async fn update_permissions(
     State(state): State<Arc<AppState>>,
     Extension(identity): Extension<Identity>,
@@ -167,7 +167,7 @@ async fn update_permissions(
     Ok(StatusCode::NO_CONTENT)
 }
 
-#[instrument(skip_all, fields(iggy_user_id = identity.user_id, iggy_updated_user_id = user_id))]
+#[instrument(skip_all, name = "trace_change_password", fields(iggy_user_id = identity.user_id, iggy_updated_user_id = user_id))]
 async fn change_password(
     State(state): State<Arc<AppState>>,
     Extension(identity): Extension<Identity>,
@@ -204,7 +204,7 @@ async fn change_password(
     Ok(StatusCode::NO_CONTENT)
 }
 
-#[instrument(skip_all, fields(iggy_user_id = identity.user_id, iggy_deleted_user_id = user_id))]
+#[instrument(skip_all, name = "trace_delete_user", fields(iggy_user_id = identity.user_id, iggy_deleted_user_id = user_id))]
 async fn delete_user(
     State(state): State<Arc<AppState>>,
     Extension(identity): Extension<Identity>,
@@ -232,7 +232,7 @@ async fn delete_user(
     Ok(StatusCode::NO_CONTENT)
 }
 
-#[instrument(skip_all)]
+#[instrument(skip_all, name = "trace_login_user")]
 async fn login_user(
     State(state): State<Arc<AppState>>,
     Json(command): Json<LoginUser>,
@@ -246,7 +246,7 @@ async fn login_user(
     Ok(Json(map_generated_access_token_to_identity_info(tokens)))
 }
 
-#[instrument(skip_all, fields(iggy_user_id = identity.user_id))]
+#[instrument(skip_all, name = "trace_logout_user", fields(iggy_user_id = identity.user_id))]
 async fn logout_user(
     State(state): State<Arc<AppState>>,
     Extension(identity): Extension<Identity>,

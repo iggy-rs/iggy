@@ -49,7 +49,7 @@ async fn get_personal_access_tokens(
     Ok(Json(personal_access_tokens))
 }
 
-#[instrument(skip_all, fields(iggy_user_id = identity.user_id))]
+#[instrument(skip_all, name = "trace_create_personal_access_token", fields(iggy_user_id = identity.user_id))]
 async fn create_personal_access_token(
     State(state): State<Arc<AppState>>,
     Extension(identity): Extension<Identity>,
@@ -83,7 +83,7 @@ async fn create_personal_access_token(
     Ok(Json(RawPersonalAccessToken { token }))
 }
 
-#[instrument(skip_all, fields(iggy_user_id = identity.user_id))]
+#[instrument(skip_all, name = "trace_delete_personal_access_token", fields(iggy_user_id = identity.user_id))]
 async fn delete_personal_access_token(
     State(state): State<Arc<AppState>>,
     Extension(identity): Extension<Identity>,
@@ -110,7 +110,7 @@ async fn delete_personal_access_token(
     Ok(StatusCode::NO_CONTENT)
 }
 
-#[instrument(skip_all)]
+#[instrument(skip_all, name = "trace_login_with_personal_access_token")]
 async fn login_with_personal_access_token(
     State(state): State<Arc<AppState>>,
     Json(command): Json<LoginWithPersonalAccessToken>,

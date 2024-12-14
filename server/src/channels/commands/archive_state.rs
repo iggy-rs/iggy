@@ -59,7 +59,7 @@ impl StateArchiver {
 
 #[async_trait]
 impl ServerCommand<ArchiveStateCommand> for ArchiveStateExecutor {
-    #[instrument(skip_all)]
+    #[instrument(skip_all, name = "trace_archive_state")]
     async fn execute(&mut self, system: &SharedSystem, command: ArchiveStateCommand) {
         let system = system.read().await;
         if system.archiver.is_none() {

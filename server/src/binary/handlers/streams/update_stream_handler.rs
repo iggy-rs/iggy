@@ -7,7 +7,7 @@ use iggy::error::IggyError;
 use iggy::streams::update_stream::UpdateStream;
 use tracing::{debug, instrument};
 
-#[instrument(skip_all, fields(iggy_user_id = session.get_user_id(), iggy_client_id = session.client_id, iggy_stream_id = command.stream_id.as_string()))]
+#[instrument(skip_all, name = "trace_update_stream", fields(iggy_user_id = session.get_user_id(), iggy_client_id = session.client_id, iggy_stream_id = command.stream_id.as_string()))]
 pub async fn handle(
     command: UpdateStream,
     sender: &mut dyn Sender,

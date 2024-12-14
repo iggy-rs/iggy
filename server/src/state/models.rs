@@ -1,4 +1,6 @@
+use crate::state::COMPONENT;
 use bytes::{BufMut, Bytes, BytesMut};
+use error_set::ResultContext;
 use iggy::bytes_serializable::BytesSerializable;
 use iggy::command::Command;
 use iggy::error::IggyError;
@@ -43,12 +45,20 @@ impl BytesSerializable for CreatePersonalAccessTokenWithHash {
         Self: Sized,
     {
         let mut position = 0;
-        let command_length = u32::from_le_bytes(bytes[position..position + 4].try_into()?);
+        let command_length =
+            u32::from_le_bytes(bytes[position..position + 4].try_into().with_error(|_| {
+                format!("{COMPONENT} - failed to parse personal access token command length")
+            })?);
         position += 4;
         let command_bytes = bytes.slice(position..position + command_length as usize);
         position += command_length as usize;
-        let command = CreatePersonalAccessToken::from_bytes(command_bytes)?;
-        let hash_length = u32::from_le_bytes(bytes[position..position + 4].try_into()?);
+        let command = CreatePersonalAccessToken::from_bytes(command_bytes).with_error(|_| {
+            format!("{COMPONENT} - failed to parse personal access token command")
+        })?;
+        let hash_length =
+            u32::from_le_bytes(bytes[position..position + 4].try_into().with_error(|_| {
+                format!("{COMPONENT} - failed to parse personal access token hash length")
+            })?);
         position += 4;
         let hash = from_utf8(&bytes[position..position + hash_length as usize])?.to_string();
         Ok(Self { command, hash })

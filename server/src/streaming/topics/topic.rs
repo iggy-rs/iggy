@@ -241,14 +241,18 @@ impl Sizeable for Topic {
 
 impl fmt::Display for Topic {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "ID: {}, ", self.topic_id)?;
-        write!(f, "stream ID: {}, ", self.stream_id)?;
-        write!(f, "name: {}, ", self.name)?;
-        write!(f, "path: {}, ", self.path)?;
-        write!(f, "partitions count: {}, ", self.partitions.len())?;
-        write!(f, "message expiry: {}, ", self.message_expiry)?;
-        write!(f, "max topic size: {}, ", self.max_topic_size)?;
-        write!(f, "replication factor: {}, ", self.replication_factor)
+        write!(
+            f,
+            "Topic {{ id: {}, stream_id: {}, name: {}, path: {}, partitions: {}, message_expire: {}, max_topic_size: {}, replication_factor: {} }}",
+            self.topic_id,
+            self.stream_id,
+            self.name,
+            self.path,
+            self.partitions.len(),
+            self.message_expiry,
+            self.max_topic_size,
+            self.replication_factor,
+        )
     }
 }
 

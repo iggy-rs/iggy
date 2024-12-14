@@ -4,3 +4,5 @@ pub mod get_topic_handler;
 pub mod get_topics_handler;
 pub mod purge_topic_handler;
 pub mod update_topic_handler;
+
+pub const COMPONENT: &str = "TOPIC_HANDLER";

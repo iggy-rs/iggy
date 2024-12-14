@@ -12,3 +12,5 @@ pub mod streams;
 pub mod system;
 pub mod topics;
 pub mod users;
+
+pub const COMPONENT: &str = "STREAMING_SYSTEMS";

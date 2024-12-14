@@ -1,5 +1,6 @@
-use crate::state::{EntryCommand, StateEntry};
+use crate::state::{EntryCommand, StateEntry, COMPONENT};
 use crate::streaming::personal_access_tokens::personal_access_token::PersonalAccessToken;
+use error_set::ResultContext;
 use iggy::compression::compression_algorithm::CompressionAlgorithm;
 use iggy::error::IggyError;
 use iggy::identifier::{IdKind, Identifier};
@@ -78,7 +79,9 @@ impl SystemState {
         let mut current_user_id = 0;
         for entry in entries {
             debug!("Processing state entry: {entry}",);
-            match entry.command()? {
+            match entry.command().with_error(|_| {
+                format!("{COMPONENT} - failed to retrieve state entry command: {entry}")
+            })? {
                 EntryCommand::CreateStream(command) => {
                     let stream_id = command.stream_id.unwrap_or_else(|| {
                         current_stream_id += 1;
@@ -318,7 +321,15 @@ impl SystemState {
                 }
                 EntryCommand::CreatePersonalAccessToken(command) => {
                     let token_hash = command.hash;
-                    let user_id = find_user_id(&users, &entry.user_id.try_into()?);
+                    let user_id = find_user_id(
+                        &users,
+                        &entry.user_id.try_into().with_error(|_| {
+                            format!(
+                                "{COMPONENT} - failed to find user, user ID: {}",
+                                entry.user_id
+                            )
+                        })?,
+                    );
                     let user = users
                         .get_mut(&user_id)
                         .unwrap_or_else(|| panic!("{}", format!("User: {user_id} not found")));
@@ -343,7 +354,15 @@ impl SystemState {
                     );
                 }
                 EntryCommand::DeletePersonalAccessToken(command) => {
-                    let user_id = find_user_id(&users, &entry.user_id.try_into()?);
+                    let user_id = find_user_id(
+                        &users,
+                        &entry.user_id.try_into().with_error(|_| {
+                            format!(
+                                "{COMPONENT} - failed to find user, user ID: {}",
+                                entry.user_id
+                            )
+                        })?,
+                    );
                     let user = users
                         .get_mut(&user_id)
                         .unwrap_or_else(|| panic!("{}", format!("User: {user_id} not found")));

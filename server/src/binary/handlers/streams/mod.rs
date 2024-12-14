@@ -4,3 +4,5 @@ pub mod get_stream_handler;
 pub mod get_streams_handler;
 pub mod purge_stream_handler;
 pub mod update_stream_handler;
+
+pub const COMPONENT: &str = "STREAM_HANDLER";

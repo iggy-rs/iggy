@@ -1,12 +1,14 @@
 pub mod disk;
 pub mod s3;
 
-use crate::server_error::ServerError;
+use crate::server_error::ArchiverError;
 use async_trait::async_trait;
 use derive_more::Display;
 use serde::{Deserialize, Serialize};
 use std::fmt::{Debug, Formatter};
 use std::str::FromStr;
+
+pub const COMPONENT: &str = "ARCHIVER";
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Default, Display, Copy, Clone)]
 #[serde(rename_all = "lowercase")]
@@ -31,17 +33,17 @@ impl FromStr for ArchiverKind {
 
 #[async_trait]
 pub trait Archiver: Sync + Send {
-    async fn init(&self) -> Result<(), ServerError>;
+    async fn init(&self) -> Result<(), ArchiverError>;
     async fn is_archived(
         &self,
         file: &str,
         base_directory: Option<String>,
-    ) -> Result<bool, ServerError>;
+    ) -> Result<bool, ArchiverError>;
     async fn archive(
         &self,
         files: &[&str],
         base_directory: Option<String>,
-    ) -> Result<(), ServerError>;
+    ) -> Result<(), ArchiverError>;
 }
 
 impl Debug for dyn Archiver {

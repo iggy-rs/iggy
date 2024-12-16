@@ -1,15 +1,17 @@
-use crate::streaming::batching::appendable_batch_info::AppendableBatchInfo;
-use crate::streaming::batching::iterator::IntoMessagesIterator;
+use crate::streaming::io::stream::message_stream::RetainedMessageStream;
 use crate::streaming::models::messages::RetainedMessage;
 use crate::streaming::partitions::partition::Partition;
 use crate::streaming::polling_consumer::PollingConsumer;
 use crate::streaming::segments::segment::Segment;
+use crate::streaming::{batching::appendable_batch_info::AppendableBatchInfo, io::log::LogReader};
+use futures::TryStreamExt;
+use iggy::error::IggyError;
 use iggy::messages::send_messages::Message;
 use iggy::models::messages::POLLED_MESSAGE_METADATA;
+use iggy::utils::sizeable::Sizeable;
 use iggy::utils::timestamp::IggyTimestamp;
-use iggy::{error::IggyError, utils::duration::IggyDuration};
+use std::future;
 use std::sync::{atomic::Ordering, Arc};
-use std::time::Duration;
 use tracing::{trace, warn};
 
 const EMPTY_MESSAGES: Vec<RetainedMessage> = vec![];
@@ -34,9 +36,9 @@ impl Partition {
         }
 
         let timestamp = timestamp.as_micros();
-        let mut found_index = None;
-        let mut start_offset = self.segments.last().unwrap().start_offset;
-        // Since index cache is configurable globally, not per segment we can handle it this way.
+        // TODO: Check cache, unsaved buffer and only if those don't contain our messages,
+        // then fetch from disk.
+        let mut messages = None;
         if !self.config.segment.cache_indexes {
             for segment in self.segments.iter() {
                 let index = segment
@@ -45,16 +47,18 @@ impl Partition {
                     .segment
                     .try_load_index_for_timestamp(segment, timestamp)
                     .await?;
-                if index.is_none() {
-                    continue;
-                } else {
-                    found_index = index;
-                    start_offset = segment.start_offset + found_index.unwrap().offset as u64;
-                    break;
+
+                if let Some(found) = index {
+                    messages = Some(
+                        segment
+                            .load_n_messages_from_disk(found.position, count, |msg| {
+                                msg.timestamp >= timestamp
+                            })
+                            .await,
+                    );
                 }
             }
         } else {
-            start_offset = self.segments.first().unwrap().start_offset;
             for segment in self.segments.iter().rev() {
                 let indexes = segment.indexes.as_ref().unwrap();
                 let index = indexes
@@ -64,58 +68,18 @@ impl Partition {
                 if index.is_none() {
                     continue;
                 } else {
-                    found_index = index;
-                    start_offset = segment.start_offset + found_index.unwrap().offset as u64;
-                    break;
+                    let found = index.unwrap();
+                    messages = Some(
+                        segment
+                            .load_n_messages_from_disk(found.position, count, |msg| {
+                                msg.timestamp >= timestamp
+                            })
+                            .await,
+                    );
                 }
             }
-        }
-
-        let found_index = found_index.unwrap_or_default();
-        trace!(
-            "Found start offset: {} for timestamp: {}.",
-            start_offset,
-            timestamp
-        );
-        if found_index.timestamp == timestamp {
-            return Ok(self
-                .get_messages_by_offset(start_offset, count)
-                .await?
-                .into_iter()
-                .filter(|msg| msg.timestamp >= timestamp)
-                .take(count as usize)
-                .collect());
-        }
-
-        let adjusted_count = self.calculate_adjusted_timestamp_message_count(
-            count,
-            timestamp,
-            found_index.timestamp,
-        );
-        Ok(self
-            .get_messages_by_offset(start_offset, adjusted_count)
-            .await?
-            .into_iter()
-            .filter(|msg| msg.timestamp >= timestamp)
-            .take(count as usize)
-            .collect())
-    }
-
-    fn calculate_adjusted_timestamp_message_count(
-        &self,
-        count: u32,
-        timestamp: u64,
-        timestamp_from_index: u64,
-    ) -> u32 {
-        if self.avg_timestamp_delta.as_micros() == 0 {
-            return count;
-        }
-        let timestamp_diff = timestamp - timestamp_from_index;
-        // This approximation is not exact, but it's good enough for the usage of this function
-        let overfetch_value =
-            ((timestamp_diff as f64 / self.avg_timestamp_delta.as_micros() as f64) * 1.35).ceil()
-                as u32;
-        count + overfetch_value
+        };
+        messages.unwrap_or_else(|| Ok(EMPTY_MESSAGES.into_iter().map(Arc::new).collect()))
     }
 
     pub async fn get_messages_by_offset(
@@ -286,43 +250,68 @@ impl Partition {
             size_bytes,
             self.partition_id
         );
-
         if self.segments.is_empty() {
             return Ok(EMPTY_MESSAGES.into_iter().map(Arc::new).collect());
         }
 
         let mut remaining_size = size_bytes;
-        let mut batches = Vec::new();
+        let mut messages = Vec::new();
         for segment in self.segments.iter().rev() {
             let segment_size_bytes = segment.size_bytes.as_bytes_u64();
             if segment_size_bytes == 0 {
                 break;
             }
+
+            let segment_size = segment.size_bytes.as_bytes_u64();
             if segment_size_bytes > remaining_size {
                 // Last segment is bigger than the remaining size, so we need to get the newest messages from it.
-                let partial_batches = segment
-                    .get_newest_batches_by_size(remaining_size)
-                    .await?
-                    .into_iter()
-                    .map(Arc::new);
-                batches.splice(..0, partial_batches);
+
+                // TODO: Once the batch accumulator is refactored to flush every n blocks,
+                // causing the on disk batch size to be deterministic,
+                // move to calculating the start_position, instead of brute force searching from the beginning.
+                let start_position = 0;
+                let reader = segment.log
+                    .read_blocks(start_position, segment_size)
+                    .into_async_read();
+                let complement = segment_size - remaining_size;
+                let message_stream = RetainedMessageStream::new(reader, 4096);
+                let mut accumulated_size = 0;
+                let collected_messages = message_stream
+                    .try_filter_map(|msg| {
+                        let msg_size = msg.get_size_bytes().as_bytes_u64();
+                        accumulated_size += msg_size;
+
+                        if accumulated_size < complement {
+                            return future::ready(Ok(None));
+                        } else {
+                            return future::ready(Ok(Some(Arc::new(msg))));
+                        }
+                    })
+                    .try_collect::<Vec<_>>()
+                    .await?;
+                messages.splice(0.., collected_messages);
                 break;
             }
 
             // Current segment is smaller than the remaining size, so we need to get all messages from it.
-            let segment_batches = segment.get_all_batches().await?.into_iter().map(Arc::new);
-            batches.splice(..0, segment_batches);
-            remaining_size = remaining_size.saturating_sub(segment_size_bytes);
+            let start_position = 0;
+            let reader = 
+                segment.log
+                .read_blocks(start_position, segment_size)
+                .into_async_read();
+            let message_stream = RetainedMessageStream::new(reader, 4096);
+            let collected_messages = message_stream
+                .map_ok(Arc::new)
+                .try_collect::<Vec<_>>()
+                .await?;
+
+            messages.extend(collected_messages);
+            remaining_size = remaining_size.saturating_sub(segment_size);
             if remaining_size == 0 {
                 break;
             }
         }
-        let mut retained_messages = Vec::new();
-        for batch in batches {
-            let messages = batch.into_messages_iter().map(Arc::new).collect::<Vec<_>>();
-            retained_messages.extend(messages);
-        }
-        Ok(retained_messages)
+        Ok(messages)
     }
 
     fn load_messages_from_cache(
@@ -383,11 +372,14 @@ impl Partition {
             let last_segment = self.segments.last_mut().ok_or(IggyError::SegmentNotFound)?;
             if last_segment.is_closed {
                 let start_offset = last_segment.end_offset + 1;
+                let unsaved_messages = last_segment.unsaved_messages.clone();
                 trace!(
                     "Current segment is closed, creating new segment with start offset: {} for partition with ID: {}...",
                     start_offset, self.partition_id
                 );
-                self.add_persisted_segment(start_offset).await?;
+                // Rolling over messages that couldn't be persisted during segment close.
+                self.add_persisted_segment(unsaved_messages, start_offset)
+                    .await?;
             }
         }
 
@@ -400,10 +392,6 @@ impl Partition {
         };
 
         let mut messages_count = 0u32;
-        // assume that messages have monotonic timestamps
-        let mut max_timestamp = 0;
-        let mut min_timestamp = 0;
-
         let mut retained_messages = Vec::with_capacity(messages.len());
         if let Some(message_deduplicator) = &self.message_deduplicator {
             for message in messages {
@@ -414,27 +402,17 @@ impl Partition {
                     );
                     continue;
                 }
-                max_timestamp = IggyTimestamp::now().as_micros();
-
-                if messages_count == 0 {
-                    min_timestamp = max_timestamp;
-                }
+                let timestamp = IggyTimestamp::now().as_micros();
                 let message_offset = base_offset + messages_count as u64;
-                let message =
-                    Arc::new(RetainedMessage::new(message_offset, max_timestamp, message));
+                let message = Arc::new(RetainedMessage::new(message_offset, timestamp, message));
                 retained_messages.push(message.clone());
                 messages_count += 1;
             }
         } else {
             for message in messages {
-                max_timestamp = IggyTimestamp::now().as_micros();
-
-                if messages_count == 0 {
-                    min_timestamp = max_timestamp;
-                }
+                let timestamp = IggyTimestamp::now().as_micros();
                 let message_offset = base_offset + messages_count as u64;
-                let message =
-                    Arc::new(RetainedMessage::new(message_offset, max_timestamp, message));
+                let message = Arc::new(RetainedMessage::new(message_offset, timestamp, message));
                 retained_messages.push(message.clone());
                 messages_count += 1;
             }
@@ -442,14 +420,6 @@ impl Partition {
         if messages_count == 0 {
             return Ok(());
         }
-
-        let avg_timestamp_delta =
-            Duration::from_micros((max_timestamp - min_timestamp) / messages_count as u64).into();
-
-        let min_alpha: f64 = 0.3;
-        let max_alpha: f64 = 0.7;
-        let dynamic_range = 10.00;
-        self.update_avg_timestamp_delta(avg_timestamp_delta, min_alpha, max_alpha, dynamic_range);
 
         let last_offset = base_offset + (messages_count - 1) as u64;
         if self.should_increment_offset {
@@ -482,7 +452,7 @@ impl Partition {
                     self.partition_id
                 );
 
-                last_segment.persist_messages().await.unwrap();
+                last_segment.persist_messages().await?;
                 self.unsaved_messages_count = 0;
             }
         }
@@ -506,29 +476,10 @@ impl Partition {
         // Make sure all of the messages from the accumulator are persisted
         // no leftover from one round trip.
         while last_segment.unsaved_messages.is_some() {
-            last_segment.persist_messages().await.unwrap();
+            last_segment.persist_messages().await?;
         }
         self.unsaved_messages_count = 0;
         Ok(())
-    }
-
-    fn update_avg_timestamp_delta(
-        &mut self,
-        avg_timestamp_delta: IggyDuration,
-        min_alpha: f64,
-        max_alpha: f64,
-        dynamic_range: f64,
-    ) {
-        let diff = self
-            .avg_timestamp_delta
-            .abs_diff(avg_timestamp_delta)
-            .as_micros();
-
-        let alpha = max_alpha.min(min_alpha.max(1.0 - (diff as f64 / dynamic_range)));
-        let avg_timestamp_diff = (alpha * avg_timestamp_delta.as_micros() as f64
-            + (1.0f64 - alpha) * self.avg_timestamp_delta.as_micros() as f64)
-            as u64;
-        self.avg_timestamp_delta = avg_timestamp_diff.into();
     }
 }
 
@@ -541,8 +492,8 @@ mod tests {
 
     use super::*;
     use crate::configs::system::{MessageDeduplicationConfig, SystemConfig};
+    use crate::streaming::iggy_storage::tests::get_test_system_storage;
     use crate::streaming::partitions::create_messages;
-    use crate::streaming::storage::tests::get_test_system_storage;
 
     #[tokio::test]
     async fn given_disabled_message_deduplication_all_messages_should_be_appended() {

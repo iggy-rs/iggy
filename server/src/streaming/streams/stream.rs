@@ -1,5 +1,5 @@
 use crate::configs::system::SystemConfig;
-use crate::streaming::storage::SystemStorage;
+use crate::streaming::iggy_storage::SystemStorage;
 use crate::streaming::topics::topic::Topic;
 use iggy::utils::byte_size::IggyByteSize;
 use iggy::utils::timestamp::IggyTimestamp;
@@ -68,7 +68,7 @@ impl Stream {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::streaming::storage::tests::get_test_system_storage;
+    use crate::streaming::iggy_storage::tests::get_test_system_storage;
 
     #[test]
     fn should_be_created_given_valid_parameters() {

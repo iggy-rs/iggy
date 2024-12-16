@@ -142,6 +142,7 @@ impl Consumer {
         }
 
         current_iteration = 0;
+        let mut previous_start_offset = 0;
         let start_timestamp = Instant::now();
         let mut records = Vec::with_capacity(message_batches as usize);
         let mut batch_user_size_bytes = 0;
@@ -186,7 +187,7 @@ impl Consumer {
                 );
                 continue;
             }
-
+            assert!(previous_start_offset <= polled_messages.messages[0].offset);
             if polled_messages.messages.len() != messages_per_batch as usize {
                 warn!(
                     "Consumer #{} → expected {} messages, but got {} messages, retrying...",
@@ -196,9 +197,8 @@ impl Consumer {
                 );
                 continue;
             }
-
+            previous_start_offset = polled_messages.messages[0].offset;
             latencies.push(latency);
-
             received_messages += polled_messages.messages.len() as u64;
 
             // We don't need to calculate the size whole batch every time by iterating over it - just always use the size of the first message

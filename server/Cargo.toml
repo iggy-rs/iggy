@@ -35,7 +35,7 @@ jsonwebtoken = "9.3.0"
 log = "0.4.20"
 moka = { version = "0.12.5", features = ["future"] }
 openssl = { version = "0.10.66", features = ["vendored"] }
-opentelemetry = { version = "0.26.0", features = ["trace", "logs"] }
+opentelemetry = { version = "0.27.1", features = ["trace", "logs"] }
 opentelemetry-appender-tracing = { version = "0.26.0", features = ["log"] }
 opentelemetry-otlp = { version = "0.26.0", features = [
     "logs",

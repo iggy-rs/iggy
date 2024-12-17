@@ -13,8 +13,6 @@ on:
     branches:
       - master
     types: [opened, synchronize, reopened]
-    paths-ignore:
-      - .github/**
 
 env:
   CRATE_NAME: iggy

@@ -106,6 +106,8 @@ impl IggyProducer {
     }
 
     /// Initializes the producer by subscribing to diagnostic events, creating the stream and topic if they do not exist etc.
+    ///
+    /// Note: This method must be invoked before producing messages.
     pub async fn init(&mut self) -> Result<(), IggyError> {
         if self.initialized {
             return Ok(());
@@ -609,6 +611,9 @@ impl IggyProducerBuilder {
         }
     }
 
+    /// Builds the producer.
+    ///
+    /// Note: After building the producer, `init()` must be invoked before producing messages.
     pub fn build(self) -> IggyProducer {
         IggyProducer::new(
             self.client,

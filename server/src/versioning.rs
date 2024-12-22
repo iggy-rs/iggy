@@ -15,9 +15,21 @@ impl FromStr for SemanticVersion {
     type Err = IggyError;
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let mut version = s.split('.');
-        let major = version.next().unwrap().parse::<u32>()?;
-        let minor = version.next().unwrap().parse::<u32>()?;
-        let patch = version.next().unwrap().parse::<u32>()?;
+        let major = version
+            .next()
+            .unwrap()
+            .parse::<u32>()
+            .map_err(|_| IggyError::InvalidNumberValue)?;
+        let minor = version
+            .next()
+            .unwrap()
+            .parse::<u32>()
+            .map_err(|_| IggyError::InvalidNumberValue)?;
+        let patch = version
+            .next()
+            .unwrap()
+            .parse::<u32>()
+            .map_err(|_| IggyError::InvalidNumberValue)?;
         Ok(SemanticVersion {
             major,
             minor,

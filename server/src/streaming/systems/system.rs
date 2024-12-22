@@ -23,12 +23,12 @@ use tracing::{error, info, instrument, trace};
 use crate::archiver::disk::DiskArchiver;
 use crate::archiver::s3::S3Archiver;
 use crate::archiver::{Archiver, ArchiverKind};
+use crate::map_toggle_str;
 use crate::state::file::FileState;
 use crate::state::system::SystemState;
 use crate::state::State;
 use crate::streaming::users::user::User;
 use crate::versioning::SemanticVersion;
-use crate::{compat, map_toggle_str};
 use iggy::locking::IggySharedMut;
 use iggy::locking::IggySharedMutFn;
 use iggy::models::user_info::UserId;
@@ -207,16 +207,6 @@ impl System {
             "Initializing system, data will be stored at: {}",
             self.config.get_system_path()
         );
-
-        if self.config.database.is_some() {
-            compat::storage_conversion::init(
-                self.config.clone(),
-                self.state.clone(),
-                self.storage.clone(),
-            )
-            .await
-            .with_error(|_| format!("{COMPONENT} - failed to initialize storage conversion"))?;
-        }
 
         let state_entries = self
             .state

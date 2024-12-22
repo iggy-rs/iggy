@@ -1,11 +1,10 @@
 use crate::configs::server::{TelemetryConfig, TelemetryTransport};
 use crate::configs::system::LoggingConfig;
 use crate::server_error::LogError;
-use opentelemetry::logs::LoggerProvider as _;
-use opentelemetry::trace::TracerProvider as _;
+use opentelemetry::trace::TracerProvider;
 use opentelemetry::{global, KeyValue};
 use opentelemetry_appender_tracing::layer::OpenTelemetryTracingBridge;
-use opentelemetry_otlp::WithExportConfig;
+use opentelemetry_otlp::{WithExportConfig, WithHttpConfig};
 use opentelemetry_sdk::propagation::TraceContextPropagator;
 use opentelemetry_sdk::runtime::Tokio;
 use opentelemetry_sdk::Resource;
@@ -175,75 +174,67 @@ impl Logging {
         ]);
 
         let logger_provider = match self.telemetry_config.logs.transport {
-            TelemetryTransport::GRPC => opentelemetry_otlp::new_pipeline()
-                .logging()
+            TelemetryTransport::GRPC => opentelemetry_sdk::logs::LoggerProvider::builder()
                 .with_resource(resource.clone())
-                .with_exporter(
-                    opentelemetry_otlp::new_exporter()
-                        .tonic()
-                        .with_endpoint(self.telemetry_config.logs.endpoint.clone()),
+                .with_batch_exporter(
+                    opentelemetry_otlp::LogExporter::builder()
+                        .with_tonic()
+                        .with_endpoint(self.telemetry_config.logs.endpoint.clone())
+                        .build()
+                        .expect("Failed to initialize gRPC logger."),
+                    Tokio,
                 )
-                .install_batch(Tokio)
-                .expect("Failed to initialize gRPC logger."),
-            TelemetryTransport::HTTP => opentelemetry_otlp::new_pipeline()
-                .logging()
+                .build(),
+            TelemetryTransport::HTTP => opentelemetry_sdk::logs::LoggerProvider::builder()
                 .with_resource(resource.clone())
-                .with_exporter(
-                    opentelemetry_otlp::new_exporter()
-                        .http()
+                .with_batch_exporter(
+                    opentelemetry_otlp::LogExporter::builder()
+                        .with_http()
                         .with_http_client(reqwest::Client::new())
+                        .with_endpoint(self.telemetry_config.logs.endpoint.clone())
                         .with_protocol(opentelemetry_otlp::Protocol::HttpBinary)
-                        .with_endpoint(self.telemetry_config.logs.endpoint.clone()),
+                        .build()
+                        .expect("Failed to initialize HTTP logger."),
+                    Tokio,
                 )
-                .install_batch(Tokio)
-                .expect("Failed to initialize HTTP logger."),
+                .build(),
         };
-
-        let logger = logger_provider
-            .logger_builder(service_name.to_owned())
-            .with_version(VERSION)
-            .build();
 
         let tracer_provider = match self.telemetry_config.traces.transport {
-            TelemetryTransport::GRPC => opentelemetry_otlp::new_pipeline()
-                .tracing()
-                .with_exporter(
-                    opentelemetry_otlp::new_exporter()
-                        .tonic()
-                        .with_endpoint(self.telemetry_config.traces.endpoint.clone()),
+            TelemetryTransport::GRPC => opentelemetry_sdk::trace::TracerProvider::builder()
+                .with_resource(resource.clone())
+                .with_batch_exporter(
+                    opentelemetry_otlp::SpanExporter::builder()
+                        .with_tonic()
+                        .with_endpoint(self.telemetry_config.traces.endpoint.clone())
+                        .build()
+                        .expect("Failed to initialize gRPC tracer."),
+                    Tokio,
                 )
-                .with_trace_config(
-                    opentelemetry_sdk::trace::Config::default().with_resource(resource),
-                )
-                .install_batch(Tokio)
-                .expect("Failed to initialize gRPC tracer."),
-            TelemetryTransport::HTTP => opentelemetry_otlp::new_pipeline()
-                .tracing()
-                .with_exporter(
-                    opentelemetry_otlp::new_exporter()
-                        .http()
+                .build(),
+            TelemetryTransport::HTTP => opentelemetry_sdk::trace::TracerProvider::builder()
+                .with_resource(resource.clone())
+                .with_batch_exporter(
+                    opentelemetry_otlp::SpanExporter::builder()
+                        .with_http()
                         .with_http_client(reqwest::Client::new())
+                        .with_endpoint(self.telemetry_config.traces.endpoint.clone())
                         .with_protocol(opentelemetry_otlp::Protocol::HttpBinary)
-                        .with_endpoint(self.telemetry_config.traces.endpoint.clone()),
+                        .build()
+                        .expect("Failed to initialize HTTP tracer."),
+                    Tokio,
                 )
-                .with_trace_config(
-                    opentelemetry_sdk::trace::Config::default().with_resource(resource),
-                )
-                .install_batch(Tokio)
-                .expect("Failed to initialize HTTP tracer."),
+                .build(),
         };
 
-        let tracer = tracer_provider
-            .tracer_builder(service_name.to_owned())
-            .with_version(VERSION)
-            .build();
+        let tracer = tracer_provider.tracer(service_name);
         global::set_tracer_provider(tracer_provider.clone());
         global::set_text_map_propagator(TraceContextPropagator::new());
         global::shutdown_tracer_provider();
 
         Registry::default()
             .with(layers)
-            .with(OpenTelemetryTracingBridge::new(logger.provider()))
+            .with(OpenTelemetryTracingBridge::new(&logger_provider))
             .with(OpenTelemetryLayer::new(tracer))
             .with(EnvFilter::try_from_default_env().unwrap_or(EnvFilter::new("INFO")))
             .init();

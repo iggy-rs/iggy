@@ -94,7 +94,11 @@ impl BytesSerializable for GetConsumerOffset {
         position += stream_id.get_size_bytes().as_bytes_usize();
         let topic_id = Identifier::from_bytes(bytes.slice(position..))?;
         position += topic_id.get_size_bytes().as_bytes_usize();
-        let partition_id = u32::from_le_bytes(bytes[position..position + 4].try_into()?);
+        let partition_id = u32::from_le_bytes(
+            bytes[position..position + 4]
+                .try_into()
+                .map_err(|_| IggyError::InvalidNumberEncoding)?,
+        );
         let partition_id = if partition_id == 0 {
             None
         } else {

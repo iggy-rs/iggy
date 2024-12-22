@@ -36,7 +36,10 @@ impl MessageClient for HttpClient {
                 },
             )
             .await?;
-        let messages = response.json().await?;
+        let messages = response
+            .json()
+            .await
+            .map_err(|_| IggyError::InvalidJsonResponse)?;
         Ok(messages)
     }
 

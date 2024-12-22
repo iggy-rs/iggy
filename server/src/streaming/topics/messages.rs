@@ -92,9 +92,11 @@ impl Topic {
 
         let partition_id = match partitioning.kind {
             PartitioningKind::Balanced => self.get_next_partition_id(),
-            PartitioningKind::PartitionId => {
-                u32::from_le_bytes(partitioning.value[..partitioning.length as usize].try_into()?)
-            }
+            PartitioningKind::PartitionId => u32::from_le_bytes(
+                partitioning.value[..partitioning.length as usize]
+                    .try_into()
+                    .map_err(|_| IggyError::InvalidNumberEncoding)?,
+            ),
             PartitioningKind::MessagesKey => {
                 self.calculate_partition_id_by_messages_key_hash(&partitioning.value)
             }
@@ -112,9 +114,11 @@ impl Topic {
     ) -> Result<(), IggyError> {
         let partition = self.partitions.get(&partition_id);
         partition
-            .ok_or_else(|| {
-                IggyError::PartitionNotFound(partition_id, self.stream_id, self.stream_id)
-            })?
+            .ok_or(IggyError::PartitionNotFound(
+                partition_id,
+                self.stream_id,
+                self.stream_id,
+            ))?
             .write()
             .await
             .flush_unsaved_buffer(fsync)
@@ -128,7 +132,7 @@ impl Topic {
     ) -> Result<(), IggyError> {
         let partition = self.partitions.get(&appendable_batch_info.partition_id);
         partition
-            .ok_or_else(|| {
+            .ok_or({
                 IggyError::PartitionNotFound(
                     appendable_batch_info.partition_id,
                     self.stream_id,
@@ -181,7 +185,8 @@ impl Topic {
         // TODO: load data from database instead of calculating the size on disk
         let total_size_on_disk_bytes = folder_size(&path)
             .await
-            .with_error(|_| format!("{COMPONENT} - failed to get folder size, path: {path}"))?;
+            .with_error(|_| format!("{COMPONENT} - failed to get folder size, path: {path}"))
+            .map_err(|_| IggyError::InvalidSizeBytes)?;
 
         for partition_lock in self.partitions.values_mut() {
             let mut partition = partition_lock.write().await;

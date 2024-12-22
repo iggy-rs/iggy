@@ -3,7 +3,6 @@ use iggy::client::{MessageClient, StreamClient, TopicClient};
 use iggy::clients::client::IggyClient;
 use iggy::consumer::Consumer;
 use iggy::error::IggyError;
-use iggy::error::IggyError::InvalidResponse;
 use iggy::messages::poll_messages::PollingStrategy;
 use iggy::messages::send_messages::{Message, Partitioning};
 use iggy::models::header::{HeaderKey, HeaderValue};
@@ -65,21 +64,13 @@ pub async fn run(client_factory: &dyn ClientFactory) {
     send_message_and_check_result(
         &client,
         MessageToSend::OfSizeWithHeaders(100_001, 10_000_000),
-        Err(InvalidResponse(
-            4017,
-            23,
-            "Too big headers payload".to_owned(),
-        )),
+        Err(IggyError::TooBigHeadersPayload),
     )
     .await;
     send_message_and_check_result(
         &client,
         MessageToSend::OfSizeWithHeaders(100_000, 10_000_001),
-        Err(InvalidResponse(
-            4022,
-            23,
-            "Too big message payload".to_owned(),
-        )),
+        Err(IggyError::TooBigMessagePayload),
     )
     .await;
 

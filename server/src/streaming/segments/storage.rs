@@ -48,12 +48,15 @@ impl SegmentStorage for FileSegmentStorage {
             "Loading segment from disk for start offset: {} and partition with ID: {} for topic with ID: {} and stream with ID: {} ...",
             segment.start_offset, segment.partition_id, segment.topic_id, segment.stream_id
         );
-        let log_file = file::open(&segment.log_path).await.with_error(|_| {
-            format!(
-                "{COMPONENT} - failed to open log_file, path: {}",
-                segment.log_path
-            )
-        })?;
+        let log_file = file::open(&segment.log_path)
+            .await
+            .with_error(|_| {
+                format!(
+                    "{COMPONENT} - failed to open log_file, path: {}",
+                    segment.log_path
+                )
+            })
+            .map_err(|_| IggyError::CannotReadFile)?;
         let file_size = log_file.metadata().await.unwrap().len() as u64;
         segment.size_bytes = IggyByteSize::from(file_size);
         segment.last_index_position = file_size as _;
@@ -261,13 +264,14 @@ impl SegmentStorage for FileSegmentStorage {
         let mut bytes = BytesMut::with_capacity(batch_size.as_bytes_usize());
         batch.extend(&mut bytes);
 
-        if let Err(err) = self
+        if self
             .persister
             .append(&segment.log_path, &bytes)
             .await
             .with_context(|| format!("Failed to save messages to segment: {}", segment.log_path))
+            .is_err()
         {
-            return Err(IggyError::CannotSaveMessagesToSegment(err));
+            return Err(IggyError::CannotSaveMessagesToSegment);
         }
 
         Ok(batch_size)
@@ -320,12 +324,15 @@ impl SegmentStorage for FileSegmentStorage {
 
     async fn load_all_indexes(&self, segment: &Segment) -> Result<Vec<Index>, IggyError> {
         trace!("Loading indexes from file...");
-        let file = file::open(&segment.index_path).await.with_error(|_| {
-            format!(
-                "{COMPONENT} - failed to open index file, path: {}",
-                segment.index_path
-            )
-        })?;
+        let file = file::open(&segment.index_path)
+            .await
+            .with_error(|_| {
+                format!(
+                    "{COMPONENT} - failed to open index file, path: {}",
+                    segment.index_path
+                )
+            })
+            .map_err(|_| IggyError::CannotReadFile)?;
         let file_size = file
             .metadata()
             .await
@@ -334,7 +341,8 @@ impl SegmentStorage for FileSegmentStorage {
                     "{COMPONENT} - failed to load index file metadata, path: {}",
                     segment.index_path
                 )
-            })?
+            })
+            .map_err(|_| IggyError::CannotReadFileMetadata)?
             .len() as usize;
         if file_size == 0 {
             trace!("Index file is empty.");
@@ -345,24 +353,36 @@ impl SegmentStorage for FileSegmentStorage {
         let mut indexes = Vec::with_capacity(indexes_count);
         let mut reader = BufReader::with_capacity(BUF_READER_CAPACITY_BYTES, file);
         for idx_num in 0..indexes_count {
-            let offset = reader.read_u32_le().await.inspect_err(|error| {
-                error!(
-                    "Cannot read offset from index file for index number: {}. Error: {}",
-                    idx_num, &error
-                )
-            })?;
-            let position = reader.read_u32_le().await.inspect_err(|error| {
-                error!(
-                    "Cannot read position from index file for offset: {}. Error: {}",
-                    offset, &error
-                )
-            })?;
-            let timestamp = reader.read_u64_le().await.inspect_err(|error| {
-                error!(
-                    "Cannot read timestamp from index file for offset: {}. Error: {}",
-                    offset, &error
-                )
-            })?;
+            let offset = reader
+                .read_u32_le()
+                .await
+                .inspect_err(|error| {
+                    error!(
+                        "Cannot read offset from index file for index number: {}. Error: {}",
+                        idx_num, &error
+                    )
+                })
+                .map_err(|_| IggyError::CannotReadIndexOffset)?;
+            let position = reader
+                .read_u32_le()
+                .await
+                .inspect_err(|error| {
+                    error!(
+                        "Cannot read position from index file for offset: {}. Error: {}",
+                        offset, &error
+                    )
+                })
+                .map_err(|_| IggyError::CannotReadIndexPosition)?;
+            let timestamp = reader
+                .read_u64_le()
+                .await
+                .inspect_err(|error| {
+                    error!(
+                        "Cannot read timestamp from index file for offset: {}. Error: {}",
+                        offset, &error
+                    )
+                })
+                .map_err(|_| IggyError::CannotReadIndexTimestamp)?;
             indexes.push(Index {
                 offset,
                 position,
@@ -404,12 +424,15 @@ impl SegmentStorage for FileSegmentStorage {
             return Ok(None);
         }
 
-        let file = file::open(&segment.index_path).await.with_error(|_| {
-            format!(
-                "{COMPONENT} - failed to open segment's index path, path: {}",
-                segment.index_path
-            )
-        })?;
+        let file = file::open(&segment.index_path)
+            .await
+            .with_error(|_| {
+                format!(
+                    "{COMPONENT} - failed to open segment's index path, path: {}",
+                    segment.index_path
+                )
+            })
+            .map_err(|_| IggyError::CannotReadFile)?;
         let file_length = file
             .metadata()
             .await
@@ -418,7 +441,8 @@ impl SegmentStorage for FileSegmentStorage {
                     "{COMPONENT} - failed to load index's metadata, path: {}",
                     segment.index_path
                 )
-            })?
+            })
+            .map_err(|_| IggyError::CannotReadFileMetadata)?
             .len() as u32;
         if file_length == 0 {
             trace!("Index file is empty.");
@@ -442,15 +466,18 @@ impl SegmentStorage for FileSegmentStorage {
             let offset = reader
                 .read_u32_le()
                 .await
-                .with_error(|_| format!("{COMPONENT} - failed to load index's offset"))?;
+                .with_error(|_| format!("{COMPONENT} - failed to load index's offset"))
+                .map_err(|_| IggyError::CannotReadIndexOffset)?;
             let position = reader
                 .read_u32_le()
                 .await
-                .with_error(|_| format!("{COMPONENT} - failed to load index's position"))?;
+                .with_error(|_| format!("{COMPONENT} - failed to load index's position"))
+                .map_err(|_| IggyError::CannotReadIndexPosition)?;
             let timestamp = reader
                 .read_u64_le()
                 .await
-                .with_error(|_| format!("{COMPONENT} - failed to load index's timestamp"))?;
+                .with_error(|_| format!("{COMPONENT} - failed to load index's timestamp"))
+                .map_err(|_| IggyError::CannotReadIndexTimestamp)?;
             read_bytes += INDEX_SIZE;
             let idx = Index {
                 offset,
@@ -487,16 +514,16 @@ impl SegmentStorage for FileSegmentStorage {
         bytes.put_u32_le(index.offset);
         bytes.put_u32_le(index.position);
         bytes.put_u64_le(index.timestamp);
-        if let Err(err) = self
-            .persister
+        self.persister
             .append(index_path, &bytes)
             .await
-            .with_context(|| format!("Failed to save index to segment: {}", index_path))
-        {
-            return Err(IggyError::CannotSaveIndexToSegment(err));
-        }
-
-        Ok(())
+            .map_err(|error| {
+                error!(
+                    "Failed to save index to segment: {}, error: {}",
+                    index_path, error
+                );
+                IggyError::CannotSaveIndexToSegment
+            })
     }
 
     async fn try_load_index_for_timestamp(
@@ -505,12 +532,15 @@ impl SegmentStorage for FileSegmentStorage {
         timestamp: u64,
     ) -> Result<Option<Index>, IggyError> {
         trace!("Loading time indexes from file...");
-        let file = file::open(&segment.index_path).await.with_error(|_| {
-            format!(
-                "{COMPONENT} - failed to open segment's index file, path: {}",
-                segment.index_path
-            )
-        })?;
+        let file = file::open(&segment.index_path)
+            .await
+            .with_error(|_| {
+                format!(
+                    "{COMPONENT} - failed to open segment's index file, path: {}",
+                    segment.index_path
+                )
+            })
+            .map_err(|_| IggyError::CannotReadFile)?;
         let file_size = file
             .metadata()
             .await
@@ -519,7 +549,8 @@ impl SegmentStorage for FileSegmentStorage {
                     "{COMPONENT} - failed to load index's metadata, path: {}",
                     segment.index_path
                 )
-            })?
+            })
+            .map_err(|_| IggyError::CannotReadFileMetadata)?
             .len() as usize;
         if file_size == 0 {
             trace!("Time index file is empty.");
@@ -530,9 +561,18 @@ impl SegmentStorage for FileSegmentStorage {
         let mut read_bytes = 0;
         let mut idx_pred = HeadTailBuffer::new();
         loop {
-            let offset = reader.read_u32_le().await?;
-            let position = reader.read_u32_le().await?;
-            let time = reader.read_u64_le().await?;
+            let offset = reader
+                .read_u32_le()
+                .await
+                .map_err(|_| IggyError::CannotReadIndexOffset)?;
+            let position = reader
+                .read_u32_le()
+                .await
+                .map_err(|_| IggyError::CannotReadIndexPosition)?;
+            let time = reader
+                .read_u64_le()
+                .await
+                .map_err(|_| IggyError::CannotReadIndexTimestamp)?;
             let idx = Index {
                 offset,
                 position,
@@ -555,8 +595,24 @@ async fn load_batches_by_range(
     index_range: &IndexRange,
     mut on_batch: impl FnMut(RetainedMessageBatch) -> Result<(), IggyError>,
 ) -> Result<(), IggyError> {
-    let file = file::open(&segment.log_path).await?;
-    let file_size = file.metadata().await?.len();
+    let file = file::open(&segment.log_path).await.map_err(|error| {
+        error!(
+            "Cannot open segment's log file: {}, error: {}",
+            segment.log_path, error
+        );
+        IggyError::CannotReadFile
+    })?;
+    let file_size = file
+        .metadata()
+        .await
+        .map_err(|error| {
+            error!(
+                "Cannot read segment's log file metadata: {}, error: {}",
+                segment.log_path, error
+            );
+            IggyError::CannotReadFileMetadata
+        })?
+        .len();
     if file_size == 0 {
         return Ok(());
     }
@@ -578,7 +634,8 @@ async fn load_batches_by_range(
                 "{COMPONENT} - failed to seek to position {}",
                 index_range.start.position
             )
-        })?;
+        })
+        .map_err(|_| IggyError::CannotSeekFile)?;
 
     let mut read_bytes = index_range.start.position as u64;
     let mut last_batch_to_read = false;
@@ -635,8 +692,24 @@ async fn load_messages_by_size(
     size_bytes: u64,
     mut on_batch: impl FnMut(RetainedMessageBatch) -> Result<(), IggyError>,
 ) -> Result<(), IggyError> {
-    let file = file::open(&segment.log_path).await?;
-    let file_size = file.metadata().await?.len();
+    let file = file::open(&segment.log_path).await.map_err(|error| {
+        error!(
+            "Cannot open segment's log file: {}, error: {}",
+            segment.log_path, error
+        );
+        IggyError::CannotReadFile
+    })?;
+    let file_size = file
+        .metadata()
+        .await
+        .map_err(|error| {
+            error!(
+                "Cannot read segment's log file metadata: {}, error: {}",
+                segment.log_path, error
+            );
+            IggyError::CannotReadFileMetadata
+        })?
+        .len();
     if file_size == 0 {
         return Ok(());
     }

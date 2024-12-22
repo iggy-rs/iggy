@@ -73,8 +73,9 @@ impl BytesSerializable for UpdateStream {
         let stream_id = Identifier::from_bytes(bytes.clone())?;
         position += stream_id.get_size_bytes().as_bytes_usize();
         let name_length = bytes[position];
-        let name =
-            from_utf8(&bytes[position + 1..position + 1 + name_length as usize])?.to_string();
+        let name = from_utf8(&bytes[position + 1..position + 1 + name_length as usize])
+            .map_err(|_| IggyError::InvalidUtf8)?
+            .to_string();
         if name.len() != name_length as usize {
             return Err(IggyError::InvalidCommand);
         }

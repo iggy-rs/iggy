@@ -1,6 +1,4 @@
-use bytes::{BufMut, BytesMut};
 use iggy::error::IggyError;
-use std::mem::size_of;
 use tokio::io::{AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt};
 use tracing::debug;
 
@@ -17,7 +15,7 @@ where
             if error.kind() == std::io::ErrorKind::UnexpectedEof {
                 Err(IggyError::ConnectionClosed)
             } else {
-                Err(IggyError::from(error))
+                Err(IggyError::TcpError)
             }
         }
     }
@@ -44,19 +42,7 @@ pub(crate) async fn send_error_response<T>(
 where
     T: AsyncRead + AsyncWrite + Unpin,
 {
-    let error_message = error.to_string();
-    let length = error_message.len() as u32;
-
-    let mut error_details_buffer = BytesMut::with_capacity(error_message.len() + size_of::<u32>());
-    error_details_buffer.put_u32_le(length);
-    error_details_buffer.put_slice(error_message.as_bytes());
-
-    send_response(
-        stream,
-        &error.as_code().to_le_bytes(),
-        &error_details_buffer,
-    )
-    .await
+    send_response(stream, &error.as_code().to_le_bytes(), &[]).await
 }
 
 pub(crate) async fn send_response<T>(
@@ -71,7 +57,8 @@ where
     let length = (payload.len() as u32).to_le_bytes();
     stream
         .write_all(&[status, &length, payload].as_slice().concat())
-        .await?;
+        .await
+        .map_err(|_| IggyError::TcpError)?;
     debug!("Sent response with status: {:?}", status);
     Ok(())
 }

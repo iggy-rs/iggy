@@ -9,7 +9,7 @@ use iggy::error::IggyError;
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::io::AsyncReadExt;
-use tracing::info;
+use tracing::{error, info};
 
 #[derive(Debug)]
 pub struct TokenStorage {
@@ -35,7 +35,10 @@ impl TokenStorage {
         }
 
         info!("Loading revoked access tokens from: {}", self.path);
-        let mut file = file.unwrap();
+        let mut file = file.map_err(|error| {
+            error!("Cannot open revoked access tokens file: {error}");
+            IggyError::CannotReadFile
+        })?;
         let file_size = file
             .metadata()
             .await
@@ -44,20 +47,24 @@ impl TokenStorage {
                     "{COMPONENT} - failed to read file metadata, path: {}",
                     self.path
                 )
-            })?
+            })
+            .map_err(|_| IggyError::CannotReadFileMetadata)?
             .len() as usize;
         let mut buffer = BytesMut::with_capacity(file_size);
         buffer.put_bytes(0, file_size);
-        file.read_exact(&mut buffer).await.with_error(|_| {
-            format!(
-                "{COMPONENT} - failed to read file into buffer, path: {}",
-                self.path
-            )
-        })?;
+        file.read_exact(&mut buffer)
+            .await
+            .with_error(|_| {
+                format!(
+                    "{COMPONENT} - failed to read file into buffer, path: {}",
+                    self.path
+                )
+            })
+            .map_err(|_| IggyError::CannotReadFile)?;
 
         let tokens: HashMap<String, u64> = bincode::deserialize(&buffer)
             .with_context(|| "Failed to deserialize revoked access tokens")
-            .map_err(IggyError::CannotDeserializeResource)?;
+            .map_err(|_| IggyError::CannotDeserializeResource)?;
 
         let tokens = tokens
             .into_iter()
@@ -80,7 +87,7 @@ impl TokenStorage {
         map.insert(token.id.to_owned(), token.expiry);
         let bytes = bincode::serialize(&map)
             .with_context(|| "Failed to serialize revoked access tokens")
-            .map_err(IggyError::CannotSerializeResource)?;
+            .map_err(|_| IggyError::CannotSerializeResource)?;
         self.persister
             .overwrite(&self.path, &bytes)
             .await
@@ -112,7 +119,7 @@ impl TokenStorage {
 
         let bytes = bincode::serialize(&map)
             .with_context(|| "Failed to serialize revoked access tokens")
-            .map_err(IggyError::CannotSerializeResource)?;
+            .map_err(|_| IggyError::CannotSerializeResource)?;
         self.persister
             .overwrite(&self.path, &bytes)
             .await

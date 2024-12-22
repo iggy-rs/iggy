@@ -24,13 +24,19 @@ impl UserClient for HttpClient {
             return Ok(None);
         }
 
-        let user = response.json().await?;
+        let user = response
+            .json()
+            .await
+            .map_err(|_| IggyError::InvalidJsonResponse)?;
         Ok(Some(user))
     }
 
     async fn get_users(&self) -> Result<Vec<UserInfo>, IggyError> {
         let response = self.get(PATH).await?;
-        let users = response.json().await?;
+        let users = response
+            .json()
+            .await
+            .map_err(|_| IggyError::InvalidJsonResponse)?;
         Ok(users)
     }
 
@@ -52,7 +58,10 @@ impl UserClient for HttpClient {
                 },
             )
             .await?;
-        let user = response.json().await?;
+        let user = response
+            .json()
+            .await
+            .map_err(|_| IggyError::InvalidJsonResponse)?;
         Ok(user)
     }
 
@@ -126,7 +135,10 @@ impl UserClient for HttpClient {
                 },
             )
             .await?;
-        let identity_info = response.json().await?;
+        let identity_info = response
+            .json()
+            .await
+            .map_err(|_| IggyError::InvalidJsonResponse)?;
         self.set_token_from_identity(&identity_info).await?;
         Ok(identity_info)
     }

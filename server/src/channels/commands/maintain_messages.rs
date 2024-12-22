@@ -78,7 +78,7 @@ impl MessagesMaintainer {
 
 #[async_trait]
 impl ServerCommand<MaintainMessagesCommand> for MaintainMessagesExecutor {
-    #[instrument(skip_all)]
+    #[instrument(skip_all, name = "trace_maintain_messages")]
     async fn execute(&mut self, system: &SharedSystem, command: MaintainMessagesCommand) {
         let system = system.read().await;
         let streams = system.get_streams();

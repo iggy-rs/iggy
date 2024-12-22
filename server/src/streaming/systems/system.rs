@@ -177,7 +177,7 @@ impl System {
         }
     }
 
-    #[instrument(skip_all)]
+    #[instrument(skip_all, name = "trace_system_init")]
     pub async fn init(&mut self) -> Result<(), IggyError> {
         let system_path = self.config.get_system_path();
         if !Path::new(&system_path).exists() && create_dir(&system_path).await.is_err() {
@@ -246,13 +246,13 @@ impl System {
         Ok(())
     }
 
-    #[instrument(skip_all)]
+    #[instrument(skip_all, name = "trace_shutdown")]
     pub async fn shutdown(&mut self) -> Result<(), IggyError> {
         self.persist_messages().await?;
         Ok(())
     }
 
-    #[instrument(skip_all)]
+    #[instrument(skip_all, name = "trace_persist_messages")]
     pub async fn persist_messages(&self) -> Result<usize, IggyError> {
         trace!("Saving buffered messages on disk...");
         let mut saved_messages_number = 0;

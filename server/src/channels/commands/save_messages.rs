@@ -58,7 +58,7 @@ impl MessagesSaver {
 
 #[async_trait]
 impl ServerCommand<SaveMessagesCommand> for SaveMessagesExecutor {
-    #[instrument(skip_all)]
+    #[instrument(skip_all, name = "trace_save_messages")]
     async fn execute(&mut self, system: &SharedSystem, _command: SaveMessagesCommand) {
         let saved_messages_count = system.read().await.persist_messages().await;
         match saved_messages_count {

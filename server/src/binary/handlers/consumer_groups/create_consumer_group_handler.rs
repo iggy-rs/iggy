@@ -10,7 +10,7 @@ use iggy::consumer_groups::create_consumer_group::CreateConsumerGroup;
 use iggy::error::IggyError;
 use tracing::{debug, instrument};
 
-#[instrument(skip_all, fields(iggy_user_id = session.get_user_id(), iggy_client_id = session.client_id, iggy_stream_id = command.stream_id.as_string(), iggy_topic_id = command.topic_id.as_string()))]
+#[instrument(skip_all, name = "trace_create_consumer_group", fields(iggy_user_id = session.get_user_id(), iggy_client_id = session.client_id, iggy_stream_id = command.stream_id.as_string(), iggy_topic_id = command.topic_id.as_string()))]
 pub async fn handle(
     command: CreateConsumerGroup,
     sender: &mut dyn Sender,

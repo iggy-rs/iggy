@@ -9,7 +9,7 @@ use iggy::error::IggyError;
 use iggy::users::login_user::LoginUser;
 use tracing::{debug, instrument};
 
-#[instrument(skip_all, fields(iggy_user_id = session.get_user_id(), iggy_client_id = session.client_id))]
+#[instrument(skip_all, name = "trace_login_user", fields(iggy_user_id = session.get_user_id(), iggy_client_id = session.client_id))]
 pub async fn handle(
     command: LoginUser,
     sender: &mut dyn Sender,

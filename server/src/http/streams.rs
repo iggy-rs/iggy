@@ -68,7 +68,7 @@ async fn get_streams(
     Ok(Json(streams))
 }
 
-#[instrument(skip_all, fields(iggy_user_id = identity.user_id))]
+#[instrument(skip_all, name = "trace_create_stream", fields(iggy_user_id = identity.user_id))]
 async fn create_stream(
     State(state): State<Arc<AppState>>,
     Extension(identity): Extension<Identity>,
@@ -109,7 +109,7 @@ async fn create_stream(
     Ok(response)
 }
 
-#[instrument(skip_all, fields(iggy_user_id = identity.user_id, iggy_stream_id = stream_id))]
+#[instrument(skip_all, name = "trace_update_stream", fields(iggy_user_id = identity.user_id, iggy_stream_id = stream_id))]
 async fn update_stream(
     State(state): State<Arc<AppState>>,
     Extension(identity): Extension<Identity>,
@@ -149,7 +149,7 @@ async fn update_stream(
     Ok(StatusCode::NO_CONTENT)
 }
 
-#[instrument(skip_all, fields(iggy_user_id = identity.user_id, iggy_stream_id = stream_id))]
+#[instrument(skip_all, name = "trace_delete_stream", fields(iggy_user_id = identity.user_id, iggy_stream_id = stream_id))]
 async fn delete_stream(
     State(state): State<Arc<AppState>>,
     Extension(identity): Extension<Identity>,
@@ -191,7 +191,7 @@ async fn delete_stream(
     Ok(StatusCode::NO_CONTENT)
 }
 
-#[instrument(skip_all, fields(iggy_user_id = identity.user_id, iggy_stream_id = stream_id))]
+#[instrument(skip_all, name = "trace_purge_stream", fields(iggy_user_id = identity.user_id, iggy_stream_id = stream_id))]
 async fn purge_stream(
     State(state): State<Arc<AppState>>,
     Extension(identity): Extension<Identity>,

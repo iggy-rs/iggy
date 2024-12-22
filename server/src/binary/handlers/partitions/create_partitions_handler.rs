@@ -9,7 +9,7 @@ use iggy::error::IggyError;
 use iggy::partitions::create_partitions::CreatePartitions;
 use tracing::{debug, instrument};
 
-#[instrument(skip_all, fields(iggy_user_id = session.get_user_id(), iggy_client_id = session.client_id, iggy_stream_id = command.stream_id.as_string(), iggy_topic_id = command.topic_id.as_string()))]
+#[instrument(skip_all, name = "trace_create_partitions", fields(iggy_user_id = session.get_user_id(), iggy_client_id = session.client_id, iggy_stream_id = command.stream_id.as_string(), iggy_topic_id = command.topic_id.as_string()))]
 pub async fn handle(
     command: CreatePartitions,
     sender: &mut dyn Sender,

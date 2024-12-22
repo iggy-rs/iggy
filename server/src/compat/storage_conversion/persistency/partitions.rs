@@ -1,8 +1,10 @@
+use crate::compat::storage_conversion::persistency::COMPONENT;
 use crate::configs::system::SystemConfig;
 use crate::streaming::batching::batch_accumulator::BatchAccumulator;
 use crate::streaming::partitions::partition::{ConsumerOffset, Partition};
 use crate::streaming::segments::segment::{Segment, LOG_EXTENSION};
 use anyhow::Context;
+use error_set::ResultContext;
 use iggy::consumer::ConsumerKind;
 use iggy::error::IggyError;
 use iggy::utils::timestamp::IggyTimestamp;
@@ -129,7 +131,13 @@ pub async fn load(
         partition.topic_id,
         partition.partition_id,
     )
-    .await?;
+    .await
+    .with_error(|_| format!(
+        "{COMPONENT} - failed to load consumer offsets for cosumer, stream ID: {}, topic ID: {}, partition ID: {}",
+        partition.stream_id,
+        partition.topic_id,
+        partition.partition_id),
+    )?;
 
     let consumer_offsets_for_group = load_consumer_offsets(
         db,
@@ -139,7 +147,13 @@ pub async fn load(
         partition.topic_id,
         partition.partition_id,
     )
-    .await?;
+    .await
+    .with_error(|_| format!(
+        "{COMPONENT} - failed to load consumer offsets for group, stream ID: {}, topic ID: {}, partition ID: {}",
+        partition.stream_id,
+        partition.topic_id,
+        partition.partition_id),
+    )?;
 
     for consumer_offset in consumer_offsets_for_consumer {
         partition
@@ -189,7 +203,12 @@ pub async fn load(
             partition.messages_count.clone(),
         );
 
-        segment.load().await?;
+        segment.load().await.with_error(|_| format!(
+            "{COMPONENT} - failed to load segment with stream ID: {}, topic ID: {}, partition ID: {}",
+            segment.stream_id,
+            segment.topic_id,
+            segment.partition_id,
+        ))?;
         let capacity = partition.config.partition.messages_required_to_save;
         if !segment.is_closed {
             segment.unsaved_messages = Some(BatchAccumulator::new(
@@ -205,7 +224,12 @@ pub async fn load(
 
         if partition.config.partition.validate_checksum {
             info!("Validating messages checksum for partition with ID: {} and segment with start offset: {}...", partition.partition_id, segment.start_offset);
-            segment.storage.segment.load_checksums(&segment).await?;
+            segment.storage.segment.load_checksums(&segment).await.with_error(|_| format!(
+                "{COMPONENT} - failed to load checksums for segment with stream ID: {}, topic ID: {}, partition ID: {}",
+                segment.stream_id,
+                segment.topic_id,
+                segment.partition_id,
+            ))?;
             info!("Validated messages checksum for partition with ID: {} and segment with start offset: {}.", partition.partition_id, segment.start_offset);
         }
 
@@ -213,7 +237,12 @@ pub async fn load(
         let mut unique_message_ids_count = 0;
         if let Some(message_deduplicator) = &partition.message_deduplicator {
             info!("Loading unique message IDs for partition with ID: {} and segment with start offset: {}...", partition.partition_id, segment.start_offset);
-            let message_ids = segment.storage.segment.load_message_ids(&segment).await?;
+            let message_ids = segment.storage.segment.load_message_ids(&segment).await.with_error(|_| format!(
+                "{COMPONENT} - failed to load message ids for segment with stream ID: {}, topic ID: {}, partition ID: {}",
+                segment.stream_id,
+                segment.topic_id,
+                segment.partition_id,
+            ))?;
             for message_id in message_ids {
                 if message_deduplicator.try_insert(&message_id).await {
                     unique_message_ids_count += 1;
@@ -259,7 +288,12 @@ pub async fn load(
         partition.current_offset = last_segment.current_offset;
     }
 
-    partition.load_consumer_offsets().await?;
+    partition.load_consumer_offsets().await.with_error(|_| format!(
+        "{COMPONENT} - failed to load consumere offsets for stream ID: {}, topic ID: {}, partiton ID: {}",
+        partition.stream_id,
+        partition.topic_id,
+        partition.partition_id,
+    ))?;
     info!(
             "Loaded partition with ID: {} for stream with ID: {} and topic with ID: {}, current offset: {}.",
             partition.partition_id, partition.stream_id, partition.topic_id, partition.current_offset

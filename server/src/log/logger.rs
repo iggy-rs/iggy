@@ -1,6 +1,6 @@
 use crate::configs::server::{TelemetryConfig, TelemetryTransport};
 use crate::configs::system::LoggingConfig;
-use crate::server_error::ServerError;
+use crate::server_error::LogError;
 use opentelemetry::logs::LoggerProvider as _;
 use opentelemetry::trace::TracerProvider as _;
 use opentelemetry::{global, KeyValue};
@@ -254,7 +254,7 @@ impl Logging {
         &mut self,
         base_directory: String,
         config: &LoggingConfig,
-    ) -> Result<(), ServerError> {
+    ) -> Result<(), LogError> {
         // Write to stdout and file at the same time.
         // Use the non_blocking appender to avoid blocking the threads.
         // Use the rolling appender to avoid having a huge log file.
@@ -266,13 +266,13 @@ impl Logging {
 
         self.filtering_stdout_reload_handle
             .as_ref()
-            .ok_or(ServerError::FilterReloadFailure)?
+            .ok_or(LogError::FilterReloadFailure)?
             .modify(|layer| *layer = filtering_level.boxed())
             .expect("Failed to modify stdout filtering layer");
 
         self.filtering_file_reload_handle
             .as_ref()
-            .ok_or(ServerError::FilterReloadFailure)?
+            .ok_or(LogError::FilterReloadFailure)?
             .modify(|layer| *layer = filtering_level.boxed())
             .expect("Failed to modify file filtering layer");
 
@@ -286,7 +286,7 @@ impl Logging {
 
         self.stdout_reload_handle
             .as_ref()
-            .ok_or(ServerError::StdoutReloadFailure)?
+            .ok_or(LogError::StdoutReloadFailure)?
             .modify(|layer| *layer = stdout_layer)
             .expect("Failed to modify stdout layer");
 
@@ -312,7 +312,7 @@ impl Logging {
         self.file_guard = Some(file_guard);
         self.file_reload_handle
             .as_ref()
-            .ok_or(ServerError::FileReloadFailure)?
+            .ok_or(LogError::FileReloadFailure)?
             .modify(|layer| *layer = file_layer)
             .expect("Failed to modify file layer");
         let level = filtering_level.to_string();

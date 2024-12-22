@@ -1,8 +1,10 @@
+use crate::binary::handlers::topics::COMPONENT;
 use crate::binary::sender::Sender;
 use crate::state::command::EntryCommand;
 use crate::streaming::session::Session;
 use crate::streaming::systems::system::SharedSystem;
 use anyhow::Result;
+use error_set::ResultContext;
 use iggy::error::IggyError;
 use iggy::topics::purge_topic::PurgeTopic;
 use tracing::{debug, instrument};
@@ -18,11 +20,25 @@ pub async fn handle(
     let system = system.read().await;
     system
         .purge_topic(session, &command.stream_id, &command.topic_id)
-        .await?;
+        .await
+        .with_error(|_| {
+            format!(
+                "{COMPONENT} - failed to purge topic with id: {}, stream_id: {}",
+                command.topic_id, command.stream_id
+            )
+        })?;
+
+    let topic_id = command.topic_id.clone();
+    let stream_id = command.stream_id.clone();
     system
         .state
         .apply(session.get_user_id(), EntryCommand::PurgeTopic(command))
-        .await?;
+        .await
+        .with_error(|_| {
+            format!(
+            "{COMPONENT} - failed to apply purge topic with id: {topic_id}, stream_id: {stream_id}",
+        )
+        })?;
     sender.send_empty_ok_response().await?;
     Ok(())
 }

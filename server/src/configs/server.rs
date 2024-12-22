@@ -4,8 +4,10 @@ use crate::configs::http::HttpConfig;
 use crate::configs::quic::QuicConfig;
 use crate::configs::system::SystemConfig;
 use crate::configs::tcp::TcpConfig;
-use crate::server_error::ServerError;
+use crate::configs::COMPONENT;
+use crate::server_error::ConfigError;
 use derive_more::Display;
+use error_set::ResultContext;
 use iggy::utils::duration::IggyDuration;
 use iggy::validatable::Validatable;
 use serde::{Deserialize, Serialize};
@@ -148,9 +150,14 @@ impl FromStr for TelemetryTransport {
 }
 
 impl ServerConfig {
-    pub async fn load(config_provider: &dyn ConfigProvider) -> Result<ServerConfig, ServerError> {
-        let server_config = config_provider.load_config().await?;
-        server_config.validate()?;
+    pub async fn load(config_provider: &dyn ConfigProvider) -> Result<ServerConfig, ConfigError> {
+        let server_config = config_provider
+            .load_config()
+            .await
+            .with_error(|_| format!("{COMPONENT} - failed to load config provider config"))?;
+        server_config
+            .validate()
+            .with_error(|_| format!("{COMPONENT} - failed to validate server config"))?;
         Ok(server_config)
     }
 }

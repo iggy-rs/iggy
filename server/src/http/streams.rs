@@ -2,11 +2,13 @@ use crate::http::error::CustomError;
 use crate::http::jwt::json_web_token::Identity;
 use crate::http::mapper;
 use crate::http::shared::AppState;
+use crate::http::COMPONENT;
 use crate::streaming::session::Session;
 use axum::extract::{Path, State};
 use axum::http::StatusCode;
 use axum::routing::{delete, get};
 use axum::{Extension, Json, Router};
+use error_set::ResultContext;
 use iggy::identifier::Identifier;
 use iggy::models::stream::{Stream, StreamDetails};
 use iggy::streams::create_stream::CreateStream;
@@ -54,8 +56,14 @@ async fn get_streams(
     Extension(identity): Extension<Identity>,
 ) -> Result<Json<Vec<Stream>>, CustomError> {
     let system = state.system.read().await;
-    let streams =
-        system.find_streams(&Session::stateless(identity.user_id, identity.ip_address))?;
+    let streams = system
+        .find_streams(&Session::stateless(identity.user_id, identity.ip_address))
+        .with_error(|_| {
+            format!(
+                "{COMPONENT} - failed to find streams, user ID: {}",
+                identity.user_id
+            )
+        })?;
     let streams = mapper::map_streams(&streams);
     Ok(Json(streams))
 }
@@ -76,15 +84,28 @@ async fn create_stream(
                 command.stream_id,
                 &command.name,
             )
-            .await?;
+            .await
+            .with_error(|_| {
+                format!(
+                    "{COMPONENT} - failed to create stream, stream ID: {:?}",
+                    command.stream_id
+                )
+            })?;
         response = Json(mapper::map_stream(stream));
     }
 
     let system = state.system.read().await;
+    let stream_id = command.stream_id;
     system
         .state
         .apply(identity.user_id, EntryCommand::CreateStream(command))
-        .await?;
+        .await
+        .with_error(|_| {
+            format!(
+                "{COMPONENT} - failed to apply create stream, stream ID: {:?}",
+                stream_id
+            )
+        })?;
     Ok(response)
 }
 
@@ -105,14 +126,26 @@ async fn update_stream(
                 &command.stream_id,
                 &command.name,
             )
-            .await?;
+            .await
+            .with_error(|_| {
+                format!(
+                    "{COMPONENT} - failed to update stream, stream ID: {}",
+                    stream_id
+                )
+            })?;
     }
 
     let system = state.system.read().await;
     system
         .state
         .apply(identity.user_id, EntryCommand::UpdateStream(command))
-        .await?;
+        .await
+        .with_error(|_| {
+            format!(
+                "{COMPONENT} - failed to apply update stream, stream ID: {}",
+                stream_id
+            )
+        })?;
     Ok(StatusCode::NO_CONTENT)
 }
 
@@ -122,15 +155,21 @@ async fn delete_stream(
     Extension(identity): Extension<Identity>,
     Path(stream_id): Path<String>,
 ) -> Result<StatusCode, CustomError> {
-    let stream_id = Identifier::from_str_value(&stream_id)?;
+    let identifier_stream_id = Identifier::from_str_value(&stream_id)?;
     {
         let mut system = state.system.write().await;
         system
             .delete_stream(
                 &Session::stateless(identity.user_id, identity.ip_address),
-                &stream_id,
+                &identifier_stream_id,
             )
-            .await?;
+            .await
+            .with_error(|_| {
+                format!(
+                    "{COMPONENT} - failed to delete stream, stream ID: {}",
+                    stream_id
+                )
+            })?;
     }
 
     let system = state.system.read().await;
@@ -138,9 +177,17 @@ async fn delete_stream(
         .state
         .apply(
             identity.user_id,
-            EntryCommand::DeleteStream(DeleteStream { stream_id }),
+            EntryCommand::DeleteStream(DeleteStream {
+                stream_id: identifier_stream_id,
+            }),
         )
-        .await?;
+        .await
+        .with_error(|_| {
+            format!(
+                "{COMPONENT} - failed to apply delete stream, stream ID: {}",
+                stream_id
+            )
+        })?;
     Ok(StatusCode::NO_CONTENT)
 }
 
@@ -150,20 +197,34 @@ async fn purge_stream(
     Extension(identity): Extension<Identity>,
     Path(stream_id): Path<String>,
 ) -> Result<StatusCode, CustomError> {
-    let stream_id = Identifier::from_str_value(&stream_id)?;
+    let identifier_stream_id = Identifier::from_str_value(&stream_id)?;
     let system = state.system.read().await;
     system
         .purge_stream(
             &Session::stateless(identity.user_id, identity.ip_address),
-            &stream_id,
+            &identifier_stream_id,
         )
-        .await?;
+        .await
+        .with_error(|_| {
+            format!(
+                "{COMPONENT} - failed to purge stream, stream ID: {}",
+                stream_id
+            )
+        })?;
     system
         .state
         .apply(
             identity.user_id,
-            EntryCommand::PurgeStream(PurgeStream { stream_id }),
+            EntryCommand::PurgeStream(PurgeStream {
+                stream_id: identifier_stream_id,
+            }),
         )
-        .await?;
+        .await
+        .with_error(|_| {
+            format!(
+                "{COMPONENT} - failed to apply purge stream, stream ID: {}",
+                stream_id
+            )
+        })?;
     Ok(StatusCode::NO_CONTENT)
 }

@@ -94,11 +94,16 @@ impl BytesSerializable for CreateConsumerGroup {
         position += stream_id.get_size_bytes().as_bytes_usize();
         let topic_id = Identifier::from_bytes(bytes.slice(position..))?;
         position += topic_id.get_size_bytes().as_bytes_usize();
-        let group_id = u32::from_le_bytes(bytes[position..position + 4].try_into()?);
+        let group_id = u32::from_le_bytes(
+            bytes[position..position + 4]
+                .try_into()
+                .map_err(|_| IggyError::InvalidNumberEncoding)?,
+        );
         let group_id = if group_id == 0 { None } else { Some(group_id) };
         let name_length = bytes[position + 4];
-        let name =
-            from_utf8(&bytes[position + 5..position + 5 + name_length as usize])?.to_string();
+        let name = from_utf8(&bytes[position + 5..position + 5 + name_length as usize])
+            .map_err(|_| IggyError::InvalidUtf8)?
+            .to_string();
         let command = CreateConsumerGroup {
             stream_id,
             topic_id,

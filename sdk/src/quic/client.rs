@@ -144,7 +144,13 @@ impl QuicClient {
 
     /// Create a new QUIC client for the provided configuration.
     pub fn create(config: Arc<QuicClientConfig>) -> Result<Self, IggyError> {
-        let server_address = config.server_address.parse::<SocketAddr>()?;
+        let server_address = config
+            .server_address
+            .parse::<SocketAddr>()
+            .map_err(|error| {
+                error!("Invalid server address: {error}");
+                IggyError::InvalidServerAddress
+            })?;
         let client_address = if server_address.is_ipv6()
             && config.client_address == QuicClientConfig::default().client_address
         {
@@ -152,7 +158,11 @@ impl QuicClient {
         } else {
             &config.client_address
         }
-        .parse::<SocketAddr>()?;
+        .parse::<SocketAddr>()
+        .map_err(|error| {
+            error!("Invalid client address: {error}");
+            IggyError::InvalidClientAddress
+        })?;
 
         let quic_config = configure(&config)?;
         let endpoint = Endpoint::client(client_address);
@@ -178,12 +188,20 @@ impl QuicClient {
     async fn handle_response(&self, recv: &mut RecvStream) -> Result<Bytes, IggyError> {
         let buffer = recv
             .read_to_end(self.config.response_buffer_size as usize)
-            .await?;
+            .await
+            .map_err(|error| {
+                error!("Failed to read response data: {error}");
+                IggyError::QuicError
+            })?;
         if buffer.is_empty() {
             return Err(IggyError::EmptyResponse);
         }
 
-        let status = u32::from_le_bytes(buffer[..4].try_into().unwrap());
+        let status = u32::from_le_bytes(
+            buffer[..4]
+                .try_into()
+                .map_err(|_| IggyError::InvalidNumberEncoding)?,
+        );
         if status != 0 {
             error!(
                 "Received an invalid response with status: {} ({}).",
@@ -191,19 +209,14 @@ impl QuicClient {
                 IggyError::from_code_as_string(status)
             );
 
-            let length =
-                u32::from_le_bytes(buffer[4..RESPONSE_INITIAL_BYTES_LENGTH].try_into().unwrap());
-            let error_message = String::from_utf8_lossy(
-                &buffer[RESPONSE_INITIAL_BYTES_LENGTH + 4
-                    ..RESPONSE_INITIAL_BYTES_LENGTH + length as usize],
-            )
-            .to_string();
-
-            return Err(IggyError::InvalidResponse(status, length, error_message));
+            return Err(IggyError::from_code(status));
         }
 
-        let length =
-            u32::from_le_bytes(buffer[4..RESPONSE_INITIAL_BYTES_LENGTH].try_into().unwrap());
+        let length = u32::from_le_bytes(
+            buffer[4..RESPONSE_INITIAL_BYTES_LENGTH]
+                .try_into()
+                .map_err(|_| IggyError::InvalidNumberEncoding)?,
+        );
         trace!("Status: OK. Response length: {}", length);
         if length <= 1 {
             return Ok(Bytes::new());
@@ -296,7 +309,10 @@ impl QuicClient {
                 return Err(IggyError::CannotEstablishConnection);
             }
 
-            connection = connection_result?;
+            connection = connection_result.map_err(|error| {
+                error!("Failed to establish QUIC connection: {error}");
+                IggyError::CannotEstablishConnection
+            })?;
             remote_address = connection.remote_address();
             break;
         }
@@ -405,13 +421,29 @@ impl QuicClient {
         let connection = self.connection.lock().await;
         if let Some(connection) = connection.as_ref() {
             let payload_length = payload.len() + REQUEST_INITIAL_BYTES_LENGTH;
-            let (mut send, mut recv) = connection.open_bi().await?;
+            let (mut send, mut recv) = connection.open_bi().await.map_err(|error| {
+                error!("Failed to open a bidirectional stream: {error}");
+                IggyError::QuicError
+            })?;
             trace!("Sending a QUIC request with code: {code}");
             send.write_all(&(payload_length as u32).to_le_bytes())
-                .await?;
-            send.write_all(&code.to_le_bytes()).await?;
-            send.write_all(&payload).await?;
-            send.finish()?;
+                .await
+                .map_err(|error| {
+                    error!("Failed to write payload length: {error}");
+                    IggyError::QuicError
+                })?;
+            send.write_all(&code.to_le_bytes()).await.map_err(|error| {
+                error!("Failed to write payload code: {error}");
+                IggyError::QuicError
+            })?;
+            send.write_all(&payload).await.map_err(|error| {
+                error!("Failed to write payload: {error}");
+                IggyError::QuicError
+            })?;
+            send.finish().map_err(|error| {
+                error!("Failed to finish sending data: {error}");
+                IggyError::QuicError
+            })?;
             trace!("Sent a QUIC request with code: {code}, waiting for a response...");
             return self.handle_response(&mut recv).await;
         }

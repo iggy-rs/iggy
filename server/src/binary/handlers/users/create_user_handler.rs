@@ -1,3 +1,4 @@
+use crate::binary::handlers::users::COMPONENT;
 use crate::binary::mapper;
 use crate::binary::sender::Sender;
 use crate::state::command::EntryCommand;
@@ -5,6 +6,7 @@ use crate::streaming::session::Session;
 use crate::streaming::systems::system::SharedSystem;
 use crate::streaming::utils::crypto;
 use anyhow::Result;
+use error_set::ResultContext;
 use iggy::error::IggyError;
 use iggy::users::create_user::CreateUser;
 use tracing::{debug, instrument};
@@ -28,7 +30,13 @@ pub async fn handle(
                 command.status,
                 command.permissions.clone(),
             )
-            .await?;
+            .await
+            .with_error(|_| {
+                format!(
+                    "{COMPONENT} - failed to create user with name: {}, session: {session}",
+                    command.username
+                )
+            })?;
         response = mapper::map_user(user);
     }
 
@@ -45,7 +53,13 @@ pub async fn handle(
                 permissions: command.permissions.clone(),
             }),
         )
-        .await?;
+        .await
+        .with_error(|_| {
+            format!(
+                "{COMPONENT} - failed to apply create user with name: {}, session: {session}",
+                command.username
+            )
+        })?;
     sender.send_ok_response(&response).await?;
     Ok(())
 }

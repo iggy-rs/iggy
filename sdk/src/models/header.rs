@@ -209,19 +209,45 @@ impl HeaderValue {
         match kind {
             HeaderKind::Raw => Self::from_raw(value.as_bytes()),
             HeaderKind::String => Self::from_str(value),
-            HeaderKind::Bool => Self::from_bool(value.parse()?),
-            HeaderKind::Int8 => Self::from_int8(value.parse()?),
-            HeaderKind::Int16 => Self::from_int16(value.parse()?),
-            HeaderKind::Int32 => Self::from_int32(value.parse()?),
-            HeaderKind::Int64 => Self::from_int64(value.parse()?),
-            HeaderKind::Int128 => Self::from_int128(value.parse()?),
-            HeaderKind::Uint8 => Self::from_uint8(value.parse()?),
-            HeaderKind::Uint16 => Self::from_uint16(value.parse()?),
-            HeaderKind::Uint32 => Self::from_uint32(value.parse()?),
-            HeaderKind::Uint64 => Self::from_uint64(value.parse()?),
-            HeaderKind::Uint128 => Self::from_uint128(value.parse()?),
-            HeaderKind::Float32 => Self::from_float32(value.parse()?),
-            HeaderKind::Float64 => Self::from_float64(value.parse()?),
+            HeaderKind::Bool => {
+                Self::from_bool(value.parse().map_err(|_| IggyError::InvalidBooleanValue)?)
+            }
+            HeaderKind::Int8 => {
+                Self::from_int8(value.parse().map_err(|_| IggyError::InvalidNumberValue)?)
+            }
+            HeaderKind::Int16 => {
+                Self::from_int16(value.parse().map_err(|_| IggyError::InvalidNumberValue)?)
+            }
+            HeaderKind::Int32 => {
+                Self::from_int32(value.parse().map_err(|_| IggyError::InvalidNumberValue)?)
+            }
+            HeaderKind::Int64 => {
+                Self::from_int64(value.parse().map_err(|_| IggyError::InvalidNumberValue)?)
+            }
+            HeaderKind::Int128 => {
+                Self::from_int128(value.parse().map_err(|_| IggyError::InvalidNumberValue)?)
+            }
+            HeaderKind::Uint8 => {
+                Self::from_uint8(value.parse().map_err(|_| IggyError::InvalidNumberValue)?)
+            }
+            HeaderKind::Uint16 => {
+                Self::from_uint16(value.parse().map_err(|_| IggyError::InvalidNumberValue)?)
+            }
+            HeaderKind::Uint32 => {
+                Self::from_uint32(value.parse().map_err(|_| IggyError::InvalidNumberValue)?)
+            }
+            HeaderKind::Uint64 => {
+                Self::from_uint64(value.parse().map_err(|_| IggyError::InvalidNumberValue)?)
+            }
+            HeaderKind::Uint128 => {
+                Self::from_uint128(value.parse().map_err(|_| IggyError::InvalidNumberValue)?)
+            }
+            HeaderKind::Float32 => {
+                Self::from_float32(value.parse().map_err(|_| IggyError::InvalidNumberValue)?)
+            }
+            HeaderKind::Float64 => {
+                Self::from_float64(value.parse().map_err(|_| IggyError::InvalidNumberValue)?)
+            }
         }
     }
     /// Creates a new header value from the specified raw bytes.
@@ -244,7 +270,7 @@ impl HeaderValue {
             return Err(IggyError::InvalidHeaderValue);
         }
 
-        Ok(std::str::from_utf8(&self.value)?)
+        std::str::from_utf8(&self.value).map_err(|_| IggyError::InvalidUtf8)
     }
 
     /// Creates a new header value from the specified string.
@@ -589,7 +615,11 @@ impl BytesSerializable for HashMap<HeaderKey, HeaderValue> {
         let mut headers = Self::new();
         let mut position = 0;
         while position < bytes.len() {
-            let key_length = u32::from_le_bytes(bytes[position..position + 4].try_into()?) as usize;
+            let key_length = u32::from_le_bytes(
+                bytes[position..position + 4]
+                    .try_into()
+                    .map_err(|_| IggyError::InvalidNumberEncoding)?,
+            ) as usize;
             if key_length == 0 || key_length > 255 {
                 return Err(IggyError::InvalidHeaderKey);
             }
@@ -602,8 +632,11 @@ impl BytesSerializable for HashMap<HeaderKey, HeaderValue> {
             position += key_length;
             let kind = HeaderKind::from_code(bytes[position])?;
             position += 1;
-            let value_length =
-                u32::from_le_bytes(bytes[position..position + 4].try_into()?) as usize;
+            let value_length = u32::from_le_bytes(
+                bytes[position..position + 4]
+                    .try_into()
+                    .map_err(|_| IggyError::InvalidNumberEncoding)?,
+            ) as usize;
             if value_length == 0 || value_length > 255 {
                 return Err(IggyError::InvalidHeaderValue);
             }

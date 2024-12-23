@@ -73,7 +73,11 @@ impl BytesSerializable for DeletePartitions {
         position += stream_id.get_size_bytes().as_bytes_usize();
         let topic_id = Identifier::from_bytes(bytes.slice(position..))?;
         position += topic_id.get_size_bytes().as_bytes_usize();
-        let partitions_count = u32::from_le_bytes(bytes[position..position + 4].try_into()?);
+        let partitions_count = u32::from_le_bytes(
+            bytes[position..position + 4]
+                .try_into()
+                .map_err(|_| IggyError::InvalidNumberEncoding)?,
+        );
         let command = DeletePartitions {
             stream_id,
             topic_id,

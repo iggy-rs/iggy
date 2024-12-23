@@ -164,12 +164,10 @@ impl Consumer {
             let latency = before_poll.elapsed();
 
             if let Err(e) = polled_messages {
-                if let IggyError::InvalidResponse(code, _, _) = e {
-                    if code == 2010 {
-                        topic_not_found_counter += 1;
-                        if topic_not_found_counter > 1000 {
-                            return Err(e);
-                        }
+                if matches!(e, IggyError::TopicIdNotFound(_, _)) {
+                    topic_not_found_counter += 1;
+                    if topic_not_found_counter > 1000 {
+                        return Err(e);
                     }
                 } else {
                     return Err(e);

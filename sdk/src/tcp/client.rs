@@ -11,7 +11,7 @@ use crate::utils::duration::IggyDuration;
 use crate::utils::timestamp::IggyTimestamp;
 use async_broadcast::{broadcast, Receiver, Sender};
 use async_trait::async_trait;
-use bytes::{Buf, BufMut, Bytes, BytesMut};
+use bytes::{BufMut, Bytes, BytesMut};
 use rustls::pki_types::{pem::PemObject, CertificateDer, ServerName};
 use std::fmt::Debug;
 use std::net::SocketAddr;
@@ -99,7 +99,7 @@ impl ConnectionStream for TcpConnectionStream {
                 "Failed to read data by client: {} from the TCP connection: {error}",
                 self.client_address
             );
-            IggyError::from(error)
+            IggyError::TcpError
         })
     }
 
@@ -109,7 +109,7 @@ impl ConnectionStream for TcpConnectionStream {
                 "Failed to write data by client: {} to the TCP connection: {error}",
                 self.client_address
             );
-            IggyError::from(error)
+            IggyError::TcpError
         })
     }
 
@@ -119,7 +119,7 @@ impl ConnectionStream for TcpConnectionStream {
                 "Failed to flush data by client: {} to the TCP connection: {error}",
                 self.client_address
             );
-            IggyError::from(error)
+            IggyError::TcpError
         })
     }
 
@@ -129,7 +129,7 @@ impl ConnectionStream for TcpConnectionStream {
                 "Failed to shutdown the TCP connection by client: {} to the TCP connection: {error}",
                 self.client_address
             );
-            IggyError::from(error)
+            IggyError::TcpError
         })
     }
 }
@@ -142,7 +142,7 @@ impl ConnectionStream for TcpTlsConnectionStream {
                 "Failed to read data by client: {} from the TCP TLS connection: {error}",
                 self.client_address
             );
-            IggyError::from(error)
+            IggyError::TcpError
         })
     }
 
@@ -152,7 +152,7 @@ impl ConnectionStream for TcpTlsConnectionStream {
                 "Failed to write data by client: {} to the TCP TLS connection: {error}",
                 self.client_address
             );
-            IggyError::from(error)
+            IggyError::TcpError
         })
     }
 
@@ -162,7 +162,7 @@ impl ConnectionStream for TcpTlsConnectionStream {
                 "Failed to flush data by client: {} to the TCP TLS connection: {error}",
                 self.client_address
             );
-            IggyError::from(error)
+            IggyError::TcpError
         })
     }
 
@@ -172,7 +172,7 @@ impl ConnectionStream for TcpTlsConnectionStream {
                 "Failed to shutdown the TCP TLS connection by client: {} to the TCP TLS connection: {error}",
                 self.client_address
             );
-            IggyError::from(error)
+            IggyError::TcpError
         })
     }
 }
@@ -346,18 +346,7 @@ impl TcpClient {
                 );
             }
 
-            let mut error_details_buffer = BytesMut::with_capacity(length as usize);
-            error_details_buffer.put_bytes(0, length as usize);
-            stream.read(&mut error_details_buffer).await?;
-
-            let string_length = error_details_buffer.get_u32_le();
-            let error_message = String::from_utf8_lossy(&error_details_buffer);
-
-            return Err(IggyError::InvalidResponse(
-                status,
-                string_length,
-                error_message.to_string(),
-            ));
+            return Err(IggyError::from_code(status));
         }
 
         trace!("Status: OK. Response length: {}", length);
@@ -452,9 +441,18 @@ impl TcpClient {
                 return Err(IggyError::CannotEstablishConnection);
             }
 
-            let stream = connection?;
-            client_address = stream.local_addr()?;
-            remote_address = stream.peer_addr()?;
+            let stream = connection.map_err(|error| {
+                error!("Failed to establish TCP connection to the server: {error}",);
+                IggyError::CannotEstablishConnection
+            })?;
+            client_address = stream.local_addr().map_err(|error| {
+                error!("Failed to get the local address of the client: {error}",);
+                IggyError::CannotEstablishConnection
+            })?;
+            remote_address = stream.peer_addr().map_err(|error| {
+                error!("Failed to get the remote address of the server: {error}",);
+                IggyError::CannotEstablishConnection
+            })?;
             self.client_address.lock().await.replace(client_address);
 
             if !tls_enabled {
@@ -489,13 +487,19 @@ impl TcpClient {
                 .with_root_certificates(root_cert_store)
                 .with_no_client_auth();
             let connector = TlsConnector::from(Arc::new(config));
-            let stream = TcpStream::connect(client_address).await?;
+            let stream = TcpStream::connect(client_address).await.map_err(|error| {
+                error!("Failed to establish TCP connection to the server: {error}",);
+                IggyError::CannotEstablishConnection
+            })?;
             let tls_domain = self.config.tls_domain.to_owned();
             let domain = ServerName::try_from(tls_domain).map_err(|error| {
                 error!("Failed to create a server name from the domain. {error}",);
                 IggyError::InvalidTlsDomain
             })?;
-            let stream = connector.connect(domain, stream).await?;
+            let stream = connector.connect(domain, stream).await.map_err(|error| {
+                error!("Failed to establish a TLS connection to the server: {error}",);
+                IggyError::CannotEstablishConnection
+            })?;
             connection_stream = Box::new(TcpTlsConnectionStream::new(
                 client_address,
                 TlsStream::Client(stream),
@@ -609,8 +613,16 @@ impl TcpClient {
                 return Err(IggyError::EmptyResponse);
             }
 
-            let status = u32::from_le_bytes(response_buffer[..4].try_into()?);
-            let length = u32::from_le_bytes(response_buffer[4..].try_into()?);
+            let status = u32::from_le_bytes(
+                response_buffer[..4]
+                    .try_into()
+                    .map_err(|_| IggyError::InvalidNumberEncoding)?,
+            );
+            let length = u32::from_le_bytes(
+                response_buffer[4..]
+                    .try_into()
+                    .map_err(|_| IggyError::InvalidNumberEncoding)?,
+            );
             return self.handle_response(status, length, stream.as_mut()).await;
         }
 

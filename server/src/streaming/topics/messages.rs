@@ -2,8 +2,10 @@ use crate::streaming::batching::appendable_batch_info::AppendableBatchInfo;
 use crate::streaming::models::messages::RetainedMessage;
 use crate::streaming::polling_consumer::PollingConsumer;
 use crate::streaming::topics::topic::Topic;
+use crate::streaming::topics::COMPONENT;
 use crate::streaming::utils::file::folder_size;
 use crate::streaming::utils::hash;
+use error_set::ResultContext;
 use iggy::error::IggyError;
 use iggy::locking::IggySharedMutFn;
 use iggy::messages::poll_messages::{PollingKind, PollingStrategy};
@@ -52,6 +54,7 @@ impl Topic {
                 partition
                     .get_messages_by_timestamp(value.into(), count)
                     .await
+                    .with_error(|_| format!("{COMPONENT} - failed to get messages by timestamp: {value}, count: {count}"))
             }
             PollingKind::First => partition.get_first_messages(count).await,
             PollingKind::Last => partition.get_last_messages(count).await,
@@ -89,9 +92,11 @@ impl Topic {
 
         let partition_id = match partitioning.kind {
             PartitioningKind::Balanced => self.get_next_partition_id(),
-            PartitioningKind::PartitionId => {
-                u32::from_le_bytes(partitioning.value[..partitioning.length as usize].try_into()?)
-            }
+            PartitioningKind::PartitionId => u32::from_le_bytes(
+                partitioning.value[..partitioning.length as usize]
+                    .try_into()
+                    .map_err(|_| IggyError::InvalidNumberEncoding)?,
+            ),
             PartitioningKind::MessagesKey => {
                 self.calculate_partition_id_by_messages_key_hash(&partitioning.value)
             }
@@ -109,9 +114,11 @@ impl Topic {
     ) -> Result<(), IggyError> {
         let partition = self.partitions.get(&partition_id);
         partition
-            .ok_or_else(|| {
-                IggyError::PartitionNotFound(partition_id, self.stream_id, self.stream_id)
-            })?
+            .ok_or(IggyError::PartitionNotFound(
+                partition_id,
+                self.stream_id,
+                self.stream_id,
+            ))?
             .write()
             .await
             .flush_unsaved_buffer(fsync)
@@ -125,7 +132,7 @@ impl Topic {
     ) -> Result<(), IggyError> {
         let partition = self.partitions.get(&appendable_batch_info.partition_id);
         partition
-            .ok_or_else(|| {
+            .ok_or({
                 IggyError::PartitionNotFound(
                     appendable_batch_info.partition_id,
                     self.stream_id,
@@ -135,7 +142,8 @@ impl Topic {
             .write()
             .await
             .append_messages(appendable_batch_info, messages)
-            .await?;
+            .await
+            .with_error(|_| format!("{COMPONENT} - failed to append messages"))?;
 
         Ok(())
     }
@@ -175,7 +183,10 @@ impl Topic {
         let path = self.config.get_system_path();
 
         // TODO: load data from database instead of calculating the size on disk
-        let total_size_on_disk_bytes = folder_size(&path).await?;
+        let total_size_on_disk_bytes = folder_size(&path)
+            .await
+            .with_error(|_| format!("{COMPONENT} - failed to get folder size, path: {path}"))
+            .map_err(|_| IggyError::InvalidSizeBytes)?;
 
         for partition_lock in self.partitions.values_mut() {
             let mut partition = partition_lock.write().await;
@@ -211,7 +222,8 @@ impl Topic {
                 as u64;
             let messages = partition
                 .get_newest_messages_by_size(size_to_fetch_from_disk as u64)
-                .await?;
+                .await
+                .with_error(|_| format!("{COMPONENT} - failed to get newest messages by size: {size_to_fetch_from_disk}"))?;
 
             let sum = messages
                 .iter()

@@ -26,7 +26,10 @@ impl ConsumerGroupClient for HttpClient {
             return Ok(None);
         }
 
-        let consumer_group = response.json().await?;
+        let consumer_group = response
+            .json()
+            .await
+            .map_err(|_| IggyError::InvalidJsonResponse)?;
         Ok(Some(consumer_group))
     }
 
@@ -38,7 +41,10 @@ impl ConsumerGroupClient for HttpClient {
         let response = self
             .get(&get_path(&stream_id.as_cow_str(), &topic_id.as_cow_str()))
             .await?;
-        let consumer_groups = response.json().await?;
+        let consumer_groups = response
+            .json()
+            .await
+            .map_err(|_| IggyError::InvalidJsonResponse)?;
         Ok(consumer_groups)
     }
 
@@ -60,7 +66,10 @@ impl ConsumerGroupClient for HttpClient {
                 },
             )
             .await?;
-        let consumer_group = response.json().await?;
+        let consumer_group = response
+            .json()
+            .await
+            .map_err(|_| IggyError::InvalidJsonResponse)?;
         Ok(consumer_group)
     }
 

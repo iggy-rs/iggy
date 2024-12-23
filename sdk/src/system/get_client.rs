@@ -49,7 +49,12 @@ impl BytesSerializable for GetClient {
             return Err(IggyError::InvalidCommand);
         }
 
-        let client_id = u32::from_le_bytes(bytes.as_ref().try_into()?);
+        let client_id = u32::from_le_bytes(
+            bytes
+                .as_ref()
+                .try_into()
+                .map_err(|_| IggyError::InvalidNumberEncoding)?,
+        );
         let command = GetClient { client_id };
         Ok(command)
     }

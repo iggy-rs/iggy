@@ -159,29 +159,17 @@ impl<'a> IggyCredentials<'a> {
                         let login_result =
                             client.login_with_personal_access_token(token_value).await;
                         if let Err(err) = login_result {
-                            match err {
-                                IggyError::InvalidResponse(code, _, _) => {
-                                    // Check what does the code means and if that's one of the cases
-                                    // when we should delete the session and inform user to try login again
-                                    // TODO: improve this part when we have more information about the codes
-                                    if code == IggyError::ResourceNotFound(String::new()).as_code()
-                                        || code == IggyError::Unauthenticated.as_code()
-                                        || code
-                                            == IggyError::PersonalAccessTokenExpired(
-                                                String::new(),
-                                                0,
-                                            )
-                                            .as_code()
-                                    {
-                                        let server_session =
-                                            ServerSession::new(server_address.clone());
-                                        server_session.delete()?;
-                                        bail!("Login session expired for Iggy server: {server_address}, please login again or use other authentication method");
-                                    }
-                                }
-                                _ => {
-                                    bail!("Problem with server login with token: {token_value}");
-                                }
+                            if matches!(
+                                err,
+                                IggyError::Unauthenticated
+                                    | IggyError::ResourceNotFound(_)
+                                    | IggyError::PersonalAccessTokenExpired(_, _)
+                            ) {
+                                let server_session = ServerSession::new(server_address.clone());
+                                server_session.delete()?;
+                                bail!("Login session expired for Iggy server: {server_address}, please login again or use other authentication method");
+                            } else {
+                                bail!("Problem with server login with token: {token_value}");
                             }
                         }
                     }

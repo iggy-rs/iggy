@@ -1,7 +1,8 @@
 use crate::streaming::systems::system::System;
+use iggy::error::IggyError;
 use iggy::locking::IggySharedMutFn;
 use iggy::models::stats::Stats;
-use iggy::{error::IggyError, utils::duration::IggyDuration};
+use iggy::utils::duration::IggyDuration;
 use std::sync::OnceLock;
 use sysinfo::{Pid, ProcessesToUpdate, System as SysinfoSystem};
 use tokio::sync::Mutex;

@@ -104,7 +104,9 @@ impl FromStr for IggyByteSize {
         if matches!(s, "0" | "unlimited" | "Unlimited" | "none" | "None") {
             Ok(IggyByteSize(Byte::from_u64(0)))
         } else {
-            Ok(IggyByteSize(Byte::from_str(s)?))
+            Ok(IggyByteSize(
+                Byte::from_str(s).map_err(|_| IggyError::InvalidSizeBytes)?,
+            ))
         }
     }
 }

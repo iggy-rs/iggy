@@ -94,13 +94,21 @@ impl BytesSerializable for StoreConsumerOffset {
         position += stream_id.get_size_bytes().as_bytes_usize();
         let topic_id = Identifier::from_bytes(bytes.slice(position..))?;
         position += topic_id.get_size_bytes().as_bytes_usize();
-        let partition_id = u32::from_le_bytes(bytes[position..position + 4].try_into()?);
+        let partition_id = u32::from_le_bytes(
+            bytes[position..position + 4]
+                .try_into()
+                .map_err(|_| IggyError::InvalidNumberEncoding)?,
+        );
         let partition_id = if partition_id == 0 {
             None
         } else {
             Some(partition_id)
         };
-        let offset = u64::from_le_bytes(bytes[position + 4..position + 12].try_into()?);
+        let offset = u64::from_le_bytes(
+            bytes[position + 4..position + 12]
+                .try_into()
+                .map_err(|_| IggyError::InvalidNumberEncoding)?,
+        );
         let command = StoreConsumerOffset {
             consumer,
             stream_id,

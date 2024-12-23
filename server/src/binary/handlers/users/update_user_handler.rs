@@ -1,8 +1,10 @@
+use crate::binary::handlers::users::COMPONENT;
 use crate::binary::sender::Sender;
 use crate::state::command::EntryCommand;
 use crate::streaming::session::Session;
 use crate::streaming::systems::system::SharedSystem;
 use anyhow::Result;
+use error_set::ResultContext;
 use iggy::error::IggyError;
 use iggy::users::update_user::UpdateUser;
 use tracing::{debug, instrument};
@@ -24,14 +26,28 @@ pub async fn handle(
                 command.username.clone(),
                 command.status,
             )
-            .await?;
+            .await
+            .with_error(|_| {
+                format!(
+                    "{COMPONENT} - failed to update user with user_id: {}, session: {session}",
+                    command.user_id
+                )
+            })?;
     }
 
     let system = system.read().await;
+    let user_id = command.user_id.clone();
+
     system
         .state
         .apply(session.get_user_id(), EntryCommand::UpdateUser(command))
-        .await?;
+        .await
+        .with_error(|_| {
+            format!(
+                "{COMPONENT} - failed to apply update user with user_id: {}, session: {session}",
+                user_id
+            )
+        })?;
     sender.send_empty_ok_response().await?;
     Ok(())
 }

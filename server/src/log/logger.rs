@@ -1,11 +1,10 @@
 use crate::configs::server::{TelemetryConfig, TelemetryTransport};
 use crate::configs::system::LoggingConfig;
-use crate::server_error::ServerError;
-use opentelemetry::logs::LoggerProvider as _;
-use opentelemetry::trace::TracerProvider as _;
+use crate::server_error::LogError;
+use opentelemetry::trace::TracerProvider;
 use opentelemetry::{global, KeyValue};
 use opentelemetry_appender_tracing::layer::OpenTelemetryTracingBridge;
-use opentelemetry_otlp::WithExportConfig;
+use opentelemetry_otlp::{WithExportConfig, WithHttpConfig};
 use opentelemetry_sdk::propagation::TraceContextPropagator;
 use opentelemetry_sdk::runtime::Tokio;
 use opentelemetry_sdk::Resource;
@@ -175,75 +174,67 @@ impl Logging {
         ]);
 
         let logger_provider = match self.telemetry_config.logs.transport {
-            TelemetryTransport::GRPC => opentelemetry_otlp::new_pipeline()
-                .logging()
+            TelemetryTransport::GRPC => opentelemetry_sdk::logs::LoggerProvider::builder()
                 .with_resource(resource.clone())
-                .with_exporter(
-                    opentelemetry_otlp::new_exporter()
-                        .tonic()
-                        .with_endpoint(self.telemetry_config.logs.endpoint.clone()),
+                .with_batch_exporter(
+                    opentelemetry_otlp::LogExporter::builder()
+                        .with_tonic()
+                        .with_endpoint(self.telemetry_config.logs.endpoint.clone())
+                        .build()
+                        .expect("Failed to initialize gRPC logger."),
+                    Tokio,
                 )
-                .install_batch(Tokio)
-                .expect("Failed to initialize gRPC logger."),
-            TelemetryTransport::HTTP => opentelemetry_otlp::new_pipeline()
-                .logging()
+                .build(),
+            TelemetryTransport::HTTP => opentelemetry_sdk::logs::LoggerProvider::builder()
                 .with_resource(resource.clone())
-                .with_exporter(
-                    opentelemetry_otlp::new_exporter()
-                        .http()
+                .with_batch_exporter(
+                    opentelemetry_otlp::LogExporter::builder()
+                        .with_http()
                         .with_http_client(reqwest::Client::new())
+                        .with_endpoint(self.telemetry_config.logs.endpoint.clone())
                         .with_protocol(opentelemetry_otlp::Protocol::HttpBinary)
-                        .with_endpoint(self.telemetry_config.logs.endpoint.clone()),
+                        .build()
+                        .expect("Failed to initialize HTTP logger."),
+                    Tokio,
                 )
-                .install_batch(Tokio)
-                .expect("Failed to initialize HTTP logger."),
+                .build(),
         };
-
-        let logger = logger_provider
-            .logger_builder(service_name.to_owned())
-            .with_version(VERSION)
-            .build();
 
         let tracer_provider = match self.telemetry_config.traces.transport {
-            TelemetryTransport::GRPC => opentelemetry_otlp::new_pipeline()
-                .tracing()
-                .with_exporter(
-                    opentelemetry_otlp::new_exporter()
-                        .tonic()
-                        .with_endpoint(self.telemetry_config.traces.endpoint.clone()),
+            TelemetryTransport::GRPC => opentelemetry_sdk::trace::TracerProvider::builder()
+                .with_resource(resource.clone())
+                .with_batch_exporter(
+                    opentelemetry_otlp::SpanExporter::builder()
+                        .with_tonic()
+                        .with_endpoint(self.telemetry_config.traces.endpoint.clone())
+                        .build()
+                        .expect("Failed to initialize gRPC tracer."),
+                    Tokio,
                 )
-                .with_trace_config(
-                    opentelemetry_sdk::trace::Config::default().with_resource(resource),
-                )
-                .install_batch(Tokio)
-                .expect("Failed to initialize gRPC tracer."),
-            TelemetryTransport::HTTP => opentelemetry_otlp::new_pipeline()
-                .tracing()
-                .with_exporter(
-                    opentelemetry_otlp::new_exporter()
-                        .http()
+                .build(),
+            TelemetryTransport::HTTP => opentelemetry_sdk::trace::TracerProvider::builder()
+                .with_resource(resource.clone())
+                .with_batch_exporter(
+                    opentelemetry_otlp::SpanExporter::builder()
+                        .with_http()
                         .with_http_client(reqwest::Client::new())
+                        .with_endpoint(self.telemetry_config.traces.endpoint.clone())
                         .with_protocol(opentelemetry_otlp::Protocol::HttpBinary)
-                        .with_endpoint(self.telemetry_config.traces.endpoint.clone()),
+                        .build()
+                        .expect("Failed to initialize HTTP tracer."),
+                    Tokio,
                 )
-                .with_trace_config(
-                    opentelemetry_sdk::trace::Config::default().with_resource(resource),
-                )
-                .install_batch(Tokio)
-                .expect("Failed to initialize HTTP tracer."),
+                .build(),
         };
 
-        let tracer = tracer_provider
-            .tracer_builder(service_name.to_owned())
-            .with_version(VERSION)
-            .build();
+        let tracer = tracer_provider.tracer(service_name);
         global::set_tracer_provider(tracer_provider.clone());
         global::set_text_map_propagator(TraceContextPropagator::new());
         global::shutdown_tracer_provider();
 
         Registry::default()
             .with(layers)
-            .with(OpenTelemetryTracingBridge::new(logger.provider()))
+            .with(OpenTelemetryTracingBridge::new(&logger_provider))
             .with(OpenTelemetryLayer::new(tracer))
             .with(EnvFilter::try_from_default_env().unwrap_or(EnvFilter::new("INFO")))
             .init();
@@ -254,7 +245,7 @@ impl Logging {
         &mut self,
         base_directory: String,
         config: &LoggingConfig,
-    ) -> Result<(), ServerError> {
+    ) -> Result<(), LogError> {
         // Write to stdout and file at the same time.
         // Use the non_blocking appender to avoid blocking the threads.
         // Use the rolling appender to avoid having a huge log file.
@@ -266,13 +257,13 @@ impl Logging {
 
         self.filtering_stdout_reload_handle
             .as_ref()
-            .ok_or(ServerError::FilterReloadFailure)?
+            .ok_or(LogError::FilterReloadFailure)?
             .modify(|layer| *layer = filtering_level.boxed())
             .expect("Failed to modify stdout filtering layer");
 
         self.filtering_file_reload_handle
             .as_ref()
-            .ok_or(ServerError::FilterReloadFailure)?
+            .ok_or(LogError::FilterReloadFailure)?
             .modify(|layer| *layer = filtering_level.boxed())
             .expect("Failed to modify file filtering layer");
 
@@ -286,7 +277,7 @@ impl Logging {
 
         self.stdout_reload_handle
             .as_ref()
-            .ok_or(ServerError::StdoutReloadFailure)?
+            .ok_or(LogError::StdoutReloadFailure)?
             .modify(|layer| *layer = stdout_layer)
             .expect("Failed to modify stdout layer");
 
@@ -312,7 +303,7 @@ impl Logging {
         self.file_guard = Some(file_guard);
         self.file_reload_handle
             .as_ref()
-            .ok_or(ServerError::FileReloadFailure)?
+            .ok_or(LogError::FileReloadFailure)?
             .modify(|layer| *layer = file_layer)
             .expect("Failed to modify file layer");
         let level = filtering_level.to_string();

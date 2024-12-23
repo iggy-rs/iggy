@@ -206,6 +206,8 @@ impl IggyConsumer {
     }
 
     /// Initializes the consumer by subscribing to diagnostic events, initializing the consumer group if needed, storing the offsets in the background etc.
+    ///
+    /// Note: This method must be called before polling messages.
     pub async fn init(&mut self) -> Result<(), IggyError> {
         if self.initialized {
             return Ok(());
@@ -338,7 +340,7 @@ impl IggyConsumer {
 
     fn send_store_offset(&self, partition_id: u32, offset: u64) {
         if let Err(error) = self.store_offset_sender.send((partition_id, offset)) {
-            error!("Failed to send offset to store: {error}");
+            error!("Failed to send offset to store: {error}, please verify if `init()` on IggyConsumer object has been called.");
         }
     }
 
@@ -985,6 +987,9 @@ impl IggyConsumerBuilder {
         }
     }
 
+    /// Builds the consumer.
+    ///
+    /// Note: After building the consumer, `init()` must be invoked before producing messages.
     pub fn build(self) -> IggyConsumer {
         IggyConsumer::new(
             self.client,

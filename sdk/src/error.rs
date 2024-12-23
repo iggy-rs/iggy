@@ -3,7 +3,7 @@ use crate::utils::topic_size::MaxTopicSize;
 use strum::{EnumDiscriminants, FromRepr, IntoStaticStr};
 use thiserror::Error;
 
-#[derive(Debug, Error, EnumDiscriminants, IntoStaticStr)]
+#[derive(Debug, Error, EnumDiscriminants, IntoStaticStr, FromRepr)]
 #[repr(u32)]
 #[strum(serialize_all = "snake_case")]
 #[strum_discriminants(
@@ -48,18 +48,16 @@ pub enum IggyError {
     CannotOpenDatabase(String) = 19,
     #[error("Resource with key: {0} was not found.")]
     ResourceNotFound(String) = 20,
-    #[error("Cannot load resource. Reason: {0:#}")]
-    CannotLoadResource(#[source] anyhow::Error) = 21,
-    #[error("Cannot save resource. Reason: {0:#}")]
-    CannotSaveResource(#[source] anyhow::Error) = 22,
-    #[error("Cannot delete resource. Reason: {0:#}")]
-    CannotDeleteResource(#[source] anyhow::Error) = 23,
-    #[error("Cannot serialize resource. Reason: {0:#}")]
-    CannotSerializeResource(#[source] anyhow::Error) = 24,
-    #[error("Cannot deserialize resource. Reason: {0:#}")]
-    CannotDeserializeResource(#[source] anyhow::Error) = 25,
     #[error("Stale client")]
     StaleClient = 30,
+    #[error("TCP error")]
+    TcpError = 31,
+    #[error("QUIC error")]
+    QuicError = 32,
+    #[error("Invalid server address")]
+    InvalidServerAddress = 33,
+    #[error("Invalid client address")]
+    InvalidClientAddress = 34,
     #[error("Unauthenticated")]
     Unauthenticated = 40,
     #[error("Unauthorized")]
@@ -94,10 +92,16 @@ pub enum IggyError {
     UsersLimitReached = 55,
     #[error("Not connected")]
     NotConnected = 61,
-    #[error("Request error")]
-    RequestError(#[from] reqwest::Error) = 62,
     #[error("Client shutdown")]
     ClientShutdown = 63,
+    #[error("Invalid TLS domain")]
+    InvalidTlsDomain = 64,
+    #[error("Invalid TLS certificate path")]
+    InvalidTlsCertificatePath = 65,
+    #[error("Invalid TLS certificate")]
+    InvalidTlsCertificate = 66,
+    #[error("Failed to add certificate")]
+    FailedToAddCertificate = 67,
     #[error("Invalid encryption key")]
     InvalidEncryptionKey = 70,
     #[error("Cannot encrypt data")]
@@ -116,52 +120,38 @@ pub enum IggyError {
     AccessTokenMissing = 77,
     #[error("Invalid access token")]
     InvalidAccessToken = 78,
+    #[error("Invalid size bytes")]
+    InvalidSizeBytes = 80,
+    #[error("Invalid UTF-8")]
+    InvalidUtf8 = 81,
+    #[error("Invalid number encoding")]
+    InvalidNumberEncoding = 82,
+    #[error("Invalid boolean value")]
+    InvalidBooleanValue,
+    #[error("Invalid number value")]
+    InvalidNumberValue,
     #[error("Client with ID: {0} was not found.")]
     ClientNotFound(u32) = 100,
     #[error("Invalid client ID")]
     InvalidClientId = 101,
-    #[error("IO error")]
-    IoError(#[from] std::io::Error) = 200,
-    #[error("Write error")]
-    WriteError(#[from] quinn::WriteError) = 201,
-    #[error("Cannot parse UTF8")]
-    CannotParseUtf8(#[from] std::str::Utf8Error) = 202,
-    #[error("Cannot parse integer")]
-    CannotParseInt(#[from] std::num::ParseIntError) = 203,
-    #[error("Cannot parse integer")]
-    CannotParseSlice(#[from] std::array::TryFromSliceError) = 204,
-    #[error("Cannot parse byte unit")]
-    CannotParseByteUnit(#[from] byte_unit::ParseError) = 205,
     #[error("Connection closed")]
     ConnectionClosed = 206,
-    #[error("Cannot parse float")]
-    CannotParseFloat(#[from] std::num::ParseFloatError) = 207,
-    #[error("Cannot parse bool")]
-    CannotParseBool(#[from] std::str::ParseBoolError) = 208,
     #[error("Cannot parse header kind from {0}")]
     CannotParseHeaderKind(String) = 209,
     #[error("HTTP response error, status: {0}, body: {1}")]
     HttpResponseError(u16, String) = 300,
-    #[error("Request middleware error")]
-    RequestMiddlewareError(#[from] reqwest_middleware::Error) = 301,
-    #[error("Cannot create endpoint")]
-    CannotCreateEndpoint = 302,
-    #[error("Cannot parse URL")]
-    CannotParseUrl = 303,
-    #[error("Invalid response: {0}: {2})")]
-    InvalidResponse(u32, u32, String) = 304,
+    #[error("Invalid HTTP request")]
+    InvalidHttpRequest = 301,
+    #[error("Invalid JSON response")]
+    InvalidJsonResponse = 302,
+    #[error("Invalid bytes response")]
+    InvalidBytesResponse = 303,
     #[error("Empty response")]
-    EmptyResponse = 305,
-    #[error("Cannot parse address")]
-    CannotParseAddress(#[from] std::net::AddrParseError) = 306,
-    #[error("Read error")]
-    ReadError(#[from] quinn::ReadError) = 307,
-    #[error("Connection error")]
-    ConnectionError(#[from] quinn::ConnectionError) = 308,
-    #[error("Read to end error")]
-    ReadToEndError(#[from] quinn::ReadToEndError) = 309,
-    #[error("Closed error")]
-    ClosedError(#[from] quinn::ClosedStream) = 310,
+    EmptyResponse = 304,
+    #[error("Cannot create endpoint")]
+    CannotCreateEndpoint = 305,
+    #[error("Cannot parse URL")]
+    CannotParseUrl = 306,
     #[error("Cannot create streams directory, Path: {0}")]
     CannotCreateStreamsDirectory(String) = 1000,
     #[error("Cannot create stream with ID: {0} directory, Path: {1}")]
@@ -252,8 +242,8 @@ pub enum IggyError {
     CannotCreatePartitionDirectory(u32, u32, u32) = 3002,
     #[error("Cannot open partition log file")]
     CannotOpenPartitionLogFile = 3003,
-    #[error("Cannot read partitions directories. Reason: {0:#}")]
-    CannotReadPartitions(#[source] anyhow::Error) = 3004,
+    #[error("Cannot read partitions directories.")]
+    CannotReadPartitions = 3004,
     #[error(
         "Failed to delete partition with ID: {0} for stream with ID: {1} and topic with ID: {2}"
     )]
@@ -288,12 +278,12 @@ pub enum IggyError {
     CannotCreateSegmentIndexFile(String) = 4004,
     #[error("Failed to create segment time index file for Path: {0}.")]
     CannotCreateSegmentTimeIndexFile(String) = 4005,
-    #[error("Cannot save messages to segment. Reason: {0:#}")]
-    CannotSaveMessagesToSegment(#[source] anyhow::Error) = 4006,
-    #[error("Cannot save index to segment. Reason: {0:#}")]
-    CannotSaveIndexToSegment(#[source] anyhow::Error) = 4007,
-    #[error("Cannot save time index to segment. Reason: {0:#}")]
-    CannotSaveTimeIndexToSegment(#[source] anyhow::Error) = 4008,
+    #[error("Cannot save messages to segment.")]
+    CannotSaveMessagesToSegment = 4006,
+    #[error("Cannot save index to segment.")]
+    CannotSaveIndexToSegment = 4007,
+    #[error("Cannot save time index to segment.")]
+    CannotSaveTimeIndexToSegment = 4008,
     #[error("Invalid messages count")]
     InvalidMessagesCount = 4009,
     #[error("Cannot append message")]
@@ -378,6 +368,34 @@ pub enum IggyError {
     CannotReadBatchPayload = 7004,
     #[error("Invalid connection string")]
     InvalidConnectionString = 8000,
+    #[error("Snapshot file completion failed")]
+    SnapshotFileCompletionFailed = 9000,
+    #[error("Cannot serialize resource")]
+    CannotSerializeResource = 10000,
+    #[error("Cannot deserialize resource")]
+    CannotDeserializeResource = 10001,
+    #[error("Cannot read file")]
+    CannotReadFile = 10002,
+    #[error("Cannot read file metadata")]
+    CannotReadFileMetadata = 10003,
+    #[error("Cannot seek file")]
+    CannotSeekFile = 10004,
+    #[error("Cannot append to file")]
+    CannotAppendToFile = 10005,
+    #[error("Cannot write to file")]
+    CannotWriteToFile = 10006,
+    #[error("Cannot overwrite file")]
+    CannotOverwriteFile = 10007,
+    #[error("Cannot delete file")]
+    CannotDeleteFile = 10008,
+    #[error("Cannot sync file")]
+    CannotSyncFile = 10009,
+    #[error("Cannot read index offset")]
+    CannotReadIndexOffset = 10010,
+    #[error("Cannot read index position")]
+    CannotReadIndexPosition = 10011,
+    #[error("Cannot read index timestamp")]
+    CannotReadIndexTimestamp = 10012,
 }
 
 impl IggyError {
@@ -389,6 +407,10 @@ impl IggyError {
 
     pub fn as_string(&self) -> &'static str {
         self.into()
+    }
+
+    pub fn from_code(code: u32) -> Self {
+        IggyError::from_repr(code).unwrap_or(IggyError::Error)
     }
 
     pub fn from_code_as_string(code: u32) -> &'static str {

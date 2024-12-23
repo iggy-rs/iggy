@@ -5,6 +5,7 @@ use crate::map_toggle_str;
 use crate::streaming::systems::system::SharedSystem;
 use crate::streaming::topics::topic::Topic;
 use async_trait::async_trait;
+use error_set::ResultContext;
 use flume::Sender;
 use iggy::error::IggyError;
 use iggy::locking::IggySharedMutFn;
@@ -12,7 +13,7 @@ use iggy::utils::duration::IggyDuration;
 use iggy::utils::timestamp::IggyTimestamp;
 use std::sync::Arc;
 use tokio::time;
-use tracing::{debug, error, info};
+use tracing::{debug, error, info, instrument};
 
 pub struct MessagesMaintainer {
     cleaner_enabled: bool,
@@ -77,6 +78,7 @@ impl MessagesMaintainer {
 
 #[async_trait]
 impl ServerCommand<MaintainMessagesCommand> for MaintainMessagesExecutor {
+    #[instrument(skip_all, name = "trace_maintain_messages")]
     async fn execute(&mut self, system: &SharedSystem, command: MaintainMessagesCommand) {
         let system = system.read().await;
         let streams = system.get_streams();
@@ -210,7 +212,9 @@ async fn handle_expired_segments(
                 "Archiving expired segments for stream ID: {}, topic ID: {}",
                 topic.stream_id, topic.topic_id
             );
-            archive_segments(topic, &expired_segments, archiver.clone()).await?;
+            archive_segments(topic, &expired_segments, archiver.clone()).await.with_error(|_| {
+                format!("CHANNEL_COMMAND - failed to archive expired segments for stream ID: {}, topic ID: {}", topic.stream_id, topic.topic_id)
+            })?;
         } else {
             error!(
                 "Archiver is not enabled, yet archive_expired is set to true. Cannot archive expired segments for stream ID: {}, topic ID: {}",
@@ -316,7 +320,14 @@ async fn handle_oldest_segments(
             topic.stream_id,
             topic.topic_id,
         );
-        archive_segments(topic, &segments_to_archive, archiver.clone()).await?;
+        archive_segments(topic, &segments_to_archive, archiver.clone())
+            .await
+            .with_error(|_| {
+                format!(
+                    "CHANNEL_COMMAND - failed to archive segments for stream ID: {}, topic ID: {}",
+                    topic.stream_id, topic.topic_id
+                )
+            })?;
     }
 
     if topic.is_unlimited() {
@@ -438,11 +449,7 @@ async fn archive_segments(
                     }
 
                     let segment = segment.unwrap();
-                    let files = [
-                        segment.index_path.as_ref(),
-                        segment.time_index_path.as_ref(),
-                        segment.log_path.as_ref(),
-                    ];
+                    let files = [segment.index_path.as_ref(), segment.log_path.as_ref()];
                     if let Err(error) = archiver.archive(&files, None).await {
                         error!(
                             "Failed to archive segment with start offset: {} for stream ID: {}, topic ID: {}, partition ID: {}. Error: {}",
@@ -489,7 +496,9 @@ async fn delete_segments(
                 let mut partition = partition.write().await;
                 let mut last_end_offset = 0;
                 for start_offset in &segment_to_delete.start_offsets {
-                    let deleted_segment = partition.delete_segment(*start_offset).await?;
+                    let deleted_segment = partition.delete_segment(*start_offset).await.with_error(|_| {
+                        format!("CHANNEL_COMMAND - failed to delete segment for stream ID: {}, topic ID: {}", topic.stream_id, topic.topic_id)
+                    })?;
                     last_end_offset = deleted_segment.end_offset;
                     segments_count += 1;
                     messages_count += deleted_segment.messages_count;
@@ -497,7 +506,9 @@ async fn delete_segments(
 
                 if partition.get_segments().is_empty() {
                     let start_offset = last_end_offset + 1;
-                    partition.add_persisted_segment(start_offset).await?;
+                    partition.add_persisted_segment(start_offset).await.with_error(|_| {
+                        format!("CHANNEL_COMMAND - failed to add persisted segment for stream ID: {}, topic ID: {}", topic.stream_id, topic.topic_id)
+                    })?;
                 }
             }
             Err(error) => {

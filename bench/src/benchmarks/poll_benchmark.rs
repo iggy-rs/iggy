@@ -30,6 +30,7 @@ impl Benchmarkable for PollMessagesBenchmark {
         info!("Creating {} client(s)...", clients_count);
         let messages_per_batch = self.args.messages_per_batch();
         let message_batches = self.args.message_batches();
+        let output_directory = self.args.output_directory();
 
         let mut futures: BenchmarkFutures = Ok(Vec::with_capacity(clients_count as usize));
         for client_id in 1..=clients_count {
@@ -45,6 +46,7 @@ impl Benchmarkable for PollMessagesBenchmark {
                 false => start_stream_id + 1,
             };
             let warmup_time = args.warmup_time();
+            let output_directory = output_directory.clone();
 
             let consumer = Consumer::new(
                 client_factory,
@@ -54,6 +56,7 @@ impl Benchmarkable for PollMessagesBenchmark {
                 messages_per_batch,
                 message_batches,
                 warmup_time,
+                output_directory,
             );
 
             let future = Box::pin(async move { consumer.run().await });

@@ -11,6 +11,9 @@ use iggy::utils::crypto::{Aes256GcmEncryptor, Encryptor};
 use std::error::Error;
 use std::sync::Arc;
 use tracing::info;
+use tracing_subscriber::layer::SubscriberExt;
+use tracing_subscriber::util::SubscriberInitExt;
+use tracing_subscriber::{EnvFilter, Registry};
 
 #[derive(Parser, Debug, Clone)]
 #[command(author, version, about, long_about = None)]
@@ -30,7 +33,10 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let args = DataSeederArgs::parse();
     let iggy_args = Args::from(vec![args.iggy.clone()]);
 
-    tracing_subscriber::fmt::init();
+    Registry::default()
+        .with(tracing_subscriber::fmt::layer())
+        .with(EnvFilter::try_from_default_env().unwrap_or(EnvFilter::new("INFO")))
+        .init();
     let encryptor: Option<Arc<dyn Encryptor>> = match iggy_args.encryption_key.is_empty() {
         true => None,
         false => Some(Arc::new(

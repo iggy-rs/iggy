@@ -98,7 +98,9 @@ impl BytesSerializable for CreateUser {
         }
 
         let username_length = bytes[0];
-        let username = from_utf8(&bytes[1..1 + username_length as usize])?.to_string();
+        let username = from_utf8(&bytes[1..1 + username_length as usize])
+            .map_err(|_| IggyError::InvalidUtf8)?
+            .to_string();
         if username.len() != username_length as usize {
             return Err(IggyError::InvalidCommand);
         }
@@ -106,8 +108,9 @@ impl BytesSerializable for CreateUser {
         let mut position = 1 + username_length as usize;
         let password_length = bytes[position];
         position += 1;
-        let password =
-            from_utf8(&bytes[position..position + password_length as usize])?.to_string();
+        let password = from_utf8(&bytes[position..position + password_length as usize])
+            .map_err(|_| IggyError::InvalidUtf8)?
+            .to_string();
         if password.len() != password_length as usize {
             return Err(IggyError::InvalidCommand);
         }
@@ -122,7 +125,11 @@ impl BytesSerializable for CreateUser {
 
         position += 1;
         let permissions = if has_permissions == 1 {
-            let permissions_length = u32::from_le_bytes(bytes[position..position + 4].try_into()?);
+            let permissions_length = u32::from_le_bytes(
+                bytes[position..position + 4]
+                    .try_into()
+                    .map_err(|_| IggyError::InvalidNumberEncoding)?,
+            );
             position += 4;
             Some(Permissions::from_bytes(
                 bytes.slice(position..position + permissions_length as usize),

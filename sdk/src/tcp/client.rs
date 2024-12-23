@@ -11,7 +11,8 @@ use crate::utils::duration::IggyDuration;
 use crate::utils::timestamp::IggyTimestamp;
 use async_broadcast::{broadcast, Receiver, Sender};
 use async_trait::async_trait;
-use bytes::{Buf, BufMut, Bytes, BytesMut};
+use bytes::{BufMut, Bytes, BytesMut};
+use rustls::pki_types::{pem::PemObject, CertificateDer, ServerName};
 use std::fmt::Debug;
 use std::net::SocketAddr;
 use std::str::FromStr;
@@ -21,8 +22,7 @@ use tokio::net::tcp::{OwnedReadHalf, OwnedWriteHalf};
 use tokio::net::TcpStream;
 use tokio::sync::Mutex;
 use tokio::time::sleep;
-use tokio_native_tls::native_tls::TlsConnector;
-use tokio_native_tls::TlsStream;
+use tokio_rustls::{TlsConnector, TlsStream};
 use tracing::{error, info, trace, warn};
 
 const REQUEST_INITIAL_BYTES_LENGTH: usize = 4;
@@ -99,7 +99,7 @@ impl ConnectionStream for TcpConnectionStream {
                 "Failed to read data by client: {} from the TCP connection: {error}",
                 self.client_address
             );
-            IggyError::from(error)
+            IggyError::TcpError
         })
     }
 
@@ -109,7 +109,7 @@ impl ConnectionStream for TcpConnectionStream {
                 "Failed to write data by client: {} to the TCP connection: {error}",
                 self.client_address
             );
-            IggyError::from(error)
+            IggyError::TcpError
         })
     }
 
@@ -119,7 +119,7 @@ impl ConnectionStream for TcpConnectionStream {
                 "Failed to flush data by client: {} to the TCP connection: {error}",
                 self.client_address
             );
-            IggyError::from(error)
+            IggyError::TcpError
         })
     }
 
@@ -129,7 +129,7 @@ impl ConnectionStream for TcpConnectionStream {
                 "Failed to shutdown the TCP connection by client: {} to the TCP connection: {error}",
                 self.client_address
             );
-            IggyError::from(error)
+            IggyError::TcpError
         })
     }
 }
@@ -142,7 +142,7 @@ impl ConnectionStream for TcpTlsConnectionStream {
                 "Failed to read data by client: {} from the TCP TLS connection: {error}",
                 self.client_address
             );
-            IggyError::from(error)
+            IggyError::TcpError
         })
     }
 
@@ -152,7 +152,7 @@ impl ConnectionStream for TcpTlsConnectionStream {
                 "Failed to write data by client: {} to the TCP TLS connection: {error}",
                 self.client_address
             );
-            IggyError::from(error)
+            IggyError::TcpError
         })
     }
 
@@ -162,7 +162,7 @@ impl ConnectionStream for TcpTlsConnectionStream {
                 "Failed to flush data by client: {} to the TCP TLS connection: {error}",
                 self.client_address
             );
-            IggyError::from(error)
+            IggyError::TcpError
         })
     }
 
@@ -172,7 +172,7 @@ impl ConnectionStream for TcpTlsConnectionStream {
                 "Failed to shutdown the TCP TLS connection by client: {} to the TCP TLS connection: {error}",
                 self.client_address
             );
-            IggyError::from(error)
+            IggyError::TcpError
         })
     }
 }
@@ -346,18 +346,7 @@ impl TcpClient {
                 );
             }
 
-            let mut error_details_buffer = BytesMut::with_capacity(length as usize);
-            error_details_buffer.put_bytes(0, length as usize);
-            stream.read(&mut error_details_buffer).await?;
-
-            let string_length = error_details_buffer.get_u32_le();
-            let error_message = String::from_utf8_lossy(&error_details_buffer);
-
-            return Err(IggyError::InvalidResponse(
-                status,
-                string_length,
-                error_message.to_string(),
-            ));
+            return Err(IggyError::from_code(status));
         }
 
         trace!("Status: OK. Response length: {}", length);
@@ -452,9 +441,18 @@ impl TcpClient {
                 return Err(IggyError::CannotEstablishConnection);
             }
 
-            let stream = connection?;
-            client_address = stream.local_addr()?;
-            remote_address = stream.peer_addr()?;
+            let stream = connection.map_err(|error| {
+                error!("Failed to establish TCP connection to the server: {error}",);
+                IggyError::CannotEstablishConnection
+            })?;
+            client_address = stream.local_addr().map_err(|error| {
+                error!("Failed to get the local address of the client: {error}",);
+                IggyError::CannotEstablishConnection
+            })?;
+            remote_address = stream.peer_addr().map_err(|error| {
+                error!("Failed to get the remote address of the server: {error}",);
+                IggyError::CannotEstablishConnection
+            })?;
             self.client_address.lock().await.replace(client_address);
 
             if !tls_enabled {
@@ -462,24 +460,50 @@ impl TcpClient {
                 break;
             }
 
-            let connector = tokio_native_tls::TlsConnector::from(
-                TlsConnector::builder().build().map_err(|error| {
-                    error!("Failed to create a TLS connector: {error}");
-                    IggyError::CannotEstablishConnection
-                })?,
-            );
-            let stream = tokio_native_tls::TlsConnector::connect(
-                &connector,
-                &self.config.tls_domain,
-                stream,
-            )
-            .await
-            .map_err(|error| {
-                error!("Failed to establish a TLS connection: {error}");
+            let mut root_cert_store = rustls::RootCertStore::empty();
+            if let Some(certificate_path) = &self.config.tls_ca_file {
+                for cert in CertificateDer::pem_file_iter(certificate_path).map_err(|error| {
+                    error!("Failed to read the CA file: {certificate_path}. {error}",);
+                    IggyError::InvalidTlsCertificatePath
+                })? {
+                    let certificate = cert.map_err(|error| {
+                        error!(
+                            "Failed to read a certificate from the CA file: {certificate_path}. {error}",
+                        );
+                        IggyError::InvalidTlsCertificate
+                    })?;
+                    root_cert_store.add(certificate).map_err(|error| {
+                        error!(
+                            "Failed to add a certificate to the root certificate store. {error}",
+                        );
+                        IggyError::InvalidTlsCertificate
+                    })?;
+                }
+            } else {
+                root_cert_store.extend(webpki_roots::TLS_SERVER_ROOTS.iter().cloned());
+            }
+
+            let config = rustls::ClientConfig::builder()
+                .with_root_certificates(root_cert_store)
+                .with_no_client_auth();
+            let connector = TlsConnector::from(Arc::new(config));
+            let stream = TcpStream::connect(client_address).await.map_err(|error| {
+                error!("Failed to establish TCP connection to the server: {error}",);
                 IggyError::CannotEstablishConnection
             })?;
-
-            connection_stream = Box::new(TcpTlsConnectionStream::new(client_address, stream));
+            let tls_domain = self.config.tls_domain.to_owned();
+            let domain = ServerName::try_from(tls_domain).map_err(|error| {
+                error!("Failed to create a server name from the domain. {error}",);
+                IggyError::InvalidTlsDomain
+            })?;
+            let stream = connector.connect(domain, stream).await.map_err(|error| {
+                error!("Failed to establish a TLS connection to the server: {error}",);
+                IggyError::CannotEstablishConnection
+            })?;
+            connection_stream = Box::new(TcpTlsConnectionStream::new(
+                client_address,
+                TlsStream::Client(stream),
+            ));
             break;
         }
 
@@ -589,8 +613,16 @@ impl TcpClient {
                 return Err(IggyError::EmptyResponse);
             }
 
-            let status = u32::from_le_bytes(response_buffer[..4].try_into()?);
-            let length = u32::from_le_bytes(response_buffer[4..].try_into()?);
+            let status = u32::from_le_bytes(
+                response_buffer[..4]
+                    .try_into()
+                    .map_err(|_| IggyError::InvalidNumberEncoding)?,
+            );
+            let length = u32::from_le_bytes(
+                response_buffer[4..]
+                    .try_into()
+                    .map_err(|_| IggyError::InvalidNumberEncoding)?,
+            );
             return self.handle_response(status, length, stream.as_mut()).await;
         }
 

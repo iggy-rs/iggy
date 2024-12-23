@@ -3,19 +3,26 @@ use crate::error::IggyError;
 use crate::http::client::HttpClient;
 use crate::http::HttpTransport;
 use crate::models::client_info::{ClientInfo, ClientInfoDetails};
+use crate::models::snapshot::Snapshot;
 use crate::models::stats::Stats;
+use crate::snapshot::{SnapshotCompression, SystemSnapshotType};
+use crate::system::get_snapshot::GetSnapshot;
 use crate::utils::duration::IggyDuration;
 use async_trait::async_trait;
 
 const PING: &str = "/ping";
 const CLIENTS: &str = "/clients";
 const STATS: &str = "/stats";
+const SNAPSHOT: &str = "/snapshot";
 
 #[async_trait]
 impl SystemClient for HttpClient {
     async fn get_stats(&self) -> Result<Stats, IggyError> {
         let response = self.get(STATS).await?;
-        let stats = response.json().await?;
+        let stats = response
+            .json()
+            .await
+            .map_err(|_| IggyError::InvalidJsonResponse)?;
         Ok(stats)
     }
 
@@ -29,13 +36,19 @@ impl SystemClient for HttpClient {
             return Ok(None);
         }
 
-        let client = response.json().await?;
+        let client = response
+            .json()
+            .await
+            .map_err(|_| IggyError::InvalidJsonResponse)?;
         Ok(Some(client))
     }
 
     async fn get_clients(&self) -> Result<Vec<ClientInfo>, IggyError> {
         let response = self.get(CLIENTS).await?;
-        let clients = response.json().await?;
+        let clients = response
+            .json()
+            .await
+            .map_err(|_| IggyError::InvalidJsonResponse)?;
         Ok(clients)
     }
 
@@ -46,5 +59,27 @@ impl SystemClient for HttpClient {
 
     async fn heartbeat_interval(&self) -> IggyDuration {
         self.heartbeat_interval
+    }
+
+    async fn snapshot(
+        &self,
+        compression: SnapshotCompression,
+        snapshot_types: Vec<SystemSnapshotType>,
+    ) -> Result<Snapshot, IggyError> {
+        let response = self
+            .post(
+                SNAPSHOT,
+                &GetSnapshot {
+                    compression,
+                    snapshot_types,
+                },
+            )
+            .await?;
+        let file = response
+            .bytes()
+            .await
+            .map_err(|_| IggyError::InvalidBytesResponse)?;
+        let snapshot = Snapshot::new(file.to_vec());
+        Ok(snapshot)
     }
 }

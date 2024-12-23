@@ -118,7 +118,7 @@ impl Serialize for MaxTopicSize {
 
 struct MaxTopicSizeVisitor;
 
-impl<'de> Visitor<'de> for MaxTopicSizeVisitor {
+impl Visitor<'_> for MaxTopicSizeVisitor {
     type Value = MaxTopicSize;
 
     fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {

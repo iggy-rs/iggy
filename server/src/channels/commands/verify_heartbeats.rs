@@ -7,7 +7,7 @@ use iggy::locking::IggySharedMutFn;
 use iggy::utils::duration::IggyDuration;
 use iggy::utils::timestamp::IggyTimestamp;
 use tokio::time;
-use tracing::{debug, error, info, warn};
+use tracing::{debug, error, info, instrument, warn};
 
 const MAX_THRESHOLD: f64 = 1.2;
 
@@ -65,6 +65,7 @@ impl VerifyHeartbeats {
 
 #[async_trait]
 impl ServerCommand<VerifyHeartbeatsCommand> for VerifyHeartbeatsExecutor {
+    #[instrument(skip_all, name = "trace_verify_heartbeats")]
     async fn execute(&mut self, system: &SharedSystem, command: VerifyHeartbeatsCommand) {
         let system = system.read().await;
         let clients;

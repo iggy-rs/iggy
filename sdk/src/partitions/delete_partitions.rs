@@ -3,6 +3,7 @@ use crate::command::{Command, DELETE_PARTITIONS_CODE};
 use crate::error::IggyError;
 use crate::identifier::Identifier;
 use crate::partitions::MAX_PARTITIONS_COUNT;
+use crate::utils::sizeable::Sizeable;
 use crate::validatable::Validatable;
 use bytes::{BufMut, Bytes, BytesMut};
 use serde::{Deserialize, Serialize};
@@ -69,10 +70,14 @@ impl BytesSerializable for DeletePartitions {
 
         let mut position = 0;
         let stream_id = Identifier::from_bytes(bytes.clone())?;
-        position += stream_id.get_size_bytes() as usize;
+        position += stream_id.get_size_bytes().as_bytes_usize();
         let topic_id = Identifier::from_bytes(bytes.slice(position..))?;
-        position += topic_id.get_size_bytes() as usize;
-        let partitions_count = u32::from_le_bytes(bytes[position..position + 4].try_into()?);
+        position += topic_id.get_size_bytes().as_bytes_usize();
+        let partitions_count = u32::from_le_bytes(
+            bytes[position..position + 4]
+                .try_into()
+                .map_err(|_| IggyError::InvalidNumberEncoding)?,
+        );
         let command = DeletePartitions {
             stream_id,
             topic_id,
@@ -108,9 +113,9 @@ mod tests {
         let bytes = command.to_bytes();
         let mut position = 0;
         let stream_id = Identifier::from_bytes(bytes.clone()).unwrap();
-        position += stream_id.get_size_bytes() as usize;
+        position += stream_id.get_size_bytes().as_bytes_usize();
         let topic_id = Identifier::from_bytes(bytes.slice(position..)).unwrap();
-        position += topic_id.get_size_bytes() as usize;
+        position += topic_id.get_size_bytes().as_bytes_usize();
         let partitions_count =
             u32::from_le_bytes(bytes[position..position + 4].try_into().unwrap());
 

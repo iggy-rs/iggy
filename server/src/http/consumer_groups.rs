@@ -2,18 +2,21 @@ use crate::http::error::CustomError;
 use crate::http::jwt::json_web_token::Identity;
 use crate::http::mapper;
 use crate::http::shared::AppState;
+use crate::http::COMPONENT;
 use crate::state::command::EntryCommand;
 use crate::streaming::session::Session;
 use axum::extract::{Path, State};
 use axum::http::StatusCode;
 use axum::routing::get;
 use axum::{Extension, Json, Router};
+use error_set::ResultContext;
 use iggy::consumer_groups::create_consumer_group::CreateConsumerGroup;
 use iggy::consumer_groups::delete_consumer_group::DeleteConsumerGroup;
 use iggy::identifier::Identifier;
 use iggy::models::consumer_group::{ConsumerGroup, ConsumerGroupDetails};
 use iggy::validatable::Validatable;
 use std::sync::Arc;
+use tracing::instrument;
 
 pub fn router(state: Arc<AppState>) -> Router {
     Router::new()
@@ -33,16 +36,23 @@ async fn get_consumer_group(
     Extension(identity): Extension<Identity>,
     Path((stream_id, topic_id, group_id)): Path<(String, String, String)>,
 ) -> Result<Json<ConsumerGroupDetails>, CustomError> {
-    let stream_id = Identifier::from_str_value(&stream_id)?;
-    let topic_id = Identifier::from_str_value(&topic_id)?;
-    let group_id = Identifier::from_str_value(&group_id)?;
+    let identifier_stream_id = Identifier::from_str_value(&stream_id)?;
+    let identifier_topic_id = Identifier::from_str_value(&topic_id)?;
+    let identifier_group_id = Identifier::from_str_value(&group_id)?;
     let system = state.system.read().await;
-    let consumer_group = system.get_consumer_group(
-        &Session::stateless(identity.user_id, identity.ip_address),
-        &stream_id,
-        &topic_id,
-        &group_id,
-    );
+    let consumer_group = system
+        .get_consumer_group(
+            &Session::stateless(identity.user_id, identity.ip_address),
+            &identifier_stream_id,
+            &identifier_topic_id,
+            &identifier_group_id,
+        )
+        .with_error(|_| {
+            format!(
+                "{COMPONENT} - failed to get consumer group, stream ID: {}, topic ID: {}, group ID: {}",
+                stream_id, topic_id, group_id,
+            )
+        });
     if consumer_group.is_err() {
         return Err(CustomError::ResourceNotFound);
     }
@@ -70,6 +80,7 @@ async fn get_consumer_groups(
     Ok(Json(consumer_groups))
 }
 
+#[instrument(skip_all, name = "trace_create_consumer_group", fields(iggy_user_id = identity.user_id, iggy_stream_id = stream_id, iggy_topic_id = topic_id))]
 async fn create_consumer_group(
     State(state): State<Arc<AppState>>,
     Extension(identity): Extension<Identity>,
@@ -90,7 +101,8 @@ async fn create_consumer_group(
                 command.group_id,
                 &command.name,
             )
-            .await?;
+            .await
+            .with_error(|_| format!("{COMPONENT} - failed to create consumer group, stream ID: {}, topic ID: {}, group ID: {:?}", stream_id, topic_id, command.group_id))?;
         let consumer_group = consumer_group.read().await;
         consumer_group_details = mapper::map_consumer_group(&consumer_group).await;
     }
@@ -104,24 +116,26 @@ async fn create_consumer_group(
     Ok((StatusCode::CREATED, Json(consumer_group_details)))
 }
 
+#[instrument(skip_all, name = "trace_delete_consumer_group", fields(iggy_user_id = identity.user_id, iggy_stream_id = stream_id, iggy_topic_id = topic_id, iggy_group_id = group_id))]
 async fn delete_consumer_group(
     State(state): State<Arc<AppState>>,
     Extension(identity): Extension<Identity>,
     Path((stream_id, topic_id, group_id)): Path<(String, String, String)>,
 ) -> Result<StatusCode, CustomError> {
-    let stream_id = Identifier::from_str_value(&stream_id)?;
-    let topic_id = Identifier::from_str_value(&topic_id)?;
-    let group_id = Identifier::from_str_value(&group_id)?;
+    let identifier_stream_id = Identifier::from_str_value(&stream_id)?;
+    let identifier_topic_id = Identifier::from_str_value(&topic_id)?;
+    let identifier_group_id = Identifier::from_str_value(&group_id)?;
     {
         let mut system = state.system.write().await;
         system
             .delete_consumer_group(
                 &Session::stateless(identity.user_id, identity.ip_address),
-                &stream_id,
-                &topic_id,
-                &group_id,
+                &identifier_stream_id,
+                &identifier_topic_id,
+                &identifier_group_id,
             )
-            .await?;
+            .await
+            .with_error(|_| format!("{COMPONENT} - failed to delete consumer group, stream ID: {}, topic ID: {}, group ID: {}", stream_id, topic_id, group_id))?;
     }
 
     let system = state.system.read().await;
@@ -130,9 +144,9 @@ async fn delete_consumer_group(
         .apply(
             identity.user_id,
             EntryCommand::DeleteConsumerGroup(DeleteConsumerGroup {
-                stream_id,
-                topic_id,
-                group_id,
+                stream_id: identifier_stream_id,
+                topic_id: identifier_topic_id,
+                group_id: identifier_group_id,
             }),
         )
         .await?;

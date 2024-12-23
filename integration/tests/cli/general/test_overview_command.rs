@@ -32,6 +32,7 @@ Commands:
   ping             ping iggy server
   me               get current client info
   stats            get iggy server statistics
+  snapshot         collect iggy server troubleshooting data
   pat              personal access token operations
   user             user operations [aliases: u]
   client           client operations [aliases: c]

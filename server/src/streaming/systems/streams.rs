@@ -2,6 +2,8 @@ use crate::state::system::StreamState;
 use crate::streaming::session::Session;
 use crate::streaming::streams::stream::Stream;
 use crate::streaming::systems::system::System;
+use crate::streaming::systems::COMPONENT;
+use error_set::ResultContext;
 use futures::future::try_join_all;
 use iggy::error::IggyError;
 use iggy::identifier::{IdKind, Identifier};
@@ -23,22 +25,19 @@ impl System {
     ) -> Result<(), IggyError> {
         info!("Loading streams from disk...");
         let mut unloaded_streams = Vec::new();
-        let dir_entries = read_dir(&self.config.get_streams_path()).await;
-        if let Err(error) = dir_entries {
-            error!("Cannot read streams directory: {}", error);
-            return Err(IggyError::CannotReadStreams);
-        }
+        let mut dir_entries = read_dir(&self.config.get_streams_path())
+            .await
+            .map_err(|error| {
+                error!("Cannot read streams directory: {error}");
+                IggyError::CannotReadStreams
+            })?;
 
-        let mut dir_entries = dir_entries?;
         while let Some(dir_entry) = dir_entries.next_entry().await.unwrap_or(None) {
             let name = dir_entry.file_name().into_string().unwrap();
-            let stream_id = name.parse::<u32>();
-            if stream_id.is_err() {
+            let stream_id = name.parse::<u32>().map_err(|_| {
                 error!("Invalid stream ID file with name: '{name}'.");
-                continue;
-            }
-
-            let stream_id = stream_id?;
+                IggyError::InvalidNumberValue
+            })?;
             let stream_state = streams.iter().find(|s| s.id == stream_id);
             if stream_state.is_none() {
                 error!("Stream with ID: '{stream_id}' was not found in state, but exists on disk and will be removed.");
@@ -149,7 +148,14 @@ impl System {
 
     pub fn find_streams(&self, session: &Session) -> Result<Vec<&Stream>, IggyError> {
         self.ensure_authenticated(session)?;
-        self.permissioner.get_streams(session.get_user_id())?;
+        self.permissioner
+            .get_streams(session.get_user_id())
+            .with_error(|_| {
+                format!(
+                    "{COMPONENT} - permission denied to get streams for user {}",
+                    session.get_user_id(),
+                )
+            })?;
         Ok(self.get_streams())
     }
 
@@ -162,7 +168,13 @@ impl System {
         let stream = self.get_stream(identifier);
         if let Ok(stream) = stream {
             self.permissioner
-                .get_stream(session.get_user_id(), stream.stream_id)?;
+                .get_stream(session.get_user_id(), stream.stream_id)
+                .with_error(|_| {
+                    format!(
+                        "{COMPONENT} - permission denied to get stream for user {}",
+                        session.get_user_id(),
+                    )
+                })?;
             return Ok(stream);
         }
 
@@ -276,12 +288,21 @@ impl System {
         self.ensure_authenticated(session)?;
         let stream_id;
         {
-            let stream = self.get_stream(id)?;
+            let stream = self
+                .get_stream(id)
+                .with_error(|_| format!("{COMPONENT} - failed to get stream with id: {id}"))?;
             stream_id = stream.stream_id;
         }
 
         self.permissioner
-            .update_stream(session.get_user_id(), stream_id)?;
+            .update_stream(session.get_user_id(), stream_id)
+            .with_error(|_| {
+                format!(
+                    "{COMPONENT} - failed to update stream, user ID: {}, stream ID: {}",
+                    session.get_user_id(),
+                    stream_id
+                )
+            })?;
         let updated_name = text::to_lowercase_non_whitespace(name);
 
         {
@@ -294,7 +315,9 @@ impl System {
 
         let old_name;
         {
-            let stream = self.get_stream_mut(id)?;
+            let stream = self.get_stream_mut(id).with_error(|_| {
+                format!("{COMPONENT} - failed to get mutable reference to stream with id: {id}")
+            })?;
             old_name = stream.name.clone();
             stream.name.clone_from(&updated_name);
             stream.persist().await?;
@@ -318,10 +341,19 @@ impl System {
         id: &Identifier,
     ) -> Result<u32, IggyError> {
         self.ensure_authenticated(session)?;
-        let stream = self.get_stream(id)?;
+        let stream = self
+            .get_stream(id)
+            .with_error(|_| format!("{COMPONENT} - failed to get stream with id: {id}"))?;
         let stream_id = stream.stream_id;
         self.permissioner
-            .delete_stream(session.get_user_id(), stream_id)?;
+            .delete_stream(session.get_user_id(), stream_id)
+            .with_error(|_| {
+                format!(
+                    "{COMPONENT} - permission denied to delete stream for user {}, stream ID: {}",
+                    session.get_user_id(),
+                    stream.stream_id,
+                )
+            })?;
         let stream_name = stream.name.clone();
         if stream.delete().await.is_err() {
             return Err(IggyError::CannotDeleteStream(stream_id));
@@ -352,9 +384,18 @@ impl System {
         session: &Session,
         stream_id: &Identifier,
     ) -> Result<(), IggyError> {
-        let stream = self.get_stream(stream_id)?;
+        let stream = self
+            .get_stream(stream_id)
+            .with_error(|_| format!("{COMPONENT} - failed to get stream with id: {stream_id}"))?;
         self.permissioner
-            .purge_stream(session.get_user_id(), stream.stream_id)?;
+            .purge_stream(session.get_user_id(), stream.stream_id)
+            .with_error(|_| {
+                format!(
+                    "{COMPONENT} - permission denied to purge stream for user {}, stream ID: {}",
+                    session.get_user_id(),
+                    stream.stream_id,
+                )
+            })?;
         stream.purge().await
     }
 }

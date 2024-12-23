@@ -30,46 +30,142 @@ const EMPTY_PERSONAL_ACCESS_TOKENS: Vec<PersonalAccessTokenInfo> = vec![];
 const EMPTY_CONSUMER_GROUPS: Vec<ConsumerGroup> = vec![];
 
 pub fn map_stats(payload: Bytes) -> Result<Stats, IggyError> {
-    let process_id = u32::from_le_bytes(payload[..4].try_into()?);
-    let cpu_usage = f32::from_le_bytes(payload[4..8].try_into()?);
-    let total_cpu_usage = f32::from_le_bytes(payload[8..12].try_into()?);
-    let memory_usage = u64::from_le_bytes(payload[12..20].try_into()?).into();
-    let total_memory = u64::from_le_bytes(payload[20..28].try_into()?).into();
-    let available_memory = u64::from_le_bytes(payload[28..36].try_into()?).into();
-    let run_time = u64::from_le_bytes(payload[36..44].try_into()?).into();
-    let start_time = u64::from_le_bytes(payload[44..52].try_into()?).into();
-    let read_bytes = u64::from_le_bytes(payload[52..60].try_into()?).into();
-    let written_bytes = u64::from_le_bytes(payload[60..68].try_into()?).into();
-    let messages_size_bytes = u64::from_le_bytes(payload[68..76].try_into()?).into();
-    let streams_count = u32::from_le_bytes(payload[76..80].try_into()?);
-    let topics_count = u32::from_le_bytes(payload[80..84].try_into()?);
-    let partitions_count = u32::from_le_bytes(payload[84..88].try_into()?);
-    let segments_count = u32::from_le_bytes(payload[88..92].try_into()?);
-    let messages_count = u64::from_le_bytes(payload[92..100].try_into()?);
-    let clients_count = u32::from_le_bytes(payload[100..104].try_into()?);
-    let consumer_groups_count = u32::from_le_bytes(payload[104..108].try_into()?);
+    let process_id = u32::from_le_bytes(
+        payload[..4]
+            .try_into()
+            .map_err(|_| IggyError::InvalidNumberEncoding)?,
+    );
+    let cpu_usage = f32::from_le_bytes(
+        payload[4..8]
+            .try_into()
+            .map_err(|_| IggyError::InvalidNumberEncoding)?,
+    );
+    let total_cpu_usage = f32::from_le_bytes(
+        payload[8..12]
+            .try_into()
+            .map_err(|_| IggyError::InvalidNumberEncoding)?,
+    );
+    let memory_usage = u64::from_le_bytes(
+        payload[12..20]
+            .try_into()
+            .map_err(|_| IggyError::InvalidNumberEncoding)?,
+    )
+    .into();
+    let total_memory = u64::from_le_bytes(
+        payload[20..28]
+            .try_into()
+            .map_err(|_| IggyError::InvalidNumberEncoding)?,
+    )
+    .into();
+    let available_memory = u64::from_le_bytes(
+        payload[28..36]
+            .try_into()
+            .map_err(|_| IggyError::InvalidNumberEncoding)?,
+    )
+    .into();
+    let run_time = u64::from_le_bytes(
+        payload[36..44]
+            .try_into()
+            .map_err(|_| IggyError::InvalidNumberEncoding)?,
+    )
+    .into();
+    let start_time = u64::from_le_bytes(
+        payload[44..52]
+            .try_into()
+            .map_err(|_| IggyError::InvalidNumberEncoding)?,
+    )
+    .into();
+    let read_bytes = u64::from_le_bytes(
+        payload[52..60]
+            .try_into()
+            .map_err(|_| IggyError::InvalidNumberEncoding)?,
+    )
+    .into();
+    let written_bytes = u64::from_le_bytes(
+        payload[60..68]
+            .try_into()
+            .map_err(|_| IggyError::InvalidNumberEncoding)?,
+    )
+    .into();
+    let messages_size_bytes = u64::from_le_bytes(
+        payload[68..76]
+            .try_into()
+            .map_err(|_| IggyError::InvalidNumberEncoding)?,
+    )
+    .into();
+    let streams_count = u32::from_le_bytes(
+        payload[76..80]
+            .try_into()
+            .map_err(|_| IggyError::InvalidNumberEncoding)?,
+    );
+    let topics_count = u32::from_le_bytes(
+        payload[80..84]
+            .try_into()
+            .map_err(|_| IggyError::InvalidNumberEncoding)?,
+    );
+    let partitions_count = u32::from_le_bytes(
+        payload[84..88]
+            .try_into()
+            .map_err(|_| IggyError::InvalidNumberEncoding)?,
+    );
+    let segments_count = u32::from_le_bytes(
+        payload[88..92]
+            .try_into()
+            .map_err(|_| IggyError::InvalidNumberEncoding)?,
+    );
+    let messages_count = u64::from_le_bytes(
+        payload[92..100]
+            .try_into()
+            .map_err(|_| IggyError::InvalidNumberEncoding)?,
+    );
+    let clients_count = u32::from_le_bytes(
+        payload[100..104]
+            .try_into()
+            .map_err(|_| IggyError::InvalidNumberEncoding)?,
+    );
+    let consumer_groups_count = u32::from_le_bytes(
+        payload[104..108]
+            .try_into()
+            .map_err(|_| IggyError::InvalidNumberEncoding)?,
+    );
     let mut current_position = 108;
-    let hostname_length =
-        u32::from_le_bytes(payload[current_position..current_position + 4].try_into()?) as usize;
+    let hostname_length = u32::from_le_bytes(
+        payload[current_position..current_position + 4]
+            .try_into()
+            .map_err(|_| IggyError::InvalidNumberEncoding)?,
+    ) as usize;
     let hostname =
-        from_utf8(&payload[current_position + 4..current_position + 4 + hostname_length])?
+        from_utf8(&payload[current_position + 4..current_position + 4 + hostname_length])
+            .map_err(|_| IggyError::InvalidUtf8)?
             .to_string();
     current_position += 4 + hostname_length;
-    let os_name_length =
-        u32::from_le_bytes(payload[current_position..current_position + 4].try_into()?) as usize;
-    let os_name = from_utf8(&payload[current_position + 4..current_position + 4 + os_name_length])?
+    let os_name_length = u32::from_le_bytes(
+        payload[current_position..current_position + 4]
+            .try_into()
+            .map_err(|_| IggyError::InvalidNumberEncoding)?,
+    ) as usize;
+    let os_name = from_utf8(&payload[current_position + 4..current_position + 4 + os_name_length])
+        .map_err(|_| IggyError::InvalidUtf8)?
         .to_string();
     current_position += 4 + os_name_length;
-    let os_version_length =
-        u32::from_le_bytes(payload[current_position..current_position + 4].try_into()?) as usize;
+    let os_version_length = u32::from_le_bytes(
+        payload[current_position..current_position + 4]
+            .try_into()
+            .map_err(|_| IggyError::InvalidNumberEncoding)?,
+    ) as usize;
     let os_version =
-        from_utf8(&payload[current_position + 4..current_position + 4 + os_version_length])?
+        from_utf8(&payload[current_position + 4..current_position + 4 + os_version_length])
+            .map_err(|_| IggyError::InvalidUtf8)?
             .to_string();
     current_position += 4 + os_version_length;
-    let kernel_version_length =
-        u32::from_le_bytes(payload[current_position..current_position + 4].try_into()?) as usize;
+    let kernel_version_length = u32::from_le_bytes(
+        payload[current_position..current_position + 4]
+            .try_into()
+            .map_err(|_| IggyError::InvalidNumberEncoding)?,
+    ) as usize;
     let kernel_version =
-        from_utf8(&payload[current_position + 4..current_position + 4 + kernel_version_length])?
+        from_utf8(&payload[current_position + 4..current_position + 4 + kernel_version_length])
+            .map_err(|_| IggyError::InvalidUtf8)?
             .to_string();
 
     Ok(Stats {
@@ -99,9 +195,21 @@ pub fn map_stats(payload: Bytes) -> Result<Stats, IggyError> {
 }
 
 pub fn map_consumer_offset(payload: Bytes) -> Result<ConsumerOffsetInfo, IggyError> {
-    let partition_id = u32::from_le_bytes(payload[..4].try_into()?);
-    let current_offset = u64::from_le_bytes(payload[4..12].try_into()?);
-    let stored_offset = u64::from_le_bytes(payload[12..20].try_into()?);
+    let partition_id = u32::from_le_bytes(
+        payload[..4]
+            .try_into()
+            .map_err(|_| IggyError::InvalidNumberEncoding)?,
+    );
+    let current_offset = u64::from_le_bytes(
+        payload[4..12]
+            .try_into()
+            .map_err(|_| IggyError::InvalidNumberEncoding)?,
+    );
+    let stored_offset = u64::from_le_bytes(
+        payload[12..20]
+            .try_into()
+            .map_err(|_| IggyError::InvalidNumberEncoding)?,
+    );
     Ok(ConsumerOffsetInfo {
         partition_id,
         current_offset,
@@ -113,8 +221,11 @@ pub fn map_user(payload: Bytes) -> Result<UserInfoDetails, IggyError> {
     let (user, position) = map_to_user_info(payload.clone(), 0)?;
     let has_permissions = payload[position];
     let permissions = if has_permissions == 1 {
-        let permissions_length =
-            u32::from_le_bytes(payload[position + 1..position + 5].try_into()?) as usize;
+        let permissions_length = u32::from_le_bytes(
+            payload[position + 1..position + 5]
+                .try_into()
+                .map_err(|_| IggyError::InvalidNumberEncoding)?,
+        ) as usize;
         let permissions = payload.slice(position + 5..position + 5 + permissions_length);
         Some(Permissions::from_bytes(permissions)?)
     } else {
@@ -168,7 +279,11 @@ pub fn map_personal_access_tokens(
 }
 
 pub fn map_identity_info(payload: Bytes) -> Result<IdentityInfo, IggyError> {
-    let user_id = u32::from_le_bytes(payload[..4].try_into()?);
+    let user_id = u32::from_le_bytes(
+        payload[..4]
+            .try_into()
+            .map_err(|_| IggyError::InvalidNumberEncoding)?,
+    );
     Ok(IdentityInfo {
         user_id,
         access_token: None,
@@ -177,7 +292,9 @@ pub fn map_identity_info(payload: Bytes) -> Result<IdentityInfo, IggyError> {
 
 pub fn map_raw_pat(payload: Bytes) -> Result<RawPersonalAccessToken, IggyError> {
     let token_length = payload[0];
-    let token = from_utf8(&payload[1..1 + token_length as usize])?.to_string();
+    let token = from_utf8(&payload[1..1 + token_length as usize])
+        .map_err(|_| IggyError::InvalidUtf8)?
+        .to_string();
     Ok(RawPersonalAccessToken { token })
 }
 
@@ -187,9 +304,21 @@ pub fn map_client(payload: Bytes) -> Result<ClientInfoDetails, IggyError> {
     let length = payload.len();
     while position < length {
         for _ in 0..client.consumer_groups_count {
-            let stream_id = u32::from_le_bytes(payload[position..position + 4].try_into()?);
-            let topic_id = u32::from_le_bytes(payload[position + 4..position + 8].try_into()?);
-            let group_id = u32::from_le_bytes(payload[position + 8..position + 12].try_into()?);
+            let stream_id = u32::from_le_bytes(
+                payload[position..position + 4]
+                    .try_into()
+                    .map_err(|_| IggyError::InvalidNumberEncoding)?,
+            );
+            let topic_id = u32::from_le_bytes(
+                payload[position + 4..position + 8]
+                    .try_into()
+                    .map_err(|_| IggyError::InvalidNumberEncoding)?,
+            );
+            let group_id = u32::from_le_bytes(
+                payload[position + 8..position + 12]
+                    .try_into()
+                    .map_err(|_| IggyError::InvalidNumberEncoding)?,
+            );
             let consumer_group = ConsumerGroupInfo {
                 stream_id,
                 topic_id,
@@ -239,19 +368,51 @@ pub fn map_polled_messages(payload: Bytes) -> Result<PolledMessages, IggyError> 
     }
 
     let length = payload.len();
-    let partition_id = u32::from_le_bytes(payload[..4].try_into()?);
-    let current_offset = u64::from_le_bytes(payload[4..12].try_into()?);
+    let partition_id = u32::from_le_bytes(
+        payload[..4]
+            .try_into()
+            .map_err(|_| IggyError::InvalidNumberEncoding)?,
+    );
+    let current_offset = u64::from_le_bytes(
+        payload[4..12]
+            .try_into()
+            .map_err(|_| IggyError::InvalidNumberEncoding)?,
+    );
     // Currently ignored
-    let _messages_count = u32::from_le_bytes(payload[12..16].try_into()?);
+    let _messages_count = u32::from_le_bytes(
+        payload[12..16]
+            .try_into()
+            .map_err(|_| IggyError::InvalidNumberEncoding)?,
+    );
     let mut position = 16;
     let mut messages = Vec::new();
     while position < length {
-        let offset = u64::from_le_bytes(payload[position..position + 8].try_into()?);
+        let offset = u64::from_le_bytes(
+            payload[position..position + 8]
+                .try_into()
+                .map_err(|_| IggyError::InvalidNumberEncoding)?,
+        );
         let state = MessageState::from_code(payload[position + 8])?;
-        let timestamp = u64::from_le_bytes(payload[position + 9..position + 17].try_into()?);
-        let id = u128::from_le_bytes(payload[position + 17..position + 33].try_into()?);
-        let checksum = u32::from_le_bytes(payload[position + 33..position + 37].try_into()?);
-        let headers_length = u32::from_le_bytes(payload[position + 37..position + 41].try_into()?);
+        let timestamp = u64::from_le_bytes(
+            payload[position + 9..position + 17]
+                .try_into()
+                .map_err(|_| IggyError::InvalidNumberEncoding)?,
+        );
+        let id = u128::from_le_bytes(
+            payload[position + 17..position + 33]
+                .try_into()
+                .map_err(|_| IggyError::InvalidNumberEncoding)?,
+        );
+        let checksum = u32::from_le_bytes(
+            payload[position + 33..position + 37]
+                .try_into()
+                .map_err(|_| IggyError::InvalidNumberEncoding)?,
+        );
+        let headers_length = u32::from_le_bytes(
+            payload[position + 37..position + 41]
+                .try_into()
+                .map_err(|_| IggyError::InvalidNumberEncoding)?,
+        );
         let headers = if headers_length > 0 {
             let headers_payload =
                 payload.slice(position + 41..position + 41 + headers_length as usize);
@@ -260,7 +421,11 @@ pub fn map_polled_messages(payload: Bytes) -> Result<PolledMessages, IggyError> 
             None
         };
         position += headers_length as usize;
-        let message_length = u32::from_le_bytes(payload[position + 41..position + 45].try_into()?);
+        let message_length = u32::from_le_bytes(
+            payload[position + 41..position + 45]
+                .try_into()
+                .map_err(|_| IggyError::InvalidNumberEncoding)?,
+        );
         let payload_range = position + 45..position + 45 + message_length as usize;
         if payload_range.start > length || payload_range.end > length {
             break;
@@ -276,7 +441,7 @@ pub fn map_polled_messages(payload: Bytes) -> Result<PolledMessages, IggyError> 
             checksum,
             id,
             headers,
-            length: message_length,
+            length: IggyByteSize::from(message_length as u64),
             payload: Bytes::from(payload),
         });
 
@@ -334,14 +499,37 @@ pub fn map_stream(payload: Bytes) -> Result<StreamDetails, IggyError> {
 }
 
 fn map_to_stream(payload: Bytes, position: usize) -> Result<(Stream, usize), IggyError> {
-    let id = u32::from_le_bytes(payload[position..position + 4].try_into()?);
-    let created_at = u64::from_le_bytes(payload[position + 4..position + 12].try_into()?).into();
-    let topics_count = u32::from_le_bytes(payload[position + 12..position + 16].try_into()?);
-    let size_bytes = u64::from_le_bytes(payload[position + 16..position + 24].try_into()?).into();
-    let messages_count = u64::from_le_bytes(payload[position + 24..position + 32].try_into()?);
+    let id = u32::from_le_bytes(
+        payload[position..position + 4]
+            .try_into()
+            .map_err(|_| IggyError::InvalidNumberEncoding)?,
+    );
+    let created_at = u64::from_le_bytes(
+        payload[position + 4..position + 12]
+            .try_into()
+            .map_err(|_| IggyError::InvalidNumberEncoding)?,
+    )
+    .into();
+    let topics_count = u32::from_le_bytes(
+        payload[position + 12..position + 16]
+            .try_into()
+            .map_err(|_| IggyError::InvalidNumberEncoding)?,
+    );
+    let size_bytes = u64::from_le_bytes(
+        payload[position + 16..position + 24]
+            .try_into()
+            .map_err(|_| IggyError::InvalidNumberEncoding)?,
+    )
+    .into();
+    let messages_count = u64::from_le_bytes(
+        payload[position + 24..position + 32]
+            .try_into()
+            .map_err(|_| IggyError::InvalidNumberEncoding)?,
+    );
     let name_length = payload[position + 32];
-    let name =
-        from_utf8(&payload[position + 33..position + 33 + name_length as usize])?.to_string();
+    let name = from_utf8(&payload[position + 33..position + 33 + name_length as usize])
+        .map_err(|_| IggyError::InvalidUtf8)?
+        .to_string();
     let read_bytes = 4 + 8 + 4 + 8 + 8 + 1 + name_length as usize;
     Ok((
         Stream {
@@ -402,26 +590,52 @@ pub fn map_topic(payload: Bytes) -> Result<TopicDetails, IggyError> {
 }
 
 fn map_to_topic(payload: Bytes, position: usize) -> Result<(Topic, usize), IggyError> {
-    let id = u32::from_le_bytes(payload[position..position + 4].try_into()?);
-    let created_at = u64::from_le_bytes(payload[position + 4..position + 12].try_into()?);
+    let id = u32::from_le_bytes(
+        payload[position..position + 4]
+            .try_into()
+            .map_err(|_| IggyError::InvalidNumberEncoding)?,
+    );
+    let created_at = u64::from_le_bytes(
+        payload[position + 4..position + 12]
+            .try_into()
+            .map_err(|_| IggyError::InvalidNumberEncoding)?,
+    );
     let created_at = created_at.into();
-    let partitions_count = u32::from_le_bytes(payload[position + 12..position + 16].try_into()?);
-    let message_expiry = match u64::from_le_bytes(payload[position + 16..position + 24].try_into()?)
-    {
+    let partitions_count = u32::from_le_bytes(
+        payload[position + 12..position + 16]
+            .try_into()
+            .map_err(|_| IggyError::InvalidNumberEncoding)?,
+    );
+    let message_expiry = match u64::from_le_bytes(
+        payload[position + 16..position + 24]
+            .try_into()
+            .map_err(|_| IggyError::InvalidNumberEncoding)?,
+    ) {
         0 => IggyExpiry::NeverExpire,
         message_expiry => message_expiry.into(),
     };
     let compression_algorithm = CompressionAlgorithm::from_code(payload[position + 24])?;
-    let max_topic_size = u64::from_le_bytes(payload[position + 25..position + 33].try_into()?);
+    let max_topic_size = u64::from_le_bytes(
+        payload[position + 25..position + 33]
+            .try_into()
+            .map_err(|_| IggyError::InvalidNumberEncoding)?,
+    );
     let max_topic_size: MaxTopicSize = max_topic_size.into();
     let replication_factor = payload[position + 33];
     let size_bytes = IggyByteSize::from(u64::from_le_bytes(
-        payload[position + 34..position + 42].try_into()?,
+        payload[position + 34..position + 42]
+            .try_into()
+            .map_err(|_| IggyError::InvalidNumberEncoding)?,
     ));
-    let messages_count = u64::from_le_bytes(payload[position + 42..position + 50].try_into()?);
+    let messages_count = u64::from_le_bytes(
+        payload[position + 42..position + 50]
+            .try_into()
+            .map_err(|_| IggyError::InvalidNumberEncoding)?,
+    );
     let name_length = payload[position + 50];
-    let name =
-        from_utf8(&payload[position + 51..position + 51 + name_length as usize])?.to_string();
+    let name = from_utf8(&payload[position + 51..position + 51 + name_length as usize])
+        .map_err(|_| IggyError::InvalidUtf8)?
+        .to_string();
     let read_bytes = 4 + 8 + 4 + 8 + 8 + 8 + 8 + 1 + 1 + 1 + name_length as usize;
     Ok((
         Topic {
@@ -441,13 +655,38 @@ fn map_to_topic(payload: Bytes, position: usize) -> Result<(Topic, usize), IggyE
 }
 
 fn map_to_partition(payload: Bytes, position: usize) -> Result<(Partition, usize), IggyError> {
-    let id = u32::from_le_bytes(payload[position..position + 4].try_into()?);
-    let created_at = u64::from_le_bytes(payload[position + 4..position + 12].try_into()?);
+    let id = u32::from_le_bytes(
+        payload[position..position + 4]
+            .try_into()
+            .map_err(|_| IggyError::InvalidNumberEncoding)?,
+    );
+    let created_at = u64::from_le_bytes(
+        payload[position + 4..position + 12]
+            .try_into()
+            .map_err(|_| IggyError::InvalidNumberEncoding)?,
+    );
     let created_at = created_at.into();
-    let segments_count = u32::from_le_bytes(payload[position + 12..position + 16].try_into()?);
-    let current_offset = u64::from_le_bytes(payload[position + 16..position + 24].try_into()?);
-    let size_bytes = u64::from_le_bytes(payload[position + 24..position + 32].try_into()?).into();
-    let messages_count = u64::from_le_bytes(payload[position + 32..position + 40].try_into()?);
+    let segments_count = u32::from_le_bytes(
+        payload[position + 12..position + 16]
+            .try_into()
+            .map_err(|_| IggyError::InvalidNumberEncoding)?,
+    );
+    let current_offset = u64::from_le_bytes(
+        payload[position + 16..position + 24]
+            .try_into()
+            .map_err(|_| IggyError::InvalidNumberEncoding)?,
+    );
+    let size_bytes = u64::from_le_bytes(
+        payload[position + 24..position + 32]
+            .try_into()
+            .map_err(|_| IggyError::InvalidNumberEncoding)?,
+    )
+    .into();
+    let messages_count = u64::from_le_bytes(
+        payload[position + 32..position + 40]
+            .try_into()
+            .map_err(|_| IggyError::InvalidNumberEncoding)?,
+    );
     let read_bytes = 4 + 8 + 4 + 8 + 8 + 8;
     Ok((
         Partition {
@@ -503,12 +742,25 @@ fn map_to_consumer_group(
     payload: Bytes,
     position: usize,
 ) -> Result<(ConsumerGroup, usize), IggyError> {
-    let id = u32::from_le_bytes(payload[position..position + 4].try_into()?);
-    let partitions_count = u32::from_le_bytes(payload[position + 4..position + 8].try_into()?);
-    let members_count = u32::from_le_bytes(payload[position + 8..position + 12].try_into()?);
+    let id = u32::from_le_bytes(
+        payload[position..position + 4]
+            .try_into()
+            .map_err(|_| IggyError::InvalidNumberEncoding)?,
+    );
+    let partitions_count = u32::from_le_bytes(
+        payload[position + 4..position + 8]
+            .try_into()
+            .map_err(|_| IggyError::InvalidNumberEncoding)?,
+    );
+    let members_count = u32::from_le_bytes(
+        payload[position + 8..position + 12]
+            .try_into()
+            .map_err(|_| IggyError::InvalidNumberEncoding)?,
+    );
     let name_length = payload[position + 12];
-    let name =
-        from_utf8(&payload[position + 13..position + 13 + name_length as usize])?.to_string();
+    let name = from_utf8(&payload[position + 13..position + 13 + name_length as usize])
+        .map_err(|_| IggyError::InvalidUtf8)?
+        .to_string();
     let read_bytes = 13 + name_length as usize;
     Ok((
         ConsumerGroup {
@@ -525,13 +777,22 @@ fn map_to_consumer_group_member(
     payload: Bytes,
     position: usize,
 ) -> Result<(ConsumerGroupMember, usize), IggyError> {
-    let id = u32::from_le_bytes(payload[position..position + 4].try_into()?);
-    let partitions_count = u32::from_le_bytes(payload[position + 4..position + 8].try_into()?);
+    let id = u32::from_le_bytes(
+        payload[position..position + 4]
+            .try_into()
+            .map_err(|_| IggyError::InvalidNumberEncoding)?,
+    );
+    let partitions_count = u32::from_le_bytes(
+        payload[position + 4..position + 8]
+            .try_into()
+            .map_err(|_| IggyError::InvalidNumberEncoding)?,
+    );
     let mut partitions = Vec::new();
     for i in 0..partitions_count {
         let partition_id = u32::from_le_bytes(
             payload[position + 8 + (i * 4) as usize..position + 8 + ((i + 1) * 4) as usize]
-                .try_into()?,
+                .try_into()
+                .map_err(|_| IggyError::InvalidNumberEncoding)?,
         );
         partitions.push(partition_id);
     }
@@ -552,8 +813,16 @@ fn map_to_client_info(
     mut position: usize,
 ) -> Result<(ClientInfo, usize), IggyError> {
     let mut read_bytes;
-    let client_id = u32::from_le_bytes(payload[position..position + 4].try_into()?);
-    let user_id = u32::from_le_bytes(payload[position + 4..position + 8].try_into()?);
+    let client_id = u32::from_le_bytes(
+        payload[position..position + 4]
+            .try_into()
+            .map_err(|_| IggyError::InvalidNumberEncoding)?,
+    );
+    let user_id = u32::from_le_bytes(
+        payload[position + 4..position + 8]
+            .try_into()
+            .map_err(|_| IggyError::InvalidNumberEncoding)?,
+    );
     let user_id = match user_id {
         0 => None,
         _ => Some(user_id),
@@ -567,12 +836,21 @@ fn map_to_client_info(
     }
     .to_string();
 
-    let address_length =
-        u32::from_le_bytes(payload[position + 9..position + 13].try_into()?) as usize;
-    let address = from_utf8(&payload[position + 13..position + 13 + address_length])?.to_string();
+    let address_length = u32::from_le_bytes(
+        payload[position + 9..position + 13]
+            .try_into()
+            .map_err(|_| IggyError::InvalidNumberEncoding)?,
+    ) as usize;
+    let address = from_utf8(&payload[position + 13..position + 13 + address_length])
+        .map_err(|_| IggyError::InvalidUtf8)?
+        .to_string();
     read_bytes = 4 + 4 + 1 + 4 + address_length;
     position += read_bytes;
-    let consumer_groups_count = u32::from_le_bytes(payload[position..position + 4].try_into()?);
+    let consumer_groups_count = u32::from_le_bytes(
+        payload[position..position + 4]
+            .try_into()
+            .map_err(|_| IggyError::InvalidNumberEncoding)?,
+    );
     read_bytes += 4;
     Ok((
         ClientInfo {
@@ -587,14 +865,23 @@ fn map_to_client_info(
 }
 
 fn map_to_user_info(payload: Bytes, position: usize) -> Result<(UserInfo, usize), IggyError> {
-    let id = u32::from_le_bytes(payload[position..position + 4].try_into()?);
-    let created_at = u64::from_le_bytes(payload[position + 4..position + 12].try_into()?);
+    let id = u32::from_le_bytes(
+        payload[position..position + 4]
+            .try_into()
+            .map_err(|_| IggyError::InvalidNumberEncoding)?,
+    );
+    let created_at = u64::from_le_bytes(
+        payload[position + 4..position + 12]
+            .try_into()
+            .map_err(|_| IggyError::InvalidNumberEncoding)?,
+    );
     let created_at = created_at.into();
     let status = payload[position + 12];
     let status = UserStatus::from_code(status)?;
     let username_length = payload[position + 13];
-    let username =
-        from_utf8(&payload[position + 14..position + 14 + username_length as usize])?.to_string();
+    let username = from_utf8(&payload[position + 14..position + 14 + username_length as usize])
+        .map_err(|_| IggyError::InvalidUtf8)?
+        .to_string();
     let read_bytes = 4 + 8 + 1 + 1 + username_length as usize;
 
     Ok((
@@ -613,9 +900,15 @@ fn map_to_pat_info(
     position: usize,
 ) -> Result<(PersonalAccessTokenInfo, usize), IggyError> {
     let name_length = payload[position];
-    let name = from_utf8(&payload[position + 1..position + 1 + name_length as usize])?.to_string();
+    let name = from_utf8(&payload[position + 1..position + 1 + name_length as usize])
+        .map_err(|_| IggyError::InvalidUtf8)?
+        .to_string();
     let position = position + 1 + name_length as usize;
-    let expiry_at = u64::from_le_bytes(payload[position..position + 8].try_into()?);
+    let expiry_at = u64::from_le_bytes(
+        payload[position..position + 8]
+            .try_into()
+            .map_err(|_| IggyError::InvalidNumberEncoding)?,
+    );
     let expiry_at = match expiry_at {
         0 => None,
         value => Some(value.into()),

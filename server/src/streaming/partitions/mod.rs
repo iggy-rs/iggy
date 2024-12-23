@@ -8,6 +8,8 @@ pub mod persistence;
 pub mod segments;
 pub mod storage;
 
+pub const COMPONENT: &str = "STREAMING_PARTITIONS";
+
 #[allow(dead_code)]
 fn create_messages() -> Vec<send_messages::Message> {
     vec![

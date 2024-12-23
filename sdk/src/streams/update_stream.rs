@@ -3,6 +3,7 @@ use crate::command::{Command, UPDATE_STREAM_CODE};
 use crate::error::IggyError;
 use crate::identifier::Identifier;
 use crate::streams::MAX_NAME_LENGTH;
+use crate::utils::sizeable::Sizeable;
 use crate::utils::text;
 use crate::validatable::Validatable;
 use bytes::{BufMut, Bytes, BytesMut};
@@ -70,10 +71,11 @@ impl BytesSerializable for UpdateStream {
 
         let mut position = 0;
         let stream_id = Identifier::from_bytes(bytes.clone())?;
-        position += stream_id.get_size_bytes() as usize;
+        position += stream_id.get_size_bytes().as_bytes_usize();
         let name_length = bytes[position];
-        let name =
-            from_utf8(&bytes[position + 1..position + 1 + name_length as usize])?.to_string();
+        let name = from_utf8(&bytes[position + 1..position + 1 + name_length as usize])
+            .map_err(|_| IggyError::InvalidUtf8)?
+            .to_string();
         if name.len() != name_length as usize {
             return Err(IggyError::InvalidCommand);
         }
@@ -103,7 +105,7 @@ mod tests {
         let bytes = command.to_bytes();
         let mut position = 0;
         let stream_id = Identifier::from_bytes(bytes.clone()).unwrap();
-        position += stream_id.get_size_bytes() as usize;
+        position += stream_id.get_size_bytes().as_bytes_usize();
         let name_length = bytes[position];
         let name = from_utf8(&bytes[position + 1..position + 1 + name_length as usize])
             .unwrap()

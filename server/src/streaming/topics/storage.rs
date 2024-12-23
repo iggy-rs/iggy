@@ -3,8 +3,10 @@ use crate::streaming::partitions::partition::Partition;
 use crate::streaming::storage::TopicStorage;
 use crate::streaming::topics::consumer_group::ConsumerGroup;
 use crate::streaming::topics::topic::Topic;
+use crate::streaming::topics::COMPONENT;
 use anyhow::Context;
 use async_trait::async_trait;
+use error_set::ResultContext;
 use futures::future::join_all;
 use iggy::error::IggyError;
 use iggy::locking::IggySharedMut;
@@ -46,15 +48,12 @@ impl TopicStorage for FileTopicStorage {
         topic.compression_algorithm = state.compression_algorithm;
         topic.replication_factor = state.replication_factor.unwrap_or(1);
 
-        let dir_entries = fs::read_dir(&topic.partitions_path).await
+        let mut dir_entries = fs::read_dir(&topic.partitions_path).await
             .with_context(|| format!("Failed to read partition with ID: {} for stream with ID: {} for topic with ID: {} and path: {}",
-                                     topic.topic_id, topic.stream_id, topic.topic_id, &topic.partitions_path));
-        if let Err(err) = dir_entries {
-            return Err(IggyError::CannotReadPartitions(err));
-        }
+                                     topic.topic_id, topic.stream_id, topic.topic_id, &topic.partitions_path))
+            .map_err(|_| IggyError::CannotReadPartitions)?;
 
         let mut unloaded_partitions = Vec::new();
-        let mut dir_entries = dir_entries.unwrap();
         while let Some(dir_entry) = dir_entries.next_entry().await.unwrap_or(None) {
             let metadata = dir_entry.metadata().await;
             if metadata.is_err() || metadata.unwrap().is_file() {
@@ -151,7 +150,9 @@ impl TopicStorage for FileTopicStorage {
                     topic.segments_count_of_parent_stream.clone(),
                     partition_state.created_at,
                 );
-                partition.persist().await?;
+                partition.persist().await.with_error(|_| {
+                    format!("{COMPONENT} - failed to persist partiton: {partition}")
+                })?;
                 partition.segments.clear();
                 unloaded_partitions.push(partition);
                 info!(
@@ -205,7 +206,12 @@ impl TopicStorage for FileTopicStorage {
                 .insert(consumer_group.group_id, RwLock::new(consumer_group));
         }
 
-        topic.load_messages_from_disk_to_cache().await?;
+        topic
+            .load_messages_from_disk_to_cache()
+            .await
+            .with_error(|_| {
+                format!("{COMPONENT} - failed to load messages from disk to cache, topic: {topic}")
+            })?;
         info!("Loaded topic {topic}");
 
         Ok(())
@@ -235,7 +241,9 @@ impl TopicStorage for FileTopicStorage {
         );
         for (_, partition) in topic.partitions.iter() {
             let partition = partition.write().await;
-            partition.persist().await?;
+            partition.persist().await.with_error(|_| {
+                format!("{COMPONENT} - failed to persist partition, topic: {topic}")
+            })?;
         }
 
         info!("Saved topic {topic}");

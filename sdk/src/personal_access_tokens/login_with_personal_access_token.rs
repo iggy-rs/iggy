@@ -56,7 +56,9 @@ impl BytesSerializable for LoginWithPersonalAccessToken {
         }
 
         let token_length = bytes[0];
-        let token = from_utf8(&bytes[1..1 + token_length as usize])?.to_string();
+        let token = from_utf8(&bytes[1..1 + token_length as usize])
+            .map_err(|_| IggyError::InvalidUtf8)?
+            .to_string();
         if token.len() != token_length as usize {
             return Err(IggyError::InvalidCommand);
         }

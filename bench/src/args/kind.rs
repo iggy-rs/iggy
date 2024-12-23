@@ -4,7 +4,7 @@ use super::props::BenchmarkKindProps;
 use super::transport::BenchmarkTransportCommand;
 use super::{common::IggyBenchArgs, simple::BenchmarkKind};
 use clap::{error::ErrorKind, CommandFactory, Parser, Subcommand};
-use core::panic;
+use serde::Serialize;
 use std::num::NonZeroU32;
 
 #[derive(Subcommand, Debug)]
@@ -97,7 +97,7 @@ impl BenchmarkKindProps for BenchmarkKindCommand {
 }
 
 /// Sending (writing) benchmark
-#[derive(Parser, Debug)]
+#[derive(Parser, Debug, Serialize, Clone)]
 pub struct SendArgs {
     #[command(subcommand)]
     pub transport: BenchmarkTransportCommand,
@@ -153,7 +153,7 @@ impl BenchmarkKindProps for SendArgs {
     }
 
     fn consumers(&self) -> u32 {
-        panic!("")
+        0
     }
 
     fn producers(&self) -> u32 {
@@ -173,7 +173,7 @@ impl BenchmarkKindProps for SendArgs {
     }
 
     fn number_of_consumer_groups(&self) -> u32 {
-        panic!("No consumer groups in send benchmark");
+        0
     }
 
     fn validate(&self) {
@@ -192,7 +192,7 @@ impl BenchmarkKindProps for SendArgs {
 }
 
 /// Sending and Polling benchmark with consumer group
-#[derive(Parser, Debug)]
+#[derive(Parser, Debug, Clone)]
 pub struct ConsumerGroupArgs {
     #[command(subcommand)]
     pub transport: BenchmarkTransportCommand,
@@ -240,7 +240,7 @@ impl BenchmarkKindProps for ConsumerGroupArgs {
     }
 
     fn number_of_partitions(&self) -> u32 {
-        panic!("No partitions in consumer group benchmark");
+        0
     }
 
     fn consumers(&self) -> u32 {
@@ -248,15 +248,15 @@ impl BenchmarkKindProps for ConsumerGroupArgs {
     }
 
     fn producers(&self) -> u32 {
-        panic!("No producers in consumer group");
+        0
     }
 
     fn disable_parallel_producer_streams(&self) -> bool {
-        panic!("No parallel producer for consumer group");
+        false
     }
 
     fn disable_parallel_consumer_streams(&self) -> bool {
-        panic!("No parallel consumer for consumer group");
+        false
     }
 
     fn transport_command(&self) -> &BenchmarkTransportCommand {
@@ -290,7 +290,7 @@ impl BenchmarkKindProps for ConsumerGroupArgs {
 }
 
 /// Polling (reading) benchmark
-#[derive(Parser, Debug)]
+#[derive(Parser, Debug, Clone, Serialize)]
 pub struct PollArgs {
     #[command(subcommand)]
     pub transport: BenchmarkTransportCommand,
@@ -350,7 +350,7 @@ impl BenchmarkKindProps for PollArgs {
     }
 
     fn producers(&self) -> u32 {
-        panic!("")
+        0
     }
 
     fn disable_parallel_producer_streams(&self) -> bool {
@@ -366,7 +366,7 @@ impl BenchmarkKindProps for PollArgs {
     }
 
     fn number_of_consumer_groups(&self) -> u32 {
-        panic!("No consumer groups in poll benchmark");
+        0
     }
 
     fn validate(&self) {
@@ -385,7 +385,7 @@ impl BenchmarkKindProps for PollArgs {
 }
 
 /// Parallel sending and polling benchmark
-#[derive(Parser, Debug)]
+#[derive(Parser, Debug, Clone)]
 pub struct SendAndPollArgs {
     #[command(subcommand)]
     pub transport: BenchmarkTransportCommand,
@@ -469,7 +469,7 @@ impl BenchmarkKindProps for SendAndPollArgs {
     }
 
     fn number_of_consumer_groups(&self) -> u32 {
-        panic!("No consumer groups in send and poll benchmark");
+        0
     }
 
     fn validate(&self) {

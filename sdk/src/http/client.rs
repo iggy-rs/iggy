@@ -20,6 +20,7 @@ const UNAUTHORIZED_PATHS: &[&str] = &[
     "/",
     "/metrics",
     "/ping",
+    "/stats",
     "/users/login",
     "/users/refresh-token",
     "/personal-access-tokens/login",
@@ -84,7 +85,8 @@ impl HttpTransport for HttpClient {
             .get(url)
             .bearer_auth(token.deref())
             .send()
-            .await?;
+            .await
+            .map_err(|_| IggyError::InvalidHttpRequest)?;
         Self::handle_response(response).await
     }
 
@@ -103,7 +105,8 @@ impl HttpTransport for HttpClient {
             .bearer_auth(token.deref())
             .query(query)
             .send()
-            .await?;
+            .await
+            .map_err(|_| IggyError::InvalidHttpRequest)?;
         Self::handle_response(response).await
     }
 
@@ -122,7 +125,8 @@ impl HttpTransport for HttpClient {
             .bearer_auth(token.deref())
             .json(payload)
             .send()
-            .await?;
+            .await
+            .map_err(|_| IggyError::InvalidHttpRequest)?;
         Self::handle_response(response).await
     }
 
@@ -141,7 +145,8 @@ impl HttpTransport for HttpClient {
             .bearer_auth(token.deref())
             .json(payload)
             .send()
-            .await?;
+            .await
+            .map_err(|_| IggyError::InvalidHttpRequest)?;
         Self::handle_response(response).await
     }
 
@@ -155,7 +160,8 @@ impl HttpTransport for HttpClient {
             .delete(url)
             .bearer_auth(token.deref())
             .send()
-            .await?;
+            .await
+            .map_err(|_| IggyError::InvalidHttpRequest)?;
         Self::handle_response(response).await
     }
 
@@ -174,7 +180,8 @@ impl HttpTransport for HttpClient {
             .bearer_auth(token.deref())
             .query(query)
             .send()
-            .await?;
+            .await
+            .map_err(|_| IggyError::InvalidHttpRequest)?;
         Self::handle_response(response).await
     }
 
@@ -195,7 +202,10 @@ impl HttpTransport for HttpClient {
             token: token.to_owned(),
         };
         let response = self.post("/users/refresh-token", &command).await?;
-        let identity_info: IdentityInfo = response.json().await?;
+        let identity_info: IdentityInfo = response
+            .json()
+            .await
+            .map_err(|_| IggyError::InvalidJsonResponse)?;
         if identity_info.access_token.is_none() {
             return Err(IggyError::JwtMissing);
         }

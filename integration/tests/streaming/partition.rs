@@ -1,11 +1,13 @@
 use crate::streaming::common::test_setup::TestSetup;
 use crate::streaming::create_messages;
+use iggy::utils::byte_size::IggyByteSize;
 use iggy::utils::expiry::IggyExpiry;
+use iggy::utils::sizeable::Sizeable;
 use iggy::utils::timestamp::IggyTimestamp;
 use server::state::system::PartitionState;
 use server::streaming::batching::appendable_batch_info::AppendableBatchInfo;
 use server::streaming::partitions::partition::Partition;
-use server::streaming::segments::segment::{INDEX_EXTENSION, LOG_EXTENSION, TIME_INDEX_EXTENSION};
+use server::streaming::segments::segment::{INDEX_EXTENSION, LOG_EXTENSION};
 use std::sync::atomic::{AtomicU32, AtomicU64};
 use std::sync::Arc;
 use tokio::fs;
@@ -176,7 +178,10 @@ async fn should_purge_existing_partition_on_disk() {
         let messages = create_messages();
         let messages_count = messages.len();
         let appendable_batch_info = AppendableBatchInfo::new(
-            messages.iter().map(|msg| msg.get_size_bytes() as u64).sum(),
+            messages
+                .iter()
+                .map(|msg| msg.get_size_bytes())
+                .sum::<IggyByteSize>(),
             partition.partition_id,
         );
         partition
@@ -202,10 +207,8 @@ async fn assert_persisted_partition(partition_path: &str, with_segment: bool) {
         let segment_path = format!("{}/{:0>20}", partition_path, start_offset);
         let log_path = format!("{}.{}", segment_path, LOG_EXTENSION);
         let index_path = format!("{}.{}", segment_path, INDEX_EXTENSION);
-        let time_index_path = format!("{}.{}", segment_path, TIME_INDEX_EXTENSION);
         assert!(fs::metadata(&log_path).await.is_ok());
         assert!(fs::metadata(&index_path).await.is_ok());
-        assert!(fs::metadata(&time_index_path).await.is_ok());
     }
 }
 

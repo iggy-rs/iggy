@@ -1,8 +1,8 @@
-use crate::streaming::session::Session;
 use crate::streaming::systems::system::System;
 use iggy::error::IggyError;
 use iggy::locking::IggySharedMutFn;
 use iggy::models::stats::Stats;
+use iggy::utils::duration::IggyDuration;
 use std::sync::OnceLock;
 use sysinfo::{Pid, ProcessesToUpdate, System as SysinfoSystem};
 use tokio::sync::Mutex;
@@ -17,18 +17,12 @@ fn sysinfo() -> &'static Mutex<SysinfoSystem> {
 }
 
 impl System {
-    pub async fn get_stats(&self, session: &Session) -> Result<Stats, IggyError> {
-        self.ensure_authenticated(session)?;
-        self.permissioner.get_stats(session.get_user_id())?;
-        self.get_stats_bypass_auth().await
-    }
-
-    pub async fn get_stats_bypass_auth(&self) -> Result<Stats, IggyError> {
+    pub async fn get_stats(&self) -> Result<Stats, IggyError> {
         let mut sys = sysinfo().lock().await;
         let process_id = std::process::id();
         sys.refresh_cpu_all();
         sys.refresh_memory();
-        sys.refresh_processes(ProcessesToUpdate::Some(&[Pid::from_u32(process_id)]));
+        sys.refresh_processes(ProcessesToUpdate::Some(&[Pid::from_u32(process_id)]), true);
 
         let total_cpu_usage = sys.global_cpu_usage();
         let total_memory = sys.total_memory().into();
@@ -62,7 +56,7 @@ impl System {
             stats.process_id = process.pid().as_u32();
             stats.cpu_usage = process.cpu_usage();
             stats.memory_usage = process.memory().into();
-            stats.run_time = process.run_time().into();
+            stats.run_time = IggyDuration::new_from_secs(process.run_time());
             stats.start_time = process.start_time().into();
 
             let disk_usage = process.disk_usage();

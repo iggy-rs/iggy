@@ -3,6 +3,7 @@ use crate::command::{Command, CREATE_CONSUMER_GROUP_CODE};
 use crate::consumer_groups::MAX_NAME_LENGTH;
 use crate::error::IggyError;
 use crate::identifier::Identifier;
+use crate::utils::sizeable::Sizeable;
 use crate::utils::text;
 use crate::validatable::Validatable;
 use bytes::{BufMut, Bytes, BytesMut};
@@ -90,14 +91,19 @@ impl BytesSerializable for CreateConsumerGroup {
 
         let mut position = 0;
         let stream_id = Identifier::from_bytes(bytes.clone())?;
-        position += stream_id.get_size_bytes() as usize;
+        position += stream_id.get_size_bytes().as_bytes_usize();
         let topic_id = Identifier::from_bytes(bytes.slice(position..))?;
-        position += topic_id.get_size_bytes() as usize;
-        let group_id = u32::from_le_bytes(bytes[position..position + 4].try_into()?);
+        position += topic_id.get_size_bytes().as_bytes_usize();
+        let group_id = u32::from_le_bytes(
+            bytes[position..position + 4]
+                .try_into()
+                .map_err(|_| IggyError::InvalidNumberEncoding)?,
+        );
         let group_id = if group_id == 0 { None } else { Some(group_id) };
         let name_length = bytes[position + 4];
-        let name =
-            from_utf8(&bytes[position + 5..position + 5 + name_length as usize])?.to_string();
+        let name = from_utf8(&bytes[position + 5..position + 5 + name_length as usize])
+            .map_err(|_| IggyError::InvalidUtf8)?
+            .to_string();
         let command = CreateConsumerGroup {
             stream_id,
             topic_id,
@@ -137,9 +143,9 @@ mod tests {
         let bytes = command.to_bytes();
         let mut position = 0;
         let stream_id = Identifier::from_bytes(bytes.clone()).unwrap();
-        position += stream_id.get_size_bytes() as usize;
+        position += stream_id.get_size_bytes().as_bytes_usize();
         let topic_id = Identifier::from_bytes(bytes.slice(position..)).unwrap();
-        position += topic_id.get_size_bytes() as usize;
+        position += topic_id.get_size_bytes().as_bytes_usize();
         let group_id = u32::from_le_bytes(bytes[position..position + 4].try_into().unwrap());
 
         let name_length = bytes[position + 4];

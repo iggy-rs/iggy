@@ -13,7 +13,6 @@ use serde_with::DisplayFromStr;
 pub struct SystemConfig {
     pub path: String,
     pub backup: BackupConfig,
-    pub database: Option<DatabaseConfig>,
     pub state: StateConfig,
     pub runtime: RuntimeConfig,
     pub logging: LoggingConfig,
@@ -120,7 +119,6 @@ pub struct RecoveryConfig {
 pub struct SegmentConfig {
     pub size: IggyByteSize,
     pub cache_indexes: bool,
-    pub cache_time_indexes: bool,
     #[serde_as(as = "DisplayFromStr")]
     pub message_expiry: IggyExpiry,
     pub archive_expired: bool,
@@ -134,12 +132,6 @@ pub struct StateConfig {
 impl SystemConfig {
     pub fn get_system_path(&self) -> String {
         self.path.to_string()
-    }
-
-    pub fn get_database_path(&self) -> Option<String> {
-        self.database
-            .as_ref()
-            .map(|database| format!("{}/{}", self.get_system_path(), database.path))
     }
 
     pub fn get_state_path(&self) -> String {

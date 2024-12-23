@@ -11,6 +11,9 @@ use std::env;
 use std::error::Error;
 use std::str::FromStr;
 use tracing::{info, warn};
+use tracing_subscriber::layer::SubscriberExt;
+use tracing_subscriber::util::SubscriberInitExt;
+use tracing_subscriber::{EnvFilter, Registry};
 
 const STREAM_ID: u32 = 1;
 const TOPIC_ID: u32 = 1;
@@ -19,7 +22,10 @@ const BATCHES_LIMIT: u32 = 5;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
-    tracing_subscriber::fmt::init();
+    Registry::default()
+        .with(tracing_subscriber::fmt::layer())
+        .with(EnvFilter::try_from_default_env().unwrap_or(EnvFilter::new("INFO")))
+        .init();
 
     let client = IggyClientBuilder::new()
         .with_tcp()

@@ -167,6 +167,9 @@ enabled = true
 # For example, "0.0.0.0:8090" listens on all network interfaces on port 8090.
 address = "0.0.0.0:8090"
 
+# Whether to use ipv4 or ipv6
+ipv6 = false
+
 # TLS configuration for the TCP server.
 [tcp.tls]
 # Enables or disables TLS for TCP connections.
@@ -179,6 +182,27 @@ certificate = "certs/iggy.pfx"
 
 # Password for the TLS certificate, required for accessing the private key.
 password = "iggy123"
+
+# Configuration for the TCP socket
+[tcp.socket]
+# Whether to overwrite the OS-default socket parameters
+override_defaults = false
+
+# SO_RCVBUF: maximum size of the receive buffer, can be clamped by the OS
+recv_buffer_size = "100 KB"
+
+# SO_SNDBUF: maximum size of the send buffer, can be clamped by the OS
+send_buffer_size = "100 KB"
+
+# SO_KEEPALIVE: whether to regularly send a keepalive packet maintaining the connection
+keepalive = false
+
+# TCP_NODELAY: enable/disable the Nagle algorithm which buffers data before sending segments
+nodelay = false
+
+# SO_LINGER: delay to wait for while data is being transmitted before closing the socket after a
+# close or shutdown call has been received
+linger = "0 s"
 
 # QUIC protocol configuration.
 [quic]
@@ -272,6 +296,27 @@ enabled = false
 # Interval for expected client heartbeats
 interval = "5 s"
 
+# OpenTelemetry configuration
+[telemetry]
+# Enables or disables telemetry.
+enabled = false
+# Service name for telemetry.
+service_name = "iggy"
+
+# OpenTelemetry logs configuration
+[telemetry.logs]
+# Transport for sending logs. Options: "grpc", "http".
+transport = "grpc"
+# Endpoint for sending logs.
+endpoint = "http://localhost:7281/v1/logs"
+
+# OpenTelemetry traces configuration
+[telemetry.traces]
+# Transport for sending traces. Options: "grpc", "http".
+transport = "grpc"
+# Endpoint for sending traces.
+endpoint = "http://localhost:7281/v1/traces"
+
 # System configuration.
 [system]
 # Base path for system data storage.
@@ -286,12 +331,6 @@ path = "backup"
 [system.backup.compatibility]
 # Subpath of the backup directory where converted segment data is stored after compatibility conversion.
 path = "compatibility"
-
-# Legacy database configuration - used only for the migration purposes.
-#[system.database]
-## Path for storing database files.
-## Specifies the directory where database files are stored, relative to `system.path`.
-#path = "database"
 
 [system.state]
 # Determines whether to enforce file synchronization on state updates (boolean).
@@ -416,15 +455,10 @@ message_expiry = "none"
 # Configures whether expired segments are archived (boolean) or just deleted without archiving.
 archive_expired = false
 
-# Controls whether to cache indexes for segment access (boolean).
+# Controls whether to cache indexes (time and positional) for segment access (boolean).
 # `true` keeps indexes in memory, speeding up data retrieval.
 # `false` reads indexes from disk, which can conserve memory at the cost of access speed.
 cache_indexes = true
-
-# Determines whether to cache time-based indexes for segments (boolean).
-# `true` allows faster timestamp-based data retrieval by keeping indexes in memory.
-# `false` conserves memory by reading time indexes from disk, which may slow down access.
-cache_time_indexes = true
 
 # Message deduplication configuration
 [system.message_deduplication]
@@ -436,7 +470,6 @@ enabled = false
 max_entries = 1000
 # Maximum age of ID entries in the deduplication cache in human-readable format.
 expiry = "1 m"
-
 
 # Recovery configuration in case of lost data
 [system.recovery]

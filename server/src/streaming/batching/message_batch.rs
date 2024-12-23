@@ -2,16 +2,16 @@ use crate::streaming::batching::batch_filter::BatchItemizer;
 use crate::streaming::batching::iterator::IntoMessagesIterator;
 use crate::streaming::models::messages::RetainedMessage;
 use bytes::{BufMut, Bytes, BytesMut};
+use iggy::utils::{byte_size::IggyByteSize, sizeable::Sizeable};
 
-pub const RETAINED_BATCH_OVERHEAD: u32 = 8 + 8 + 4 + 4;
+pub const RETAINED_BATCH_OVERHEAD: u64 = 8 + 8 + 4 + 4;
 
-use crate::streaming::sizeable::Sizeable;
 #[derive(Debug, Clone)]
 pub struct RetainedMessageBatch {
     pub base_offset: u64,
     pub last_offset_delta: u32,
     pub max_timestamp: u64,
-    pub length: u32,
+    pub length: IggyByteSize,
     pub bytes: Bytes,
 }
 
@@ -20,7 +20,7 @@ impl RetainedMessageBatch {
         base_offset: u64,
         last_offset_delta: u32,
         max_timestamp: u64,
-        length: u32,
+        length: IggyByteSize,
         bytes: Bytes,
     ) -> Self {
         RetainedMessageBatch {
@@ -48,7 +48,7 @@ impl RetainedMessageBatch {
 
     pub fn extend(&self, bytes: &mut BytesMut) {
         bytes.put_u64_le(self.base_offset);
-        bytes.put_u32_le(self.length);
+        bytes.put_u32_le(self.length.as_bytes_u64() as u32);
         bytes.put_u32_le(self.last_offset_delta);
         bytes.put_u64_le(self.max_timestamp);
         bytes.put_slice(&self.bytes);
@@ -77,7 +77,7 @@ where
 }
 
 impl Sizeable for RetainedMessageBatch {
-    fn get_size_bytes(&self) -> u32 {
-        RETAINED_BATCH_OVERHEAD + self.length
+    fn get_size_bytes(&self) -> IggyByteSize {
+        self.length + RETAINED_BATCH_OVERHEAD.into()
     }
 }

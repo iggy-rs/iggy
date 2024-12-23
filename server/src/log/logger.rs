@@ -1,17 +1,29 @@
+use crate::configs::server::{TelemetryConfig, TelemetryTransport};
 use crate::configs::system::LoggingConfig;
-use crate::server_error::ServerError;
+use crate::server_error::LogError;
+use opentelemetry::trace::TracerProvider;
+use opentelemetry::{global, KeyValue};
+use opentelemetry_appender_tracing::layer::OpenTelemetryTracingBridge;
+use opentelemetry_otlp::{WithExportConfig, WithHttpConfig};
+use opentelemetry_sdk::propagation::TraceContextPropagator;
+use opentelemetry_sdk::runtime::Tokio;
+use opentelemetry_sdk::Resource;
 use std::io::{self, Write};
 use std::path::PathBuf;
 use std::str::FromStr;
 use std::sync::{Arc, Mutex};
 use tracing::{event, info, trace, Level};
 use tracing_appender::non_blocking::WorkerGuard;
+use tracing_opentelemetry::OpenTelemetryLayer;
+use tracing_subscriber::layer::SubscriberExt;
+use tracing_subscriber::util::SubscriberInitExt;
 use tracing_subscriber::{
-    filter::LevelFilter, fmt, fmt::format::Format, fmt::MakeWriter, prelude::*, reload,
-    reload::Handle, Layer, Registry,
+    filter::LevelFilter, fmt, fmt::format::Format, fmt::MakeWriter, reload, reload::Handle,
+    EnvFilter, Layer, Registry,
 };
 
 const IGGY_LOG_FILE_PREFIX: &str = "iggy-server.log";
+const VERSION: &str = env!("CARGO_PKG_VERSION");
 
 // Writer that does nothing
 struct NullWriter;
@@ -88,10 +100,12 @@ pub struct Logging {
     filtering_file_reload_handle: Option<ReloadHandle>,
 
     early_logs_buffer: Arc<Mutex<Vec<String>>>,
+
+    telemetry_config: TelemetryConfig,
 }
 
 impl Logging {
-    pub fn new() -> Self {
+    pub fn new(telemetry_config: TelemetryConfig) -> Self {
         Self {
             stdout_guard: None,
             stdout_reload_handle: None,
@@ -100,6 +114,7 @@ impl Logging {
             filtering_stdout_reload_handle: None,
             filtering_file_reload_handle: None,
             early_logs_buffer: Arc::new(Mutex::new(vec![])),
+            telemetry_config,
         }
     }
 
@@ -136,33 +151,101 @@ impl Logging {
         self.file_reload_handle = Some(file_layer_reload_handle);
         layers.push(file_layer.and_then(filtering_file_layer));
 
-        let subscriber = tracing_subscriber::registry().with(layers);
-
-        tracing::subscriber::set_global_default(subscriber)
-            .expect("Setting global default subscriber failed");
-
-        if option_env!("IGGY_CI_BUILD") == Some("true") {
-            let version = option_env!("CARGO_PKG_VERSION").unwrap_or("unknown");
-            let hash = option_env!("VERGEN_GIT_SHA").unwrap_or("unknown");
-            let built_at = option_env!("VERGEN_BUILD_TIMESTAMP").unwrap_or("unknown");
-            let rust_version = option_env!("VERGEN_RUSTC_SEMVER").unwrap_or("unknown");
-            let target = option_env!("VERGEN_CARGO_TARGET_TRIPLE").unwrap_or("unknown");
-            info!(
-                "Version: {}, hash: {}, built at: {} using rust version: {} for target: {}",
-                version, hash, built_at, rust_version, target
-            );
-        } else {
-            info!("It seems that you are a developer. Environment variable IGGY_CI_BUILD is not set to 'true', skipping build info print.")
+        if !self.telemetry_config.enabled {
+            // This is moment when we can start logging something and not worry about losing it.
+            Registry::default()
+                .with(layers)
+                .with(EnvFilter::try_from_default_env().unwrap_or(EnvFilter::new("INFO")))
+                .init();
+            Self::print_build_info();
+            return;
         }
 
-        // This is moment when we can start logging something and not worry about losing it.
+        let service_name = self.telemetry_config.service_name.to_owned();
+        let resource = Resource::new(vec![
+            KeyValue::new(
+                opentelemetry_semantic_conventions::resource::SERVICE_NAME,
+                service_name.to_owned(),
+            ),
+            KeyValue::new(
+                opentelemetry_semantic_conventions::resource::SERVICE_VERSION,
+                VERSION,
+            ),
+        ]);
+
+        let logger_provider = match self.telemetry_config.logs.transport {
+            TelemetryTransport::GRPC => opentelemetry_sdk::logs::LoggerProvider::builder()
+                .with_resource(resource.clone())
+                .with_batch_exporter(
+                    opentelemetry_otlp::LogExporter::builder()
+                        .with_tonic()
+                        .with_endpoint(self.telemetry_config.logs.endpoint.clone())
+                        .build()
+                        .expect("Failed to initialize gRPC logger."),
+                    Tokio,
+                )
+                .build(),
+            TelemetryTransport::HTTP => opentelemetry_sdk::logs::LoggerProvider::builder()
+                .with_resource(resource.clone())
+                .with_batch_exporter(
+                    opentelemetry_otlp::LogExporter::builder()
+                        .with_http()
+                        .with_http_client(reqwest::Client::new())
+                        .with_endpoint(self.telemetry_config.logs.endpoint.clone())
+                        .with_protocol(opentelemetry_otlp::Protocol::HttpBinary)
+                        .build()
+                        .expect("Failed to initialize HTTP logger."),
+                    Tokio,
+                )
+                .build(),
+        };
+
+        let tracer_provider = match self.telemetry_config.traces.transport {
+            TelemetryTransport::GRPC => opentelemetry_sdk::trace::TracerProvider::builder()
+                .with_resource(resource.clone())
+                .with_batch_exporter(
+                    opentelemetry_otlp::SpanExporter::builder()
+                        .with_tonic()
+                        .with_endpoint(self.telemetry_config.traces.endpoint.clone())
+                        .build()
+                        .expect("Failed to initialize gRPC tracer."),
+                    Tokio,
+                )
+                .build(),
+            TelemetryTransport::HTTP => opentelemetry_sdk::trace::TracerProvider::builder()
+                .with_resource(resource.clone())
+                .with_batch_exporter(
+                    opentelemetry_otlp::SpanExporter::builder()
+                        .with_http()
+                        .with_http_client(reqwest::Client::new())
+                        .with_endpoint(self.telemetry_config.traces.endpoint.clone())
+                        .with_protocol(opentelemetry_otlp::Protocol::HttpBinary)
+                        .build()
+                        .expect("Failed to initialize HTTP tracer."),
+                    Tokio,
+                )
+                .build(),
+        };
+
+        let tracer = tracer_provider.tracer(service_name);
+        global::set_tracer_provider(tracer_provider.clone());
+        global::set_text_map_propagator(TraceContextPropagator::new());
+        global::shutdown_tracer_provider();
+
+        Registry::default()
+            .with(layers)
+            .with(OpenTelemetryTracingBridge::new(&logger_provider))
+            .with(OpenTelemetryLayer::new(tracer))
+            .with(EnvFilter::try_from_default_env().unwrap_or(EnvFilter::new("INFO")))
+            .init();
+        Self::print_build_info();
     }
 
     pub fn late_init(
         &mut self,
         base_directory: String,
         config: &LoggingConfig,
-    ) -> Result<(), ServerError> {
+    ) -> Result<(), LogError> {
         // Write to stdout and file at the same time.
         // Use the non_blocking appender to avoid blocking the threads.
         // Use the rolling appender to avoid having a huge log file.
@@ -174,13 +257,13 @@ impl Logging {
 
         self.filtering_stdout_reload_handle
             .as_ref()
-            .ok_or(ServerError::FilterReloadFailure)?
+            .ok_or(LogError::FilterReloadFailure)?
             .modify(|layer| *layer = filtering_level.boxed())
             .expect("Failed to modify stdout filtering layer");
 
         self.filtering_file_reload_handle
             .as_ref()
-            .ok_or(ServerError::FilterReloadFailure)?
+            .ok_or(LogError::FilterReloadFailure)?
             .modify(|layer| *layer = filtering_level.boxed())
             .expect("Failed to modify file filtering layer");
 
@@ -194,7 +277,7 @@ impl Logging {
 
         self.stdout_reload_handle
             .as_ref()
-            .ok_or(ServerError::StdoutReloadFailure)?
+            .ok_or(LogError::StdoutReloadFailure)?
             .modify(|layer| *layer = stdout_layer)
             .expect("Failed to modify stdout layer");
 
@@ -220,7 +303,7 @@ impl Logging {
         self.file_guard = Some(file_guard);
         self.file_reload_handle
             .as_ref()
-            .ok_or(ServerError::FileReloadFailure)?
+            .ok_or(LogError::FileReloadFailure)?
             .modify(|layer| *layer = file_layer)
             .expect("Failed to modify file layer");
         let level = filtering_level.to_string();
@@ -278,10 +361,25 @@ impl Logging {
     fn _install_log_rotation_handler(&self) {
         todo!("Implement log rotation handler based on size and retention time");
     }
+
+    fn print_build_info() {
+        if option_env!("IGGY_CI_BUILD") == Some("true") {
+            let hash = option_env!("VERGEN_GIT_SHA").unwrap_or("unknown");
+            let built_at = option_env!("VERGEN_BUILD_TIMESTAMP").unwrap_or("unknown");
+            let rust_version = option_env!("VERGEN_RUSTC_SEMVER").unwrap_or("unknown");
+            let target = option_env!("VERGEN_CARGO_TARGET_TRIPLE").unwrap_or("unknown");
+            info!(
+                "Version: {VERSION}, hash: {}, built at: {} using rust version: {} for target: {}",
+                hash, built_at, rust_version, target
+            );
+        } else {
+            info!("It seems that you are a developer. Environment variable IGGY_CI_BUILD is not set to 'true', skipping build info print.")
+        }
+    }
 }
 
 impl Default for Logging {
     fn default() -> Self {
-        Self::new()
+        Self::new(TelemetryConfig::default())
     }
 }

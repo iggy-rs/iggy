@@ -4,9 +4,10 @@ use crate::streaming::batching::message_batch::{RetainedMessageBatch, RETAINED_B
 use crate::streaming::models::messages::RetainedMessage;
 use crate::streaming::segments::index::{Index, IndexRange};
 use crate::streaming::segments::segment::Segment;
-use crate::streaming::segments::time_index::TimeIndex;
-use crate::streaming::sizeable::Sizeable;
+use error_set::ResultContext;
 use iggy::error::IggyError;
+use iggy::utils::byte_size::IggyByteSize;
+use iggy::utils::sizeable::Sizeable;
 use std::sync::atomic::Ordering;
 use std::sync::Arc;
 use tracing::{info, trace, warn};
@@ -57,7 +58,10 @@ impl Segment {
         }
 
         // Can this be somehow improved? maybe with chain iterators
-        let mut messages = self.load_messages_from_disk(offset, end_offset).await?;
+        let mut messages = self.load_messages_from_disk(offset, end_offset).await.with_error(|_| format!(
+            "STREAMING_SEGMENT - failed to load messages from disk, stream ID: {}, topic ID: {}, partition ID: {}, start offset: {}, end offset :{}",
+            self.stream_id, self.topic_id, self.partition_id, offset, end_offset,
+        ))?;
         let mut buffered_messages = self.load_messages_from_unsaved_buffer(offset, last_offset);
         messages.append(&mut buffered_messages);
 
@@ -84,7 +88,11 @@ impl Segment {
             .storage
             .segment
             .load_newest_batches_by_size(self, size_bytes)
-            .await?;
+            .await
+            .with_error(|_| format!(
+                "STREAMING_SEGMENT - failed to load newest batches by size, stream ID: {}, topic ID: {}, partition ID: {}, size: {}",
+                self.stream_id, self.topic_id, self.partition_id, size_bytes,
+            ))?;
 
         Ok(messages)
     }
@@ -146,7 +154,11 @@ impl Segment {
             .storage
             .segment
             .load_index_range(self, start_offset, end_offset)
-            .await?
+            .await
+            .with_error(|_| format!(
+                "STREAMING_SEGMENT - failed to load index range, stream ID: {}, topic ID: {}, partition ID: {}, start offset: {}, end offset :{}",
+                self.stream_id, self.topic_id, self.partition_id, start_offset, end_offset,
+            ))?
         {
             Some(index_range) => {
                 self.load_messages_from_segment_file(&index_range, start_offset, end_offset)
@@ -167,7 +179,11 @@ impl Segment {
             .storage
             .segment
             .load_message_batches(self, index_range)
-            .await?
+            .await
+            .with_error(|_| format!(
+                "STREAMING_SEGMENT - failed to load message batches, stream ID: {}, topic ID: {}, partition ID: {}, startf offset: {}, end offset: {}",
+                self.stream_id, self.topic_id, self.partition_id, start_offset, end_offset,
+            ))?
             .iter()
             .to_messages_with_filter(messages_count, &|msg| {
                 msg.offset >= start_offset && msg.offset <= end_offset
@@ -185,7 +201,7 @@ impl Segment {
 
     pub async fn append_batch(
         &mut self,
-        batch_size: u64,
+        batch_size: IggyByteSize,
         messages_count: u32,
         batch: &[Arc<RetainedMessage>],
     ) -> Result<(), IggyError> {
@@ -204,7 +220,8 @@ impl Segment {
         let curr_offset = batch_accumulator.batch_max_offset();
 
         self.current_offset = curr_offset;
-        self.size_bytes += batch_size as u32;
+        self.size_bytes += batch_size;
+        let batch_size = batch_size.as_bytes_u64();
         self.size_of_parent_stream
             .fetch_add(batch_size, Ordering::AcqRel);
         self.size_of_parent_topic
@@ -225,31 +242,16 @@ impl Segment {
         &mut self,
         batch_last_offset: u64,
         batch_max_timestamp: u64,
-    ) -> (Index, TimeIndex) {
+    ) -> Index {
         let relative_offset = (batch_last_offset - self.start_offset) as u32;
         trace!("Storing index for relative_offset: {relative_offset}");
         let index = Index {
-            relative_offset,
+            offset: relative_offset,
             position: self.last_index_position,
-        };
-        let time_index = TimeIndex {
-            relative_offset,
             timestamp: batch_max_timestamp,
         };
-        match (&mut self.indexes, &mut self.time_indexes) {
-            (Some(indexes), Some(time_indexes)) => {
-                indexes.push(index);
-                time_indexes.push(time_index);
-            }
-            (Some(indexes), None) => {
-                indexes.push(index);
-            }
-            (None, Some(time_indexes)) => {
-                time_indexes.push(time_index);
-            }
-            (None, None) => {}
-        };
-        (index, time_index)
+        self.indexes.as_mut().unwrap().push(index);
+        index
     }
 
     pub async fn persist_messages(&mut self) -> Result<usize, IggyError> {
@@ -264,7 +266,7 @@ impl Segment {
         }
         let batch_max_offset = batch_accumulator.batch_max_offset();
         let batch_max_timestamp = batch_accumulator.batch_max_timestamp();
-        let (index, time_index) =
+        let index =
             self.store_offset_and_timestamp_index_for_batch(batch_max_offset, batch_max_timestamp);
 
         let unsaved_messages_number = batch_accumulator.unsaved_messages_count();
@@ -281,18 +283,18 @@ impl Segment {
             self.unsaved_messages = Some(batch_accumulator);
         }
         let saved_bytes = storage.save_batches(self, batch).await?;
-        storage.save_index(&self.index_path, index).await?;
-        storage
-            .save_time_index(&self.time_index_path, time_index)
-            .await?;
-        self.last_index_position += batch_size;
-        self.size_bytes += RETAINED_BATCH_OVERHEAD;
+        storage.save_index(&self.index_path, index).await.with_error(|_| format!(
+            "STREAMING_SEGMENT - failed to save index, stream ID: {}, topic ID: {}, partition ID: {}, path: {}",
+            self.stream_id, self.topic_id, self.partition_id, self.index_path,
+        ))?;
+        self.last_index_position += batch_size.as_bytes_u64() as u32;
+        self.size_bytes += IggyByteSize::from(RETAINED_BATCH_OVERHEAD);
         self.size_of_parent_stream
-            .fetch_add(RETAINED_BATCH_OVERHEAD as u64, Ordering::AcqRel);
+            .fetch_add(RETAINED_BATCH_OVERHEAD, Ordering::AcqRel);
         self.size_of_parent_topic
-            .fetch_add(RETAINED_BATCH_OVERHEAD as u64, Ordering::AcqRel);
+            .fetch_add(RETAINED_BATCH_OVERHEAD, Ordering::AcqRel);
         self.size_of_parent_partition
-            .fetch_add(RETAINED_BATCH_OVERHEAD as u64, Ordering::AcqRel);
+            .fetch_add(RETAINED_BATCH_OVERHEAD, Ordering::AcqRel);
 
         trace!(
             "Saved {} messages on disk in segment with start offset: {} for partition with ID: {}, total bytes written: {}.",

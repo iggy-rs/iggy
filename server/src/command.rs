@@ -26,6 +26,7 @@ use iggy::streams::update_stream::UpdateStream;
 use iggy::system::get_client::GetClient;
 use iggy::system::get_clients::GetClients;
 use iggy::system::get_me::GetMe;
+use iggy::system::get_snapshot::GetSnapshot;
 use iggy::system::get_stats::GetStats;
 use iggy::system::ping::Ping;
 use iggy::topics::create_topic::CreateTopic;
@@ -95,6 +96,7 @@ pub enum ServerCommand {
     DeleteConsumerGroup(DeleteConsumerGroup),
     JoinConsumerGroup(JoinConsumerGroup),
     LeaveConsumerGroup(LeaveConsumerGroup),
+    GetSnapshotFile(GetSnapshot),
 }
 
 impl BytesSerializable for ServerCommand {
@@ -143,11 +145,16 @@ impl BytesSerializable for ServerCommand {
             ServerCommand::JoinConsumerGroup(payload) => as_bytes(payload),
             ServerCommand::LeaveConsumerGroup(payload) => as_bytes(payload),
             ServerCommand::FlushUnsavedBuffer(payload) => as_bytes(payload),
+            ServerCommand::GetSnapshotFile(payload) => as_bytes(payload),
         }
     }
 
     fn from_bytes(bytes: Bytes) -> Result<Self, IggyError> {
-        let code = u32::from_le_bytes(bytes[..4].try_into()?);
+        let code = u32::from_le_bytes(
+            bytes[..4]
+                .try_into()
+                .map_err(|_| IggyError::InvalidNumberEncoding)?,
+        );
         let payload = bytes.slice(4..);
         match code {
             PING_CODE => Ok(ServerCommand::Ping(Ping::from_bytes(payload)?)),
@@ -247,6 +254,9 @@ impl BytesSerializable for ServerCommand {
             LEAVE_CONSUMER_GROUP_CODE => Ok(ServerCommand::LeaveConsumerGroup(
                 LeaveConsumerGroup::from_bytes(payload)?,
             )),
+            GET_SNAPSHOT_FILE_CODE => Ok(ServerCommand::GetSnapshotFile(GetSnapshot::from_bytes(
+                payload,
+            )?)),
             _ => Err(IggyError::InvalidCommand),
         }
     }
@@ -306,6 +316,7 @@ impl Validatable<IggyError> for ServerCommand {
             ServerCommand::JoinConsumerGroup(command) => command.validate(),
             ServerCommand::LeaveConsumerGroup(command) => command.validate(),
             ServerCommand::FlushUnsavedBuffer(command) => command.validate(),
+            ServerCommand::GetSnapshotFile(command) => command.validate(),
         }
     }
 }
@@ -389,6 +400,9 @@ impl Display for ServerCommand {
             }
             ServerCommand::FlushUnsavedBuffer(payload) => {
                 write!(formatter, "{FLUSH_UNSAVED_BUFFER}|{payload}")
+            }
+            ServerCommand::GetSnapshotFile(payload) => {
+                write!(formatter, "{GET_SNAPSHOT_FILE}|{payload}")
             }
         }
     }

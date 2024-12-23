@@ -1,7 +1,8 @@
 use crate::configs::quic::{QuicCertificateConfig, QuicConfig};
 use crate::configs::server::{
     ArchiverConfig, DataMaintenanceConfig, DiskArchiverConfig, HeartbeatConfig,
-    MessagesMaintenanceConfig, S3ArchiverConfig, StateMaintenanceConfig,
+    MessagesMaintenanceConfig, S3ArchiverConfig, StateMaintenanceConfig, TelemetryConfig,
+    TelemetryLogsConfig, TelemetryTracesConfig,
 };
 use crate::configs::system::MessageDeduplicationConfig;
 use crate::configs::{
@@ -12,7 +13,7 @@ use crate::configs::{
         CacheConfig, CompressionConfig, EncryptionConfig, LoggingConfig, PartitionConfig,
         SegmentConfig, StreamConfig, SystemConfig, TopicConfig,
     },
-    tcp::{TcpConfig, TcpTlsConfig},
+    tcp::{TcpConfig, TcpSocketConfig, TcpTlsConfig},
 };
 use std::fmt::{Display, Formatter};
 
@@ -185,8 +186,8 @@ impl Display for ServerConfig {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
-            "{{ data_maintenance: {}, message_saver: {}, heartbeat: {}, system: {}, quic: {}, tcp: {}, http: {} }}",
-            self.data_maintenance, self.message_saver, self.heartbeat, self.system, self.quic, self.tcp, self.http
+            "{{ data_maintenance: {}, message_saver: {}, heartbeat: {}, system: {}, quic: {}, tcp: {}, http: {}, telemetry: {} }}",
+            self.data_maintenance, self.message_saver, self.heartbeat, self.system, self.quic, self.tcp, self.http, self.telemetry
         )
     }
 }
@@ -266,8 +267,8 @@ impl Display for SegmentConfig {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
-            "{{ size_bytes: {}, cache_indexes: {}, cache_time_indexes: {}, message_expiry: {}, archive_expired: {} }}",
-            self.size, self.cache_indexes, self.cache_time_indexes, self.message_expiry, self.archive_expired
+            "{{ size_bytes: {}, cache_indexes: {}, message_expiry: {}, archive_expired: {} }}",
+            self.size, self.cache_indexes, self.message_expiry, self.archive_expired
         )
     }
 }
@@ -289,8 +290,8 @@ impl Display for TcpConfig {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
-            "{{ enabled: {}, address: {}, tls: {} }}",
-            self.enabled, self.address, self.tls
+            "{{ enabled: {}, address: {}, ipv6: {}, tls: {}, socket: {} }}",
+            self.enabled, self.address, self.ipv6, self.tls, self.socket,
         )
     }
 }
@@ -301,6 +302,46 @@ impl Display for TcpTlsConfig {
             f,
             "{{ enabled: {}, certificate: {} }}",
             self.enabled, self.certificate
+        )
+    }
+}
+
+impl Display for TcpSocketConfig {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "{{ override defaults: {}, recv buffer size: {}, send buffer size {}, keepalive: {}, nodelay: {}, linger: {} }}",
+            self.override_defaults, self.recv_buffer_size, self.send_buffer_size, self.keepalive, self.nodelay, self.linger,
+        )
+    }
+}
+
+impl Display for TelemetryConfig {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "{{ enabled: {}, service_name: {}, logs: {}, traces: {} }}",
+            self.enabled, self.service_name, self.logs, self.traces
+        )
+    }
+}
+
+impl Display for TelemetryLogsConfig {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "{{ transport: {}, endpoint: {} }}",
+            self.transport, self.endpoint
+        )
+    }
+}
+
+impl Display for TelemetryTracesConfig {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "{{ transport: {}, endpoint: {} }}",
+            self.transport, self.endpoint
         )
     }
 }

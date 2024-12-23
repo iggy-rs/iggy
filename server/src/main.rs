@@ -1,5 +1,6 @@
 use anyhow::Result;
 use clap::Parser;
+use dotenvy::dotenv;
 use figlet_rs::FIGfont;
 use server::args::Args;
 use server::channels::commands::archive_state::ArchiveStateExecutor;
@@ -21,24 +22,35 @@ use server::server_error::ServerError;
 use server::streaming::systems::system::{SharedSystem, System};
 use server::tcp::tcp_server;
 use tokio::time::Instant;
-use tracing::info;
+use tracing::{info, instrument};
 
 #[tokio::main]
+#[instrument(skip_all, name = "trace_start_server")]
 async fn main() -> Result<(), ServerError> {
     let startup_timestamp = Instant::now();
     let standard_font = FIGfont::standard().unwrap();
     let figure = standard_font.convert("Iggy Server");
     println!("{}", figure.unwrap());
 
-    let mut logging = Logging::new();
+    if let Ok(env_path) = std::env::var("IGGY_ENV_PATH") {
+        if dotenvy::from_path(&env_path).is_ok() {
+            println!("Loaded environment variables from path: {env_path}");
+        }
+    } else if let Ok(path) = dotenv() {
+        println!(
+            "Loaded environment variables from .env file at path: {}",
+            path.display()
+        );
+    }
+
+    let args = Args::parse();
+    let config_provider = config_provider::resolve(&args.config_provider)?;
+    let config = ServerConfig::load(config_provider.as_ref()).await?;
+
+    let mut logging = Logging::new(config.telemetry.clone());
     logging.early_init();
 
     // From this point on, we can use tracing macros to log messages.
-
-    let args = Args::parse();
-
-    let config_provider = config_provider::resolve(&args.config_provider)?;
-    let config = ServerConfig::load(config_provider.as_ref()).await?;
 
     logging.late_init(config.system.get_system_path(), &config.system.logging)?;
 
@@ -51,7 +63,7 @@ async fn main() -> Result<(), ServerError> {
     // Workaround to ensure that the statistics are initialized before the server
     // loads streams and starts accepting connections. This is necessary to
     // have the correct statistics when the server starts.
-    system.write().await.get_stats_bypass_auth().await?;
+    system.write().await.get_stats().await?;
     system.write().await.init().await?;
 
     let _command_handler = ServerCommandHandler::new(system.clone(), &config)

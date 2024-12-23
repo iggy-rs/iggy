@@ -4,6 +4,7 @@ use crate::error::IggyError;
 use crate::identifier::Identifier;
 use crate::models::user_status::UserStatus;
 use crate::users::defaults::*;
+use crate::utils::sizeable::Sizeable;
 use crate::utils::text;
 use crate::validatable::Validatable;
 use bytes::{BufMut, Bytes, BytesMut};
@@ -81,7 +82,7 @@ impl BytesSerializable for UpdateUser {
         }
 
         let user_id = Identifier::from_bytes(bytes.clone())?;
-        let mut position = user_id.get_size_bytes() as usize;
+        let mut position = user_id.get_size_bytes().as_bytes_usize();
         let has_username = bytes[position];
         if has_username > 1 {
             return Err(IggyError::InvalidCommand);
@@ -91,8 +92,9 @@ impl BytesSerializable for UpdateUser {
         let username = if has_username == 1 {
             let username_length = bytes[position];
             position += 1;
-            let username =
-                from_utf8(&bytes[position..position + username_length as usize])?.to_string();
+            let username = from_utf8(&bytes[position..position + username_length as usize])
+                .map_err(|_| IggyError::InvalidUtf8)?
+                .to_string();
             position += username_length as usize;
             Some(username)
         } else {
@@ -146,7 +148,7 @@ mod tests {
 
         let bytes = command.to_bytes();
         let user_id = Identifier::from_bytes(bytes.clone()).unwrap();
-        let mut position = user_id.get_size_bytes() as usize;
+        let mut position = user_id.get_size_bytes().as_bytes_usize();
         let has_username = bytes[position];
         position += 1;
         let username_length = bytes[position];

@@ -1,15 +1,15 @@
 use crate::configs::server::ServerConfig;
-use crate::server_error::ServerError;
+use crate::server_error::ConfigError;
 use crate::IGGY_ROOT_PASSWORD_ENV;
 use async_trait::async_trait;
 use figment::{
-    providers::{Format, Json, Toml},
+    providers::{Format, Toml},
     value::{Dict, Map as FigmentMap, Tag, Value as FigmentValue},
     Error, Figment, Metadata, Profile, Provider,
 };
 use std::{env, path::Path};
 use toml::{map::Map, Value as TomlValue};
-use tracing::{debug, info};
+use tracing::debug;
 
 const DEFAULT_CONFIG_PROVIDER: &str = "file";
 const DEFAULT_CONFIG_PATH: &str = "configs/server.toml";
@@ -24,7 +24,7 @@ const SECRET_KEYS: [&str; 6] = [
 
 #[async_trait]
 pub trait ConfigProvider {
-    async fn load_config(&self) -> Result<ServerConfig, ServerError>;
+    async fn load_config(&self) -> Result<ServerConfig, ConfigError>;
 }
 
 #[derive(Debug)]
@@ -122,7 +122,6 @@ impl CustomEnvProvider {
                     combined_keys.clear();
                     return;
                 }
-
                 _ => {
                     continue;
                 }
@@ -152,6 +151,11 @@ impl CustomEnvProvider {
     }
 
     fn try_parse_value(value: &str) -> FigmentValue {
+        if value.starts_with('[') && value.ends_with(']') {
+            let value = value.trim_start_matches('[').trim_end_matches(']');
+            let values: Vec<FigmentValue> = value.split(',').map(Self::try_parse_value).collect();
+            return FigmentValue::from(values);
+        }
         if value == "true" {
             return FigmentValue::from(true);
         }
@@ -197,7 +201,7 @@ impl Provider for CustomEnvProvider {
                 value = "******".to_string();
             }
 
-            info!("{env_key} value changed to: {value} from environment variable");
+            println!("{env_key} value changed to: {value} from environment variable");
             Self::insert_overridden_values_from_env(
                 &source_dict,
                 &mut new_dict,
@@ -212,16 +216,16 @@ impl Provider for CustomEnvProvider {
     }
 }
 
-pub fn resolve(config_provider_type: &str) -> Result<Box<dyn ConfigProvider>, ServerError> {
+pub fn resolve(config_provider_type: &str) -> Result<Box<dyn ConfigProvider>, ConfigError> {
     match config_provider_type {
         DEFAULT_CONFIG_PROVIDER => {
             let path =
                 env::var("IGGY_CONFIG_PATH").unwrap_or_else(|_| DEFAULT_CONFIG_PATH.to_string());
             Ok(Box::new(FileConfigProvider::new(path)))
         }
-        _ => Err(ServerError::InvalidConfigurationProvider(
-            config_provider_type.to_string(),
-        )),
+        _ => Err(ConfigError::InvalidConfigurationProvider {
+            provider_type: config_provider_type.to_string(),
+        }),
     }
 }
 
@@ -254,40 +258,39 @@ fn file_exists<P: AsRef<Path>>(path: P) -> bool {
 
 #[async_trait]
 impl ConfigProvider for FileConfigProvider {
-    async fn load_config(&self) -> Result<ServerConfig, ServerError> {
-        info!("Loading config from path: '{}'...", self.path);
+    async fn load_config(&self) -> Result<ServerConfig, ConfigError> {
+        println!("Loading config from path: '{}'...", self.path);
 
-        if !file_exists(&self.path) {
-            return Err(ServerError::CannotLoadConfiguration(format!(
-                "Cannot find configuration file at path: '{}'.",
-                self.path,
-            )));
+        // Include the default configuration from server.toml
+        let embedded_default_config = Toml::string(include_str!("../../../configs/server.toml"));
+
+        // Start with the default configuration
+        let mut config_builder = Figment::new().merge(embedded_default_config);
+
+        // If the server.toml file exists, merge it into the configuration
+        if file_exists(&self.path) {
+            println!("Found configuration file at path: '{}'.", self.path);
+            config_builder = config_builder.merge(Toml::file(&self.path));
+        } else {
+            println!(
+                "Configuration file not found at path: '{}'. Using default configuration from embedded server.toml.",
+                self.path
+            );
         }
 
-        let config_builder = Figment::new();
-        let extension = self.path.split('.').last().unwrap_or("");
-        let config_builder = match extension {
-            "json" => config_builder.merge(Json::file(&self.path)),
-            "toml" => config_builder.merge(Toml::file(&self.path)),
-            e => {
-                return Err(ServerError::CannotLoadConfiguration(format!("Cannot load configuration: invalid file extension: {e}, only .json and .toml are supported.")));
-            }
-        };
+        // Merge environment variables into the configuration
+        config_builder = config_builder.merge(CustomEnvProvider::new("IGGY_"));
 
-        let custom_env_provider = CustomEnvProvider::new("IGGY_");
-        let config_result: Result<ServerConfig, figment::Error> =
-            config_builder.merge(custom_env_provider).extract();
+        // Finally, attempt to extract the final configuration
+        let config_result: Result<ServerConfig, figment::Error> = config_builder.extract();
 
         match config_result {
             Ok(config) => {
-                info!("Config loaded from path: '{}'", self.path);
-                info!("Using Config: {config}");
+                println!("Config loaded successfully.");
+                println!("Using Config: {config}");
                 Ok(config)
             }
-            Err(figment_error) => Err(ServerError::CannotLoadConfiguration(format!(
-                "Failed to load configuration: {}",
-                figment_error
-            ))),
+            Err(_) => Err(ConfigError::CannotLoadConfiguration),
         }
     }
 }

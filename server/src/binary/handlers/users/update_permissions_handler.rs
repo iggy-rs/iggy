@@ -1,12 +1,15 @@
+use crate::binary::handlers::users::COMPONENT;
 use crate::binary::sender::Sender;
 use crate::state::command::EntryCommand;
 use crate::streaming::session::Session;
 use crate::streaming::systems::system::SharedSystem;
 use anyhow::Result;
+use error_set::ResultContext;
 use iggy::error::IggyError;
 use iggy::users::update_permissions::UpdatePermissions;
-use tracing::debug;
+use tracing::{debug, instrument};
 
+#[instrument(skip_all, name = "trace_update_permissions", fields(iggy_user_id = session.get_user_id(), iggy_client_id = session.client_id))]
 pub async fn handle(
     command: UpdatePermissions,
     sender: &mut dyn Sender,
@@ -18,7 +21,10 @@ pub async fn handle(
         let mut system = system.write().await;
         system
             .update_permissions(session, &command.user_id, command.permissions.clone())
-            .await?;
+            .await
+            .with_error(|_| format!("{COMPONENT} - failed to update permissions for user_id: {}, session: {session}",
+                command.user_id
+            ))?;
     }
 
     let system = system.read().await;

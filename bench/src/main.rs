@@ -1,4 +1,5 @@
 mod args;
+mod benchmark_params;
 mod benchmark_result;
 mod benchmark_runner;
 mod benchmarks;
@@ -6,12 +7,14 @@ mod client_factory;
 mod consumer;
 mod producer;
 mod server_starter;
+mod statistics;
 
 use crate::{args::common::IggyBenchArgs, benchmark_runner::BenchmarkRunner};
 use clap::Parser;
 use figlet_rs::FIGfont;
 use iggy::error::IggyError;
 use tracing::{error, info};
+use tracing_subscriber::EnvFilter;
 
 #[tokio::main]
 async fn main() -> Result<(), IggyError> {
@@ -19,6 +22,7 @@ async fn main() -> Result<(), IggyError> {
     let figure = standard_font.convert("Iggy Bench");
     println!("{}", figure.unwrap());
     tracing_subscriber::fmt::Subscriber::builder()
+        .with_env_filter(EnvFilter::try_from_default_env().unwrap_or(EnvFilter::new("INFO")))
         .with_ansi(true)
         .init();
 

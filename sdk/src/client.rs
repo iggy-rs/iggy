@@ -12,11 +12,13 @@ use crate::models::identity_info::IdentityInfo;
 use crate::models::messages::PolledMessages;
 use crate::models::permissions::Permissions;
 use crate::models::personal_access_token::{PersonalAccessTokenInfo, RawPersonalAccessToken};
+use crate::models::snapshot::Snapshot;
 use crate::models::stats::Stats;
 use crate::models::stream::{Stream, StreamDetails};
 use crate::models::topic::{Topic, TopicDetails};
 use crate::models::user_info::{UserInfo, UserInfoDetails};
 use crate::models::user_status::UserStatus;
+use crate::snapshot::{SnapshotCompression, SystemSnapshotType};
 use crate::tcp::config::{TcpClientConfig, TcpClientReconnectionConfig};
 use crate::utils::duration::IggyDuration;
 use crate::utils::expiry::IggyExpiry;
@@ -102,6 +104,14 @@ pub trait SystemClient {
     /// Ping the server to check if it's alive.
     async fn ping(&self) -> Result<(), IggyError>;
     async fn heartbeat_interval(&self) -> IggyDuration;
+    /// Capture and package the current system state as a snapshot.
+    ///
+    /// Authentication is required.
+    async fn snapshot(
+        &self,
+        compression: SnapshotCompression,
+        snapshot_types: Vec<SystemSnapshotType>,
+    ) -> Result<Snapshot, IggyError>;
 }
 
 /// This trait defines the methods to interact with the user module.
@@ -444,13 +454,13 @@ impl ConnectionString {
         }
 
         let connection_string = connection_string.replace(CONNECTION_STRING_PREFIX, "");
-        let parts = connection_string.split("@").collect::<Vec<&str>>();
+        let parts = connection_string.split('@').collect::<Vec<&str>>();
 
         if parts.len() != 2 {
             return Err(IggyError::InvalidConnectionString);
         }
 
-        let credentials = parts[0].split(":").collect::<Vec<&str>>();
+        let credentials = parts[0].split(':').collect::<Vec<&str>>();
         if credentials.len() != 2 {
             return Err(IggyError::InvalidConnectionString);
         }
@@ -461,7 +471,7 @@ impl ConnectionString {
             return Err(IggyError::InvalidConnectionString);
         }
 
-        let server_and_options = parts[1].split("?").collect::<Vec<&str>>();
+        let server_and_options = parts[1].split('?').collect::<Vec<&str>>();
         if server_and_options.len() > 2 {
             return Err(IggyError::InvalidConnectionString);
         }
@@ -471,11 +481,11 @@ impl ConnectionString {
             return Err(IggyError::InvalidConnectionString);
         }
 
-        if !server_address.contains(":") {
+        if !server_address.contains(':') {
             return Err(IggyError::InvalidConnectionString);
         }
 
-        let port = server_address.split(":").collect::<Vec<&str>>()[1];
+        let port = server_address.split(':').collect::<Vec<&str>>()[1];
         if port.is_empty() {
             return Err(IggyError::InvalidConnectionString);
         }
@@ -502,7 +512,7 @@ impl ConnectionString {
     }
 
     fn parse_options(options: &str) -> Result<ConnectionStringOptions, IggyError> {
-        let options = options.split("&").collect::<Vec<&str>>();
+        let options = options.split('&').collect::<Vec<&str>>();
         let mut tls_enabled = false;
         let mut tls_domain = "localhost".to_string();
         let mut reconnection_retries = "unlimited".to_owned();
@@ -511,7 +521,7 @@ impl ConnectionString {
         let mut heartbeat_interval = "5s".to_owned();
 
         for option in options {
-            let option_parts = option.split("=").collect::<Vec<&str>>();
+            let option_parts = option.split('=').collect::<Vec<&str>>();
             if option_parts.len() != 2 {
                 return Err(IggyError::InvalidConnectionString);
             }
@@ -548,7 +558,11 @@ impl ConnectionString {
                 enabled: true,
                 max_retries: match reconnection_retries.as_str() {
                     "unlimited" => None,
-                    _ => Some(reconnection_retries.parse()?),
+                    _ => Some(
+                        reconnection_retries
+                            .parse()
+                            .map_err(|_| IggyError::InvalidNumberValue)?,
+                    ),
                 },
                 interval: IggyDuration::from_str(reconnection_interval.as_str())
                     .map_err(|_| IggyError::InvalidConnectionString)?,
@@ -585,6 +599,7 @@ impl From<ConnectionString> for TcpClientConfig {
             auto_login: connection_string.auto_login,
             tls_enabled: connection_string.options.tls_enabled,
             tls_domain: connection_string.options.tls_domain,
+            tls_ca_file: None,
             reconnection: connection_string.options.reconnection,
             heartbeat_interval: connection_string.options.heartbeat_interval,
         }

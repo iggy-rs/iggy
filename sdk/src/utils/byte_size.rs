@@ -4,7 +4,8 @@ use byte_unit::{Byte, UnitType};
 use core::fmt;
 use serde::{Deserialize, Serialize};
 use std::{
-    ops::{Add, AddAssign, Sub},
+    iter::Sum,
+    ops::{Add, AddAssign, Sub, SubAssign},
     str::FromStr,
 };
 
@@ -47,6 +48,11 @@ impl IggyByteSize {
     /// Returns the byte size as a `u64`.
     pub fn as_bytes_u64(&self) -> u64 {
         self.0.as_u64()
+    }
+
+    /// Returns the byte size as a `usize`.
+    pub fn as_bytes_usize(&self) -> usize {
+        self.as_bytes_u64() as usize
     }
 
     /// Returns a human-readable string representation of the byte size using decimal units.
@@ -98,7 +104,9 @@ impl FromStr for IggyByteSize {
         if matches!(s, "0" | "unlimited" | "Unlimited" | "none" | "None") {
             Ok(IggyByteSize(Byte::from_u64(0)))
         } else {
-            Ok(IggyByteSize(Byte::from_str(s)?))
+            Ok(IggyByteSize(
+                Byte::from_str(s).map_err(|_| IggyError::InvalidSizeBytes)?,
+            ))
         }
     }
 }
@@ -112,6 +120,12 @@ impl PartialEq<u64> for IggyByteSize {
 impl PartialOrd<u64> for IggyByteSize {
     fn partial_cmp(&self, other: &u64) -> Option<std::cmp::Ordering> {
         self.as_bytes_u64().partial_cmp(other)
+    }
+}
+
+impl PartialOrd<IggyByteSize> for IggyByteSize {
+    fn partial_cmp(&self, other: &IggyByteSize) -> Option<std::cmp::Ordering> {
+        self.as_bytes_u64().partial_cmp(&other.as_bytes_u64())
     }
 }
 
@@ -140,6 +154,18 @@ impl Sub for IggyByteSize {
 
     fn sub(self, rhs: Self) -> Self::Output {
         IggyByteSize(Byte::from_u64(self.as_bytes_u64() - rhs.as_bytes_u64()))
+    }
+}
+
+impl SubAssign for IggyByteSize {
+    fn sub_assign(&mut self, rhs: Self) {
+        self.0 = Byte::from_u64(self.as_bytes_u64() - rhs.as_bytes_u64());
+    }
+}
+
+impl Sum for IggyByteSize {
+    fn sum<I: Iterator<Item = Self>>(iter: I) -> Self {
+        iter.fold(IggyByteSize::default(), |acc, ibs| acc + ibs)
     }
 }
 
@@ -254,6 +280,22 @@ mod tests {
         assert_eq!(
             byte_size._as_human_throughput_string(&duration),
             "18.45 EB/s"
+        );
+    }
+
+    #[test]
+    fn test_order() {
+        assert!(IggyByteSize::from(u64::MAX) > IggyByteSize::from(u64::MIN))
+    }
+
+    #[test]
+    fn test_sum() {
+        let r = 1..10;
+        assert_eq!(
+            r.clone().sum::<u64>(),
+            r.map(IggyByteSize::from)
+                .sum::<IggyByteSize>()
+                .as_bytes_u64()
         );
     }
 }

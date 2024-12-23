@@ -5,6 +5,7 @@ use crate::error::IggyError;
 use crate::identifier::Identifier;
 use crate::topics::MAX_NAME_LENGTH;
 use crate::utils::expiry::IggyExpiry;
+use crate::utils::sizeable::Sizeable;
 use crate::utils::text;
 use crate::utils::topic_size::MaxTopicSize;
 use crate::validatable::Validatable;
@@ -111,22 +112,31 @@ impl BytesSerializable for UpdateTopic {
         }
         let mut position = 0;
         let stream_id = Identifier::from_bytes(bytes.clone())?;
-        position += stream_id.get_size_bytes() as usize;
+        position += stream_id.get_size_bytes().as_bytes_usize();
         let topic_id = Identifier::from_bytes(bytes.slice(position..))?;
-        position += topic_id.get_size_bytes() as usize;
+        position += topic_id.get_size_bytes().as_bytes_usize();
         let compression_algorithm = CompressionAlgorithm::from_code(bytes[position])?;
         position += 1;
-        let message_expiry = u64::from_le_bytes(bytes[position..position + 8].try_into()?);
+        let message_expiry = u64::from_le_bytes(
+            bytes[position..position + 8]
+                .try_into()
+                .map_err(|_| IggyError::InvalidNumberEncoding)?,
+        );
         let message_expiry: IggyExpiry = message_expiry.into();
-        let max_topic_size = u64::from_le_bytes(bytes[position + 8..position + 16].try_into()?);
+        let max_topic_size = u64::from_le_bytes(
+            bytes[position + 8..position + 16]
+                .try_into()
+                .map_err(|_| IggyError::InvalidNumberEncoding)?,
+        );
         let max_topic_size: MaxTopicSize = max_topic_size.into();
         let replication_factor = match bytes[position + 16] {
             0 => None,
             factor => Some(factor),
         };
         let name_length = bytes[position + 17];
-        let name =
-            from_utf8(&bytes[position + 18..(position + 18 + name_length as usize)])?.to_string();
+        let name = from_utf8(&bytes[position + 18..(position + 18 + name_length as usize)])
+            .map_err(|_| IggyError::InvalidUtf8)?
+            .to_string();
         if name.len() != name_length as usize {
             return Err(IggyError::InvalidCommand);
         }
@@ -179,9 +189,9 @@ mod tests {
         let bytes = command.to_bytes();
         let mut position = 0;
         let stream_id = Identifier::from_bytes(bytes.clone()).unwrap();
-        position += stream_id.get_size_bytes() as usize;
+        position += stream_id.get_size_bytes().as_bytes_usize();
         let topic_id = Identifier::from_bytes(bytes.slice(position..)).unwrap();
-        position += topic_id.get_size_bytes() as usize;
+        position += topic_id.get_size_bytes().as_bytes_usize();
         let compression_algorithm = CompressionAlgorithm::from_code(bytes[position]).unwrap();
         position += 1;
         let message_expiry = u64::from_le_bytes(bytes[position..position + 8].try_into().unwrap());

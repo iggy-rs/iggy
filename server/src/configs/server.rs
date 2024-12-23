@@ -4,12 +4,16 @@ use crate::configs::http::HttpConfig;
 use crate::configs::quic::QuicConfig;
 use crate::configs::system::SystemConfig;
 use crate::configs::tcp::TcpConfig;
-use crate::server_error::ServerError;
+use crate::configs::COMPONENT;
+use crate::server_error::ConfigError;
+use derive_more::Display;
+use error_set::ResultContext;
 use iggy::utils::duration::IggyDuration;
 use iggy::validatable::Validatable;
 use serde::{Deserialize, Serialize};
 use serde_with::serde_as;
 use serde_with::DisplayFromStr;
+use std::str::FromStr;
 use std::sync::Arc;
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
@@ -22,6 +26,7 @@ pub struct ServerConfig {
     pub quic: QuicConfig,
     pub tcp: TcpConfig,
     pub http: HttpConfig,
+    pub telemetry: TelemetryConfig,
 }
 
 #[serde_as]
@@ -104,10 +109,55 @@ pub struct HeartbeatConfig {
     pub interval: IggyDuration,
 }
 
+#[derive(Debug, Deserialize, Serialize, Clone)]
+pub struct TelemetryConfig {
+    pub enabled: bool,
+    pub service_name: String,
+    pub logs: TelemetryLogsConfig,
+    pub traces: TelemetryTracesConfig,
+}
+
+#[derive(Debug, Deserialize, Serialize, Clone)]
+pub struct TelemetryLogsConfig {
+    pub transport: TelemetryTransport,
+    pub endpoint: String,
+}
+
+#[derive(Debug, Deserialize, Serialize, Clone)]
+pub struct TelemetryTracesConfig {
+    pub transport: TelemetryTransport,
+    pub endpoint: String,
+}
+
+#[derive(Debug, Serialize, Deserialize, PartialEq, Display, Copy, Clone)]
+#[serde(rename_all = "lowercase")]
+pub enum TelemetryTransport {
+    #[display("grpc")]
+    GRPC,
+    #[display("http")]
+    HTTP,
+}
+
+impl FromStr for TelemetryTransport {
+    type Err = String;
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "grpc" => Ok(TelemetryTransport::GRPC),
+            "http" => Ok(TelemetryTransport::HTTP),
+            _ => Err(format!("Invalid telemetry transport: {s}")),
+        }
+    }
+}
+
 impl ServerConfig {
-    pub async fn load(config_provider: &dyn ConfigProvider) -> Result<ServerConfig, ServerError> {
-        let server_config = config_provider.load_config().await?;
-        server_config.validate()?;
+    pub async fn load(config_provider: &dyn ConfigProvider) -> Result<ServerConfig, ConfigError> {
+        let server_config = config_provider
+            .load_config()
+            .await
+            .with_error(|_| format!("{COMPONENT} - failed to load config provider config"))?;
+        server_config
+            .validate()
+            .with_error(|_| format!("{COMPONENT} - failed to validate server config"))?;
         Ok(server_config)
     }
 }

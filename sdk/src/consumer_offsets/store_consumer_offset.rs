@@ -3,6 +3,7 @@ use crate::command::{Command, STORE_CONSUMER_OFFSET_CODE};
 use crate::consumer::{Consumer, ConsumerKind};
 use crate::error::IggyError;
 use crate::identifier::Identifier;
+use crate::utils::sizeable::Sizeable;
 use crate::validatable::Validatable;
 use bytes::{BufMut, Bytes, BytesMut};
 use serde::{Deserialize, Serialize};
@@ -84,22 +85,30 @@ impl BytesSerializable for StoreConsumerOffset {
         let mut position = 0;
         let consumer_kind = ConsumerKind::from_code(bytes[0])?;
         let consumer_id = Identifier::from_bytes(bytes.slice(1..))?;
-        position += 1 + consumer_id.get_size_bytes() as usize;
+        position += 1 + consumer_id.get_size_bytes().as_bytes_usize();
         let consumer = Consumer {
             kind: consumer_kind,
             id: consumer_id,
         };
         let stream_id = Identifier::from_bytes(bytes.slice(position..))?;
-        position += stream_id.get_size_bytes() as usize;
+        position += stream_id.get_size_bytes().as_bytes_usize();
         let topic_id = Identifier::from_bytes(bytes.slice(position..))?;
-        position += topic_id.get_size_bytes() as usize;
-        let partition_id = u32::from_le_bytes(bytes[position..position + 4].try_into()?);
+        position += topic_id.get_size_bytes().as_bytes_usize();
+        let partition_id = u32::from_le_bytes(
+            bytes[position..position + 4]
+                .try_into()
+                .map_err(|_| IggyError::InvalidNumberEncoding)?,
+        );
         let partition_id = if partition_id == 0 {
             None
         } else {
             Some(partition_id)
         };
-        let offset = u64::from_le_bytes(bytes[position + 4..position + 12].try_into()?);
+        let offset = u64::from_le_bytes(
+            bytes[position + 4..position + 12]
+                .try_into()
+                .map_err(|_| IggyError::InvalidNumberEncoding)?,
+        );
         let command = StoreConsumerOffset {
             consumer,
             stream_id,
@@ -143,15 +152,15 @@ mod tests {
         let mut position = 0;
         let consumer_kind = ConsumerKind::from_code(bytes[0]).unwrap();
         let consumer_id = Identifier::from_bytes(bytes.slice(1..)).unwrap();
-        position += 1 + consumer_id.get_size_bytes() as usize;
+        position += 1 + consumer_id.get_size_bytes().as_bytes_usize();
         let consumer = Consumer {
             kind: consumer_kind,
             id: consumer_id,
         };
         let stream_id = Identifier::from_bytes(bytes.slice(position..)).unwrap();
-        position += stream_id.get_size_bytes() as usize;
+        position += stream_id.get_size_bytes().as_bytes_usize();
         let topic_id = Identifier::from_bytes(bytes.slice(position..)).unwrap();
-        position += topic_id.get_size_bytes() as usize;
+        position += topic_id.get_size_bytes().as_bytes_usize();
         let partition_id = u32::from_le_bytes(bytes[position..position + 4].try_into().unwrap());
         let offset = u64::from_le_bytes(bytes[position + 4..position + 12].try_into().unwrap());
 

@@ -122,7 +122,6 @@ impl CustomEnvProvider {
                     combined_keys.clear();
                     return;
                 }
-
                 _ => {
                     continue;
                 }
@@ -152,6 +151,11 @@ impl CustomEnvProvider {
     }
 
     fn try_parse_value(value: &str) -> FigmentValue {
+        if value.starts_with('[') && value.ends_with(']') {
+            let value = value.trim_start_matches('[').trim_end_matches(']');
+            let values: Vec<FigmentValue> = value.split(',').map(Self::try_parse_value).collect();
+            return FigmentValue::from(values);
+        }
         if value == "true" {
             return FigmentValue::from(true);
         }

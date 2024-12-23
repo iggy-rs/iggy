@@ -86,12 +86,15 @@ impl BytesSerializable for ChangePassword {
         let current_password_length = bytes[position];
         position += 1;
         let current_password =
-            from_utf8(&bytes[position..position + current_password_length as usize])?.to_string();
+            from_utf8(&bytes[position..position + current_password_length as usize])
+                .map_err(|_| IggyError::InvalidUtf8)?
+                .to_string();
         position += current_password_length as usize;
         let new_password_length = bytes[position];
         position += 1;
-        let new_password =
-            from_utf8(&bytes[position..position + new_password_length as usize])?.to_string();
+        let new_password = from_utf8(&bytes[position..position + new_password_length as usize])
+            .map_err(|_| IggyError::InvalidUtf8)?
+            .to_string();
 
         let command = ChangePassword {
             user_id,

@@ -11,13 +11,12 @@ use iggy::error::IggyError;
 use iggy::utils::byte_size::IggyByteSize;
 use iggy::utils::crypto::Encryptor;
 use iggy::utils::timestamp::IggyTimestamp;
-use log::debug;
 use std::fmt::Debug;
 use std::path::Path;
 use std::sync::atomic::{AtomicU32, AtomicU64, Ordering};
 use std::sync::Arc;
 use tokio::io::{AsyncReadExt, BufReader};
-use tracing::{error, info};
+use tracing::{debug, error, info};
 
 const BUF_READER_CAPACITY_BYTES: usize = 512 * 1000;
 const FILE_STATE_PARSE_ERROR: &str = "STATE - failed to parse file state";
@@ -103,12 +102,15 @@ impl State for FileState {
             return Err(IggyError::StateFileNotFound);
         }
 
-        let file = file::open(&self.path).await.with_error(|_| {
-            format!(
-                "{COMPONENT} - failed to open state file, path: {}",
-                self.path
-            )
-        })?;
+        let file = file::open(&self.path)
+            .await
+            .with_error(|_| {
+                format!(
+                    "{COMPONENT} - failed to open state file, path: {}",
+                    self.path
+                )
+            })
+            .map_err(|_| IggyError::CannotReadFile)?;
         let file_size = file
             .metadata()
             .await
@@ -117,7 +119,8 @@ impl State for FileState {
                     "{COMPONENT} - failed to load state file metadata, path: {}",
                     self.path
                 )
-            })?
+            })
+            .map_err(|_| IggyError::CannotReadFileMetadata)?
             .len();
         if file_size == 0 {
             info!("State file is empty");
@@ -137,7 +140,8 @@ impl State for FileState {
             let index = reader
                 .read_u64_le()
                 .await
-                .with_error(|_| format!("{FILE_STATE_PARSE_ERROR} index"))?;
+                .with_error(|_| format!("{FILE_STATE_PARSE_ERROR} index"))
+                .map_err(|_| IggyError::InvalidNumberEncoding)?;
             total_size += 8;
             if entries_count > 0 && index != current_index + 1 {
                 error!(
@@ -153,65 +157,81 @@ impl State for FileState {
             let term = reader
                 .read_u64_le()
                 .await
-                .with_error(|_| format!("{FILE_STATE_PARSE_ERROR} term"))?;
+                .with_error(|_| format!("{FILE_STATE_PARSE_ERROR} term"))
+                .map_err(|_| IggyError::InvalidNumberEncoding)?;
             total_size += 8;
             let leader_id = reader
                 .read_u32_le()
                 .await
-                .with_error(|_| format!("{FILE_STATE_PARSE_ERROR} leader_id"))?;
+                .with_error(|_| format!("{FILE_STATE_PARSE_ERROR} leader_id"))
+                .map_err(|_| IggyError::InvalidNumberEncoding)?;
             total_size += 4;
             let version = reader
                 .read_u32_le()
                 .await
-                .with_error(|_| format!("{FILE_STATE_PARSE_ERROR} version"))?;
+                .with_error(|_| format!("{FILE_STATE_PARSE_ERROR} version"))
+                .map_err(|_| IggyError::InvalidNumberEncoding)?;
             total_size += 4;
             let flags = reader
                 .read_u64_le()
                 .await
-                .with_error(|_| format!("{FILE_STATE_PARSE_ERROR} flags"))?;
+                .with_error(|_| format!("{FILE_STATE_PARSE_ERROR} flags"))
+                .map_err(|_| IggyError::InvalidNumberEncoding)?;
             total_size += 8;
             let timestamp = IggyTimestamp::from(
                 reader
                     .read_u64_le()
                     .await
-                    .with_error(|_| format!("{FILE_STATE_PARSE_ERROR} timestamp"))?,
+                    .with_error(|_| format!("{FILE_STATE_PARSE_ERROR} timestamp"))
+                    .map_err(|_| IggyError::InvalidNumberEncoding)?,
             );
             total_size += 8;
             let user_id = reader
                 .read_u32_le()
                 .await
-                .with_error(|_| format!("{FILE_STATE_PARSE_ERROR} user_id"))?;
+                .with_error(|_| format!("{FILE_STATE_PARSE_ERROR} user_id"))
+                .map_err(|_| IggyError::InvalidNumberEncoding)?;
             total_size += 4;
             let checksum = reader
                 .read_u32_le()
                 .await
-                .with_error(|_| format!("{FILE_STATE_PARSE_ERROR} checksum"))?;
+                .with_error(|_| format!("{FILE_STATE_PARSE_ERROR} checksum"))
+                .map_err(|_| IggyError::InvalidNumberEncoding)?;
             total_size += 4;
             let context_length = reader
                 .read_u32_le()
                 .await
-                .with_error(|_| format!("{FILE_STATE_PARSE_ERROR} context context_length"))?
+                .with_error(|_| format!("{FILE_STATE_PARSE_ERROR} context context_length"))
+                .map_err(|_| IggyError::InvalidNumberEncoding)?
                 as usize;
             total_size += 4;
             let mut context = BytesMut::with_capacity(context_length);
             context.put_bytes(0, context_length);
-            reader.read_exact(&mut context).await?;
+            reader
+                .read_exact(&mut context)
+                .await
+                .map_err(|_| IggyError::CannotReadFile)?;
             let context = context.freeze();
             total_size += context_length as u64;
             let code = reader
                 .read_u32_le()
                 .await
-                .with_error(|_| format!("{FILE_STATE_PARSE_ERROR} code"))?;
+                .with_error(|_| format!("{FILE_STATE_PARSE_ERROR} code"))
+                .map_err(|_| IggyError::InvalidNumberEncoding)?;
             total_size += 4;
             let mut command_length = reader
                 .read_u32_le()
                 .await
-                .with_error(|_| format!("{FILE_STATE_PARSE_ERROR} command_length"))?
+                .with_error(|_| format!("{FILE_STATE_PARSE_ERROR} command_length"))
+                .map_err(|_| IggyError::InvalidNumberEncoding)?
                 as usize;
             total_size += 4;
             let mut command = BytesMut::with_capacity(command_length);
             command.put_bytes(0, command_length);
-            reader.read_exact(&mut command).await?;
+            reader
+                .read_exact(&mut command)
+                .await
+                .map_err(|_| IggyError::CannotReadFile)?;
             total_size += command_length as u64;
             let command_payload;
             if let Some(encryptor) = &self.encryptor {

@@ -46,14 +46,20 @@ impl PartitionStorage for FilePartitionStorage {
         );
         partition.created_at = state.created_at;
         let dir_entries = fs::read_dir(&partition.partition_path).await;
-        if let Err(err) = fs::read_dir(&partition.partition_path)
+        if fs::read_dir(&partition.partition_path)
                 .await
+                .inspect_err(|err| {
+                    error!(
+                            "Failed to read partition with ID: {} for stream with ID: {} and topic with ID: {} and path: {}. Error: {}",
+                            partition.partition_id, partition.stream_id, partition.topic_id, partition.partition_path, err
+                        );
+                })
                 .with_context(|| format!(
-                    "{COMPONENT} - failed to read partition with ID: {} for stream with ID: {} and topic with ID: {} and path: {}",
+                    "{COMPONENT} - failed to read partition with ID: {} for stream with ID: {} and topic with ID: {} and path: {}.",
                     partition.partition_id, partition.stream_id, partition.topic_id, partition.partition_path,
-                ))
+                )).is_err()
             {
-                return Err(IggyError::CannotReadPartitions(err));
+                return Err(IggyError::CannotReadPartitions);
             }
 
         let mut dir_entries = dir_entries.unwrap();
@@ -376,12 +382,17 @@ impl PartitionStorage for FilePartitionStorage {
 
             let path = path.unwrap().to_string();
             let consumer_id = consumer_id.unwrap();
-            let mut file = file::open(&path).await.with_error(|_| {
-                format!("{COMPONENT} - failed to open offset file, path: {path}")
-            })?;
-            let offset = file.read_u64_le().await.with_error(|_| {
-                format!("{COMPONENT} - failed to read consumer offset from file, path: {path}")
-            })?;
+            let mut file = file::open(&path)
+                .await
+                .with_error(|_| format!("{COMPONENT} - failed to open offset file, path: {path}"))
+                .map_err(|_| IggyError::CannotReadFile)?;
+            let offset = file
+                .read_u64_le()
+                .await
+                .with_error(|_| {
+                    format!("{COMPONENT} - failed to read consumer offset from file, path: {path}")
+                })
+                .map_err(|_| IggyError::CannotReadFile)?;
 
             consumer_offsets.push(ConsumerOffset {
                 kind,

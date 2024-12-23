@@ -28,13 +28,19 @@ impl TopicClient for HttpClient {
             return Ok(None);
         }
 
-        let topic = response.json().await?;
+        let topic = response
+            .json()
+            .await
+            .map_err(|_| IggyError::InvalidJsonResponse)?;
         Ok(Some(topic))
     }
 
     async fn get_topics(&self, stream_id: &Identifier) -> Result<Vec<Topic>, IggyError> {
         let response = self.get(&get_path(&stream_id.as_cow_str())).await?;
-        let topics = response.json().await?;
+        let topics = response
+            .json()
+            .await
+            .map_err(|_| IggyError::InvalidJsonResponse)?;
         Ok(topics)
     }
 
@@ -64,7 +70,10 @@ impl TopicClient for HttpClient {
                 },
             )
             .await?;
-        let topic = response.json().await?;
+        let topic = response
+            .json()
+            .await
+            .map_err(|_| IggyError::InvalidJsonResponse)?;
         Ok(topic)
     }
 

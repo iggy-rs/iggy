@@ -203,7 +203,7 @@ impl Stream {
         let topic = self
             .topics
             .remove(&id)
-            .ok_or_else(|| IggyError::TopicIdNotFound(id, self.stream_id))?;
+            .ok_or(IggyError::TopicIdNotFound(id, self.stream_id))?;
 
         self.topics_ids
             .remove(&topic.name)
@@ -219,7 +219,7 @@ impl Stream {
 
         self.topics
             .remove(&topic_id)
-            .ok_or_else(|| IggyError::TopicIdNotFound(topic_id, self.stream_id))
+            .ok_or(IggyError::TopicIdNotFound(topic_id, self.stream_id))
     }
 
     pub async fn delete_topic(&mut self, id: &Identifier) -> Result<Topic, IggyError> {

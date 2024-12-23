@@ -70,13 +70,19 @@ impl BytesSerializable for CreatePersonalAccessToken {
         }
 
         let name_length = bytes[0];
-        let name = from_utf8(&bytes.slice(1..1 + name_length as usize))?.to_string();
+        let name = from_utf8(&bytes.slice(1..1 + name_length as usize))
+            .map_err(|_| IggyError::InvalidUtf8)?
+            .to_string();
         if name.len() != name_length as usize {
             return Err(IggyError::InvalidCommand);
         }
 
         let position = 1 + name_length as usize;
-        let expiry = u64::from_le_bytes(bytes[position..position + 8].try_into()?);
+        let expiry = u64::from_le_bytes(
+            bytes[position..position + 8]
+                .try_into()
+                .map_err(|_| IggyError::InvalidNumberEncoding)?,
+        );
         let expiry: IggyExpiry = expiry.into();
 
         let command = CreatePersonalAccessToken { name, expiry };

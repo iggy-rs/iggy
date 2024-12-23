@@ -15,7 +15,10 @@ const PATH: &str = "/personal-access-tokens";
 impl PersonalAccessTokenClient for HttpClient {
     async fn get_personal_access_tokens(&self) -> Result<Vec<PersonalAccessTokenInfo>, IggyError> {
         let response = self.get(PATH).await?;
-        let personal_access_tokens = response.json().await?;
+        let personal_access_tokens = response
+            .json()
+            .await
+            .map_err(|_| IggyError::InvalidJsonResponse)?;
         Ok(personal_access_tokens)
     }
 
@@ -33,7 +36,10 @@ impl PersonalAccessTokenClient for HttpClient {
                 },
             )
             .await?;
-        let personal_access_token = response.json().await?;
+        let personal_access_token = response
+            .json()
+            .await
+            .map_err(|_| IggyError::InvalidJsonResponse)?;
         Ok(personal_access_token)
     }
 
@@ -54,7 +60,10 @@ impl PersonalAccessTokenClient for HttpClient {
                 },
             )
             .await?;
-        let identity_info: IdentityInfo = response.json().await?;
+        let identity_info: IdentityInfo = response
+            .json()
+            .await
+            .map_err(|_| IggyError::InvalidJsonResponse)?;
         self.set_token_from_identity(&identity_info).await?;
         Ok(identity_info)
     }

@@ -1,12 +1,10 @@
 use crate::binary::sender::Sender;
 use crate::quic::COMPONENT;
 use async_trait::async_trait;
-use bytes::{BufMut, BytesMut};
 use error_set::ResultContext;
 use iggy::error::IggyError;
 use quinn::{RecvStream, SendStream};
-use std::mem::size_of;
-use tracing::debug;
+use tracing::{debug, error};
 
 const STATUS_OK: &[u8] = &[0; 4];
 
@@ -22,12 +20,12 @@ unsafe impl Sync for QuicSender {}
 #[async_trait]
 impl Sender for QuicSender {
     async fn read(&mut self, buffer: &mut [u8]) -> Result<usize, IggyError> {
-        let read_bytes = self.recv.read(buffer).await;
-        if let Err(error) = read_bytes {
-            return Err(IggyError::from(error));
-        }
+        let read_bytes = self.recv.read(buffer).await.map_err(|error| {
+            error!("Failed to read from the stream: {:?}", error);
+            IggyError::QuicError
+        })?;
 
-        Ok(read_bytes.unwrap().unwrap())
+        Ok(read_bytes.ok_or(IggyError::QuicError)?)
     }
 
     async fn send_empty_ok_response(&mut self) -> Result<(), IggyError> {
@@ -39,15 +37,7 @@ impl Sender for QuicSender {
     }
 
     async fn send_error_response(&mut self, error: IggyError) -> Result<(), IggyError> {
-        let error_message = error.to_string();
-        let length = error_message.len() as u32;
-
-        let mut error_details_buffer =
-            BytesMut::with_capacity(error_message.len() + size_of::<u32>());
-        error_details_buffer.put_u32_le(length);
-        error_details_buffer.put_slice(error_message.as_bytes());
-
-        self.send_response(&error.as_code().to_le_bytes(), &error_details_buffer)
+        self.send_response(&error.as_code().to_le_bytes(), &[])
             .await
     }
 }
@@ -59,10 +49,12 @@ impl QuicSender {
         self.send
             .write_all(&[status, &length, payload].as_slice().concat())
             .await
-            .with_error(|_| format!("{COMPONENT} - failed to write buffer to the stream"))?;
+            .with_error(|_| format!("{COMPONENT} - failed to write buffer to the stream"))
+            .map_err(|_| IggyError::QuicError)?;
         self.send
             .finish()
-            .with_error(|_| format!("{COMPONENT} - failed to finish send stream"))?;
+            .with_error(|_| format!("{COMPONENT} - failed to finish send stream"))
+            .map_err(|_| IggyError::QuicError)?;
         debug!("Sent response with status: {:?}", status);
         Ok(())
     }

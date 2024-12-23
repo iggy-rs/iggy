@@ -43,25 +43,29 @@ impl SystemInfoStorage for FileSystemInfoStorage {
                     "{COMPONENT} - failed to retrieve metadata for file at path: {}",
                     self.path
                 )
-            })?
+            })
+            .map_err(|_| IggyError::CannotReadFileMetadata)?
             .len() as usize;
         let mut buffer = BytesMut::with_capacity(file_size);
         buffer.put_bytes(0, file_size);
-        file.read_exact(&mut buffer).await.with_error(|_| {
-            format!(
-                "{COMPONENT} - failed to read file content from path: {}",
-                self.path
-            )
-        })?;
+        file.read_exact(&mut buffer)
+            .await
+            .with_error(|_| {
+                format!(
+                    "{COMPONENT} - failed to read file content from path: {}",
+                    self.path
+                )
+            })
+            .map_err(|_| IggyError::CannotReadFile)?;
         bincode::deserialize(&buffer)
             .with_context(|| "Failed to deserialize system info")
-            .map_err(IggyError::CannotDeserializeResource)
+            .map_err(|_| IggyError::CannotDeserializeResource)
     }
 
     async fn save(&self, system_info: &SystemInfo) -> Result<(), IggyError> {
         let data = bincode::serialize(&system_info)
             .with_context(|| "Failed to serialize system info")
-            .map_err(IggyError::CannotSerializeResource)?;
+            .map_err(|_| IggyError::CannotSerializeResource)?;
         self.persister
             .overwrite(&self.path, &data)
             .await

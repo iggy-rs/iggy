@@ -268,19 +268,31 @@ impl BytesSerializable for PollMessages {
         position += stream_id.get_size_bytes().as_bytes_usize();
         let topic_id = Identifier::from_bytes(bytes.slice(position..))?;
         position += topic_id.get_size_bytes().as_bytes_usize();
-        let partition_id = u32::from_le_bytes(bytes[position..position + 4].try_into()?);
+        let partition_id = u32::from_le_bytes(
+            bytes[position..position + 4]
+                .try_into()
+                .map_err(|_| IggyError::InvalidNumberEncoding)?,
+        );
         let partition_id = match partition_id {
             0 => None,
             partition_id => Some(partition_id),
         };
         let polling_kind = PollingKind::from_code(bytes[position + 4])?;
         position += 5;
-        let value = u64::from_le_bytes(bytes[position..position + 8].try_into()?);
+        let value = u64::from_le_bytes(
+            bytes[position..position + 8]
+                .try_into()
+                .map_err(|_| IggyError::InvalidNumberEncoding)?,
+        );
         let strategy = PollingStrategy {
             kind: polling_kind,
             value,
         };
-        let count = u32::from_le_bytes(bytes[position + 8..position + 12].try_into()?);
+        let count = u32::from_le_bytes(
+            bytes[position + 8..position + 12]
+                .try_into()
+                .map_err(|_| IggyError::InvalidNumberEncoding)?,
+        );
         let auto_commit = bytes[position + 12];
         let auto_commit = matches!(auto_commit, 1);
         let command = PollMessages {
@@ -379,7 +391,11 @@ impl BytesSerializable for PollingStrategy {
         }
 
         let kind = PollingKind::from_code(bytes[0])?;
-        let value = u64::from_le_bytes(bytes[1..9].try_into()?);
+        let value = u64::from_le_bytes(
+            bytes[1..9]
+                .try_into()
+                .map_err(|_| IggyError::InvalidNumberEncoding)?,
+        );
         let strategy = PollingStrategy { kind, value };
         Ok(strategy)
     }

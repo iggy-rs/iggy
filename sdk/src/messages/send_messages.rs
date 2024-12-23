@@ -381,11 +381,19 @@ impl BytesSerializable for Message {
             return Err(IggyError::InvalidCommand);
         }
 
-        let mut id = u128::from_le_bytes(bytes[..16].try_into()?);
+        let mut id = u128::from_le_bytes(
+            bytes[..16]
+                .try_into()
+                .map_err(|_| IggyError::InvalidNumberEncoding)?,
+        );
         if id == 0 {
             id = Uuid::now_v7().to_u128_le();
         }
-        let headers_length = u32::from_le_bytes(bytes[16..20].try_into()?);
+        let headers_length = u32::from_le_bytes(
+            bytes[16..20]
+                .try_into()
+                .map_err(|_| IggyError::InvalidNumberEncoding)?,
+        );
         let headers = if headers_length > 0 {
             Some(HashMap::from_bytes(
                 bytes.slice(20..20 + headers_length as usize),
@@ -395,7 +403,9 @@ impl BytesSerializable for Message {
         };
 
         let payload_length = u32::from_le_bytes(
-            bytes[20 + headers_length as usize..24 + headers_length as usize].try_into()?,
+            bytes[20 + headers_length as usize..24 + headers_length as usize]
+                .try_into()
+                .map_err(|_| IggyError::InvalidNumberEncoding)?,
         );
         if payload_length == 0 {
             return Err(IggyError::EmptyMessagePayload);

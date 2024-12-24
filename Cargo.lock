@@ -3144,9 +3144,9 @@ dependencies = [
 
 [[package]]
 name = "passterm"
-version = "2.0.4"
+version = "2.0.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d1e7a4c22a6cce262e8c126b3052e6baf05d4dd5699ef23ed6dadd85c2a1194a"
+checksum = "150ca2316c7813c688677784f20bb0a9efab639415ae1961869863ee99a81e51"
 dependencies = [
  "libc",
 ]

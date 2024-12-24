@@ -8,7 +8,7 @@ ahash = { version = "0.8.11", features = ["serde"] }
 assert_cmd = "2.0.14"
 async-trait = "0.1.82"
 bytes = "1.6.0"
-chrono = "0.4.38"
+chrono = "0.4.39"
 ctor = "0.2.8"
 derive_more = "1.0.0"
 env_logger = "0.11.5"

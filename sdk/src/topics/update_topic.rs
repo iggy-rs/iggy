@@ -89,7 +89,7 @@ impl BytesSerializable for UpdateTopic {
         let stream_id_bytes = self.stream_id.to_bytes();
         let topic_id_bytes = self.topic_id.to_bytes();
         let mut bytes = BytesMut::with_capacity(
-            14 + stream_id_bytes.len() + topic_id_bytes.len() + self.name.len(),
+            19 + stream_id_bytes.len() + topic_id_bytes.len() + self.name.len(),
         );
         bytes.put_slice(&stream_id_bytes.clone());
         bytes.put_slice(&topic_id_bytes.clone());
@@ -107,7 +107,7 @@ impl BytesSerializable for UpdateTopic {
     }
 
     fn from_bytes(bytes: Bytes) -> Result<UpdateTopic, IggyError> {
-        if bytes.len() < 16 {
+        if bytes.len() < 21 {
             return Err(IggyError::InvalidCommand);
         }
         let mut position = 0;
@@ -229,7 +229,7 @@ mod tests {
         let stream_id_bytes = stream_id.to_bytes();
         let topic_id_bytes = topic_id.to_bytes();
         let mut bytes =
-            BytesMut::with_capacity(5 + stream_id_bytes.len() + topic_id_bytes.len() + name.len());
+            BytesMut::with_capacity(19 + stream_id_bytes.len() + topic_id_bytes.len() + name.len());
         bytes.put_slice(&stream_id_bytes);
         bytes.put_slice(&topic_id_bytes);
         bytes.put_u8(compression_algorithm.as_code());
@@ -247,8 +247,10 @@ mod tests {
         let command = command.unwrap();
         assert_eq!(command.stream_id, stream_id);
         assert_eq!(command.topic_id, topic_id);
+        assert_eq!(command.compression_algorithm, compression_algorithm);
         assert_eq!(command.message_expiry, message_expiry);
-        assert_eq!(command.stream_id, stream_id);
-        assert_eq!(command.topic_id, topic_id);
+        assert_eq!(command.max_topic_size, max_topic_size);
+        assert_eq!(command.replication_factor, Some(replication_factor));
+        assert_eq!(command.name, name);
     }
 }

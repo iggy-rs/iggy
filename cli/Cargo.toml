@@ -22,7 +22,7 @@ clap_complete = "4.5.26"
 figlet-rs = "0.1.5"
 iggy = { path = "../sdk", features = ["iggy-cli"], version = "0.6.60" }
 keyring = { version = "3.2.0", features = ["sync-secret-service", "vendored"], optional = true }
-passterm = "2.0.1"
+passterm = "2.0.5"
 thiserror = "2.0.9"
 tokio = { version = "1.40.0", features = ["full"] }
 tracing = "0.1.37"

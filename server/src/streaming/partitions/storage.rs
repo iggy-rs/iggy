@@ -1,4 +1,4 @@
-use crate::compat::index_conversion::index_converter::IndexConverter;
+use crate::compat::index_rebuilding::index_rebuilder::IndexRebuilder;
 use crate::state::system::PartitionState;
 use crate::streaming::batching::batch_accumulator::BatchAccumulator;
 use crate::streaming::partitions::partition::{ConsumerOffset, Partition};
@@ -98,24 +98,42 @@ impl PartitionStorage for FilePartitionStorage {
             );
 
             let index_path = segment.index_path.to_owned();
+            let log_path = segment.log_path.to_owned();
             let time_index_path = index_path.replace(INDEX_EXTENSION, "timeindex");
 
-            let index_converter = IndexConverter::new(index_path, time_index_path);
-            if let Ok(true) = index_converter.needs_migration().await {
-                match index_converter.migrate().await {
-                    Ok(_) => {
-                        info!(
-                            "Migrated indexes for partition with ID: {} for stream with ID: {} and topic with ID: {}.",
-                            partition.partition_id, partition.stream_id, partition.topic_id
-                        );
-                    }
-                    Err(err) => {
-                        error!(
-                            "Failed to migrate indexes for partition with ID: {} for stream with ID: {} and topic with ID: {}. Error: {}",
-                            partition.partition_id, partition.stream_id, partition.topic_id, err
-                        );
-                    }
-                }
+            let index_cache_enabled = partition.config.segment.cache_indexes;
+
+            let index_path_exists = tokio::fs::try_exists(&index_path).await.unwrap();
+            let time_index_path_exists = tokio::fs::try_exists(&time_index_path).await.unwrap();
+
+            // Rebuild indexes in 2 cases:
+            // 1. Index cache is enabled and index at path does not exists.
+            // 2. Index cache is enabled and time index at path exists.
+            if index_cache_enabled && (!index_path_exists || time_index_path_exists) {
+                warn!(
+                    "Index at path {} does not exist, rebuilding it based on {}...",
+                    index_path, log_path
+                );
+                let now = tokio::time::Instant::now();
+                let index_rebuilder =
+                    IndexRebuilder::new(log_path.clone(), index_path.clone(), start_offset);
+                index_rebuilder.rebuild().await.unwrap_or_else(|e| {
+                    panic!(
+                        "Failed to rebuild index for partition with ID: {} for
+                    stream with ID: {} and topic with ID: {}. Error: {e}",
+                        partition.partition_id, partition.stream_id, partition.topic_id,
+                    )
+                });
+                info!(
+                    "Rebuilding index for path {} finished, it took {} ms",
+                    index_path,
+                    now.elapsed().as_millis()
+                );
+            }
+
+            // Remove legacy time index if it exists.
+            if time_index_path_exists {
+                tokio::fs::remove_file(&time_index_path).await.unwrap();
             }
 
             segment
@@ -330,7 +348,7 @@ impl PartitionStorage for FilePartitionStorage {
             .overwrite(&offset.path, &offset.offset.to_le_bytes())
             .await
             .with_error(|_| format!(
-                "{COMPONENT} - failed to ovewrite consumer offset with value: {}, kind: {}, consumer ID: {}, path: {}",
+                "{COMPONENT} - failed to overwrite consumer offset with value: {}, kind: {}, consumer ID: {}, path: {}",
                 offset.offset, offset.kind, offset.consumer_id, offset.path,
             ))?;
         trace!(

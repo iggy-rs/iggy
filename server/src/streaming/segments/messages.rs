@@ -181,7 +181,7 @@ impl Segment {
             .load_message_batches(self, index_range)
             .await
             .with_error(|_| format!(
-                "STREAMING_SEGMENT - failed to load message batches, stream ID: {}, topic ID: {}, partition ID: {}, startf offset: {}, end offset: {}",
+                "STREAMING_SEGMENT - failed to load message batches, stream ID: {}, topic ID: {}, partition ID: {}, start offset: {}, end offset: {}",
                 self.stream_id, self.topic_id, self.partition_id, start_offset, end_offset,
             ))?
             .iter()

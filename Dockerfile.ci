@@ -1,4 +1,4 @@
-FROM ubuntu:latest
+FROM alpine:latest
 
 ARG IGGY_CMD_PATH
 RUN test -n "$IGGY_CMD_PATH" || (echo "IGGY_CMD_PATH not set" && false)

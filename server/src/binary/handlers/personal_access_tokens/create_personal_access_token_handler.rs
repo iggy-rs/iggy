@@ -7,7 +7,7 @@ use crate::streaming::personal_access_tokens::personal_access_token::PersonalAcc
 use crate::streaming::session::Session;
 use crate::streaming::systems::system::SharedSystem;
 use anyhow::Result;
-use error_set::ResultContext;
+use error_set::ErrContext;
 use iggy::error::IggyError;
 use iggy::personal_access_tokens::create_personal_access_token::CreatePersonalAccessToken;
 use tracing::{debug, instrument};
@@ -27,7 +27,7 @@ pub async fn handle(
         let token = system
             .create_personal_access_token(session, &command.name, command.expiry)
             .await
-            .with_error(|_| {
+            .with_error_context(|_| {
                 format!(
                     "{COMPONENT} - failed to create personal access token with name: {}, session: {session}",
                     command.name
@@ -51,7 +51,7 @@ pub async fn handle(
             }),
         )
         .await
-        .with_error(|_| {
+        .with_error_context(|_| {
             format!(
                 "{COMPONENT} - failed to create personal access token with name: {}, session: {session}",
                 command.name

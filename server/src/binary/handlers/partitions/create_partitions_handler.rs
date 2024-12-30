@@ -4,7 +4,7 @@ use crate::state::command::EntryCommand;
 use crate::streaming::session::Session;
 use crate::streaming::systems::system::SharedSystem;
 use anyhow::Result;
-use error_set::ResultContext;
+use error_set::ErrContext;
 use iggy::error::IggyError;
 use iggy::partitions::create_partitions::CreatePartitions;
 use tracing::{debug, instrument};
@@ -27,7 +27,7 @@ pub async fn handle(
                 command.partitions_count,
             )
             .await
-            .with_error(|_| {
+            .with_error_context(|_| {
                 format!(
                     "{COMPONENT} - failed to create partitions for stream_id: {}, topic_id: {}, session: {}",
                     command.stream_id, command.topic_id, session
@@ -46,7 +46,7 @@ pub async fn handle(
             EntryCommand::CreatePartitions(command),
         )
         .await
-        .with_error(|_| {
+        .with_error_context(|_| {
             format!(
                 "{COMPONENT} - failed to apply create partitions for stream_id: {}, topic_id: {}, session: {}",
                 stream_id, topic_id, session

@@ -26,7 +26,7 @@ console-subscriber = { version = "0.4.0", optional = true }
 dashmap = "6.0.1"
 derive_more = "1.0.0"
 dotenvy = { version = "0.15.7" }
-error_set = { version = "0.8.3", features = ["tracing"] }
+error_set = { version = "0.8.5", features = ["tracing"] }
 figlet-rs = "0.1.5"
 figment = { version = "0.10.19", features = ["toml", "env"] }
 flume = "0.11.0"

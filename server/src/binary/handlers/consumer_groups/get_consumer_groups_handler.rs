@@ -4,7 +4,7 @@ use crate::binary::sender::Sender;
 use crate::streaming::session::Session;
 use crate::streaming::systems::system::SharedSystem;
 use anyhow::Result;
-use error_set::ResultContext;
+use error_set::ErrContext;
 use iggy::consumer_groups::get_consumer_groups::GetConsumerGroups;
 use iggy::error::IggyError;
 use tracing::debug;
@@ -19,7 +19,7 @@ pub async fn handle(
     let system = system.read().await;
     let consumer_groups = system
         .get_consumer_groups(session, &command.stream_id, &command.topic_id)
-        .with_error(|_| {
+        .with_error_context(|_| {
             format!(
                 "{COMPONENT} - failed on getting consumer groups for stream_id: {}, topic_id: {}, session: {}",
                 command.stream_id, command.topic_id, session

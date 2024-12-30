@@ -3,7 +3,7 @@ use crate::binary::sender::Sender;
 use crate::streaming::session::Session;
 use crate::streaming::systems::system::SharedSystem;
 use anyhow::Result;
-use error_set::ResultContext;
+use error_set::ErrContext;
 use iggy::error::IggyError;
 use iggy::messages::flush_unsaved_buffer::FlushUnsavedBuffer;
 use tracing::{debug, instrument};
@@ -24,7 +24,7 @@ pub async fn handle(
     system
         .flush_unsaved_buffer(session, stream_id, topic_id, partition_id, fsync)
         .await
-        .with_error(|_| {
+        .with_error_context(|_| {
             format!(
                 "{COMPONENT} - failed to flush unsaved buffer for stream_id: {}, topic_id: {}, partition_id: {}, session: {}",
                 command.stream_id, command.topic_id, command.partition_id, session

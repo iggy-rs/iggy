@@ -3,7 +3,7 @@ use std::sync::atomic::Ordering;
 use crate::streaming::partitions::partition::Partition;
 use crate::streaming::partitions::COMPONENT;
 use crate::streaming::segments::segment::Segment;
-use error_set::ResultContext;
+use error_set::ErrContext;
 use iggy::error::IggyError;
 use iggy::utils::timestamp::IggyTimestamp;
 use tracing::info;
@@ -64,7 +64,7 @@ impl Partition {
             self.messages_count_of_parent_topic.clone(),
             self.messages_count.clone(),
         );
-        new_segment.persist().await.with_error(|_| {
+        new_segment.persist().await.with_error_context(|_| {
             format!("{COMPONENT} - failed to persist new segment: {new_segment}",)
         })?;
         self.segments.push(new_segment);
@@ -88,7 +88,9 @@ impl Partition {
                 .segment
                 .delete(segment)
                 .await
-                .with_error(|_| format!("{COMPONENT} - failed to delete segment: {segment}",))?;
+                .with_error_context(|_| {
+                    format!("{COMPONENT} - failed to delete segment: {segment}",)
+                })?;
             self.segments_count_of_parent_stream
                 .fetch_sub(1, Ordering::SeqCst);
 

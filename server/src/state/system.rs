@@ -1,6 +1,6 @@
 use crate::state::{EntryCommand, StateEntry, COMPONENT};
 use crate::streaming::personal_access_tokens::personal_access_token::PersonalAccessToken;
-use error_set::ResultContext;
+use error_set::ErrContext;
 use iggy::compression::compression_algorithm::CompressionAlgorithm;
 use iggy::error::IggyError;
 use iggy::identifier::{IdKind, Identifier};
@@ -79,7 +79,7 @@ impl SystemState {
         let mut current_user_id = 0;
         for entry in entries {
             debug!("Processing state entry: {entry}",);
-            match entry.command().with_error(|_| {
+            match entry.command().with_error_context(|_| {
                 format!("{COMPONENT} - failed to retrieve state entry command: {entry}")
             })? {
                 EntryCommand::CreateStream(command) => {
@@ -323,7 +323,7 @@ impl SystemState {
                     let token_hash = command.hash;
                     let user_id = find_user_id(
                         &users,
-                        &entry.user_id.try_into().with_error(|_| {
+                        &entry.user_id.try_into().with_error_context(|_| {
                             format!(
                                 "{COMPONENT} - failed to find user, user ID: {}",
                                 entry.user_id
@@ -356,7 +356,7 @@ impl SystemState {
                 EntryCommand::DeletePersonalAccessToken(command) => {
                     let user_id = find_user_id(
                         &users,
-                        &entry.user_id.try_into().with_error(|_| {
+                        &entry.user_id.try_into().with_error_context(|_| {
                             format!(
                                 "{COMPONENT} - failed to find user, user ID: {}",
                                 entry.user_id

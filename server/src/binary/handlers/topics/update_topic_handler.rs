@@ -4,7 +4,7 @@ use crate::state::command::EntryCommand;
 use crate::streaming::session::Session;
 use crate::streaming::systems::system::SharedSystem;
 use anyhow::Result;
-use error_set::ResultContext;
+use error_set::ErrContext;
 use iggy::error::IggyError;
 use iggy::topics::update_topic::UpdateTopic;
 use tracing::{debug, instrument};
@@ -32,7 +32,7 @@ pub async fn handle(
                 command.replication_factor,
             )
             .await
-            .with_error(|_| format!(
+            .with_error_context(|_| format!(
                 "{COMPONENT} - failed to update topic with id: {}, stream_id: {}, session: {session}",
                 command.topic_id, command.stream_id
             ))?;
@@ -48,7 +48,7 @@ pub async fn handle(
         .state
         .apply(session.get_user_id(), EntryCommand::UpdateTopic(command))
         .await
-        .with_error(|_| format!(
+        .with_error_context(|_| format!(
             "{COMPONENT} - failed to apply update topic with id: {}, stream_id: {}, session: {session}",
             topic_id, stream_id
         ))?;

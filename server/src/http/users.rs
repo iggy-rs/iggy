@@ -11,7 +11,7 @@ use axum::extract::{Path, State};
 use axum::http::StatusCode;
 use axum::routing::{delete, get, post, put};
 use axum::{Extension, Json, Router};
-use error_set::ResultContext;
+use error_set::ErrContext;
 use iggy::identifier::Identifier;
 use iggy::models::identity_info::IdentityInfo;
 use iggy::models::user_info::{UserInfo, UserInfoDetails};
@@ -53,7 +53,7 @@ async fn get_user(
             &Session::stateless(identity.user_id, identity.ip_address),
             &identifier_user_id,
         )
-        .with_error(|_| format!("{COMPONENT} - failed to find user, user ID: {}", user_id));
+        .with_error_context(|_| format!("{COMPONENT} - failed to find user, user ID: {}", user_id));
     if user.is_err() {
         return Err(CustomError::ResourceNotFound);
     }
@@ -70,7 +70,7 @@ async fn get_users(
     let users = system
         .get_users(&Session::stateless(identity.user_id, identity.ip_address))
         .await
-        .with_error(|_| {
+        .with_error_context(|_| {
             format!(
                 "{COMPONENT} - failed to get users, user ID: {}",
                 identity.user_id
@@ -99,7 +99,7 @@ async fn create_user(
                 command.permissions.clone(),
             )
             .await
-            .with_error(|_| {
+            .with_error_context(|_| {
                 format!(
                     "{COMPONENT} - failed to create user, username: {}",
                     command.username
@@ -122,7 +122,7 @@ async fn create_user(
             }),
         )
         .await
-        .with_error(|_| {
+        .with_error_context(|_| {
             format!(
                 "{COMPONENT} - failed to apply create user, username: {}",
                 command.username
@@ -151,7 +151,9 @@ async fn update_user(
                 command.status,
             )
             .await
-            .with_error(|_| format!("{COMPONENT} - failed to update user, user ID: {}", user_id))?;
+            .with_error_context(|_| {
+                format!("{COMPONENT} - failed to update user, user ID: {}", user_id)
+            })?;
     }
 
     let system = state.system.read().await;
@@ -159,7 +161,7 @@ async fn update_user(
         .state
         .apply(identity.user_id, EntryCommand::UpdateUser(command))
         .await
-        .with_error(|_| {
+        .with_error_context(|_| {
             format!(
                 "{COMPONENT} - failed to apply update user, user ID: {}",
                 user_id
@@ -186,7 +188,7 @@ async fn update_permissions(
                 command.permissions.clone(),
             )
             .await
-            .with_error(|_| {
+            .with_error_context(|_| {
                 format!(
                     "{COMPONENT} - failed to update permissions, user ID: {}",
                     user_id
@@ -199,7 +201,7 @@ async fn update_permissions(
         .state
         .apply(identity.user_id, EntryCommand::UpdatePermissions(command))
         .await
-        .with_error(|_| {
+        .with_error_context(|_| {
             format!(
                 "{COMPONENT} - failed to apply update permissions, user ID: {}",
                 user_id
@@ -227,7 +229,7 @@ async fn change_password(
                 &command.new_password,
             )
             .await
-            .with_error(|_| {
+            .with_error_context(|_| {
                 format!(
                     "{COMPONENT} - failed to change password, user ID: {}",
                     user_id
@@ -248,7 +250,7 @@ async fn change_password(
             }),
         )
         .await
-        .with_error(|_| {
+        .with_error_context(|_| {
             format!(
                 "{COMPONENT} - failed to apply change password, user ID: {}",
                 user_id
@@ -272,7 +274,9 @@ async fn delete_user(
                 &identifier_user_id,
             )
             .await
-            .with_error(|_| format!("{COMPONENT} - failed to delete user, user ID: {}", user_id))?;
+            .with_error_context(|_| {
+                format!("{COMPONENT} - failed to delete user, user ID: {}", user_id)
+            })?;
     }
 
     let system = state.system.read().await;
@@ -285,7 +289,7 @@ async fn delete_user(
             }),
         )
         .await
-        .with_error(|_| {
+        .with_error_context(|_| {
             format!(
                 "{COMPONENT} - failed to apply delete user, user ID: {}",
                 user_id
@@ -304,7 +308,7 @@ async fn login_user(
     let user = system
         .login_user(&command.username, &command.password, None)
         .await
-        .with_error(|_| {
+        .with_error_context(|_| {
             format!(
                 "{COMPONENT} - failed to login, username: {}",
                 command.username
@@ -323,7 +327,7 @@ async fn logout_user(
     system
         .logout_user(&Session::stateless(identity.user_id, identity.ip_address))
         .await
-        .with_error(|_| {
+        .with_error_context(|_| {
             format!(
                 "{COMPONENT} - failed to logout, user ID: {}",
                 identity.user_id
@@ -333,7 +337,7 @@ async fn logout_user(
         .jwt_manager
         .revoke_token(&identity.token_id, identity.token_expiry)
         .await
-        .with_error(|_| {
+        .with_error_context(|_| {
             format!(
                 "{COMPONENT} - failed to revoke token, user ID: {}",
                 identity.user_id
@@ -350,7 +354,7 @@ async fn refresh_token(
         .jwt_manager
         .refresh_token(&command.token)
         .await
-        .with_error(|_| "{COMPONENT} - failed to refresh token")?;
+        .with_error_context(|_| "{COMPONENT} - failed to refresh token")?;
     Ok(Json(map_generated_access_token_to_identity_info(token)))
 }
 

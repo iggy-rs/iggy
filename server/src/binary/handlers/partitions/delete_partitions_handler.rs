@@ -4,7 +4,7 @@ use crate::state::command::EntryCommand;
 use crate::streaming::session::Session;
 use crate::streaming::systems::system::SharedSystem;
 use anyhow::Result;
-use error_set::ResultContext;
+use error_set::ErrContext;
 use iggy::error::IggyError;
 use iggy::partitions::delete_partitions::DeletePartitions;
 use tracing::{debug, instrument};
@@ -30,7 +30,7 @@ pub async fn handle(
                 command.partitions_count,
             )
             .await
-            .with_error(|_| {
+            .with_error_context(|_| {
                 format!(
                     "{COMPONENT} - failed to delete partitions for stream_id: {}, topic_id: {}, session: {}",
                     stream_id, topic_id, session
@@ -46,7 +46,7 @@ pub async fn handle(
             EntryCommand::DeletePartitions(command),
         )
         .await
-        .with_error(|_| {
+        .with_error_context(|_| {
             format!(
                 "{COMPONENT} - failed to apply delete partitions for stream_id: {}, topic_id: {}, session: {}",
                 stream_id, topic_id, session

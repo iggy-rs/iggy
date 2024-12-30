@@ -1,12 +1,12 @@
 [package]
 name = "server"
-version = "0.4.92"
+version = "0.4.93"
 edition = "2021"
 build = "src/build.rs"
 
 [features]
 default = []
-jemalloc = ["dep:tikv-jemallocator"]
+mimalloc = ["dep:mimalloc"]
 tokio-console = ["dep:console-subscriber", "tokio/tracing"]
 
 [dependencies]
@@ -90,7 +90,10 @@ xxhash-rust = { version = "0.8.12", features = ["xxh32"] }
 zip = "2.2.0"
 
 [target.'cfg(not(target_env = "msvc"))'.dependencies]
-tikv-jemallocator = { version = "0.6", optional = true }
+mimalloc = { version = "0.1", optional = true }
+
+[target.'cfg(target_env = "musl")'.dependencies]
+mimalloc = { version = "0.1", features = ["override"] }
 
 [build-dependencies]
 figment = { version = "0.10.18", features = ["json", "toml", "env"] }

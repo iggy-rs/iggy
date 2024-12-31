@@ -9,7 +9,7 @@ use axum::extract::{Path, State};
 use axum::http::StatusCode;
 use axum::routing::get;
 use axum::{Extension, Json, Router};
-use error_set::ResultContext;
+use error_set::ErrContext;
 use iggy::consumer_groups::create_consumer_group::CreateConsumerGroup;
 use iggy::consumer_groups::delete_consumer_group::DeleteConsumerGroup;
 use iggy::identifier::Identifier;
@@ -47,7 +47,7 @@ async fn get_consumer_group(
             &identifier_topic_id,
             &identifier_group_id,
         )
-        .with_error(|_| {
+        .with_error_context(|_| {
             format!(
                 "{COMPONENT} - failed to get consumer group, stream ID: {}, topic ID: {}, group ID: {}",
                 stream_id, topic_id, group_id,
@@ -102,7 +102,7 @@ async fn create_consumer_group(
                 &command.name,
             )
             .await
-            .with_error(|_| format!("{COMPONENT} - failed to create consumer group, stream ID: {}, topic ID: {}, group ID: {:?}", stream_id, topic_id, command.group_id))?;
+            .with_error_context(|_| format!("{COMPONENT} - failed to create consumer group, stream ID: {}, topic ID: {}, group ID: {:?}", stream_id, topic_id, command.group_id))?;
         let consumer_group = consumer_group.read().await;
         consumer_group_details = mapper::map_consumer_group(&consumer_group).await;
     }
@@ -135,7 +135,7 @@ async fn delete_consumer_group(
                 &identifier_group_id,
             )
             .await
-            .with_error(|_| format!("{COMPONENT} - failed to delete consumer group, stream ID: {}, topic ID: {}, group ID: {}", stream_id, topic_id, group_id))?;
+            .with_error_context(|_| format!("{COMPONENT} - failed to delete consumer group, stream ID: {}, topic ID: {}, group ID: {}", stream_id, topic_id, group_id))?;
     }
 
     let system = state.system.read().await;

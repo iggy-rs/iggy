@@ -5,7 +5,7 @@ use std::net::SocketAddr;
 use std::sync::Arc;
 
 use anyhow::Result;
-use error_set::ResultContext;
+use error_set::ErrContext;
 use quinn::{Endpoint, IdleTimeout, VarInt};
 use rustls::pki_types::{CertificateDer, PrivateKeyDer};
 use tracing::info;
@@ -39,7 +39,7 @@ fn configure_quic(config: QuicConfig) -> Result<quinn::ServerConfig, Box<dyn Err
     };
 
     let mut server_config = quinn::ServerConfig::with_single_cert(certificate, key)
-        .with_error(|_| format!("{COMPONENT} - failed to create server config"))?;
+        .with_error_context(|_| format!("{COMPONENT} - failed to create server config"))?;
     let mut transport = quinn::TransportConfig::default();
     transport.initial_mtu(config.initial_mtu.as_bytes_u64() as u16);
     transport.send_window(config.send_window.as_bytes_u64());
@@ -72,17 +72,17 @@ fn load_certificates(
     cert_file: &str,
     key_file: &str,
 ) -> Result<(Vec<CertificateDer<'static>>, PrivateKeyDer<'static>), Box<dyn Error>> {
-    let mut cert_chain_reader = BufReader::new(
-        File::open(cert_file)
-            .with_error(|_| format!("{COMPONENT} - failed to open cert file: {cert_file}"))?,
-    );
+    let mut cert_chain_reader =
+        BufReader::new(File::open(cert_file).with_error_context(|_| {
+            format!("{COMPONENT} - failed to open cert file: {cert_file}")
+        })?);
     let certs = rustls_pemfile::certs(&mut cert_chain_reader)
         .map(|x| CertificateDer::from(x.unwrap().to_vec()))
         .collect();
-    let mut key_reader = BufReader::new(
-        File::open(key_file)
-            .with_error(|_| format!("{COMPONENT} - failed to open key file: {key_file}"))?,
-    );
+    let mut key_reader =
+        BufReader::new(File::open(key_file).with_error_context(|_| {
+            format!("{COMPONENT} - failed to open key file: {key_file}")
+        })?);
     let mut keys = rustls_pemfile::rsa_private_keys(&mut key_reader)
         .filter(|key| key.is_ok())
         .map(|key| PrivateKeyDer::try_from(key.unwrap().secret_pkcs1_der().to_vec()))

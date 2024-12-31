@@ -1,7 +1,7 @@
 use crate::state::system::TopicState;
 use crate::streaming::topics::topic::Topic;
 use crate::streaming::topics::COMPONENT;
-use error_set::ResultContext;
+use error_set::ErrContext;
 use iggy::error::IggyError;
 use iggy::locking::IggySharedMutFn;
 
@@ -19,7 +19,7 @@ impl Topic {
     pub async fn delete(&self) -> Result<(), IggyError> {
         for partition in self.get_partitions() {
             let partition = partition.read().await;
-            partition.delete().await.with_error(|_| {
+            partition.delete().await.with_error_context(|_| {
                 format!(
                     "{COMPONENT} - failed to delete partition with id: {}",
                     partition.partition_id
@@ -36,7 +36,7 @@ impl Topic {
             let mut partition = partition.write().await;
             let partition_id = partition.partition_id;
             for segment in partition.get_segments_mut() {
-                saved_messages_number += segment.persist_messages().await.with_error(|_| format!("{COMPONENT} - failed to persist messages in segment, partiton ID: {partition_id}"))?;
+                saved_messages_number += segment.persist_messages().await.with_error_context(|_| format!("{COMPONENT} - failed to persist messages in segment, partition ID: {partition_id}"))?;
             }
         }
 

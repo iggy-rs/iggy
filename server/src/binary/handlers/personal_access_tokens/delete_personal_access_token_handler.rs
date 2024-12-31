@@ -4,7 +4,7 @@ use crate::state::command::EntryCommand;
 use crate::streaming::session::Session;
 use crate::streaming::systems::system::SharedSystem;
 use anyhow::Result;
-use error_set::ResultContext;
+use error_set::ErrContext;
 use iggy::error::IggyError;
 use iggy::personal_access_tokens::delete_personal_access_token::DeletePersonalAccessToken;
 use tracing::{debug, instrument};
@@ -24,7 +24,7 @@ pub async fn handle(
         system
             .delete_personal_access_token(session, &command.name)
             .await
-            .with_error(|_| {format!(
+            .with_error_context(|_| {format!(
                 "{COMPONENT} - failed to delete personal access token with name: {token_name}, session: {session}"
             )})?;
     }
@@ -37,7 +37,7 @@ pub async fn handle(
             EntryCommand::DeletePersonalAccessToken(command),
         )
         .await
-        .with_error(|_| {format!(
+        .with_error_context(|_| {format!(
             "{COMPONENT} - failed to apply delete personal access token with name: {token_name}, session: {session}"
         )})?;
     sender.send_empty_ok_response().await?;

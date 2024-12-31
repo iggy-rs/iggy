@@ -7,7 +7,7 @@ use axum::extract::{Path, Query, State};
 use axum::http::StatusCode;
 use axum::routing::get;
 use axum::{Extension, Json, Router};
-use error_set::ResultContext;
+use error_set::ErrContext;
 use iggy::consumer::Consumer;
 use iggy::consumer_offsets::get_consumer_offset::GetConsumerOffset;
 use iggy::consumer_offsets::store_consumer_offset::StoreConsumerOffset;
@@ -45,7 +45,7 @@ async fn get_consumer_offset(
             query.0.partition_id,
         )
         .await
-        .with_error(|_| format!("{COMPONENT} - failed to get consumer offset, stream ID: {}, topic ID: {}, patition ID: {:?}", stream_id, topic_id, query.0.partition_id));
+        .with_error_context(|_| format!("{COMPONENT} - failed to get consumer offset, stream ID: {}, topic ID: {}, patition ID: {:?}", stream_id, topic_id, query.0.partition_id));
     if offset.is_err() {
         return Err(CustomError::ResourceNotFound);
     }
@@ -74,6 +74,6 @@ async fn store_consumer_offset(
             command.0.offset,
         )
         .await
-        .with_error(|_| format!("{COMPONENT} - failed to store consumer offset, stream ID: {}, topic ID: {}, partition ID: {:?}", stream_id, topic_id, command.0.partition_id))?;
+        .with_error_context(|_| format!("{COMPONENT} - failed to store consumer offset, stream ID: {}, topic ID: {}, partition ID: {:?}", stream_id, topic_id, command.0.partition_id))?;
     Ok(StatusCode::NO_CONTENT)
 }

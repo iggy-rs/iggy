@@ -9,7 +9,7 @@ use axum::extract::{Path, State};
 use axum::http::StatusCode;
 use axum::routing::{delete, get};
 use axum::{Extension, Json, Router};
-use error_set::ResultContext;
+use error_set::ErrContext;
 use iggy::identifier::Identifier;
 use iggy::models::topic::{Topic, TopicDetails};
 use iggy::topics::create_topic::CreateTopic;
@@ -51,7 +51,7 @@ async fn get_topic(
             &identity_stream_id,
             &identity_topic_id,
         )
-        .with_error(|_| {
+        .with_error_context(|_| {
             format!(
                 "{COMPONENT} - failed to find topic, stream ID: {}, topic ID: {}",
                 stream_id, topic_id
@@ -77,7 +77,7 @@ async fn get_topics(
             &Session::stateless(identity.user_id, identity.ip_address),
             &stream_id,
         )
-        .with_error(|_| {
+        .with_error_context(|_| {
             format!(
                 "{COMPONENT} - failed to find topic, stream ID: {}",
                 stream_id
@@ -112,7 +112,7 @@ async fn create_topic(
                 command.replication_factor,
             )
             .await
-            .with_error(|_| {
+            .with_error_context(|_| {
                 format!(
                     "{COMPONENT} - failed to create topic, stream ID: {}",
                     stream_id
@@ -128,7 +128,7 @@ async fn create_topic(
         .state
         .apply(identity.user_id, EntryCommand::CreateTopic(command))
         .await
-        .with_error(|_| {
+        .with_error_context(|_| {
             format!(
                 "{COMPONENT} - failed to apply create topic, stream ID: {}",
                 stream_id
@@ -161,7 +161,7 @@ async fn update_topic(
                 command.replication_factor,
             )
             .await
-            .with_error(|_| {
+            .with_error_context(|_| {
                 format!(
                     "{COMPONENT} - failed to update topic, stream ID: {}, topic ID: {}",
                     stream_id, topic_id
@@ -176,7 +176,7 @@ async fn update_topic(
         .state
         .apply(identity.user_id, EntryCommand::UpdateTopic(command))
         .await
-        .with_error(|_| {
+        .with_error_context(|_| {
             format!(
                 "{COMPONENT} - failed to apply update topic, stream ID: {}, topic ID: {}",
                 stream_id, topic_id
@@ -202,7 +202,7 @@ async fn delete_topic(
                 &identifier_topic_id,
             )
             .await
-            .with_error(|_| {
+            .with_error_context(|_| {
                 format!(
                     "{COMPONENT} - failed to delete topic, stream ID: {}, topic ID: {}",
                     stream_id, topic_id
@@ -221,7 +221,7 @@ async fn delete_topic(
             }),
         )
         .await
-        .with_error(|_| {
+        .with_error_context(|_| {
             format!(
                 "{COMPONENT} - failed to apply delete topic, stream ID: {}, topic ID: {}",
                 stream_id, topic_id
@@ -246,7 +246,7 @@ async fn purge_topic(
             &identifier_topic_id,
         )
         .await
-        .with_error(|_| {
+        .with_error_context(|_| {
             format!(
                 "{COMPONENT} - failed to purge topic, stream ID: {}, topic ID: {}",
                 stream_id, topic_id
@@ -262,7 +262,7 @@ async fn purge_topic(
             }),
         )
         .await
-        .with_error(|_| {
+        .with_error_context(|_| {
             format!(
                 "{COMPONENT} - failed to apply purge topic, stream ID: {}, topic ID: {}",
                 stream_id, topic_id

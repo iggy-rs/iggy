@@ -1,7 +1,7 @@
 use crate::state::system::PartitionState;
 use crate::streaming::partitions::partition::Partition;
 use crate::streaming::partitions::COMPONENT;
-use error_set::ResultContext;
+use error_set::ErrContext;
 use iggy::error::IggyError;
 use std::path::Path;
 use std::sync::atomic::Ordering;
@@ -24,7 +24,9 @@ impl Partition {
                 .segment
                 .delete(segment)
                 .await
-                .with_error(|_| format!("{COMPONENT} - failed to delete segment: {segment}",))?;
+                .with_error_context(|_| {
+                    format!("{COMPONENT} - failed to delete segment: {segment}",)
+                })?;
             self.segments_count_of_parent_stream
                 .fetch_sub(1, Ordering::SeqCst);
         }
@@ -45,7 +47,9 @@ impl Partition {
                 .segment
                 .delete(segment)
                 .await
-                .with_error(|_| format!("{COMPONENT} - failed to delete segment: {segment}",))?;
+                .with_error_context(|_| {
+                    format!("{COMPONENT} - failed to delete segment: {segment}",)
+                })?;
             self.segments_count_of_parent_stream
                 .fetch_sub(1, Ordering::SeqCst);
         }
@@ -54,19 +58,21 @@ impl Partition {
             .partition
             .delete_consumer_offsets(&self.consumer_offsets_path)
             .await
-            .with_error(|_| {
+            .with_error_context(|_| {
                 format!("{COMPONENT} - failed to delete consumer offsets, partition: {self}")
             })?;
         self.storage
             .partition
             .delete_consumer_offsets(&self.consumer_group_offsets_path)
             .await
-            .with_error(|_| {
+            .with_error_context(|_| {
                 format!("{COMPONENT} - failed to delete consumer offsets, partition: {self}")
             })?;
-        self.add_persisted_segment(0).await.with_error(|_| {
-            format!("{COMPONENT} - failed to add persisted segment, partition: {self}",)
-        })?;
+        self.add_persisted_segment(0)
+            .await
+            .with_error_context(|_| {
+                format!("{COMPONENT} - failed to add persisted segment, partition: {self}",)
+            })?;
 
         if !Path::new(&self.consumer_offsets_path).exists()
             && create_dir(&self.consumer_offsets_path).await.is_err()

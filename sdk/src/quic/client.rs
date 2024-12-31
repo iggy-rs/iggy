@@ -489,9 +489,9 @@ fn configure(config: &QuicClientConfig) -> Result<ClientConfig, IggyError> {
     }
 
     if CryptoProvider::get_default().is_none() {
-        rustls::crypto::ring::default_provider()
-            .install_default()
-            .expect("Failed to install rustls crypto provider");
+        if let Err(e) = rustls::crypto::ring::default_provider().install_default() {
+            warn!("Failed to install rustls crypto provider. Error: {:?}. This may be normal if another thread installed it first.", e);
+        }
     }
     let mut client_config = match config.validate_certificate {
         true => ClientConfig::with_platform_verifier(),

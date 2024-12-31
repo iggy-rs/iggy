@@ -4,7 +4,7 @@ use crate::streaming::batching::message_batch::{RetainedMessageBatch, RETAINED_B
 use crate::streaming::models::messages::RetainedMessage;
 use crate::streaming::segments::index::{Index, IndexRange};
 use crate::streaming::segments::segment::Segment;
-use error_set::ResultContext;
+use error_set::ErrContext;
 use iggy::error::IggyError;
 use iggy::utils::byte_size::IggyByteSize;
 use iggy::utils::sizeable::Sizeable;
@@ -58,7 +58,7 @@ impl Segment {
         }
 
         // Can this be somehow improved? maybe with chain iterators
-        let mut messages = self.load_messages_from_disk(offset, end_offset).await.with_error(|_| format!(
+        let mut messages = self.load_messages_from_disk(offset, end_offset).await.with_error_context(|_| format!(
             "STREAMING_SEGMENT - failed to load messages from disk, stream ID: {}, topic ID: {}, partition ID: {}, start offset: {}, end offset :{}",
             self.stream_id, self.topic_id, self.partition_id, offset, end_offset,
         ))?;
@@ -89,7 +89,7 @@ impl Segment {
             .segment
             .load_newest_batches_by_size(self, size_bytes)
             .await
-            .with_error(|_| format!(
+            .with_error_context(|_| format!(
                 "STREAMING_SEGMENT - failed to load newest batches by size, stream ID: {}, topic ID: {}, partition ID: {}, size: {}",
                 self.stream_id, self.topic_id, self.partition_id, size_bytes,
             ))?;
@@ -155,7 +155,7 @@ impl Segment {
             .segment
             .load_index_range(self, start_offset, end_offset)
             .await
-            .with_error(|_| format!(
+            .with_error_context(|_| format!(
                 "STREAMING_SEGMENT - failed to load index range, stream ID: {}, topic ID: {}, partition ID: {}, start offset: {}, end offset :{}",
                 self.stream_id, self.topic_id, self.partition_id, start_offset, end_offset,
             ))?
@@ -180,8 +180,8 @@ impl Segment {
             .segment
             .load_message_batches(self, index_range)
             .await
-            .with_error(|_| format!(
-                "STREAMING_SEGMENT - failed to load message batches, stream ID: {}, topic ID: {}, partition ID: {}, startf offset: {}, end offset: {}",
+            .with_error_context(|_| format!(
+                "STREAMING_SEGMENT - failed to load message batches, stream ID: {}, topic ID: {}, partition ID: {}, start offset: {}, end offset: {}",
                 self.stream_id, self.topic_id, self.partition_id, start_offset, end_offset,
             ))?
             .iter()
@@ -283,7 +283,7 @@ impl Segment {
             self.unsaved_messages = Some(batch_accumulator);
         }
         let saved_bytes = storage.save_batches(self, batch).await?;
-        storage.save_index(&self.index_path, index).await.with_error(|_| format!(
+        storage.save_index(&self.index_path, index).await.with_error_context(|_| format!(
             "STREAMING_SEGMENT - failed to save index, stream ID: {}, topic ID: {}, partition ID: {}, path: {}",
             self.stream_id, self.topic_id, self.partition_id, self.index_path,
         ))?;

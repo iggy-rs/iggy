@@ -5,7 +5,7 @@ use crate::state::command::EntryCommand;
 use crate::streaming::session::Session;
 use crate::streaming::systems::system::SharedSystem;
 use anyhow::Result;
-use error_set::ResultContext;
+use error_set::ErrContext;
 use iggy::consumer_groups::create_consumer_group::CreateConsumerGroup;
 use iggy::error::IggyError;
 use tracing::{debug, instrument};
@@ -30,7 +30,7 @@ pub async fn handle(
                 &command.name,
             )
             .await
-            .with_error(|_| {
+            .with_error_context(|_| {
                 format!(
                     "{COMPONENT} - failed to create consumer group for stream_id: {}, topic_id: {}, group_id: {:?}, session: {:?}",
                     command.stream_id, command.topic_id, command.group_id, session
@@ -52,7 +52,7 @@ pub async fn handle(
             EntryCommand::CreateConsumerGroup(command),
         )
         .await
-        .with_error(|_| {
+        .with_error_context(|_| {
             format!(
                 "{COMPONENT} - failed to apply create consumer group for stream_id: {}, topic_id: {}, group_id: {:?}, session: {}",
                 stream_id, topic_id, group_id, session

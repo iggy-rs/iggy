@@ -3,9 +3,17 @@ on:
   pull_request:
     branches:
       - master
+    paths:
+      - '**/*.rs'
+      - '**/Cargo.toml'
+      - '**/Cargo.lock'
   push:
     branches:
       - master
+    paths:
+      - '**/*.rs'
+      - '**/Cargo.toml'
+      - '**/Cargo.lock'
 
 env:
   CARGO_TERM_COLOR: always

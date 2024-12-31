@@ -9,7 +9,7 @@ use crate::streaming::storage::SystemStorage;
 use crate::streaming::streams::stream::Stream;
 use crate::streaming::systems::COMPONENT;
 use crate::streaming::users::permissioner::Permissioner;
-use error_set::ResultContext;
+use error_set::ErrContext;
 use iggy::error::IggyError;
 use iggy::utils::byte_size::IggyByteSize;
 use iggy::utils::crypto::{Aes256GcmEncryptor, Encryptor};
@@ -208,24 +208,23 @@ impl System {
             self.config.get_system_path()
         );
 
-        let state_entries = self
-            .state
-            .init()
-            .await
-            .with_error(|_| format!("{COMPONENT} - failed to initialize state entries"))?;
+        let state_entries =
+            self.state.init().await.with_error_context(|_| {
+                format!("{COMPONENT} - failed to initialize state entries")
+            })?;
         let system_state = SystemState::init(state_entries)
             .await
-            .with_error(|_| format!("{COMPONENT} - failed to initialize system state"))?;
+            .with_error_context(|_| format!("{COMPONENT} - failed to initialize system state"))?;
         let now = Instant::now();
         self.load_version()
             .await
-            .with_error(|_| format!("{COMPONENT} - failed to load version"))?;
+            .with_error_context(|_| format!("{COMPONENT} - failed to load version"))?;
         self.load_users(system_state.users.into_values().collect())
             .await
-            .with_error(|_| format!("{COMPONENT} - failed to load users"))?;
+            .with_error_context(|_| format!("{COMPONENT} - failed to load users"))?;
         self.load_streams(system_state.streams.into_values().collect())
             .await
-            .with_error(|_| format!("{COMPONENT} - failed to load streams"))?;
+            .with_error_context(|_| format!("{COMPONENT} - failed to load streams"))?;
         if let Some(archiver) = self.archiver.as_ref() {
             archiver
                 .init()

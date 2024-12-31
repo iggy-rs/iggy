@@ -5,7 +5,7 @@ use crate::streaming::session::Session;
 use crate::streaming::systems::system::SharedSystem;
 use crate::streaming::utils::crypto;
 use anyhow::Result;
-use error_set::ResultContext;
+use error_set::ErrContext;
 use iggy::error::IggyError;
 use iggy::users::change_password::ChangePassword;
 use tracing::{debug, instrument};
@@ -28,7 +28,7 @@ pub async fn handle(
                 &command.new_password,
             )
             .await
-            .with_error(|_| {
+            .with_error_context(|_| {
                 format!(
                     "{COMPONENT} - failed to change password for user_id: {}, session: {session}",
                     command.user_id
@@ -49,7 +49,7 @@ pub async fn handle(
             }),
         )
         .await
-        .with_error(|_| {
+        .with_error_context(|_| {
             format!(
                 "{COMPONENT} - failed to apply change password for user_id: {}, session: {session}",
                 command.user_id

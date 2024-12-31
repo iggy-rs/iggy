@@ -1,4 +1,4 @@
-use crate::compat::index_conversion::index_converter::IndexConverter;
+use crate::compat::index_rebuilding::index_rebuilder::IndexRebuilder;
 use crate::state::system::PartitionState;
 use crate::streaming::batching::batch_accumulator::BatchAccumulator;
 use crate::streaming::partitions::partition::{ConsumerOffset, Partition};
@@ -9,7 +9,7 @@ use crate::streaming::storage::PartitionStorage;
 use crate::streaming::utils::file;
 use anyhow::Context;
 use async_trait::async_trait;
-use error_set::ResultContext;
+use error_set::ErrContext;
 use iggy::consumer::ConsumerKind;
 use iggy::error::IggyError;
 use std::path::Path;
@@ -98,30 +98,47 @@ impl PartitionStorage for FilePartitionStorage {
             );
 
             let index_path = segment.index_path.to_owned();
+            let log_path = segment.log_path.to_owned();
             let time_index_path = index_path.replace(INDEX_EXTENSION, "timeindex");
 
-            let index_converter = IndexConverter::new(index_path, time_index_path);
-            if let Ok(true) = index_converter.needs_migration().await {
-                match index_converter.migrate().await {
-                    Ok(_) => {
-                        info!(
-                            "Migrated indexes for partition with ID: {} for stream with ID: {} and topic with ID: {}.",
-                            partition.partition_id, partition.stream_id, partition.topic_id
-                        );
-                    }
-                    Err(err) => {
-                        error!(
-                            "Failed to migrate indexes for partition with ID: {} for stream with ID: {} and topic with ID: {}. Error: {}",
-                            partition.partition_id, partition.stream_id, partition.topic_id, err
-                        );
-                    }
-                }
+            let index_cache_enabled = partition.config.segment.cache_indexes;
+
+            let index_path_exists = tokio::fs::try_exists(&index_path).await.unwrap();
+            let time_index_path_exists = tokio::fs::try_exists(&time_index_path).await.unwrap();
+
+            // Rebuild indexes in 2 cases:
+            // 1. Index cache is enabled and index at path does not exists.
+            // 2. Index cache is enabled and time index at path exists.
+            if index_cache_enabled && (!index_path_exists || time_index_path_exists) {
+                warn!(
+                    "Index at path {} does not exist, rebuilding it based on {}...",
+                    index_path, log_path
+                );
+                let now = tokio::time::Instant::now();
+                let index_rebuilder =
+                    IndexRebuilder::new(log_path.clone(), index_path.clone(), start_offset);
+                index_rebuilder.rebuild().await.unwrap_or_else(|e| {
+                    panic!(
+                        "Failed to rebuild index for partition with ID: {} for
+                    stream with ID: {} and topic with ID: {}. Error: {e}",
+                        partition.partition_id, partition.stream_id, partition.topic_id,
+                    )
+                });
+                info!(
+                    "Rebuilding index for path {} finished, it took {} ms",
+                    index_path,
+                    now.elapsed().as_millis()
+                );
             }
 
-            segment
-                .load()
-                .await
-                .with_error(|_| format!("{COMPONENT} - failed to load segment: {segment}",))?;
+            // Remove legacy time index if it exists.
+            if time_index_path_exists {
+                tokio::fs::remove_file(&time_index_path).await.unwrap();
+            }
+
+            segment.load().await.with_error_context(|_| {
+                format!("{COMPONENT} - failed to load segment: {segment}",)
+            })?;
             let capacity = partition.config.partition.messages_required_to_save;
             if !segment.is_closed {
                 segment.unsaved_messages = Some(BatchAccumulator::new(
@@ -150,7 +167,7 @@ impl PartitionStorage for FilePartitionStorage {
                     .segment
                     .load_message_ids(&segment)
                     .await
-                    .with_error(|_| {
+                    .with_error_context(|_| {
                         format!("{COMPONENT} - failed to load message ids, segment: {segment}",)
                     })?;
                 for message_id in message_ids {
@@ -198,9 +215,12 @@ impl PartitionStorage for FilePartitionStorage {
             partition.current_offset = last_segment.current_offset;
         }
 
-        partition.load_consumer_offsets().await.with_error(|_| {
-            format!("{COMPONENT} - failed to load consumer offsets, partition: {partition}",)
-        })?;
+        partition
+            .load_consumer_offsets()
+            .await
+            .with_error_context(|_| {
+                format!("{COMPONENT} - failed to load consumer offsets, partition: {partition}",)
+            })?;
         info!(
             "Loaded partition with ID: {} for stream with ID: {} and topic with ID: {}, current offset: {}.",
             partition.partition_id, partition.stream_id, partition.topic_id, partition.current_offset
@@ -269,10 +289,9 @@ impl PartitionStorage for FilePartitionStorage {
         }
 
         for segment in partition.get_segments() {
-            segment
-                .persist()
-                .await
-                .with_error(|_| format!("{COMPONENT} - failed to persist segment: {segment}",))?;
+            segment.persist().await.with_error_context(|_| {
+                format!("{COMPONENT} - failed to persist segment: {segment}",)
+            })?;
         }
 
         info!("Saved partition with start ID: {} for stream with ID: {} and topic with ID: {}, path: {}.", partition.partition_id, partition.stream_id, partition.topic_id, partition.partition_path);
@@ -329,8 +348,8 @@ impl PartitionStorage for FilePartitionStorage {
         self.persister
             .overwrite(&offset.path, &offset.offset.to_le_bytes())
             .await
-            .with_error(|_| format!(
-                "{COMPONENT} - failed to ovewrite consumer offset with value: {}, kind: {}, consumer ID: {}, path: {}",
+            .with_error_context(|_| format!(
+                "{COMPONENT} - failed to overwrite consumer offset with value: {}, kind: {}, consumer ID: {}, path: {}",
                 offset.offset, offset.kind, offset.consumer_id, offset.path,
             ))?;
         trace!(
@@ -384,12 +403,14 @@ impl PartitionStorage for FilePartitionStorage {
             let consumer_id = consumer_id.unwrap();
             let mut file = file::open(&path)
                 .await
-                .with_error(|_| format!("{COMPONENT} - failed to open offset file, path: {path}"))
+                .with_error_context(|_| {
+                    format!("{COMPONENT} - failed to open offset file, path: {path}")
+                })
                 .map_err(|_| IggyError::CannotReadFile)?;
             let offset = file
                 .read_u64_le()
                 .await
-                .with_error(|_| {
+                .with_error_context(|_| {
                     format!("{COMPONENT} - failed to read consumer offset from file, path: {path}")
                 })
                 .map_err(|_| IggyError::CannotReadFile)?;

@@ -4,6 +4,7 @@
 /local_data
 /certs
 /scripts
+/target
 Dockerfile
 docker-compose.yml
 .dockerignore

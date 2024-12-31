@@ -6,7 +6,7 @@ use crate::streaming::topics::topic::Topic;
 use crate::streaming::topics::COMPONENT;
 use anyhow::Context;
 use async_trait::async_trait;
-use error_set::ResultContext;
+use error_set::ErrContext;
 use futures::future::join_all;
 use iggy::error::IggyError;
 use iggy::locking::IggySharedMut;
@@ -150,7 +150,7 @@ impl TopicStorage for FileTopicStorage {
                     topic.segments_count_of_parent_stream.clone(),
                     partition_state.created_at,
                 );
-                partition.persist().await.with_error(|_| {
+                partition.persist().await.with_error_context(|_| {
                     format!("{COMPONENT} - failed to persist partiton: {partition}")
                 })?;
                 partition.segments.clear();
@@ -209,7 +209,7 @@ impl TopicStorage for FileTopicStorage {
         topic
             .load_messages_from_disk_to_cache()
             .await
-            .with_error(|_| {
+            .with_error_context(|_| {
                 format!("{COMPONENT} - failed to load messages from disk to cache, topic: {topic}")
             })?;
         info!("Loaded topic {topic}");
@@ -241,7 +241,7 @@ impl TopicStorage for FileTopicStorage {
         );
         for (_, partition) in topic.partitions.iter() {
             let partition = partition.write().await;
-            partition.persist().await.with_error(|_| {
+            partition.persist().await.with_error_context(|_| {
                 format!("{COMPONENT} - failed to persist partition, topic: {topic}")
             })?;
         }

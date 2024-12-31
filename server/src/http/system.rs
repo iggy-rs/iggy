@@ -13,7 +13,7 @@ use axum::routing::{get, post};
 use axum::{Extension, Json, Router};
 use bytes::Bytes;
 use chrono::Local;
-use error_set::ResultContext;
+use error_set::ErrContext;
 use iggy::locking::IggySharedMutFn;
 use iggy::models::client_info::{ClientInfo, ClientInfoDetails};
 use iggy::models::stats::Stats;
@@ -49,7 +49,7 @@ async fn get_stats(State(state): State<Arc<AppState>>) -> Result<Json<Stats>, Cu
     let stats = system
         .get_stats()
         .await
-        .with_error(|_| format!("{COMPONENT} - failed to get stats"))?;
+        .with_error_context(|_| format!("{COMPONENT} - failed to get stats"))?;
     Ok(Json(stats))
 }
 
@@ -65,7 +65,7 @@ async fn get_client(
             client_id,
         )
         .await
-        .with_error(|_| {
+        .with_error_context(|_| {
             format!(
                 "{COMPONENT} - failed to get client, user ID: {}",
                 identity.user_id
@@ -89,7 +89,7 @@ async fn get_clients(
     let clients = system
         .get_clients(&Session::stateless(identity.user_id, identity.ip_address))
         .await
-        .with_error(|_| {
+        .with_error_context(|_| {
             format!(
                 "{COMPONENT} - failed to get clients, user ID: {}",
                 identity.user_id

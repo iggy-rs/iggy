@@ -4,7 +4,7 @@ use crate::binary::sender::Sender;
 use crate::streaming::session::Session;
 use crate::streaming::systems::system::SharedSystem;
 use anyhow::Result;
-use error_set::ResultContext;
+use error_set::ErrContext;
 use iggy::error::IggyError;
 use iggy::personal_access_tokens::login_with_personal_access_token::LoginWithPersonalAccessToken;
 use tracing::{debug, instrument};
@@ -21,7 +21,7 @@ pub async fn handle(
     let user = system
         .login_with_personal_access_token(&command.token, Some(session))
         .await
-        .with_error(|_| {
+        .with_error_context(|_| {
             format!(
                 "{COMPONENT} - failed to login with personal access token: {}, session: {session}",
                 command.token

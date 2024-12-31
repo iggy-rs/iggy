@@ -1,7 +1,7 @@
 use crate::streaming::topics::consumer_group::ConsumerGroup;
 use crate::streaming::topics::topic::Topic;
 use crate::streaming::topics::COMPONENT;
-use error_set::ResultContext;
+use error_set::ErrContext;
 use iggy::error::IggyError;
 use iggy::identifier::{IdKind, Identifier};
 use iggy::locking::IggySharedMutFn;
@@ -120,7 +120,7 @@ impl Topic {
     ) -> Result<RwLock<ConsumerGroup>, IggyError> {
         let group_id;
         {
-            let consumer_group = self.get_consumer_group(id).with_error(|_| {
+            let consumer_group = self.get_consumer_group(id).with_error_context(|_| {
                 format!("{COMPONENT} - failed to get consumer group with id: {id}")
             })?;
             let consumer_group = consumer_group.read().await;
@@ -166,7 +166,7 @@ impl Topic {
         group_id: &Identifier,
         member_id: u32,
     ) -> Result<(), IggyError> {
-        let consumer_group = self.get_consumer_group(group_id).with_error(|_| {
+        let consumer_group = self.get_consumer_group(group_id).with_error_context(|_| {
             format!("{COMPONENT} - failed to get consumer group with id: {group_id}")
         })?;
         let mut consumer_group = consumer_group.write().await;
@@ -183,7 +183,7 @@ impl Topic {
         group_id: &Identifier,
         member_id: u32,
     ) -> Result<(), IggyError> {
-        let consumer_group = self.get_consumer_group(group_id).with_error(|_| {
+        let consumer_group = self.get_consumer_group(group_id).with_error_context(|_| {
             format!("{COMPONENT} - failed to get consumer group with id: {group_id}")
         })?;
         let mut consumer_group = consumer_group.write().await;

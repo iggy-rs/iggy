@@ -4,7 +4,7 @@ use crate::state::command::EntryCommand;
 use crate::streaming::session::Session;
 use crate::streaming::systems::system::SharedSystem;
 use anyhow::Result;
-use error_set::ResultContext;
+use error_set::ErrContext;
 use iggy::error::IggyError;
 use iggy::users::update_user::UpdateUser;
 use tracing::{debug, instrument};
@@ -27,7 +27,7 @@ pub async fn handle(
                 command.status,
             )
             .await
-            .with_error(|_| {
+            .with_error_context(|_| {
                 format!(
                     "{COMPONENT} - failed to update user with user_id: {}, session: {session}",
                     command.user_id
@@ -42,7 +42,7 @@ pub async fn handle(
         .state
         .apply(session.get_user_id(), EntryCommand::UpdateUser(command))
         .await
-        .with_error(|_| {
+        .with_error_context(|_| {
             format!(
                 "{COMPONENT} - failed to apply update user with user_id: {}, session: {session}",
                 user_id

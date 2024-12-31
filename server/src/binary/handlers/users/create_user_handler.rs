@@ -6,7 +6,7 @@ use crate::streaming::session::Session;
 use crate::streaming::systems::system::SharedSystem;
 use crate::streaming::utils::crypto;
 use anyhow::Result;
-use error_set::ResultContext;
+use error_set::ErrContext;
 use iggy::error::IggyError;
 use iggy::users::create_user::CreateUser;
 use tracing::{debug, instrument};
@@ -31,7 +31,7 @@ pub async fn handle(
                 command.permissions.clone(),
             )
             .await
-            .with_error(|_| {
+            .with_error_context(|_| {
                 format!(
                     "{COMPONENT} - failed to create user with name: {}, session: {session}",
                     command.username
@@ -54,7 +54,7 @@ pub async fn handle(
             }),
         )
         .await
-        .with_error(|_| {
+        .with_error_context(|_| {
             format!(
                 "{COMPONENT} - failed to apply create user with name: {}, session: {session}",
                 command.username

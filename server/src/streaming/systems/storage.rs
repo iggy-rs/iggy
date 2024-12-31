@@ -6,7 +6,7 @@ use crate::streaming::utils::file;
 use anyhow::Context;
 use async_trait::async_trait;
 use bytes::{BufMut, BytesMut};
-use error_set::ResultContext;
+use error_set::ErrContext;
 use iggy::error::IggyError;
 use std::sync::Arc;
 use tokio::io::AsyncReadExt;
@@ -38,7 +38,7 @@ impl SystemInfoStorage for FileSystemInfoStorage {
         let file_size = file
             .metadata()
             .await
-            .with_error(|_| {
+            .with_error_context(|_| {
                 format!(
                     "{COMPONENT} - failed to retrieve metadata for file at path: {}",
                     self.path
@@ -50,7 +50,7 @@ impl SystemInfoStorage for FileSystemInfoStorage {
         buffer.put_bytes(0, file_size);
         file.read_exact(&mut buffer)
             .await
-            .with_error(|_| {
+            .with_error_context(|_| {
                 format!(
                     "{COMPONENT} - failed to read file content from path: {}",
                     self.path
@@ -69,7 +69,7 @@ impl SystemInfoStorage for FileSystemInfoStorage {
         self.persister
             .overwrite(&self.path, &data)
             .await
-            .with_error(|_| {
+            .with_error_context(|_| {
                 format!(
                     "{COMPONENT} - failed to overwrite file at path: {}",
                     self.path

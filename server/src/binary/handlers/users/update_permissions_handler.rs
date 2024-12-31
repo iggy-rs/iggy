@@ -4,7 +4,7 @@ use crate::state::command::EntryCommand;
 use crate::streaming::session::Session;
 use crate::streaming::systems::system::SharedSystem;
 use anyhow::Result;
-use error_set::ResultContext;
+use error_set::ErrContext;
 use iggy::error::IggyError;
 use iggy::users::update_permissions::UpdatePermissions;
 use tracing::{debug, instrument};
@@ -22,7 +22,7 @@ pub async fn handle(
         system
             .update_permissions(session, &command.user_id, command.permissions.clone())
             .await
-            .with_error(|_| format!("{COMPONENT} - failed to update permissions for user_id: {}, session: {session}",
+            .with_error_context(|_| format!("{COMPONENT} - failed to update permissions for user_id: {}, session: {session}",
                 command.user_id
             ))?;
     }

@@ -9,7 +9,7 @@ use crate::streaming::storage::PartitionStorage;
 use crate::streaming::utils::file;
 use anyhow::Context;
 use async_trait::async_trait;
-use error_set::ResultContext;
+use error_set::ErrContext;
 use iggy::consumer::ConsumerKind;
 use iggy::error::IggyError;
 use std::path::Path;
@@ -136,10 +136,9 @@ impl PartitionStorage for FilePartitionStorage {
                 tokio::fs::remove_file(&time_index_path).await.unwrap();
             }
 
-            segment
-                .load()
-                .await
-                .with_error(|_| format!("{COMPONENT} - failed to load segment: {segment}",))?;
+            segment.load().await.with_error_context(|_| {
+                format!("{COMPONENT} - failed to load segment: {segment}",)
+            })?;
             let capacity = partition.config.partition.messages_required_to_save;
             if !segment.is_closed {
                 segment.unsaved_messages = Some(BatchAccumulator::new(
@@ -168,7 +167,7 @@ impl PartitionStorage for FilePartitionStorage {
                     .segment
                     .load_message_ids(&segment)
                     .await
-                    .with_error(|_| {
+                    .with_error_context(|_| {
                         format!("{COMPONENT} - failed to load message ids, segment: {segment}",)
                     })?;
                 for message_id in message_ids {
@@ -216,9 +215,12 @@ impl PartitionStorage for FilePartitionStorage {
             partition.current_offset = last_segment.current_offset;
         }
 
-        partition.load_consumer_offsets().await.with_error(|_| {
-            format!("{COMPONENT} - failed to load consumer offsets, partition: {partition}",)
-        })?;
+        partition
+            .load_consumer_offsets()
+            .await
+            .with_error_context(|_| {
+                format!("{COMPONENT} - failed to load consumer offsets, partition: {partition}",)
+            })?;
         info!(
             "Loaded partition with ID: {} for stream with ID: {} and topic with ID: {}, current offset: {}.",
             partition.partition_id, partition.stream_id, partition.topic_id, partition.current_offset
@@ -287,10 +289,9 @@ impl PartitionStorage for FilePartitionStorage {
         }
 
         for segment in partition.get_segments() {
-            segment
-                .persist()
-                .await
-                .with_error(|_| format!("{COMPONENT} - failed to persist segment: {segment}",))?;
+            segment.persist().await.with_error_context(|_| {
+                format!("{COMPONENT} - failed to persist segment: {segment}",)
+            })?;
         }
 
         info!("Saved partition with start ID: {} for stream with ID: {} and topic with ID: {}, path: {}.", partition.partition_id, partition.stream_id, partition.topic_id, partition.partition_path);
@@ -347,7 +348,7 @@ impl PartitionStorage for FilePartitionStorage {
         self.persister
             .overwrite(&offset.path, &offset.offset.to_le_bytes())
             .await
-            .with_error(|_| format!(
+            .with_error_context(|_| format!(
                 "{COMPONENT} - failed to overwrite consumer offset with value: {}, kind: {}, consumer ID: {}, path: {}",
                 offset.offset, offset.kind, offset.consumer_id, offset.path,
             ))?;
@@ -402,12 +403,14 @@ impl PartitionStorage for FilePartitionStorage {
             let consumer_id = consumer_id.unwrap();
             let mut file = file::open(&path)
                 .await
-                .with_error(|_| format!("{COMPONENT} - failed to open offset file, path: {path}"))
+                .with_error_context(|_| {
+                    format!("{COMPONENT} - failed to open offset file, path: {path}")
+                })
                 .map_err(|_| IggyError::CannotReadFile)?;
             let offset = file
                 .read_u64_le()
                 .await
-                .with_error(|_| {
+                .with_error_context(|_| {
                     format!("{COMPONENT} - failed to read consumer offset from file, path: {path}")
                 })
                 .map_err(|_| IggyError::CannotReadFile)?;

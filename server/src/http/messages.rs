@@ -9,7 +9,7 @@ use axum::extract::{Path, Query, State};
 use axum::http::StatusCode;
 use axum::routing::get;
 use axum::{Extension, Json, Router};
-use error_set::ResultContext;
+use error_set::ErrContext;
 use iggy::consumer::Consumer;
 use iggy::identifier::Identifier;
 use iggy::messages::poll_messages::PollMessages;
@@ -54,7 +54,7 @@ async fn poll_messages(
             PollingArgs::new(query.0.strategy, query.0.count, query.0.auto_commit),
         )
         .await
-        .with_error(|_| {
+        .with_error_context(|_| {
             format!(
                 "{COMPONENT} - failed to poll messages, stream ID: {}, topic ID: {}, partition ID: {:?}",
                 stream_id, topic_id, query.0.partition_id
@@ -93,7 +93,7 @@ async fn send_messages(
             messages,
         )
         .await
-        .with_error(|_| {
+        .with_error_context(|_| {
             format!(
                 "{COMPONENT} - failed to append messages, stream ID: {}, topic ID: {}",
                 stream_id, topic_id

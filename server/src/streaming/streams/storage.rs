@@ -4,7 +4,7 @@ use crate::streaming::streams::stream::Stream;
 use crate::streaming::streams::COMPONENT;
 use crate::streaming::topics::topic::Topic;
 use async_trait::async_trait;
-use error_set::ResultContext;
+use error_set::ErrContext;
 use futures::future::join_all;
 use iggy::error::IggyError;
 use iggy::utils::timestamp::IggyTimestamp;
@@ -116,10 +116,9 @@ impl StreamStorage for FileStreamStorage {
                     stream.config.clone(),
                     stream.storage.clone(),
                 );
-                topic
-                    .persist()
-                    .await
-                    .with_error(|_| format!("{COMPONENT} - failed to persist topic: {topic}"))?;
+                topic.persist().await.with_error_context(|_| {
+                    format!("{COMPONENT} - failed to persist topic: {topic}")
+                })?;
                 unloaded_topics.push(topic);
                 info!(
                     "Created missing topic with ID: '{}', name: {}, for stream with ID: '{}'.",

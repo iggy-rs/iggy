@@ -1,7 +1,7 @@
 use crate::binary::sender::Sender;
 use crate::quic::COMPONENT;
 use async_trait::async_trait;
-use error_set::ResultContext;
+use error_set::ErrContext;
 use iggy::error::IggyError;
 use quinn::{RecvStream, SendStream};
 use tracing::{debug, error};
@@ -49,11 +49,11 @@ impl QuicSender {
         self.send
             .write_all(&[status, &length, payload].as_slice().concat())
             .await
-            .with_error(|_| format!("{COMPONENT} - failed to write buffer to the stream"))
+            .with_error_context(|_| format!("{COMPONENT} - failed to write buffer to the stream"))
             .map_err(|_| IggyError::QuicError)?;
         self.send
             .finish()
-            .with_error(|_| format!("{COMPONENT} - failed to finish send stream"))
+            .with_error_context(|_| format!("{COMPONENT} - failed to finish send stream"))
             .map_err(|_| IggyError::QuicError)?;
         debug!("Sent response with status: {:?}", status);
         Ok(())

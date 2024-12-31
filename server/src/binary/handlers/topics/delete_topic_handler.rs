@@ -4,7 +4,7 @@ use crate::state::command::EntryCommand;
 use crate::streaming::session::Session;
 use crate::streaming::systems::system::SharedSystem;
 use anyhow::Result;
-use error_set::ResultContext;
+use error_set::ErrContext;
 use iggy::error::IggyError;
 use iggy::topics::delete_topic::DeleteTopic;
 use tracing::{debug, instrument};
@@ -25,7 +25,7 @@ pub async fn handle(
         system
             .delete_topic(session, &command.stream_id, &command.topic_id)
             .await
-            .with_error(|_| format!(
+            .with_error_context(|_| format!(
                 "{COMPONENT} - failed to delete topic for stream_id: {stream_id}, topic_id: {topic_id}",
             ))?;
     }
@@ -35,7 +35,7 @@ pub async fn handle(
         .state
         .apply(session.get_user_id(), EntryCommand::DeleteTopic(command))
         .await
-        .with_error(|_| format!(
+        .with_error_context(|_| format!(
             "{COMPONENT} - failed to apply delete topic for stream_id: {stream_id}, topic_id: {topic_id}",
         ))?;
     sender.send_empty_ok_response().await?;

@@ -12,7 +12,7 @@ use axum::extract::{Path, State};
 use axum::http::StatusCode;
 use axum::routing::{delete, get, post};
 use axum::{Extension, Json, Router};
-use error_set::ResultContext;
+use error_set::ErrContext;
 use iggy::models::identity_info::IdentityInfo;
 use iggy::models::personal_access_token::{PersonalAccessTokenInfo, RawPersonalAccessToken};
 use iggy::personal_access_tokens::create_personal_access_token::CreatePersonalAccessToken;
@@ -47,7 +47,7 @@ async fn get_personal_access_tokens(
     let personal_access_tokens = system
         .get_personal_access_tokens(&Session::stateless(identity.user_id, identity.ip_address))
         .await
-        .with_error(|_| {
+        .with_error_context(|_| {
             format!(
                 "{COMPONENT} - failed to get personal access tokens, user ID: {}",
                 identity.user_id
@@ -74,7 +74,7 @@ async fn create_personal_access_token(
                 command.expiry,
             )
             .await
-            .with_error(|_| {
+            .with_error_context(|_| {
                 format!(
                     "{COMPONENT} - failed to create personal access token, user ID: {}",
                     identity.user_id
@@ -94,7 +94,7 @@ async fn create_personal_access_token(
             }),
         )
         .await
-        .with_error(|_| {
+        .with_error_context(|_| {
             format!(
                 "{COMPONENT} - failed to apply create personal access token with hash, user ID: {}",
                 identity.user_id
@@ -117,7 +117,7 @@ async fn delete_personal_access_token(
                 &name,
             )
             .await
-            .with_error(|_| {
+            .with_error_context(|_| {
                 format!(
                     "{COMPONENT} - failed to delete personal access token, user ID: {}",
                     identity.user_id
@@ -133,7 +133,7 @@ async fn delete_personal_access_token(
             EntryCommand::DeletePersonalAccessToken(DeletePersonalAccessToken { name }),
         )
         .await
-        .with_error(|_| {
+        .with_error_context(|_| {
             format!(
                 "{COMPONENT} - failed to apply delete personal access token, user ID: {}",
                 identity.user_id
@@ -152,7 +152,7 @@ async fn login_with_personal_access_token(
     let user = system
         .login_with_personal_access_token(&command.token, None)
         .await
-        .with_error(|_| "{COMPONENT} - failed to login with personal access token")?;
+        .with_error_context(|_| "{COMPONENT} - failed to login with personal access token")?;
     let tokens = state.jwt_manager.generate(user.id)?;
     Ok(Json(map_generated_access_token_to_identity_info(tokens)))
 }

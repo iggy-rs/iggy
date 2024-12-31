@@ -4,7 +4,7 @@ use crate::state::command::EntryCommand;
 use crate::streaming::session::Session;
 use crate::streaming::systems::system::SharedSystem;
 use anyhow::Result;
-use error_set::ResultContext;
+use error_set::ErrContext;
 use iggy::error::IggyError;
 use iggy::streams::purge_stream::PurgeStream;
 use tracing::{debug, instrument};
@@ -23,7 +23,7 @@ pub async fn handle(
     system
         .purge_stream(session, &command.stream_id)
         .await
-        .with_error(|_| {
+        .with_error_context(|_| {
             format!("{COMPONENT} - failed to purge stream with id: {stream_id}, session: {session}")
         })?;
 
@@ -31,7 +31,7 @@ pub async fn handle(
         .state
         .apply(session.get_user_id(), EntryCommand::PurgeStream(command))
         .await
-        .with_error(|_| {
+        .with_error_context(|_| {
             format!("{COMPONENT} - failed to apply purge stream with id: {stream_id}, session: {session}")
         })?;
     sender.send_empty_ok_response().await?;

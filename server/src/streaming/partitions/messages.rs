@@ -5,7 +5,7 @@ use crate::streaming::partitions::partition::Partition;
 use crate::streaming::partitions::COMPONENT;
 use crate::streaming::polling_consumer::PollingConsumer;
 use crate::streaming::segments::segment::Segment;
-use error_set::ResultContext;
+use error_set::ErrContext;
 use iggy::messages::send_messages::Message;
 use iggy::models::messages::POLLED_MESSAGE_METADATA;
 use iggy::utils::timestamp::IggyTimestamp;
@@ -47,7 +47,7 @@ impl Partition {
                     .segment
                     .try_load_index_for_timestamp(segment, timestamp)
                     .await
-                    .with_error(|_| format!(
+                    .with_error_context(|_| format!(
                         "{COMPONENT} - failed to load index for timestamp, partition: {}, segment start offset: {}, timestamp: {}",
                         self, segment.start_offset, timestamp,
                     ))?;
@@ -87,7 +87,7 @@ impl Partition {
             return Ok(self
                 .get_messages_by_offset(start_offset, count)
                 .await
-                .with_error(|_| format!(
+                .with_error_context(|_| format!(
                     "{COMPONENT} - failed to get messages by offset, partition: {}, timestamp: {}, start offset: {}, count: {}",
                     self, timestamp, start_offset, count,
                 ))?
@@ -105,7 +105,7 @@ impl Partition {
         Ok(self
             .get_messages_by_offset(start_offset, adjusted_count)
             .await
-            .with_error(|_| format!(
+            .with_error_context(|_| format!(
                 "{COMPONENT} - failed to get messages by offset, patititon: {}, timestamp: {}, start offset: {}",
                 self, timestamp, start_offset,
             ))?
@@ -259,7 +259,7 @@ impl Partition {
     ) -> Result<Vec<Arc<RetainedMessage>>, IggyError> {
         let mut messages = Vec::with_capacity(segments.len());
         for segment in segments {
-            let segment_messages = segment.get_messages(offset, count).await.with_error(|_| format!(
+            let segment_messages = segment.get_messages(offset, count).await.with_error_context(|_| format!(
                 "{COMPONENT} - failed to get messages from segment, segment: {}, offset: {}, count: {}",
                 segment, offset, count,
             ))?;
@@ -320,7 +320,7 @@ impl Partition {
                 let partial_batches = segment
                     .get_newest_batches_by_size(remaining_size)
                     .await
-                    .with_error(|_| format!(
+                    .with_error_context(|_| format!(
                         "{COMPONENT} - failed to get newest batches by size, segment: {}, remaining size: {}",
                         segment, remaining_size,
                     ))?
@@ -334,7 +334,7 @@ impl Partition {
             let segment_batches = segment
                 .get_all_batches()
                 .await
-                .with_error(|_| {
+                .with_error_context(|_| {
                     format!("{COMPONENT} - failed to retrieve all batches from segment: {segment}",)
                 })?
                 .into_iter()
@@ -415,7 +415,7 @@ impl Partition {
                     "Current segment is closed, creating new segment with start offset: {} for partition with ID: {}...",
                     start_offset, self.partition_id
                 );
-                self.add_persisted_segment(start_offset).await.with_error(|_| format!(
+                self.add_persisted_segment(start_offset).await.with_error_context(|_| format!(
                     "{COMPONENT} - failed to add persisted segment, partition: {}, start offset: {}",
                     self, start_offset,
                 ))?;
@@ -495,7 +495,7 @@ impl Partition {
             last_segment
                 .append_batch(batch_size, messages_count, &retained_messages)
                 .await
-                .with_error(|_| {
+                .with_error_context(|_| {
                     format!(
                         "{COMPONENT} - failed to append batch into last segment: {last_segment}",
                     )

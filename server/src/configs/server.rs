@@ -7,7 +7,7 @@ use crate::configs::tcp::TcpConfig;
 use crate::configs::COMPONENT;
 use crate::server_error::ConfigError;
 use derive_more::Display;
-use error_set::ResultContext;
+use error_set::ErrContext;
 use iggy::utils::duration::IggyDuration;
 use iggy::validatable::Validatable;
 use serde::{Deserialize, Serialize};
@@ -154,10 +154,12 @@ impl ServerConfig {
         let server_config = config_provider
             .load_config()
             .await
-            .with_error(|_| format!("{COMPONENT} - failed to load config provider config"))?;
+            .with_error_context(|_| {
+                format!("{COMPONENT} - failed to load config provider config")
+            })?;
         server_config
             .validate()
-            .with_error(|_| format!("{COMPONENT} - failed to validate server config"))?;
+            .with_error_context(|_| format!("{COMPONENT} - failed to validate server config"))?;
         Ok(server_config)
     }
 }

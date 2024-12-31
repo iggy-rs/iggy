@@ -8,7 +8,7 @@ use axum::extract::{Path, Query, State};
 use axum::http::StatusCode;
 use axum::routing::post;
 use axum::{Extension, Json, Router};
-use error_set::ResultContext;
+use error_set::ErrContext;
 use iggy::identifier::Identifier;
 use iggy::partitions::create_partitions::CreatePartitions;
 use iggy::partitions::delete_partitions::DeletePartitions;
@@ -45,7 +45,7 @@ async fn create_partitions(
                 command.partitions_count,
             )
             .await
-            .with_error(|_| {
+            .with_error_context(|_| {
                 format!(
                     "{COMPONENT} - failed to create partitions, stream ID: {}, topic ID: {}",
                     stream_id, topic_id
@@ -58,7 +58,7 @@ async fn create_partitions(
         .state
         .apply(identity.user_id, EntryCommand::CreatePartitions(command))
         .await
-        .with_error(|_| {
+        .with_error_context(|_| {
             format!(
                 "{COMPONENT} - failed to apply create partitions, stream ID: {}, topic ID: {}",
                 stream_id, topic_id
@@ -87,7 +87,7 @@ async fn delete_partitions(
                 query.partitions_count,
             )
             .await
-            .with_error(|_| {
+            .with_error_context(|_| {
                 format!(
                     "{COMPONENT} - failed to delete partitions, stream ID: {}, topic ID: {}",
                     stream_id, topic_id
@@ -107,7 +107,7 @@ async fn delete_partitions(
             }),
         )
         .await
-        .with_error(|_| {
+        .with_error_context(|_| {
             format!(
                 "{COMPONENT} - failed to apply delete partitions, stream ID: {}, topic ID: {}",
                 stream_id, topic_id

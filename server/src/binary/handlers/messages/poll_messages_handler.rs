@@ -5,7 +5,7 @@ use crate::streaming::session::Session;
 use crate::streaming::systems::messages::PollingArgs;
 use crate::streaming::systems::system::SharedSystem;
 use anyhow::Result;
-use error_set::ResultContext;
+use error_set::ErrContext;
 use iggy::error::IggyError;
 use iggy::messages::poll_messages::PollMessages;
 use tracing::debug;
@@ -28,7 +28,7 @@ pub async fn handle(
             PollingArgs::new(command.strategy, command.count, command.auto_commit),
         )
         .await
-        .with_error(|_| format!(
+        .with_error_context(|_| format!(
             "{COMPONENT} - failed to poll messages for consumer: {}, stream_id: {}, topic_id: {}, partition_id: {:?}, session: {}",
             command.consumer, command.stream_id, command.topic_id, command.partition_id, session
         ))?;

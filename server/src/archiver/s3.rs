@@ -45,7 +45,7 @@ impl S3Archiver {
         )
         .map_err(|_| ArchiverError::CannotInitializeS3Archiver)?;
         Ok(Self {
-            bucket,
+            bucket: *bucket,
             tmp_upload_dir: config.tmp_upload_dir,
         })
     }

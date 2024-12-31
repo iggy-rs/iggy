@@ -58,8 +58,8 @@ impl RetainedMessage {
             checksum: checksum::calculate(&message.payload),
             message_state: MessageState::Available,
             id: message.id,
-            payload: message.payload.clone(),
-            headers: message.headers.as_ref().map(|headers| headers.to_bytes()),
+            payload: message.payload,
+            headers: message.headers.map(|h| h.to_bytes()),
         }
     }
 

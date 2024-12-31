@@ -1,6 +1,6 @@
 [package]
 name = "iggy_examples"
-version = "0.0.4"
+version = "0.0.5"
 edition = "2021"
 
 [[example]]
@@ -53,14 +53,14 @@ path = "src/new-sdk/producer/main.rs"
 
 [dependencies]
 ahash = { version = "0.8.11", features = ["serde"] }
-anyhow = "1.0.86"
-bytes = "1.6.0"
-clap = { version = "4.5.17", features = ["derive"] }
-futures-util = "0.3.30"
+anyhow = "1.0.95"
+bytes = "1.9.0"
+clap = { version = "4.5.23", features = ["derive"] }
+futures-util = "0.3.31"
 iggy = { path = "../sdk" }
 rand = "0.8.5"
-serde = { version = "1.0.210", features = ["derive", "rc"] }
-serde_json = "1.0.127"
-tokio = { version = "1.40.0", features = ["full"] }
-tracing = { version = "0.1.37" }
-tracing-subscriber = { version = "0.3.18", features = ["fmt", "env-filter"] }
+serde = { version = "1.0.217", features = ["derive", "rc"] }
+serde_json = "1.0.134"
+tokio = { version = "1.42.0", features = ["full"] }
+tracing = { version = "0.1.41" }
+tracing-subscriber = { version = "0.3.19", features = ["fmt", "env-filter"] }

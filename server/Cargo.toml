@@ -1,6 +1,6 @@
 [package]
 name = "server"
-version = "0.4.94"
+version = "0.4.95"
 edition = "2021"
 build = "src/build.rs"
 
@@ -11,31 +11,31 @@ tokio-console = ["dep:console-subscriber", "tokio/tracing"]
 
 [dependencies]
 ahash = { version = "0.8.11" }
-anyhow = "1.0.86"
-async-trait = "0.1.82"
+anyhow = "1.0.95"
+async-trait = "0.1.83"
 atone = "0.3.7"
-axum = "0.7.5"
+axum = "0.7.9"
 axum-server = { version = "0.7.1", features = ["tls-rustls"] }
 bcrypt = "0.16.0"
 bincode = "1.3.3"
-blake3 = "1.5.4"
-bytes = "1.6.0"
-chrono = "0.4.38"
-clap = { version = "4.5.17", features = ["derive"] }
-console-subscriber = { version = "0.4.0", optional = true }
-dashmap = "6.0.1"
+blake3 = "1.5.5"
+bytes = "1.9.0"
+chrono = "0.4.39"
+clap = { version = "4.5.23", features = ["derive"] }
+console-subscriber = { version = "0.4.1", optional = true }
+dashmap = "6.1.0"
 derive_more = "1.0.0"
 dotenvy = { version = "0.15.7" }
 error_set = { version = "0.8.5", features = ["tracing"] }
 figlet-rs = "0.1.5"
 figment = { version = "0.10.19", features = ["toml", "env"] }
-flume = "0.11.0"
-futures = "0.3.30"
+flume = "0.11.1"
+futures = "0.3.31"
 iggy = { path = "../sdk" }
 jsonwebtoken = "9.3.0"
-moka = { version = "0.12.5", features = ["future"] }
-openssl = { version = "0.10.66", features = ["vendored"] }
-opentelemetry = { version = "0.27.0", features = ["trace", "logs"] }
+moka = { version = "0.12.8", features = ["future"] }
+openssl = { version = "0.10.68", features = ["vendored"] }
+opentelemetry = { version = "0.27.1", features = ["trace", "logs"] }
 opentelemetry-appender-tracing = { version = "0.27.0", features = ["log"] }
 opentelemetry-otlp = { version = "0.27.0", features = [
     "logs",
@@ -47,47 +47,47 @@ opentelemetry-otlp = { version = "0.27.0", features = [
     "tokio",
 ] }
 opentelemetry-semantic-conventions = { version = "0.27.0" }
-opentelemetry_sdk = { version = "0.27.0", features = [
+opentelemetry_sdk = { version = "0.27.1", features = [
     "rt-tokio",
     "logs",
     "trace",
     "tokio",
 ] }
-prometheus-client = "0.22.2"
-quinn = { version = "0.11.5" }
-rcgen = "0.13.1"
-reqwest = { version = "0.12.4", features = [
+prometheus-client = "0.22.3"
+quinn = { version = "0.11.6" }
+rcgen = "0.13.2"
+reqwest = { version = "0.12.11", features = [
     "rustls-tls",
     "rustls-tls-no-provider",
 ] }
 ring = "0.17.8"
-rust-s3 = { version = "0.34.0", features = ["default"] }
-rustls = { version = "0.23.10" }
-rustls-pemfile = "2.1.2"
-serde = { version = "1.0.210", features = ["derive", "rc"] }
-serde_json = "1.0.127"
-serde_with = { version = "3.8.1", features = ["base64", "macros"] }
-static-toml = "1.2.0"
+rust-s3 = { version = "0.35.1", features = ["default"] }
+rustls = { version = "0.23.20" }
+rustls-pemfile = "2.2.0"
+serde = { version = "1.0.217", features = ["derive", "rc"] }
+serde_json = "1.0.134"
+serde_with = { version = "3.12.0", features = ["base64", "macros"] }
+static-toml = "1.3.0"
 strip-ansi-escapes = "0.2.0"
-strum = { version = "0.26.2", features = ["derive"] }
-sysinfo = "0.33.0"
+strum = { version = "0.26.3", features = ["derive"] }
+sysinfo = "0.33.1"
 thiserror = "2.0.9"
-tokio = { version = "1.40.0", features = ["full"] }
+tokio = { version = "1.42.0", features = ["full"] }
 tokio-native-tls = "0.3.1"
-toml = "0.8.14"
-tower-http = { version = "0.6.1", features = [
+toml = "0.8.19"
+tower-http = { version = "0.6.2", features = [
     "add-extension",
     "cors",
     "trace",
 ] }
-tracing = { version = "0.1.40" }
+tracing = { version = "0.1.41" }
 tracing-appender = "0.2.3"
 tracing-opentelemetry = { version = "0.28.0" }
-tracing-subscriber = { version = "0.3.18", features = ["fmt", "env-filter"] }
-ulid = "1.1.2"
-uuid = { version = "1.1.0", features = ["v7", "fast-rng", "zerocopy"] }
-xxhash-rust = { version = "0.8.12", features = ["xxh32"] }
-zip = "2.2.0"
+tracing-subscriber = { version = "0.3.19", features = ["fmt", "env-filter"] }
+ulid = "1.1.3"
+uuid = { version = "1.11.0", features = ["v7", "fast-rng", "zerocopy"] }
+xxhash-rust = { version = "0.8.15", features = ["xxh32"] }
+zip = "2.2.2"
 
 [target.'cfg(not(target_env = "msvc"))'.dependencies]
 mimalloc = { version = "0.1", optional = true }
@@ -96,9 +96,9 @@ mimalloc = { version = "0.1", optional = true }
 mimalloc = { version = "0.1", features = ["override"] }
 
 [build-dependencies]
-figment = { version = "0.10.18", features = ["json", "toml", "env"] }
+figment = { version = "0.10.19", features = ["json", "toml", "env"] }
 serde_json = "1.0.134"
-vergen-git2 = { version = "1.0.0", features = [
+vergen-git2 = { version = "1.0.2", features = [
     "build",
     "cargo",
     "rustc",

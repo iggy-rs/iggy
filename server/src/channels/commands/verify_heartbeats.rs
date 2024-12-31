@@ -65,7 +65,7 @@ impl VerifyHeartbeats {
 
 #[async_trait]
 impl ServerCommand<VerifyHeartbeatsCommand> for VerifyHeartbeatsExecutor {
-    #[instrument(skip_all)]
+    #[instrument(skip_all, name = "trace_verify_heartbeats")]
     async fn execute(&mut self, system: &SharedSystem, command: VerifyHeartbeatsCommand) {
         let system = system.read().await;
         let clients;

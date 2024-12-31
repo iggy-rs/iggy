@@ -1,13 +1,15 @@
 use crate::http::jwt::json_web_token::RevokedAccessToken;
+use crate::http::jwt::COMPONENT;
 use crate::streaming::persistence::persister::Persister;
 use crate::streaming::utils::file;
 use anyhow::Context;
 use bytes::{BufMut, BytesMut};
+use error_set::ErrContext;
 use iggy::error::IggyError;
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::io::AsyncReadExt;
-use tracing::info;
+use tracing::{error, info};
 
 #[derive(Debug)]
 pub struct TokenStorage {
@@ -33,15 +35,36 @@ impl TokenStorage {
         }
 
         info!("Loading revoked access tokens from: {}", self.path);
-        let mut file = file.unwrap();
-        let file_size = file.metadata().await?.len() as usize;
+        let mut file = file.map_err(|error| {
+            error!("Cannot open revoked access tokens file: {error}");
+            IggyError::CannotReadFile
+        })?;
+        let file_size = file
+            .metadata()
+            .await
+            .with_error_context(|_| {
+                format!(
+                    "{COMPONENT} - failed to read file metadata, path: {}",
+                    self.path
+                )
+            })
+            .map_err(|_| IggyError::CannotReadFileMetadata)?
+            .len() as usize;
         let mut buffer = BytesMut::with_capacity(file_size);
         buffer.put_bytes(0, file_size);
-        file.read_exact(&mut buffer).await?;
+        file.read_exact(&mut buffer)
+            .await
+            .with_error_context(|_| {
+                format!(
+                    "{COMPONENT} - failed to read file into buffer, path: {}",
+                    self.path
+                )
+            })
+            .map_err(|_| IggyError::CannotReadFile)?;
 
         let tokens: HashMap<String, u64> = bincode::deserialize(&buffer)
             .with_context(|| "Failed to deserialize revoked access tokens")
-            .map_err(IggyError::CannotDeserializeResource)?;
+            .map_err(|_| IggyError::CannotDeserializeResource)?;
 
         let tokens = tokens
             .into_iter()
@@ -64,13 +87,24 @@ impl TokenStorage {
         map.insert(token.id.to_owned(), token.expiry);
         let bytes = bincode::serialize(&map)
             .with_context(|| "Failed to serialize revoked access tokens")
-            .map_err(IggyError::CannotSerializeResource)?;
-        self.persister.overwrite(&self.path, &bytes).await?;
+            .map_err(|_| IggyError::CannotSerializeResource)?;
+        self.persister
+            .overwrite(&self.path, &bytes)
+            .await
+            .with_error_context(|_| {
+                format!(
+                    "{COMPONENT} - failed to overwrite file, path: {}",
+                    self.path
+                )
+            })?;
         Ok(())
     }
 
     pub async fn delete_revoked_access_tokens(&self, id: &[String]) -> Result<(), IggyError> {
-        let tokens = self.load_all_revoked_access_tokens().await?;
+        let tokens = self
+            .load_all_revoked_access_tokens()
+            .await
+            .with_error_context(|_| "{COMPONENT} - failed to load revoked access tokens")?;
         if tokens.is_empty() {
             return Ok(());
         }
@@ -85,8 +119,16 @@ impl TokenStorage {
 
         let bytes = bincode::serialize(&map)
             .with_context(|| "Failed to serialize revoked access tokens")
-            .map_err(IggyError::CannotSerializeResource)?;
-        self.persister.overwrite(&self.path, &bytes).await?;
+            .map_err(|_| IggyError::CannotSerializeResource)?;
+        self.persister
+            .overwrite(&self.path, &bytes)
+            .await
+            .with_error_context(|_| {
+                format!(
+                    "{COMPONENT} - failed to overwrite file, path: {}",
+                    self.path
+                )
+            })?;
         Ok(())
     }
 }

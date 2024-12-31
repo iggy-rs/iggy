@@ -4,6 +4,7 @@ use crate::streaming::topics::topic::Topic;
 use iggy::utils::byte_size::IggyByteSize;
 use iggy::utils::timestamp::IggyTimestamp;
 use std::collections::HashMap;
+use std::fmt::Display;
 use std::sync::atomic::{AtomicU32, AtomicU64, Ordering};
 use std::sync::Arc;
 
@@ -62,6 +63,16 @@ impl Stream {
 
     pub fn get_size(&self) -> IggyByteSize {
         IggyByteSize::from(self.size_bytes.load(Ordering::SeqCst))
+    }
+}
+
+impl Display for Stream {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "Stream {{ stream_id: {}, name: {}, path: {}, topic_path: {}, created_at: {} }}",
+            self.stream_id, self.name, self.path, self.topics_path, self.created_at,
+        )
     }
 }
 

@@ -102,7 +102,9 @@ impl BytesSerializable for LoginUser {
         }
 
         let username_length = bytes[0];
-        let username = from_utf8(&bytes[1..=(username_length as usize)])?.to_string();
+        let username = from_utf8(&bytes[1..=(username_length as usize)])
+            .map_err(|_| IggyError::InvalidUtf8)?
+            .to_string();
         if username.len() != username_length as usize {
             return Err(IggyError::InvalidCommand);
         }
@@ -111,30 +113,41 @@ impl BytesSerializable for LoginUser {
         let password = from_utf8(
             &bytes[2 + username_length as usize
                 ..2 + username_length as usize + password_length as usize],
-        )?
+        )
+        .map_err(|_| IggyError::InvalidUtf8)?
         .to_string();
         if password.len() != password_length as usize {
             return Err(IggyError::InvalidCommand);
         }
 
         let position = 2 + username_length as usize + password_length as usize;
-        let version_length = u32::from_le_bytes(bytes[position..position + 4].try_into()?);
+        let version_length = u32::from_le_bytes(
+            bytes[position..position + 4]
+                .try_into()
+                .map_err(|_| IggyError::InvalidNumberEncoding)?,
+        );
         let version = match version_length {
             0 => None,
             _ => {
                 let version =
-                    from_utf8(&bytes[position + 4..position + 4 + version_length as usize])?
+                    from_utf8(&bytes[position + 4..position + 4 + version_length as usize])
+                        .map_err(|_| IggyError::InvalidUtf8)?
                         .to_string();
                 Some(version)
             }
         };
         let position = position + 4 + version_length as usize;
-        let context_length = u32::from_le_bytes(bytes[position..position + 4].try_into()?);
+        let context_length = u32::from_le_bytes(
+            bytes[position..position + 4]
+                .try_into()
+                .map_err(|_| IggyError::InvalidNumberEncoding)?,
+        );
         let context = match context_length {
             0 => None,
             _ => {
                 let context =
-                    from_utf8(&bytes[position + 4..position + 4 + context_length as usize])?
+                    from_utf8(&bytes[position + 4..position + 4 + context_length as usize])
+                        .map_err(|_| IggyError::InvalidUtf8)?
                         .to_string();
                 Some(context)
             }

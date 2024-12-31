@@ -1,6 +1,7 @@
 use crate::http::error::CustomError;
 use crate::http::jwt::json_web_token::Identity;
 use crate::http::shared::AppState;
+use crate::http::COMPONENT;
 use crate::streaming::session::Session;
 use crate::streaming::systems::messages::PollingArgs;
 use crate::streaming::utils::random_id;
@@ -8,6 +9,7 @@ use axum::extract::{Path, Query, State};
 use axum::http::StatusCode;
 use axum::routing::get;
 use axum::{Extension, Json, Router};
+use error_set::ErrContext;
 use iggy::consumer::Consumer;
 use iggy::identifier::Identifier;
 use iggy::messages::poll_messages::PollMessages;
@@ -51,7 +53,13 @@ async fn poll_messages(
             query.0.partition_id,
             PollingArgs::new(query.0.strategy, query.0.count, query.0.auto_commit),
         )
-        .await?;
+        .await
+        .with_error_context(|_| {
+            format!(
+                "{COMPONENT} - failed to poll messages, stream ID: {}, topic ID: {}, partition ID: {:?}",
+                stream_id, topic_id, query.0.partition_id
+            )
+        })?;
     Ok(Json(polled_messages))
 }
 
@@ -72,23 +80,29 @@ async fn send_messages(
     command.validate()?;
 
     let messages = command.messages;
-    let stream_id = command.stream_id;
-    let topic_id = command.topic_id;
+    let command_stream_id = command.stream_id;
+    let command_topic_id = command.topic_id;
     let partitioning = command.partitioning;
     let system = state.system.read().await;
     system
         .append_messages(
             &Session::stateless(identity.user_id, identity.ip_address),
-            stream_id,
-            topic_id,
+            command_stream_id,
+            command_topic_id,
             partitioning,
             messages,
         )
-        .await?;
+        .await
+        .with_error_context(|_| {
+            format!(
+                "{COMPONENT} - failed to append messages, stream ID: {}, topic ID: {}",
+                stream_id, topic_id
+            )
+        })?;
     Ok(StatusCode::CREATED)
 }
 
-#[instrument(skip_all, fields(iggy_user_id = identity.user_id, iggy_stream_id = stream_id, iggy_topic_id = topic_id, iggy_partition_id = partition_id, iggy_fsync = fsync))]
+#[instrument(skip_all, name = "trace_flush_unsaved_buffer", fields(iggy_user_id = identity.user_id, iggy_stream_id = stream_id, iggy_topic_id = topic_id, iggy_partition_id = partition_id, iggy_fsync = fsync))]
 async fn flush_unsaved_buffer(
     State(state): State<Arc<AppState>>,
     Extension(identity): Extension<Identity>,

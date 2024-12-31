@@ -5,28 +5,42 @@
 
 COMMON_ARGS="--warmup-time 0"
 
-# Function to get the current git tag or commit
-function get_git_commit_or_tag() {
-    local dir=$1
+# Function to get the current git tag containing "server" or commit SHA1
+function get_git_iggy_server_tag_or_sha1() {
+    local dir="$1"
 
     if [ -d "$dir" ]; then
-        pushd "$dir" > /dev/null || exit 1
+        pushd "$dir" > /dev/null || {
+            echo "Error: Failed to enter directory '$dir'." >&2
+            exit 1
+        }
 
         if git rev-parse --git-dir > /dev/null 2>&1; then
+            # Get the short commit hash
             local commit_hash
             commit_hash=$(git rev-parse --short HEAD)
-            local tag
-            tag=$(git describe --exact-match --tags HEAD 2> /dev/null)
 
-            popd > /dev/null || exit 1
+            # Get all tags pointing to HEAD that contain "server" (case-insensitive)
+            local matching_tags
+            matching_tags=$(git tag --points-at HEAD | grep -i "server" || true)
 
-            if [ -n "$tag" ]; then
-                echo "$tag"
+            popd > /dev/null || {
+                echo "Error: Failed to return from directory '$dir'." >&2
+                exit 1
+            }
+
+            if [ -n "$matching_tags" ]; then
+                # If multiple tags match, you can choose to return the first one
+                # or handle them as needed. Here, we'll return the first match.
+                local first_matching_tag
+                first_matching_tag=$(echo "$matching_tags" | head -n 1)
+                echo "$first_matching_tag"
             else
+                # No matching tag found; return the commit hash
                 echo "$commit_hash"
             fi
         else
-            echo "Error: Not a git repository." >&2
+            echo "Error: Directory '$dir' is not a git repository." >&2
             popd > /dev/null || exit 1
             return 1
         fi
@@ -62,7 +76,9 @@ function construct_bench_command() {
     local streams=${count}
 
     local superdir
-    superdir="performance_results_$(get_git_commit_or_tag .)" || { echo "Failed to get git commit or tag."; exit 1; }
+    superdir="performance_results/$(get_git_iggy_server_tag_or_sha1 .)" || { echo "Failed to get git commit or tag."; exit 1; }
+    rm -rf "$superdir" || true
+    mkdir -p "$superdir" || { echo "Failed to create directory '$superdir'."; exit 1; }
     local output_directory="${superdir}/${type}_${count}${type:0:1}_${message_size}_${messages_per_batch}_${message_batches}_${protocol}"
 
     echo "$bench_command \

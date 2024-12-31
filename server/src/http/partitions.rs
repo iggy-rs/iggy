@@ -1,12 +1,14 @@
 use crate::http::error::CustomError;
 use crate::http::jwt::json_web_token::Identity;
 use crate::http::shared::AppState;
+use crate::http::COMPONENT;
 use crate::state::command::EntryCommand;
 use crate::streaming::session::Session;
 use axum::extract::{Path, Query, State};
 use axum::http::StatusCode;
 use axum::routing::post;
 use axum::{Extension, Json, Router};
+use error_set::ErrContext;
 use iggy::identifier::Identifier;
 use iggy::partitions::create_partitions::CreatePartitions;
 use iggy::partitions::delete_partitions::DeletePartitions;
@@ -23,7 +25,7 @@ pub fn router(state: Arc<AppState>) -> Router {
         .with_state(state)
 }
 
-#[instrument(skip_all, fields(iggy_user_id = identity.user_id, iggy_stream_id = stream_id, iggy_topic_id = topic_id))]
+#[instrument(skip_all, name = "trace_create_partitions", fields(iggy_user_id = identity.user_id, iggy_stream_id = stream_id, iggy_topic_id = topic_id))]
 async fn create_partitions(
     State(state): State<Arc<AppState>>,
     Extension(identity): Extension<Identity>,
@@ -42,18 +44,30 @@ async fn create_partitions(
                 &command.topic_id,
                 command.partitions_count,
             )
-            .await?;
+            .await
+            .with_error_context(|_| {
+                format!(
+                    "{COMPONENT} - failed to create partitions, stream ID: {}, topic ID: {}",
+                    stream_id, topic_id
+                )
+            })?;
     }
 
     let system = state.system.read().await;
     system
         .state
         .apply(identity.user_id, EntryCommand::CreatePartitions(command))
-        .await?;
+        .await
+        .with_error_context(|_| {
+            format!(
+                "{COMPONENT} - failed to apply create partitions, stream ID: {}, topic ID: {}",
+                stream_id, topic_id
+            )
+        })?;
     Ok(StatusCode::CREATED)
 }
 
-#[instrument(skip_all, fields(iggy_user_id = identity.user_id, iggy_stream_id = stream_id, iggy_topic_id = topic_id))]
+#[instrument(skip_all, name = "trace_delete_partitions", fields(iggy_user_id = identity.user_id, iggy_stream_id = stream_id, iggy_topic_id = topic_id))]
 async fn delete_partitions(
     State(state): State<Arc<AppState>>,
     Extension(identity): Extension<Identity>,
@@ -72,7 +86,13 @@ async fn delete_partitions(
                 &query.topic_id.clone(),
                 query.partitions_count,
             )
-            .await?;
+            .await
+            .with_error_context(|_| {
+                format!(
+                    "{COMPONENT} - failed to delete partitions, stream ID: {}, topic ID: {}",
+                    stream_id, topic_id
+                )
+            })?;
     }
 
     let system = state.system.read().await;
@@ -86,6 +106,12 @@ async fn delete_partitions(
                 partitions_count: query.partitions_count,
             }),
         )
-        .await?;
+        .await
+        .with_error_context(|_| {
+            format!(
+                "{COMPONENT} - failed to apply delete partitions, stream ID: {}, topic ID: {}",
+                stream_id, topic_id
+            )
+        })?;
     Ok(StatusCode::NO_CONTENT)
 }

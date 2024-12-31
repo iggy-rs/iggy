@@ -71,14 +71,20 @@ impl BytesSerializable for CreateStream {
             return Err(IggyError::InvalidCommand);
         }
 
-        let stream_id = u32::from_le_bytes(bytes[..4].try_into()?);
+        let stream_id = u32::from_le_bytes(
+            bytes[..4]
+                .try_into()
+                .map_err(|_| IggyError::InvalidNumberEncoding)?,
+        );
         let stream_id = if stream_id == 0 {
             None
         } else {
             Some(stream_id)
         };
         let name_length = bytes[4];
-        let name = from_utf8(&bytes[5..5 + name_length as usize])?.to_string();
+        let name = from_utf8(&bytes[5..5 + name_length as usize])
+            .map_err(|_| IggyError::InvalidUtf8)?
+            .to_string();
         if name.len() != name_length as usize {
             return Err(IggyError::InvalidCommand);
         }

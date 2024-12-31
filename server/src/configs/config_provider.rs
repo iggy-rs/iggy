@@ -1,5 +1,5 @@
 use crate::configs::server::ServerConfig;
-use crate::server_error::ServerError;
+use crate::server_error::ConfigError;
 use crate::IGGY_ROOT_PASSWORD_ENV;
 use async_trait::async_trait;
 use figment::{
@@ -24,7 +24,7 @@ const SECRET_KEYS: [&str; 6] = [
 
 #[async_trait]
 pub trait ConfigProvider {
-    async fn load_config(&self) -> Result<ServerConfig, ServerError>;
+    async fn load_config(&self) -> Result<ServerConfig, ConfigError>;
 }
 
 #[derive(Debug)]
@@ -122,7 +122,6 @@ impl CustomEnvProvider {
                     combined_keys.clear();
                     return;
                 }
-
                 _ => {
                     continue;
                 }
@@ -152,6 +151,11 @@ impl CustomEnvProvider {
     }
 
     fn try_parse_value(value: &str) -> FigmentValue {
+        if value.starts_with('[') && value.ends_with(']') {
+            let value = value.trim_start_matches('[').trim_end_matches(']');
+            let values: Vec<FigmentValue> = value.split(',').map(Self::try_parse_value).collect();
+            return FigmentValue::from(values);
+        }
         if value == "true" {
             return FigmentValue::from(true);
         }
@@ -212,16 +216,16 @@ impl Provider for CustomEnvProvider {
     }
 }
 
-pub fn resolve(config_provider_type: &str) -> Result<Box<dyn ConfigProvider>, ServerError> {
+pub fn resolve(config_provider_type: &str) -> Result<Box<dyn ConfigProvider>, ConfigError> {
     match config_provider_type {
         DEFAULT_CONFIG_PROVIDER => {
             let path =
                 env::var("IGGY_CONFIG_PATH").unwrap_or_else(|_| DEFAULT_CONFIG_PATH.to_string());
             Ok(Box::new(FileConfigProvider::new(path)))
         }
-        _ => Err(ServerError::InvalidConfigurationProvider(
-            config_provider_type.to_string(),
-        )),
+        _ => Err(ConfigError::InvalidConfigurationProvider {
+            provider_type: config_provider_type.to_string(),
+        }),
     }
 }
 
@@ -254,7 +258,7 @@ fn file_exists<P: AsRef<Path>>(path: P) -> bool {
 
 #[async_trait]
 impl ConfigProvider for FileConfigProvider {
-    async fn load_config(&self) -> Result<ServerConfig, ServerError> {
+    async fn load_config(&self) -> Result<ServerConfig, ConfigError> {
         println!("Loading config from path: '{}'...", self.path);
 
         // Include the default configuration from server.toml
@@ -286,10 +290,7 @@ impl ConfigProvider for FileConfigProvider {
                 println!("Using Config: {config}");
                 Ok(config)
             }
-            Err(figment_error) => Err(ServerError::CannotLoadConfiguration(format!(
-                "Failed to load configuration: {}",
-                figment_error
-            ))),
+            Err(_) => Err(ConfigError::CannotLoadConfiguration),
         }
     }
 }

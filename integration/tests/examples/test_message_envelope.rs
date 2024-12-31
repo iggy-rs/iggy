@@ -7,7 +7,7 @@ struct TestMessageEnvelope<'a> {
     expected_consumer_output: Vec<&'a str>,
 }
 
-impl<'a> IggyExampleTestCase for TestMessageEnvelope<'a> {
+impl IggyExampleTestCase for TestMessageEnvelope<'_> {
     fn verify_log_output(&self, producer_stdout: &str, consumer_stdout: &str) {
         verify_stdout_contains_expected_logs(
             producer_stdout,

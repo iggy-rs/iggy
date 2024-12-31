@@ -138,10 +138,9 @@ async fn should_persist_messages_and_then_load_them_by_timestamp() {
         || (loaded_messages.len() == messages_count as usize - 1);
 
     assert!(loaded_messages_count_ok);
-    for i in (messages_count + 1)..=(messages_count * 2) {
-        let index = (i - messages_count - 1) as usize;
-        let loaded_message = &loaded_messages[index];
-        let appended_message = &appended_messages[index];
+    for i in 0..loaded_messages.len() {
+        let loaded_message = &loaded_messages[i];
+        let appended_message = &appended_messages[i];
         assert_eq!(loaded_message.id, appended_message.id);
         assert_eq!(loaded_message.payload, appended_message.payload);
         assert!(loaded_message.timestamp >= test_timestamp.as_micros());

@@ -1,6 +1,6 @@
 [package]
 name = "iggy"
-version = "0.6.50"
+version = "0.6.63"
 description = "Iggy is the persistent message streaming platform written in Rust, supporting QUIC, TCP and HTTP transport protocols, capable of processing millions of messages per second."
 edition = "2021"
 license = "MIT"
@@ -14,55 +14,54 @@ readme = "../README.md"
 [dependencies]
 aes-gcm = "0.10.3"
 ahash = { version = "0.8.11", features = ["serde"] }
-anyhow = "1.0.86"
-async-broadcast = { version = "0.7.1" }
+anyhow = "1.0.95"
+async-broadcast = { version = "0.7.2" }
 async-dropper = { version = "0.3.1", features = ["tokio", "simple"] }
-async-trait = "0.1.82"
+async-trait = "0.1.83"
 base64 = "0.22.1"
-byte-unit = { version = "5.1.4", default-features = false, features = [
+byte-unit = { version = "5.1.6", default-features = false, features = [
     "serde",
     "byte",
     "std",
 ] }
-bytes = "1.6.0"
-chrono = { version = "0.4.38" }
-clap = { version = "4.5.17", features = ["derive"] }
-comfy-table = { version = "7.1.1", optional = true }
+bytes = "1.9.0"
+chrono = { version = "0.4.39" }
+clap = { version = "4.5.23", features = ["derive"] }
+comfy-table = { version = "7.1.3", optional = true }
 crc32fast = "1.4.2"
-dashmap = "6.0.1"
+dashmap = "6.1.0"
 derive_more = { version = "1.0.0", features = ["full"] }
 dirs = "5.0.1"
 fast-async-mutex = { version = "0.6.7", optional = true }
-flume = "0.11.0"
-futures = "0.3.30"
-futures-util = "0.3.30"
+flume = "0.11.1"
+futures = "0.3.31"
+futures-util = "0.3.31"
 humantime = "2.1.0"
-keyring = { version = "3.2.0", optional = true, features = ["sync-secret-service", "vendored"] }
-lazy_static = "1.4.0"
+keyring = { version = "3.6.1", optional = true, features = ["sync-secret-service", "vendored"] }
+lazy_static = "1.5.0"
 passterm = { version = "2.0.1", optional = true }
-pem = { version = "3.0.4" }
-quinn = { version = "0.11.5" }
-regex = "1.10.4"
-reqwest = { version = "0.12.9", default-features = false, features = ["json", "rustls-tls"] }
+quinn = { version = "0.11.6" }
+regex = "1.11.1"
+reqwest = { version = "0.12.11", default-features = false, features = ["json", "rustls-tls"] }
 reqwest-middleware = { version = "0.4.0", features = ["json"] }
 reqwest-retry = "0.7.0"
-rustls = { version = "0.23.10", features = ["ring"] }
-serde = { version = "1.0.210", features = ["derive", "rc"] }
-serde_json = "1.0.127"
-serde_with = { version = "3.8.1", features = ["base64"] }
-strum = { version = "0.26.2", features = ["derive"] }
-thiserror = "2.0.3"
-tokio = { version = "1.40.1", features = ["full"] }
-tokio-rustls = { version = "0.26.0" }
-toml = "0.8.14"
-tracing = { version = "0.1.40" }
-uuid = { version = "1.1.0", features = ["v7", "fast-rng", "zerocopy"] }
-webpki-roots = { version = "0.26.6" }
+rustls = { version = "0.23.20", features = ["ring"] }
+serde = { version = "1.0.217", features = ["derive", "rc"] }
+serde_json = "1.0.134"
+serde_with = { version = "3.12.0", features = ["base64"] }
+strum = { version = "0.26.3", features = ["derive"] }
+thiserror = "2.0.9"
+tokio = { version = "1.42.0", features = ["full"] }
+tokio-rustls = { version = "0.26.1" }
+toml = "0.8.19"
+tracing = { version = "0.1.41" }
+uuid = { version = "1.11.0", features = ["v7", "fast-rng", "zerocopy"] }
+webpki-roots = { version = "0.26.7" }
 
 [build-dependencies]
 convert_case = "0.6.0"
-serde = { version = "1.0.210", features = ["derive", "rc"] }
-serde_derive = "1.0.194"
+serde = { version = "1.0.217", features = ["derive", "rc"] }
+serde_derive = "1.0.217"
 
 [features]
 default = ["tokio_lock"]

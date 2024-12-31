@@ -18,13 +18,19 @@ impl StreamClient for HttpClient {
             return Ok(None);
         }
 
-        let stream = response.json().await?;
+        let stream = response
+            .json()
+            .await
+            .map_err(|_| IggyError::InvalidJsonResponse)?;
         Ok(Some(stream))
     }
 
     async fn get_streams(&self) -> Result<Vec<Stream>, IggyError> {
         let response = self.get(PATH).await?;
-        let streams = response.json().await?;
+        let streams = response
+            .json()
+            .await
+            .map_err(|_| IggyError::InvalidJsonResponse)?;
         Ok(streams)
     }
 
@@ -42,7 +48,10 @@ impl StreamClient for HttpClient {
                 },
             )
             .await?;
-        let stream = response.json().await?;
+        let stream = response
+            .json()
+            .await
+            .map_err(|_| IggyError::InvalidJsonResponse)?;
         Ok(stream)
     }
 

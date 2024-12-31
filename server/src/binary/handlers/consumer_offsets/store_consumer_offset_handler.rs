@@ -1,7 +1,9 @@
+use crate::binary::handlers::consumer_offsets::COMPONENT;
 use crate::binary::sender::Sender;
 use crate::streaming::session::Session;
 use crate::streaming::systems::system::SharedSystem;
 use anyhow::Result;
+use error_set::ErrContext;
 use iggy::consumer_offsets::store_consumer_offset::StoreConsumerOffset;
 use iggy::error::IggyError;
 use tracing::debug;
@@ -23,7 +25,10 @@ pub async fn handle(
             command.partition_id,
             command.offset,
         )
-        .await?;
+        .await
+        .with_error_context(|_| format!("{COMPONENT} - failed to store consumer offset for stream_id: {}, topic_id: {}, partition_id: {:?}, offset: {}, session: {}",
+            command.stream_id, command.topic_id, command.partition_id, command.offset, session
+        ))?;
     sender.send_empty_ok_response().await?;
     Ok(())
 }

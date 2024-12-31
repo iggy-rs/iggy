@@ -57,7 +57,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: bnjbvr/cargo-machete@v0.6.2
+      - uses: bnjbvr/cargo-machete@v0.7.0
 
   check-commit-message:
     name: Validate commit messages
@@ -89,11 +89,11 @@ jobs:
         uses: gsactions/commit-message-checker@v2
         with:
           excludeDescription: 'true'
-          excludeTitle: 'true'
-          checkAllCommitMessages: 'true'
+          excludeTitle: 'false'
+          checkAllCommitMessages: 'false'
           accessToken: ${{ secrets.GITHUB_TOKEN }}
           pattern: '^[A-Z].*(\n.*)*$'
-          error: 'Subject of all commits in the PR has to start with a capital letter.'
+          error: 'Subject of title in the PR has to start with a capital letter.'
 
 # Uncomment this when we have a proper release - 1.0.0
 #   semver-checks:

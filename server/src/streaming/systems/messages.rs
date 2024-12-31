@@ -1,7 +1,9 @@
 use crate::streaming::cache::memory_tracker::CacheMemoryTracker;
 use crate::streaming::session::Session;
 use crate::streaming::systems::system::System;
+use crate::streaming::systems::COMPONENT;
 use bytes::Bytes;
+use error_set::ErrContext;
 use iggy::consumer::Consumer;
 use iggy::messages::poll_messages::PollingStrategy;
 use iggy::messages::send_messages::Message;
@@ -27,9 +29,15 @@ impl System {
             return Err(IggyError::InvalidMessagesCount);
         }
 
-        let topic = self.find_topic(session, stream_id, topic_id)?;
+        let topic = self.find_topic(session, stream_id, topic_id).with_error_context(|_| format!("{COMPONENT} - topic not found for stream_id: {stream_id}, topic_id: {topic_id}"))?;
         self.permissioner
-            .poll_messages(session.get_user_id(), topic.stream_id, topic.topic_id)?;
+            .poll_messages(session.get_user_id(), topic.stream_id, topic.topic_id)
+            .with_error_context(|_| format!(
+                "{COMPONENT} - permission denied to poll messages for user {} on stream_id: {}, topic_id: {}",
+                session.get_user_id(),
+                topic.stream_id,
+                topic.topic_id
+            ))?;
 
         if !topic.has_partitions() {
             return Err(IggyError::NoPartitions(topic.topic_id, topic.stream_id));
@@ -37,7 +45,8 @@ impl System {
 
         let (polling_consumer, partition_id) = topic
             .resolve_consumer_with_partition_id(consumer, session.client_id, partition_id, true)
-            .await?;
+            .await
+            .with_error_context(|_| format!("{COMPONENT} - failed to resolve consumer with partition id, consumer: {consumer}, client ID: {}, partition ID: {:?}", session.client_id, partition_id))?;
 
         let mut polled_messages = topic
             .get_messages(polling_consumer, partition_id, args.strategy, args.count)
@@ -52,7 +61,8 @@ impl System {
             trace!("Last offset: {} will be automatically stored for {}, stream: {}, topic: {}, partition: {}", offset, consumer, stream_id, topic_id, partition_id);
             topic
                 .store_consumer_offset_internal(polling_consumer, offset, partition_id)
-                .await?;
+                .await
+                .with_error_context(|_| format!("{COMPONENT} - failed to store consumer offset internal, polling consumer: {}, offset: {}, partition ID: {}", polling_consumer, offset, partition_id)) ?;
         }
 
         if self.encryptor.is_none() {
@@ -95,12 +105,17 @@ impl System {
         messages: Vec<Message>,
     ) -> Result<(), IggyError> {
         self.ensure_authenticated(session)?;
-        let topic = self.find_topic(session, &stream_id, &topic_id)?;
+        let topic = self.find_topic(session, &stream_id, &topic_id).with_error_context(|_| format!("{COMPONENT} - topic not found for stream_id: {stream_id}, topic_id: {topic_id}"))?;
         self.permissioner.append_messages(
             session.get_user_id(),
             topic.stream_id,
             topic.topic_id,
-        )?;
+        ).with_error_context(|_| format!(
+            "{COMPONENT} - permission denied to append messages for user {} on stream_id: {}, topic_id: {}",
+            session.get_user_id(),
+            topic.stream_id,
+            topic.topic_id
+        ))?;
 
         let mut batch_size_bytes = IggyByteSize::default();
         let mut messages = messages;
@@ -148,13 +163,18 @@ impl System {
         fsync: bool,
     ) -> Result<(), IggyError> {
         self.ensure_authenticated(session)?;
-        let topic = self.find_topic(session, &stream_id, &topic_id)?;
+        let topic = self.find_topic(session, &stream_id, &topic_id).with_error_context(|_| format!("{COMPONENT} - topic not found for stream_id: {stream_id}, topic_id: {topic_id}"))?;
         // Reuse those permissions as if you can append messages you can flush them
         self.permissioner.append_messages(
             session.get_user_id(),
             topic.stream_id,
             topic.topic_id,
-        )?;
+        ).with_error_context(|_| format!(
+            "{COMPONENT} - permission denied to append messages for user {} on stream_id: {}, topic_id: {}",
+            session.get_user_id(),
+            topic.stream_id,
+            topic.topic_id
+        ))?;
         topic.flush_unsaved_buffer(partition_id, fsync).await?;
         Ok(())
     }

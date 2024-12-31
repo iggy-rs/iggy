@@ -7,7 +7,9 @@ use crate::streaming::persistence::persister::*;
 use crate::streaming::session::Session;
 use crate::streaming::storage::SystemStorage;
 use crate::streaming::streams::stream::Stream;
+use crate::streaming::systems::COMPONENT;
 use crate::streaming::users::permissioner::Permissioner;
+use error_set::ErrContext;
 use iggy::error::IggyError;
 use iggy::utils::byte_size::IggyByteSize;
 use iggy::utils::crypto::{Aes256GcmEncryptor, Encryptor};
@@ -16,17 +18,17 @@ use std::path::Path;
 use std::sync::Arc;
 use tokio::fs::{create_dir, remove_dir_all};
 use tokio::time::Instant;
-use tracing::{info, instrument, trace};
+use tracing::{error, info, instrument, trace};
 
 use crate::archiver::disk::DiskArchiver;
 use crate::archiver::s3::S3Archiver;
 use crate::archiver::{Archiver, ArchiverKind};
+use crate::map_toggle_str;
 use crate::state::file::FileState;
 use crate::state::system::SystemState;
 use crate::state::State;
 use crate::streaming::users::user::User;
 use crate::versioning::SemanticVersion;
-use crate::{compat, map_toggle_str};
 use iggy::locking::IggySharedMut;
 use iggy::locking::IggySharedMutFn;
 use iggy::models::user_info::UserId;
@@ -175,7 +177,7 @@ impl System {
         }
     }
 
-    #[instrument(skip_all)]
+    #[instrument(skip_all, name = "trace_system_init")]
     pub async fn init(&mut self) -> Result<(), IggyError> {
         let system_path = self.config.get_system_path();
         if !Path::new(&system_path).exists() && create_dir(&system_path).await.is_err() {
@@ -206,23 +208,23 @@ impl System {
             self.config.get_system_path()
         );
 
-        if self.config.database.is_some() {
-            compat::storage_conversion::init(
-                self.config.clone(),
-                self.state.clone(),
-                self.storage.clone(),
-            )
-            .await?;
-        }
-
-        let state_entries = self.state.init().await?;
-        let system_state = SystemState::init(state_entries).await?;
+        let state_entries =
+            self.state.init().await.with_error_context(|_| {
+                format!("{COMPONENT} - failed to initialize state entries")
+            })?;
+        let system_state = SystemState::init(state_entries)
+            .await
+            .with_error_context(|_| format!("{COMPONENT} - failed to initialize system state"))?;
         let now = Instant::now();
-        self.load_version().await?;
+        self.load_version()
+            .await
+            .with_error_context(|_| format!("{COMPONENT} - failed to load version"))?;
         self.load_users(system_state.users.into_values().collect())
-            .await?;
+            .await
+            .with_error_context(|_| format!("{COMPONENT} - failed to load users"))?;
         self.load_streams(system_state.streams.into_values().collect())
-            .await?;
+            .await
+            .with_error_context(|_| format!("{COMPONENT} - failed to load streams"))?;
         if let Some(archiver) = self.archiver.as_ref() {
             archiver
                 .init()
@@ -233,13 +235,13 @@ impl System {
         Ok(())
     }
 
-    #[instrument(skip_all)]
+    #[instrument(skip_all, name = "trace_shutdown")]
     pub async fn shutdown(&mut self) -> Result<(), IggyError> {
         self.persist_messages().await?;
         Ok(())
     }
 
-    #[instrument(skip_all)]
+    #[instrument(skip_all, name = "trace_persist_messages")]
     pub async fn persist_messages(&self) -> Result<usize, IggyError> {
         trace!("Saving buffered messages on disk...");
         let mut saved_messages_number = 0;
@@ -252,12 +254,15 @@ impl System {
 
     pub fn ensure_authenticated(&self, session: &Session) -> Result<(), IggyError> {
         if !session.is_active() {
+            error!("{COMPONENT} - session is inactive, session: {session}");
             return Err(IggyError::StaleClient);
         }
 
-        match session.is_authenticated() {
-            true => Ok(()),
-            false => Err(IggyError::Unauthenticated),
+        if session.is_authenticated() {
+            Ok(())
+        } else {
+            error!("{COMPONENT} - unauthenticated access attempt, session: {session}");
+            Err(IggyError::Unauthenticated)
         }
     }
 

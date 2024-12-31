@@ -1,7 +1,9 @@
 use crate::streaming::personal_access_tokens::personal_access_token::PersonalAccessToken;
 use crate::streaming::session::Session;
 use crate::streaming::systems::system::System;
+use crate::streaming::systems::COMPONENT;
 use crate::streaming::users::user::User;
+use error_set::ErrContext;
 use iggy::error::IggyError;
 use iggy::utils::expiry::IggyExpiry;
 use iggy::utils::text;
@@ -15,7 +17,11 @@ impl System {
     ) -> Result<Vec<&PersonalAccessToken>, IggyError> {
         self.ensure_authenticated(session)?;
         let user_id = session.get_user_id();
-        let user = self.get_user(&user_id.try_into()?)?;
+        let user = self
+            .get_user(&user_id.try_into()?)
+            .with_error_context(|_| {
+                format!("{COMPONENT} - failed to get user with id: {user_id}")
+            })?;
         info!("Loading personal access tokens for user with ID: {user_id}...",);
         let personal_access_tokens: Vec<_> = user.personal_access_tokens.values().collect();
         info!(
@@ -35,7 +41,9 @@ impl System {
         let user_id = session.get_user_id();
         let identifier = user_id.try_into()?;
         {
-            let user = self.get_user(&identifier)?;
+            let user = self.get_user(&identifier).with_error_context(|_| {
+                format!("{COMPONENT} - failed to get user with id: {user_id}")
+            })?;
             let max_token_per_user = self.personal_access_token.max_tokens_per_user;
             if user.personal_access_tokens.len() as u32 >= max_token_per_user {
                 error!(
@@ -48,7 +56,9 @@ impl System {
             }
         }
 
-        let user = self.get_user_mut(&identifier)?;
+        let user = self.get_user_mut(&identifier).with_error_context(|_| {
+            format!("{COMPONENT} - failed to get mutable reference to the user with id: {user_id}")
+        })?;
         let name = text::to_lowercase_non_whitespace(name);
         if user
             .personal_access_tokens
@@ -75,7 +85,13 @@ impl System {
     ) -> Result<(), IggyError> {
         self.ensure_authenticated(session)?;
         let user_id = session.get_user_id();
-        let user = self.get_user_mut(&user_id.try_into()?)?;
+        let user = self
+            .get_user_mut(&user_id.try_into()?)
+            .with_error_context(|_| {
+                format!(
+                    "{COMPONENT} - failed to get mutable reference to the user with id: {user_id}"
+                )
+            })?;
         let name = text::to_lowercase_non_whitespace(name);
         let token;
 
@@ -129,7 +145,14 @@ impl System {
             ));
         }
 
-        let user = self.get_user(&personal_access_token.user_id.try_into()?)?;
+        let user = self
+            .get_user(&personal_access_token.user_id.try_into()?)
+            .with_error_context(|_| {
+                format!(
+                    "{COMPONENT} - failed to get user with id: {}",
+                    personal_access_token.user_id
+                )
+            })?;
         self.login_user_with_credentials(&user.username, None, session)
             .await
     }

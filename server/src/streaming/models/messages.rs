@@ -1,4 +1,7 @@
+use crate::streaming::local_sizeable::LocalSizeable;
+use crate::streaming::models::COMPONENT;
 use bytes::{BufMut, Bytes, BytesMut};
+use error_set::ErrContext;
 use iggy::bytes_serializable::BytesSerializable;
 use iggy::error::IggyError;
 use iggy::models::messages::PolledMessage;
@@ -10,8 +13,6 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::ops::Deref;
 use std::sync::Arc;
-
-use crate::streaming::local_sizeable::LocalSizeable;
 
 // It's the same as PolledMessages from Iggy models, but with the Arc<Message> instead of Message.
 #[derive(Debug, Serialize, Deserialize)]
@@ -57,8 +58,8 @@ impl RetainedMessage {
             checksum: checksum::calculate(&message.payload),
             message_state: MessageState::Available,
             id: message.id,
-            payload: message.payload.clone(),
-            headers: message.headers.as_ref().map(|headers| headers.to_bytes()),
+            payload: message.payload,
+            headers: message.headers.map(|h| h.to_bytes()),
         }
     }
 
@@ -89,12 +90,40 @@ impl RetainedMessage {
     }
 
     pub fn try_from_bytes(bytes: Bytes) -> Result<Self, IggyError> {
-        let offset = u64::from_le_bytes(bytes[..8].try_into()?);
-        let message_state = MessageState::from_code(bytes[8])?;
-        let timestamp = u64::from_le_bytes(bytes[9..17].try_into()?);
-        let id = u128::from_le_bytes(bytes[17..33].try_into()?);
-        let checksum = u32::from_le_bytes(bytes[33..37].try_into()?);
-        let headers_length = u32::from_le_bytes(bytes[37..41].try_into()?);
+        let offset = u64::from_le_bytes(
+            bytes[..8]
+                .try_into()
+                .with_error_context(|_| format!("{COMPONENT} - failed to parse message offset"))
+                .map_err(|_| IggyError::InvalidNumberEncoding)?,
+        );
+        let message_state = MessageState::from_code(bytes[8])
+            .with_error_context(|_| format!("{COMPONENT} - failed to parse message state"))?;
+        let timestamp = u64::from_le_bytes(
+            bytes[9..17]
+                .try_into()
+                .with_error_context(|_| format!("{COMPONENT} - failed to parse message timestamp"))
+                .map_err(|_| IggyError::InvalidNumberEncoding)?,
+        );
+        let id = u128::from_le_bytes(
+            bytes[17..33]
+                .try_into()
+                .with_error_context(|_| format!("{COMPONENT} - failed to parse message id"))
+                .map_err(|_| IggyError::InvalidNumberEncoding)?,
+        );
+        let checksum = u32::from_le_bytes(
+            bytes[33..37]
+                .try_into()
+                .with_error_context(|_| format!("{COMPONENT} - failed to parse message checksum"))
+                .map_err(|_| IggyError::InvalidNumberEncoding)?,
+        );
+        let headers_length = u32::from_le_bytes(
+            bytes[37..41]
+                .try_into()
+                .with_error_context(|_| {
+                    format!("{COMPONENT} - failed to parse message headers_length")
+                })
+                .map_err(|_| IggyError::InvalidNumberEncoding)?,
+        );
         let headers = if headers_length > 0 {
             Some(bytes.slice(41..41 + headers_length as usize))
         } else {

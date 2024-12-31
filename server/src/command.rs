@@ -150,7 +150,11 @@ impl BytesSerializable for ServerCommand {
     }
 
     fn from_bytes(bytes: Bytes) -> Result<Self, IggyError> {
-        let code = u32::from_le_bytes(bytes[..4].try_into()?);
+        let code = u32::from_le_bytes(
+            bytes[..4]
+                .try_into()
+                .map_err(|_| IggyError::InvalidNumberEncoding)?,
+        );
         let payload = bytes.slice(4..);
         match code {
             PING_CODE => Ok(ServerCommand::Ping(Ping::from_bytes(payload)?)),

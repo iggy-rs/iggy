@@ -7,6 +7,7 @@ use axum::{
     middleware::Next,
     response::Response,
 };
+use error_set::ErrContext;
 use std::sync::Arc;
 
 const AUTHORIZATION: &str = "authorization";
@@ -35,8 +36,10 @@ pub async fn jwt_auth(
     let bearer = request
         .headers()
         .get(AUTHORIZATION)
-        .ok_or(UNAUTHORIZED)?
+        .ok_or(UNAUTHORIZED)
+        .with_error_context(|_| "{COMPONENT} - missing or inaccessible Authorization header")?
         .to_str()
+        .with_error_context(|_| "{COMPONENT} - invalid authorization header format")
         .map_err(|_| UNAUTHORIZED)?;
 
     if !bearer.starts_with(BEARER) {
@@ -44,10 +47,13 @@ pub async fn jwt_auth(
     }
 
     let jwt_token = &bearer[BEARER.len()..];
-    let token_header = jsonwebtoken::decode_header(jwt_token).map_err(|_| UNAUTHORIZED)?;
+    let token_header = jsonwebtoken::decode_header(jwt_token)
+        .with_error_context(|_| "{COMPONENT} - failed to decode JWT header")
+        .map_err(|_| UNAUTHORIZED)?;
     let jwt_claims = state
         .jwt_manager
         .decode(jwt_token, token_header.alg)
+        .with_error_context(|_| "{COMPONENT} - failed to decode JWT with provided algorithm")
         .map_err(|_| UNAUTHORIZED)?;
     if state
         .jwt_manager

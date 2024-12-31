@@ -92,8 +92,9 @@ impl BytesSerializable for UpdateUser {
         let username = if has_username == 1 {
             let username_length = bytes[position];
             position += 1;
-            let username =
-                from_utf8(&bytes[position..position + username_length as usize])?.to_string();
+            let username = from_utf8(&bytes[position..position + username_length as usize])
+                .map_err(|_| IggyError::InvalidUtf8)?
+                .to_string();
             position += username_length as usize;
             Some(username)
         } else {

@@ -1,5 +1,6 @@
 use anyhow::Result;
 use clap::Parser;
+use dotenvy::dotenv;
 use figlet_rs::FIGfont;
 use server::args::Args;
 use server::channels::commands::archive_state::ArchiveStateExecutor;
@@ -24,12 +25,23 @@ use tokio::time::Instant;
 use tracing::{info, instrument};
 
 #[tokio::main]
-#[instrument(skip_all)]
+#[instrument(skip_all, name = "trace_start_server")]
 async fn main() -> Result<(), ServerError> {
     let startup_timestamp = Instant::now();
     let standard_font = FIGfont::standard().unwrap();
     let figure = standard_font.convert("Iggy Server");
     println!("{}", figure.unwrap());
+
+    if let Ok(env_path) = std::env::var("IGGY_ENV_PATH") {
+        if dotenvy::from_path(&env_path).is_ok() {
+            println!("Loaded environment variables from path: {env_path}");
+        }
+    } else if let Ok(path) = dotenv() {
+        println!(
+            "Loaded environment variables from .env file at path: {}",
+            path.display()
+        );
+    }
 
     let args = Args::parse();
     let config_provider = config_provider::resolve(&args.config_provider)?;

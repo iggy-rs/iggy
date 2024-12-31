@@ -55,7 +55,10 @@ impl ConsumerOffsetClient for HttpClient {
             return Ok(None);
         }
 
-        let offset = response.json().await?;
+        let offset = response
+            .json()
+            .await
+            .map_err(|_| IggyError::InvalidJsonResponse)?;
         Ok(Some(offset))
     }
 }

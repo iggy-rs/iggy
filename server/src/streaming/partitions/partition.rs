@@ -12,6 +12,7 @@ use iggy::utils::duration::IggyDuration;
 use iggy::utils::expiry::IggyExpiry;
 use iggy::utils::sizeable::Sizeable;
 use iggy::utils::timestamp::IggyTimestamp;
+use std::fmt;
 use std::sync::atomic::{AtomicU32, AtomicU64, Ordering};
 use std::sync::Arc;
 
@@ -173,6 +174,20 @@ impl Partition {
 impl Sizeable for Partition {
     fn get_size_bytes(&self) -> IggyByteSize {
         IggyByteSize::from(self.size_bytes.load(Ordering::SeqCst))
+    }
+}
+
+impl fmt::Display for Partition {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "Partition {{ stream_id: {}, topic_id: {}, partition_id: {}, path: {}, current_offset: {} }}",
+            self.stream_id,
+            self.topic_id,
+            self.partition_id,
+            self.partition_path,
+            self.current_offset,
+        )
     }
 }
 

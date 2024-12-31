@@ -1,5 +1,7 @@
 use crate::streaming::session::Session;
 use crate::streaming::systems::system::System;
+use crate::streaming::systems::COMPONENT;
+use error_set::ErrContext;
 use iggy::consumer::Consumer;
 use iggy::error::IggyError;
 use iggy::identifier::Identifier;
@@ -16,7 +18,7 @@ impl System {
         offset: u64,
     ) -> Result<(), IggyError> {
         self.ensure_authenticated(session)?;
-        let topic = self.find_topic(session, stream_id, topic_id)?;
+        let topic = self.find_topic(session, stream_id, topic_id).with_error_context(|_| format!("{COMPONENT} - topic not found for stream_id: {stream_id}, topic_id: {topic_id}"))?;
         self.permissioner.store_consumer_offset(
             session.get_user_id(),
             topic.stream_id,
@@ -37,12 +39,19 @@ impl System {
         partition_id: Option<u32>,
     ) -> Result<ConsumerOffsetInfo, IggyError> {
         self.ensure_authenticated(session)?;
-        let topic = self.find_topic(session, stream_id, topic_id)?;
+        let topic = self.find_topic(session, stream_id, topic_id).with_error_context(|_| format!("{COMPONENT} - topic not found for stream_id: {stream_id}, topic_id: {topic_id}"))?;
         self.permissioner.get_consumer_offset(
             session.get_user_id(),
             topic.stream_id,
             topic.topic_id,
-        )?;
+        ).with_error_context(|_| {
+            format!(
+                "{COMPONENT} - permission denied to get consumer group for user {} on stream_id: {}, topic_id: {}",
+                session.get_user_id(),
+                topic.stream_id,
+                topic.topic_id
+            )
+        })?;
 
         topic
             .get_consumer_offset(consumer, partition_id, session.client_id)

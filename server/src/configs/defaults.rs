@@ -294,7 +294,6 @@ impl Default for SystemConfig {
         SystemConfig {
             path: SERVER_CONFIG.system.path.parse().unwrap(),
             backup: BackupConfig::default(),
-            database: None,
             runtime: RuntimeConfig::default(),
             logging: LoggingConfig::default(),
             cache: CacheConfig::default(),

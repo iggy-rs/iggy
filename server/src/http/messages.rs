@@ -22,11 +22,11 @@ use tracing::instrument;
 pub fn router(state: Arc<AppState>) -> Router {
     Router::new()
         .route(
-            "/streams/:stream_id/topics/:topic_id/messages",
+            "/streams/{stream_id}/topics/{topic_id}/messages",
             get(poll_messages).post(send_messages),
         )
         .route(
-            "/streams/:stream_id/topics/:topic_id/messages/flush/:partition_id/:fsync",
+            "/streams/{stream_id}/topics/{topic_id}/messages/flush/{partition_id}/{fsync}",
             get(flush_unsaved_buffer),
         )
         .with_state(state)

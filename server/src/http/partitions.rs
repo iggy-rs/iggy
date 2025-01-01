@@ -19,7 +19,7 @@ use tracing::instrument;
 pub fn router(state: Arc<AppState>) -> Router {
     Router::new()
         .route(
-            "/streams/:stream_id/topics/:topic_id/partitions",
+            "/streams/{stream_id}/topics/{topic_id}/partitions",
             post(create_partitions).delete(delete_partitions),
         )
         .with_state(state)

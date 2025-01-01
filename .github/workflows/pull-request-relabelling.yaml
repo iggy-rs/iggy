@@ -1,10 +1,10 @@
-name: Relabelling
+name: relabelling
 on:
   pull_request:
 
 jobs:
   check-labels:
-    name: Relabelling
+    name: relabelling
     runs-on: ubuntu-latest
     permissions:
       pull-requests: write

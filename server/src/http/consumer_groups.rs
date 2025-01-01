@@ -21,11 +21,11 @@ use tracing::instrument;
 pub fn router(state: Arc<AppState>) -> Router {
     Router::new()
         .route(
-            "/streams/:stream_id/topics/:topic_id/consumer-groups",
+            "/streams/{stream_id}/topics/{topic_id}/consumer-groups",
             get(get_consumer_groups).post(create_consumer_group),
         )
         .route(
-            "/streams/:stream_id/topics/:topic_id/consumer-groups/:group_id",
+            "/streams/{stream_id}/topics/{topic_id}/consumer-groups/{group_id}",
             get(get_consumer_group).delete(delete_consumer_group),
         )
         .with_state(state)

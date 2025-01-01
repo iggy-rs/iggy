@@ -30,7 +30,7 @@ pub fn router(state: Arc<AppState>, metrics_config: &HttpMetricsConfig) -> Route
         .route("/ping", get(|| async { PONG }))
         .route("/stats", get(get_stats))
         .route("/clients", get(get_clients))
-        .route("/clients/:client_id", get(get_client))
+        .route("/clients/{client_id}", get(get_client))
         .route("/snapshot", post(get_snapshot));
     if metrics_config.enabled {
         router = router.route(&metrics_config.endpoint, get(get_metrics));

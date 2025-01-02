@@ -69,10 +69,21 @@ where
     where
         F: Fn(&RetainedMessage) -> bool,
     {
-        self.fold(Vec::with_capacity(messages_count), |mut messages, batch| {
-            messages.extend(batch.into_messages_iter().filter(f));
-            messages
-        })
+        let (messages, _) = self.fold(
+            (Vec::with_capacity(messages_count), messages_count),
+            |(mut messages, mut left_messages), batch| {
+                let materialized_messages = batch
+                    .into_messages_iter()
+                    .filter(f)
+                    .take(left_messages)
+                    .collect::<Vec<_>>();
+                let consumed = materialized_messages.len();
+                messages.extend(materialized_messages);
+                left_messages -= consumed;
+                (messages, left_messages)
+            },
+        );
+        messages
     }
 }
 

@@ -4354,6 +4354,7 @@ dependencies = [
  "opentelemetry-otlp",
  "opentelemetry-semantic-conventions",
  "opentelemetry_sdk",
+ "pin-project",
  "prometheus-client",
  "quinn",
  "rcgen",

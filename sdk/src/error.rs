@@ -48,6 +48,10 @@ pub enum IggyError {
     CannotOpenDatabase(String) = 19,
     #[error("Resource with key: {0} was not found.")]
     ResourceNotFound(String) = 20,
+    #[error("Eof error")]
+    Eof = 21,
+    #[error("PollRead error")]
+    PollReadError = 22,
     #[error("Stale client")]
     StaleClient = 30,
     #[error("TCP error")]
@@ -58,6 +62,8 @@ pub enum IggyError {
     InvalidServerAddress = 33,
     #[error("Invalid client address")]
     InvalidClientAddress = 34,
+    #[error("Underlying IO error")]
+    IoError = 35,
     #[error("Unauthenticated")]
     Unauthenticated = 40,
     #[error("Unauthorized")]

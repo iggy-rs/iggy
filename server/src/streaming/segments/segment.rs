@@ -1,5 +1,7 @@
 use crate::configs::system::SystemConfig;
 use crate::streaming::batching::batch_accumulator::BatchAccumulator;
+use crate::streaming::dma_storage::dma_storage::DmaStorage;
+use crate::streaming::io::buf::dma_buf::DmaBuf;
 use crate::streaming::segments::index::Index;
 use crate::streaming::storage::SystemStorage;
 use iggy::utils::byte_size::IggyByteSize;
@@ -37,6 +39,7 @@ pub struct Segment {
     pub(crate) config: Arc<SystemConfig>,
     pub(crate) indexes: Option<Vec<Index>>,
     pub(crate) storage: Arc<SystemStorage>,
+    pub(crate) dma_storage: DmaStorage,
 }
 
 impl Segment {
@@ -57,6 +60,8 @@ impl Segment {
         messages_count_of_parent_partition: Arc<AtomicU64>,
     ) -> Segment {
         let path = config.get_segment_path(stream_id, topic_id, partition_id, start_offset);
+        let file_path = Self::get_log_path(&path).leak();
+        let dma_storage = DmaStorage::new(file_path);
 
         Segment {
             stream_id,
@@ -87,6 +92,7 @@ impl Segment {
             messages_count_of_parent_topic,
             messages_count_of_parent_partition,
             config,
+            dma_storage,
             storage,
         }
     }

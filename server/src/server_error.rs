@@ -14,7 +14,10 @@ error_set!(
         WriteError(WriteError),
 
         #[display("Read to end error")]
-        ReadToEndError(ReadToEndError)
+        ReadToEndError(ReadToEndError),
+
+        #[display("Eof error")]
+        Eof,
     };
 
     ConfigError = {

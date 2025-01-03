@@ -1,14 +1,10 @@
 use super::benchmark::{BenchmarkFutures, Benchmarkable};
+use crate::actors::consumer::Consumer;
+use crate::actors::producer::Producer;
 use crate::args::common::IggyBenchArgs;
-use crate::args::simple::BenchmarkKind;
-use crate::consumer::Consumer;
-use crate::producer::Producer;
 use async_trait::async_trait;
-use colored::Colorize;
-use human_format::Formatter;
-use iggy::utils::byte_size::IggyByteSize;
+use iggy_benchmark_report::benchmark_kind::BenchmarkKind;
 use integration::test_server::ClientFactory;
-use std::fmt::Display;
 use std::sync::Arc;
 use tracing::info;
 
@@ -26,28 +22,6 @@ impl SendAndPollMessagesBenchmark {
     }
 }
 
-impl Display for SendAndPollMessagesBenchmark {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        let total_messages = self.total_messages();
-        let processed = IggyByteSize::from(total_messages * self.args().message_size() as u64);
-        let total_messages_human_readable = Formatter::new().format(total_messages as f64);
-        let info = format!("Benchmark: {}, transport: {}, total messages: {}, processed: {}, {} streams, {} messages per batch, {} batches, {} bytes per message, {} producers, {} consumers",
-                self.kind(),
-                self.args().transport(),
-                total_messages_human_readable,
-                processed,
-                self.args().number_of_streams(),
-                self.args().messages_per_batch(),
-                self.args().message_batches(),
-                self.args().message_size(),
-                self.args().producers(),
-                self.args().consumers(),
-            ).green();
-
-        writeln!(f, "{}", info)
-    }
-}
-
 #[async_trait]
 impl Benchmarkable for SendAndPollMessagesBenchmark {
     async fn run(&mut self) -> BenchmarkFutures {
@@ -62,7 +36,6 @@ impl Benchmarkable for SendAndPollMessagesBenchmark {
         let message_size = self.args.message_size();
         let partitions_count = self.args.number_of_partitions();
         let warmup_time = self.args.warmup_time();
-        let output_directory = self.args.output_directory();
 
         let mut futures: BenchmarkFutures =
             Ok(Vec::with_capacity((producers + consumers) as usize));
@@ -71,7 +44,6 @@ impl Benchmarkable for SendAndPollMessagesBenchmark {
                 true => start_stream_id + producer_id,
                 false => start_stream_id + 1,
             };
-            let output_directory = output_directory.clone();
             let producer = Producer::new(
                 self.client_factory.clone(),
                 producer_id,
@@ -81,7 +53,8 @@ impl Benchmarkable for SendAndPollMessagesBenchmark {
                 message_batches,
                 message_size,
                 warmup_time,
-                output_directory,
+                self.args.sampling_time(),
+                self.args.moving_average_window(),
             );
             let future = Box::pin(async move { producer.run().await });
             futures.as_mut().unwrap().push(future);
@@ -92,7 +65,6 @@ impl Benchmarkable for SendAndPollMessagesBenchmark {
                 true => start_stream_id + consumer_id,
                 false => start_stream_id + 1,
             };
-            let output_directory = output_directory.clone();
             let consumer = Consumer::new(
                 self.client_factory.clone(),
                 consumer_id,
@@ -101,7 +73,8 @@ impl Benchmarkable for SendAndPollMessagesBenchmark {
                 messages_per_batch,
                 message_batches,
                 warmup_time,
-                output_directory,
+                self.args.sampling_time(),
+                self.args.moving_average_window(),
             );
             let future = Box::pin(async move { consumer.run().await });
             futures.as_mut().unwrap().push(future);
@@ -123,9 +96,5 @@ impl Benchmarkable for SendAndPollMessagesBenchmark {
 
     fn client_factory(&self) -> &Arc<dyn ClientFactory> {
         &self.client_factory
-    }
-
-    fn display_settings(&self) {
-        info!("{}", self.to_string());
     }
 }

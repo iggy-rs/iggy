@@ -1,9 +1,10 @@
+use super::common::IggyBenchArgs;
 use super::defaults::*;
 use super::examples::print_examples;
 use super::props::BenchmarkKindProps;
 use super::transport::BenchmarkTransportCommand;
-use super::{common::IggyBenchArgs, simple::BenchmarkKind};
 use clap::{error::ErrorKind, CommandFactory, Parser, Subcommand};
+use iggy_benchmark_report::benchmark_kind::BenchmarkKind;
 use serde::Serialize;
 use std::num::NonZeroU32;
 

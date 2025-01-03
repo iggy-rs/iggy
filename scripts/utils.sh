@@ -9,6 +9,30 @@ function get_git_info() {
     echo "${git_branch}_${git_info}"
 }
 
+# OS detection
+OS="$(uname -s)"
+
+# Function to check if process exists - OS specific implementations
+function process_exists() {
+    local pid=$1
+    if [ "$OS" = "Darwin" ]; then
+        ps -p "${pid}" > /dev/null
+    else
+        [[ -e /proc/${pid} ]]
+    fi
+}
+
+# Function to send signal to process - OS specific implementations
+function send_signal_to_pid() {
+    local pid=$1
+    local signal=$2
+    if [ "$OS" = "Darwin" ]; then
+        kill "-${signal}" "${pid}"
+    else
+        kill -s "${signal}" "${pid}"
+    fi
+}
+
 # Function to wait for a process to exit
 function wait_for_process() {
     local process_name=$1
@@ -23,7 +47,7 @@ function wait_for_process() {
         pids=$(pgrep "${process_name}") || true
         if [[ -n "${pids}" ]]; then
             for pid in ${pids}; do
-                if [[ -e /proc/${pid} ]]; then
+                if process_exists "${pid}"; then
                     sleep 0.1
                     continue_outer_loop=true
                     break
@@ -47,8 +71,8 @@ function send_signal() {
 
     if [[ -n "${pids}" ]]; then
         for pid in ${pids}; do
-            if [[ -e /proc/${pid} ]]; then
-                kill -s "${signal}" "${pid}"
+            if process_exists "${pid}"; then
+                send_signal_to_pid "${pid}" "${signal}"
             fi
         done
     fi

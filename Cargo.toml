@@ -4,7 +4,16 @@ codegen-units = 1
 
 [workspace]
 resolver = "2"
-members = ["bench", "cli", "examples", "integration", "sdk", "server", "tools"]
+members = [
+    "bench",
+    "bench/report",
+    "cli",
+    "examples",
+    "integration",
+    "sdk",
+    "server",
+    "tools"
+]
 
 [workspace.metadata.cargo-machete]
 ignored = ["openssl"]

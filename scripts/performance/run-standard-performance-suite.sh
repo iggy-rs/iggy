@@ -27,14 +27,17 @@ echo "Building project..."
 cargo build --release
 
 # Create a directory for the performance results
-(mkdir performance_results || true) &> /dev/null
+(mkdir -p performance_results || true) &> /dev/null
 
 # Construct standard performance suites, each should process 8 GB of data
 STANDARD_SEND=$(construct_bench_command "$IGGY_BENCH_CMD" "send" 8 1000 1000 1000 tcp)        # 8 producers, 8 streams, 1000 byte messages, 1000 messages per batch, 1000 message batches, tcp
 STANDARD_POLL=$(construct_bench_command "$IGGY_BENCH_CMD" "poll" 8 1000 1000 1000 tcp)         # 8 consumers, 8 streams, 1000 byte messages, 1000 messages per batch, 1000 message batches, tcp
+STANDARD_FULL_CACHE_SEND=$(construct_bench_command "$IGGY_BENCH_CMD" "send" 8 1000 1000 1000 tcp "only_cache")  # Same as STANDARD_SEND but with full cache
+STANDARD_FULL_CACHE_POLL=$(construct_bench_command "$IGGY_BENCH_CMD" "poll" 8 1000 1000 1000 tcp "only_cache")  # Same as STANDARD_POLL but with full cache
+STANDARD_NO_CACHE_SEND=$(construct_bench_command "$IGGY_BENCH_CMD" "send" 8 1000 1000 1000 tcp "no_cache")  # Same as STANDARD_SEND but with cache disabled
+STANDARD_NO_CACHE_POLL=$(construct_bench_command "$IGGY_BENCH_CMD" "poll" 8 1000 1000 1000 tcp "no_cache")  # Same as STANDARD_POLL but with cache disabled
 SMALL_BATCH_SEND=$(construct_bench_command "$IGGY_BENCH_CMD" "send" 8 1000 100 10000 tcp)    # 8 producers, 8 streams, 1000 byte messages, 100 messages per batch, 10000 message batches, tcp
 SMALL_BATCH_POLL=$(construct_bench_command "$IGGY_BENCH_CMD" "poll" 8 1000 100 10000 tcp)     # 8 consumers, 8 streams, 1000 byte messages, 100 messages per batch, 10000 message batches, tcp
-
 # SMALL_BATCH_SMALL_MSG_SEND=$(construct_bench_command "$IGGY_BENCH_CMD" "send" 8 20 100 500000 tcp)    # Uncomment and adjust if needed
 # SMALL_BATCH_SMALL_MSG_POLL=$(construct_bench_command "$IGGY_BENCH_CMD" "poll" 8 20 100 500000 tcp)  # Uncomment and adjust if needed
 # SINGLE_MESSAGE_BATCH_SMALL_MSG_SEND=$(construct_bench_command "$IGGY_BENCH_CMD" "send" 8 20 1 50000000 tcp)  # Uncomment and adjust if needed
@@ -44,6 +47,10 @@ SMALL_BATCH_POLL=$(construct_bench_command "$IGGY_BENCH_CMD" "poll" 8 1000 100 1
 SUITES=(
     "${STANDARD_SEND}"
     "${STANDARD_POLL}"
+    "${STANDARD_FULL_CACHE_SEND}"
+    "${STANDARD_FULL_CACHE_POLL}"
+    "${STANDARD_NO_CACHE_SEND}"
+    "${STANDARD_NO_CACHE_POLL}"
     "${SMALL_BATCH_SEND}"
     "${SMALL_BATCH_POLL}"
     # "${SMALL_BATCH_SMALL_MSG_SEND}"
@@ -59,9 +66,17 @@ for (( i=0; i<${#SUITES[@]} ; i+=2 )) ; do
     echo "Cleaning old local_data..."
     rm -rf local_data || true
 
-    # Start iggy-server
-    echo "Starting iggy-server..."
-    target/release/iggy-server &> /dev/null &
+    # Start iggy-server with appropriate configuration
+    if [[ "$SEND_BENCH" == *"_only_cache_"* ]] || [[ "$POLL_BENCH" == *"_only_cache_"* ]]; then
+        echo "Starting iggy-server with command: IGGY_SYSTEM_CACHE_SIZE=\"9GB\" target/release/iggy-server"
+        IGGY_SYSTEM_CACHE_SIZE="9GB" target/release/iggy-server &> /dev/null &
+    elif [[ "$SEND_BENCH" == *"_no_cache_"* ]] || [[ "$POLL_BENCH" == *"_no_cache_"* ]]; then
+        echo "Starting iggy-server with command: IGGY_SYSTEM_CACHE_ENABLED=false target/release/iggy-server"
+        IGGY_SYSTEM_CACHE_ENABLED=false target/release/iggy-server &> /dev/null &
+    else
+        echo "Starting iggy-server with command: target/release/iggy-server"
+        target/release/iggy-server &> /dev/null &
+    fi
     IGGY_SERVER_PID=$!
     sleep 2
 

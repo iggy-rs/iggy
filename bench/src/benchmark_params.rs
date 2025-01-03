@@ -1,36 +1,22 @@
-use std::io::Write;
-
 use crate::args::common::IggyBenchArgs;
 use iggy::utils::timestamp::IggyTimestamp;
 use serde::Serialize;
 
 #[derive(Debug, Serialize)]
 pub struct BenchmarkParams {
-    timestamp_micros: i64,
-    benchmark_name: String,
-    transport: String,
-    messages_per_batch: u32,
-    message_batches: u32,
-    message_size: u32,
-    producers: u32,
-    consumers: u32,
-    streams: u32,
-    partitions: u32,
-    number_of_consumer_groups: u32,
-    disable_parallel_consumers: bool,
-    disable_parallel_producers: bool,
-}
-
-impl BenchmarkParams {
-    pub fn dump_to_toml(&self, output_directory: &str) {
-        let output_file = format!("{}/params.toml", output_directory);
-        let toml_str = toml::to_string(self).unwrap();
-        Write::write_all(
-            &mut std::fs::File::create(output_file).unwrap(),
-            toml_str.as_bytes(),
-        )
-        .unwrap();
-    }
+    pub timestamp_micros: i64,
+    pub benchmark_name: String,
+    pub transport: String,
+    pub messages_per_batch: u32,
+    pub message_batches: u32,
+    pub message_size: u32,
+    pub producers: u32,
+    pub consumers: u32,
+    pub streams: u32,
+    pub partitions: u32,
+    pub number_of_consumer_groups: u32,
+    pub disable_parallel_consumers: bool,
+    pub disable_parallel_producers: bool,
 }
 
 impl From<&IggyBenchArgs> for BenchmarkParams {

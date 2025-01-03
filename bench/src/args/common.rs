@@ -40,12 +40,9 @@ pub struct IggyBenchArgs {
     #[arg(long, short = 'k', default_value_t = DEFAULT_SKIP_SERVER_START)]
     pub skip_server_start: bool,
 
-    /// Output directory, in which the benchmark results will be stored as `csv` and `toml` files.
-    /// Sample from the benchmark will be stored in a `csv` file on per-actor manner - each
-    /// producer/consumer will have its own file.
-    /// Actor summary, benchmark summary and parameters will be stored in a TOML file.
-    #[arg(long, short = 'o', default_value = None)]
-    pub output_directory: Option<String>,
+    /// Output directory path for the benchmark results
+    #[arg(long, short)]
+    pub output: Option<String>,
 }
 
 fn validate_server_executable_path(v: &str) -> Result<String, String> {
@@ -141,7 +138,7 @@ impl IggyBenchArgs {
         self.warmup_time
     }
 
-    pub fn output_directory(&self) -> Option<String> {
-        self.output_directory.clone()
+    pub fn output(&self) -> Option<String> {
+        self.output.clone()
     }
 }

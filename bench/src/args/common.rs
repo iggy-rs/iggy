@@ -40,12 +40,21 @@ pub struct IggyBenchArgs {
     #[arg(long, short = 'k', default_value_t = DEFAULT_SKIP_SERVER_START)]
     pub skip_server_start: bool,
 
-    /// Output directory, in which the benchmark results will be stored as `csv` and `toml` files.
-    /// Sample from the benchmark will be stored in a `csv` file on per-actor manner - each
-    /// producer/consumer will have its own file.
-    /// Actor summary, benchmark summary and parameters will be stored in a TOML file.
-    #[arg(long, short = 'o', default_value = None)]
-    pub output_directory: Option<String>,
+    /// Output directory path for the benchmark results
+    #[arg(long, short)]
+    pub output: Option<String>,
+
+    /// Git reference (commit hash, branch or tag) used for note in the benchmark results
+    #[arg(long)]
+    pub git_ref: Option<String>,
+
+    /// Git reference date used for note in the benchmark results, preferably merge date of the commit
+    #[arg(long)]
+    pub git_ref_date: Option<String>,
+
+    /// Pretty name for the benchmark run
+    #[arg(long)]
+    pub pretty_name: Option<String>,
 }
 
 fn validate_server_executable_path(v: &str) -> Result<String, String> {
@@ -86,6 +95,17 @@ impl IggyBenchArgs {
                         "Cannot use cleanup or verbose flags with a non-loopback server address: {}",
                         self.server_address()
                     ),
+                )
+                .exit();
+        }
+
+        if self.output.is_none()
+            && (self.git_ref.is_some() || self.pretty_name.is_some() || self.git_ref_date.is_some())
+        {
+            IggyBenchArgs::command()
+                .error(
+                    ErrorKind::ArgumentConflict,
+                    "--git-ref, --git-ref-date and --pretty-name can only be used when --output is specified",
                 )
                 .exit();
         }
@@ -141,7 +161,19 @@ impl IggyBenchArgs {
         self.warmup_time
     }
 
-    pub fn output_directory(&self) -> Option<String> {
-        self.output_directory.clone()
+    pub fn output(&self) -> Option<String> {
+        self.output.clone()
+    }
+
+    pub fn pretty_name(&self) -> Option<String> {
+        self.pretty_name.clone()
+    }
+
+    pub fn git_ref(&self) -> Option<String> {
+        self.git_ref.clone()
+    }
+
+    pub fn git_ref_date(&self) -> Option<String> {
+        self.git_ref_date.clone()
     }
 }

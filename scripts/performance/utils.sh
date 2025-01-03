@@ -50,6 +50,43 @@ function get_git_iggy_server_tag_or_sha1() {
     fi
 }
 
+# Function to get the commit date (last modified date) for HEAD
+function get_git_commit_date() {
+    local dir="$1"
+
+    if [ -d "$dir" ]; then
+        pushd "$dir" > /dev/null || {
+            echo "Error: Failed to enter directory '$dir'." >&2
+            exit 1
+        }
+
+        if git rev-parse --git-dir > /dev/null 2>&1; then
+            # Get the committer date (last modified) in ISO 8601 format
+            local commit_date
+            commit_date=$(git show -s --format=%cI HEAD 2>/dev/null || echo "")
+
+            popd > /dev/null || {
+                echo "Error: Failed to return from directory '$dir'." >&2
+                exit 1
+            }
+
+            if [ -n "$commit_date" ]; then
+                echo "$commit_date"
+            else
+                echo "Error: Could not get commit date for HEAD." >&2
+                return 1
+            fi
+        else
+            echo "Error: Directory '$dir' is not a git repository." >&2
+            popd > /dev/null || exit 1
+            return 1
+        fi
+    else
+        echo "Error: Directory '$dir' does not exist." >&2
+        return 1
+    fi
+}
+
 # Function to construct a bench command (send or poll)
 function construct_bench_command() {
     local bench_command=$1
@@ -59,6 +96,7 @@ function construct_bench_command() {
     local messages_per_batch=$5
     local message_batches=$6
     local protocol=$7
+    local postfix=${8:-""}
 
     # Validate the type
     if [[ "$type" != "send" && "$type" != "poll" ]]; then
@@ -75,15 +113,30 @@ function construct_bench_command() {
 
     local streams=${count}
 
-    local superdir
-    superdir="performance_results/$(get_git_iggy_server_tag_or_sha1 .)" || { echo "Failed to get git commit or tag."; exit 1; }
-    rm -rf "$superdir" || true
-    mkdir -p "$superdir" || { echo "Failed to create directory '$superdir'."; exit 1; }
-    local output_directory="${superdir}/${type}_${count}${type:0:1}_${message_size}_${messages_per_batch}_${message_batches}_${protocol}"
+    local commit_hash
+    commit_hash=$(get_git_iggy_server_tag_or_sha1 .) || { echo "Failed to get git commit or tag."; exit 1; }
+    local commit_date
+    commit_date=$(get_git_commit_date .) || { echo "Failed to get git commit date."; exit 1; }
+    local hostname
+    hostname=$(hostname)
+    local output_file="performance_results/${type}_${count}_${message_size}_${messages_per_batch}_${message_batches}_${protocol}"
+    if [ -n "$postfix" ]; then
+        output_file="${output_file}_${postfix}"
+    fi
+    output_file="${output_file}_${commit_hash}_${hostname}"
+
+    # Construct pretty name based on the configuration
+    local pretty_name="${count} ${role}, ${message_size}B msgs, ${messages_per_batch} msgs/batch"
+    if [ -n "$postfix" ]; then
+        pretty_name="${pretty_name} (${postfix})"
+    fi
 
     echo "$bench_command \
     $COMMON_ARGS \
-    --output-directory $output_directory \
+    --output $output_file \
+    --pretty-name \"${pretty_name}\" \
+    --git-ref \"${commit_hash}\" \
+    --git-ref-date \"${commit_date}\" \
     ${type} \
     --${role} ${count} \
     --streams ${streams} \

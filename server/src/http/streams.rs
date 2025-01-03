@@ -25,10 +25,10 @@ pub fn router(state: Arc<AppState>) -> Router {
     Router::new()
         .route("/streams", get(get_streams).post(create_stream))
         .route(
-            "/streams/:stream_id",
+            "/streams/{stream_id}",
             get(get_stream).put(update_stream).delete(delete_stream),
         )
-        .route("/streams/:stream_id/purge", delete(purge_stream))
+        .route("/streams/{stream_id}/purge", delete(purge_stream))
         .with_state(state)
 }
 

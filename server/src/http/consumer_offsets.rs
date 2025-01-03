@@ -19,7 +19,7 @@ use std::sync::Arc;
 pub fn router(state: Arc<AppState>) -> Router {
     Router::new()
         .route(
-            "/streams/:stream_id/topics/:topic_id/consumer-offsets",
+            "/streams/{stream_id}/topics/{topic_id}/consumer-offsets",
             get(get_consumer_offset).put(store_consumer_offset),
         )
         .with_state(state)

@@ -29,7 +29,7 @@ pub fn router(state: Arc<AppState>) -> Router {
             get(get_personal_access_tokens).post(create_personal_access_token),
         )
         .route(
-            "/personal-access-tokens/:name",
+            "/personal-access-tokens/{name}",
             delete(delete_personal_access_token),
         )
         .route(

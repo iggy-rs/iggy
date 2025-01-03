@@ -30,11 +30,11 @@ pub fn router(state: Arc<AppState>) -> Router {
     Router::new()
         .route("/users", get(get_users).post(create_user))
         .route(
-            "/users/:user_id",
+            "/users/{user_id}",
             get(get_user).put(update_user).delete(delete_user),
         )
-        .route("/users/:user_id/permissions", put(update_permissions))
-        .route("/users/:user_id/password", put(change_password))
+        .route("/users/{user_id}/permissions", put(update_permissions))
+        .route("/users/{user_id}/password", put(change_password))
         .route("/users/login", post(login_user))
         .route("/users/logout", delete(logout_user))
         .route("/users/refresh-token", post(refresh_token))

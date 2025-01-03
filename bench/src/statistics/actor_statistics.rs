@@ -16,6 +16,8 @@ pub struct BenchmarkActorStatistics {
     pub p999_latency_ms: f64,
     pub avg_latency_ms: f64,
     pub median_latency_ms: f64,
+    #[serde(skip_serializing)]
+    pub raw_data: Vec<BenchmarkRecord>,
 }
 
 impl BenchmarkActorStatistics {
@@ -35,6 +37,7 @@ impl BenchmarkActorStatistics {
                 p999_latency_ms: 0.0,
                 avg_latency_ms: 0.0,
                 median_latency_ms: 0.0,
+                raw_data: Vec::new(),
             };
         }
 
@@ -90,6 +93,7 @@ impl BenchmarkActorStatistics {
             p999_latency_ms,
             avg_latency_ms,
             median_latency_ms,
+            raw_data: records.to_vec(),
         }
     }
 

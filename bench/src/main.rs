@@ -5,6 +5,7 @@ mod benchmark_runner;
 mod benchmarks;
 mod client_factory;
 mod consumer;
+mod plotting;
 mod producer;
 mod server_starter;
 mod statistics;

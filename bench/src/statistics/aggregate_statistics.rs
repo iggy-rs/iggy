@@ -1,5 +1,3 @@
-use std::io::Write;
-
 use super::actor_statistics::BenchmarkActorStatistics;
 use colored::{ColoredString, Colorize};
 use serde::Serialize;
@@ -79,14 +77,5 @@ impl BenchmarkAggregateStatistics {
             self.average_avg_latency_ms,
             self.average_median_latency_ms
         ).green()
-    }
-
-    pub fn dump_to_toml(&self, file_name: &str) {
-        let toml_str = toml::to_string(self).unwrap();
-        Write::write_all(
-            &mut std::fs::File::create(file_name).unwrap(),
-            toml_str.as_bytes(),
-        )
-        .unwrap();
     }
 }

@@ -24,7 +24,6 @@ pub struct Consumer {
     messages_per_batch: u32,
     message_batches: u32,
     warmup_time: IggyDuration,
-    output_directory: Option<String>,
 }
 
 impl Consumer {
@@ -37,7 +36,6 @@ impl Consumer {
         messages_per_batch: u32,
         message_batches: u32,
         warmup_time: IggyDuration,
-        output_directory: Option<String>,
     ) -> Self {
         Self {
             client_factory,
@@ -47,7 +45,6 @@ impl Consumer {
             messages_per_batch,
             message_batches,
             warmup_time,
-            output_directory,
         }
     }
 
@@ -223,32 +220,6 @@ impl Consumer {
         }
 
         let statistics = BenchmarkActorStatistics::from_records(&records);
-
-        if let Some(output_directory) = &self.output_directory {
-            std::fs::create_dir_all(format!("{}/raw_data", output_directory)).unwrap();
-
-            // Dump raw data to file
-            let output_file = format!(
-                "{}/raw_data/consumer_{}_data.csv",
-                output_directory, self.consumer_id
-            );
-            info!(
-                "Consumer #{} → writing the results to {}...",
-                self.consumer_id, output_file
-            );
-            let mut writer = csv::Writer::from_path(output_file).unwrap();
-            for sample in records {
-                writer.serialize(sample).unwrap();
-            }
-            writer.flush().unwrap();
-
-            // Dump summary to file
-            let summary_file = format!(
-                "{}/raw_data/consumer_{}_summary.toml",
-                output_directory, self.consumer_id
-            );
-            statistics.dump_to_toml(&summary_file);
-        }
 
         Self::log_consumer_statistics(
             self.consumer_id,

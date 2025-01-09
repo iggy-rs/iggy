@@ -288,7 +288,7 @@ impl Segment {
         }
         let confirmation = match confirmation {
             Some(val) => val,
-            None => self.config.segment.server_confirmation.clone(),
+            None => self.config.segment.server_confirmation,
         };
         let saved_bytes = storage.save_batches(self, batch, confirmation).await?;
         storage.save_index(&self.index_path, index).await.with_error_context(|_| format!(

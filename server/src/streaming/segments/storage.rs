@@ -267,7 +267,7 @@ impl SegmentStorage for FileSegmentStorage {
 
         let save_result = match confirmation {
             Confirmation::Wait => self.persister.append(&segment.log_path, &bytes).await,
-            Confirmation::Nowait => segment.persister_task.send(bytes.into()).await,
+            Confirmation::NoWait => segment.persister_task.send(bytes.into()).await,
         };
 
         save_result

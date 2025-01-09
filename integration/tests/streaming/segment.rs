@@ -264,7 +264,7 @@ async fn should_persist_and_load_segment_with_messages_with_nowait_confirmation(
         .await
         .unwrap();
     segment
-        .persist_messages(Some(Confirmation::Nowait))
+        .persist_messages(Some(Confirmation::NoWait))
         .await
         .unwrap();
     sleep(Duration::from_millis(200)).await;

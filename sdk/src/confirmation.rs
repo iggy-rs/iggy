@@ -1,32 +1,36 @@
-use std::{fmt, str::FromStr};
-
 use serde::{Deserialize, Serialize};
+use strum::{Display, EnumString};
 
-#[derive(Clone, Default, Deserialize, Serialize, Debug)]
+#[derive(Clone, Copy, Debug, Default, Display, Serialize, Deserialize, EnumString, PartialEq)]
+#[strum(serialize_all = "snake_case")]
 pub enum Confirmation {
     #[default]
     Wait,
-    Nowait,
+    NoWait,
 }
 
-impl FromStr for Confirmation {
-    type Err = String;
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::str::FromStr;
 
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        match s.to_lowercase().as_str() {
-            "wait" => Ok(Confirmation::Wait),
-            "nowait" => Ok(Confirmation::Nowait),
-            _ => Err(format!("Invalid confirmation type: {}", s)),
-        }
+    #[test]
+    fn test_to_string() {
+        assert_eq!(Confirmation::Wait.to_string(), "wait");
+        assert_eq!(Confirmation::NoWait.to_string(), "no_wait");
     }
-}
 
-impl fmt::Display for Confirmation {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let s = match self {
-            Confirmation::Wait => "wait",
-            Confirmation::Nowait => "nowait",
-        };
-        write!(f, "{}", s)
+    #[test]
+    fn test_from_str() {
+        assert_eq!(Confirmation::from_str("wait").unwrap(), Confirmation::Wait);
+        assert_eq!(
+            Confirmation::from_str("no_wait").unwrap(),
+            Confirmation::NoWait
+        );
+    }
+
+    #[test]
+    fn test_default() {
+        assert_eq!(Confirmation::default(), Confirmation::Wait);
     }
 }

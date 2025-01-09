@@ -464,7 +464,7 @@ message_expiry = "none"
 # Controls how the system waits for file write operations to complete.
 # Possible values:
 # - "wait": waits for the file operation to complete before proceeding.
-# - "nowait": proceeds without waiting for the file operation to finish, potentially increasing performance but at the cost of durability.
+# - "no_wait": proceeds without waiting for the file operation to finish, potentially increasing performance but at the cost of durability.
 server_confirmation = "wait"
 
 # Configures whether expired segments are archived (boolean) or just deleted without archiving.

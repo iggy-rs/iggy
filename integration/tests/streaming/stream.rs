@@ -134,7 +134,7 @@ async fn should_purge_existing_stream_on_disk() {
             .map(|msg| msg.get_size_bytes())
             .sum::<IggyByteSize>();
         topic
-            .append_messages(batch_size, Partitioning::partition_id(1), messages)
+            .append_messages(batch_size, Partitioning::partition_id(1), messages, None)
             .await
             .unwrap();
         let loaded_messages = topic

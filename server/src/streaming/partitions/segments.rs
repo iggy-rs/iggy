@@ -63,7 +63,8 @@ impl Partition {
             self.messages_count_of_parent_stream.clone(),
             self.messages_count_of_parent_topic.clone(),
             self.messages_count.clone(),
-        );
+        )
+        .await;
         new_segment.persist().await.with_error_context(|_| {
             format!("{COMPONENT} - failed to persist new segment: {new_segment}",)
         })?;

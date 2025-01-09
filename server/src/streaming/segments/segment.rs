@@ -1,5 +1,6 @@
 use crate::configs::system::SystemConfig;
 use crate::streaming::batching::batch_accumulator::BatchAccumulator;
+use crate::streaming::persistence::task::LogPersisterTask;
 use crate::streaming::segments::index::Index;
 use crate::streaming::storage::SystemStorage;
 use iggy::utils::byte_size::IggyByteSize;
@@ -32,6 +33,7 @@ pub struct Segment {
     pub messages_count_of_parent_topic: Arc<AtomicU64>,
     pub messages_count_of_parent_partition: Arc<AtomicU64>,
     pub is_closed: bool,
+    pub persister_task: LogPersisterTask,
     pub(crate) message_expiry: IggyExpiry,
     pub(crate) unsaved_messages: Option<BatchAccumulator>,
     pub(crate) config: Arc<SystemConfig>,
@@ -41,7 +43,7 @@ pub struct Segment {
 
 impl Segment {
     #[allow(clippy::too_many_arguments)]
-    pub fn create(
+    pub async fn create(
         stream_id: u32,
         topic_id: u32,
         partition_id: u32,
@@ -57,6 +59,9 @@ impl Segment {
         messages_count_of_parent_partition: Arc<AtomicU64>,
     ) -> Segment {
         let path = config.get_segment_path(stream_id, topic_id, partition_id, start_offset);
+        let persister = storage.persister.clone();
+        let task_max_retries = config.state.max_file_operation_retries;
+        let task_retry_sleep = config.state.retry_delay.get_duration();
 
         Segment {
             stream_id,
@@ -88,6 +93,12 @@ impl Segment {
             messages_count_of_parent_partition,
             config,
             storage,
+            persister_task: LogPersisterTask::new(
+                Self::get_log_path(&path),
+                persister,
+                task_max_retries,
+                task_retry_sleep,
+            ),
         }
     }
 
@@ -193,7 +204,8 @@ mod tests {
             messages_count_of_parent_stream,
             messages_count_of_parent_topic,
             messages_count_of_parent_partition,
-        );
+        )
+        .await;
 
         assert_eq!(segment.stream_id, stream_id);
         assert_eq!(segment.topic_id, topic_id);
@@ -211,8 +223,8 @@ mod tests {
         assert!(!segment.is_full().await);
     }
 
-    #[test]
-    fn should_not_initialize_indexes_cache_when_disabled() {
+    #[tokio::test]
+    async fn should_not_initialize_indexes_cache_when_disabled() {
         let storage = Arc::new(get_test_system_storage());
         let stream_id = 1;
         let topic_id = 2;
@@ -247,7 +259,8 @@ mod tests {
             messages_count_of_parent_stream,
             messages_count_of_parent_topic,
             messages_count_of_parent_partition,
-        );
+        )
+        .await;
 
         assert!(segment.indexes.is_none());
     }

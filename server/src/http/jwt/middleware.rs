@@ -10,11 +10,12 @@ use axum::{
 use error_set::ErrContext;
 use std::sync::Arc;
 
+const COMPONENT: &str = "JWT_MIDDLEWARE";
 const AUTHORIZATION: &str = "authorization";
 const BEARER: &str = "Bearer ";
 const UNAUTHORIZED: StatusCode = StatusCode::UNAUTHORIZED;
 
-const UNAUTHORIZED_PATHS: &[&str] = &[
+const PUBLIC_PATHS: &[&str] = &[
     "/",
     "/metrics",
     "/ping",
@@ -29,7 +30,7 @@ pub async fn jwt_auth(
     mut request: Request<Body>,
     next: Next,
 ) -> Result<Response, StatusCode> {
-    if UNAUTHORIZED_PATHS.contains(&request.uri().path()) {
+    if PUBLIC_PATHS.contains(&request.uri().path()) {
         return Ok(next.run(request).await);
     }
 
@@ -37,9 +38,11 @@ pub async fn jwt_auth(
         .headers()
         .get(AUTHORIZATION)
         .ok_or(UNAUTHORIZED)
-        .with_error_context(|_| "{COMPONENT} - missing or inaccessible Authorization header")?
+        .with_error_context(|_| {
+            format!("{COMPONENT} - missing or inaccessible Authorization header")
+        })?
         .to_str()
-        .with_error_context(|_| "{COMPONENT} - invalid authorization header format")
+        .with_error_context(|_| format!("{COMPONENT} - invalid authorization header format"))
         .map_err(|_| UNAUTHORIZED)?;
 
     if !bearer.starts_with(BEARER) {
@@ -48,12 +51,14 @@ pub async fn jwt_auth(
 
     let jwt_token = &bearer[BEARER.len()..];
     let token_header = jsonwebtoken::decode_header(jwt_token)
-        .with_error_context(|_| "{COMPONENT} - failed to decode JWT header")
+        .with_error_context(|_| format!("{COMPONENT} - failed to decode JWT header"))
         .map_err(|_| UNAUTHORIZED)?;
     let jwt_claims = state
         .jwt_manager
         .decode(jwt_token, token_header.alg)
-        .with_error_context(|_| "{COMPONENT} - failed to decode JWT with provided algorithm")
+        .with_error_context(|_| {
+            format!("{COMPONENT} - failed to decode JWT with provided algorithm")
+        })
         .map_err(|_| UNAUTHORIZED)?;
     if state
         .jwt_manager

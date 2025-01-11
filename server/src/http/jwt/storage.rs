@@ -104,7 +104,9 @@ impl TokenStorage {
         let tokens = self
             .load_all_revoked_access_tokens()
             .await
-            .with_error_context(|_| "{COMPONENT} - failed to load revoked access tokens")?;
+            .with_error_context(|_| {
+                format!("{COMPONENT} - failed to load revoked access tokens")
+            })?;
         if tokens.is_empty() {
             return Ok(());
         }

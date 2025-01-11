@@ -141,7 +141,7 @@ impl<'a> IggyExampleTest<'a> {
     }
 }
 
-impl<'a> IggyExampleTest<'a> {
+impl IggyExampleTest<'_> {
     async fn spawn_executables(&mut self, tcp_server_address: Vec<String>) -> (String, String) {
         let mut producer_cmd = Command::cargo_bin(format!("examples/{}-producer", self.module))
             .unwrap_or_else(|_| panic!("Failed to find {}-producer", self.module));

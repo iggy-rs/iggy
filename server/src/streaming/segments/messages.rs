@@ -1,4 +1,6 @@
 use crate::streaming::batching::batch_accumulator::BatchAccumulator;
+use crate::streaming::batching::batch_filter::BatchItemizer;
+use crate::streaming::batching::iterator::IntoMessagesIterator;
 use crate::streaming::batching::message_batch::{RetainedMessageBatch, RETAINED_BATCH_OVERHEAD};
 use crate::streaming::dma_storage::Storage;
 use crate::streaming::io::buf::dma_buf::DmaBuf;
@@ -7,8 +9,9 @@ use crate::streaming::io::val_align_up;
 use crate::streaming::models::messages::RetainedMessage;
 use crate::streaming::segments::index::{Index, IndexRange};
 use crate::streaming::segments::segment::Segment;
+use bytes::Bytes;
 use error_set::ErrContext;
-use futures::{future, StreamExt, TryStreamExt};
+use futures::{StreamExt, TryStreamExt};
 use iggy::error::IggyError;
 use iggy::utils::byte_size::IggyByteSize;
 use iggy::utils::sizeable::Sizeable;
@@ -16,7 +19,10 @@ use std::sync::atomic::Ordering;
 use std::sync::Arc;
 use tracing::{error, info, trace};
 
+use super::index::IndicesToIoVec;
+
 const EMPTY_MESSAGES: Vec<RetainedMessage> = vec![];
+const SECTOR_SIZE: usize = 4096;
 
 impl Segment {
     pub fn get_messages_count(&self) -> u64 {
@@ -133,9 +139,8 @@ impl Segment {
                     return Ok(EMPTY_MESSAGES.into_iter().map(Arc::new).collect());
                 }
             };
-            let start_position = index_range.start.position;
             return self
-                .load_n_messages_from_disk(start_position, count, |msg| msg.offset >= start_offset)
+                .load_n_messages_from_disk(index_range, count, |msg| msg.offset >= start_offset)
                 .await;
         }
 
@@ -161,26 +166,58 @@ impl Segment {
 
     pub async fn load_n_messages_from_disk<F>(
         &self,
-        start_position: u32,
+        indices: &[Index],
         count: u32,
         filter: F,
     ) -> Result<Vec<Arc<RetainedMessage>>, IggyError>
     where
         F: Fn(&RetainedMessage) -> bool,
     {
-        let mut position = start_position as u64;
-        let header_buf = DmaBuf::new(512);
-        let header_buf = self
-            .dma_storage
-            .read_sectors(position, header_buf)
-            .await
-            .map_err(|_| IggyError::IoError)?;
-        let base_offset = u64::from_le_bytes(header_buf.as_ref()[0..8].try_into().unwrap());
-        let length = u32::from_le_bytes(header_buf.as_ref()[8..12].try_into().unwrap());
-        let last_offset_delta = u32::from_le_bytes(header_buf.as_ref()[12..16].try_into().unwrap());
-        let max_timestamp = u64::from_le_bytes(header_buf.as_ref()[16..24].try_into().unwrap());
-        let payload_buf = DmaBuf::new(val_align_up(length as usize, 4096) as _);
-
+        let batch_futures = indices.iounit_iter().map(|(pos, size)| async move{
+            let buf = DmaBuf::new(size);
+            let buf = self
+                .dma_storage
+                .read_sectors(pos, buf)
+                .await
+                .map_err(|_| IggyError::IoError)?;
+            let mut position = 0;
+            let base_offset =
+                u64::from_le_bytes(buf.as_ref()[position..position + 8].try_into().unwrap());
+            position += 8;
+            let batch_length =
+                u32::from_le_bytes(buf.as_ref()[position..position + 4].try_into().unwrap());
+            position += 4;
+            let last_offset_delta =
+                u32::from_le_bytes(buf.as_ref()[position..position + 4].try_into().unwrap());
+            position += 4;
+            let max_timestamp =
+                u64::from_le_bytes(buf.as_ref()[position..position + 8].try_into().unwrap());
+            position += 8;
+            let payload_len = batch_length as usize;
+            // Skip padding required by O_DIRECT
+            let bytes = &buf.as_ref()[position..payload_len];
+            let bytes = Bytes::copy_from_slice(bytes);
+            let batch = RetainedMessageBatch::new(
+                base_offset,
+                last_offset_delta,
+                max_timestamp,
+                (payload_len as u64).into(),
+                bytes,
+            );
+            Ok(batch)
+        });
+        let mut batches = Vec::new();
+        for batch in batch_futures {
+            let batch = batch.await?;
+            batches.push(batch);
+        }
+        // Disgusting
+        let messages = batches
+            .iter()
+            .to_messages_with_filter(count, filter)
+            .into_iter()
+            .map(Arc::new)
+            .collect();
         Ok(messages)
     }
 
@@ -240,7 +277,6 @@ impl Segment {
     }
 
     pub async fn persist_messages(&mut self) -> Result<usize, IggyError> {
-        let sector_size = 4096;
         let index_storage = self.storage.segment.clone();
         if self.unsaved_messages.is_none() {
             return Ok(0);
@@ -265,14 +301,18 @@ impl Segment {
 
         let (has_remainder, batch) = batch_accumulator.materialize_batch_and_maybe_update_state();
         let batch_size = batch.get_size_bytes().as_bytes_u64();
-        let adjusted_size = val_align_up(batch_size, sector_size);
+        let adjusted_size = val_align_up(batch_size, SECTOR_SIZE as _);
         if has_remainder {
             self.unsaved_messages = Some(batch_accumulator);
         }
         let mut bytes = DmaBuf::new(adjusted_size as usize);
         let diff = bytes.len() as u64 - batch_size;
         batch.extend2(bytes.as_mut());
-        let saved_bytes = self.dma_storage.write_sectors(bytes).await?;
+        let saved_bytes = self
+            .dma_storage
+            .write_sectors(bytes)
+            .await
+            .map_err(|_| IggyError::IoError)?;
         index_storage.save_index(&self.index_path, index).await?;
         self.last_index_position += adjusted_size as u32;
         let size_increment = RETAINED_BATCH_OVERHEAD + diff;

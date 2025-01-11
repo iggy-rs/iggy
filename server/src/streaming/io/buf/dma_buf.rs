@@ -1,5 +1,6 @@
 use std::{
     alloc::{self, Layout},
+    ops::Deref,
     ptr,
 };
 
@@ -60,6 +61,14 @@ impl IoBuf for DmaBuf {
         let data = ptr::NonNull::new(data_ptr).expect("DmaBuf data_ptr is null");
 
         Self { data, layout, size }
+    }
+}
+
+impl Deref for DmaBuf {
+    type Target = [u8];
+
+    fn deref(&self) -> &Self::Target {
+        self.as_ref()
     }
 }
 

@@ -41,7 +41,7 @@ impl Display for HttpJwtConfig {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
-            "{{ algorithm: {}, audience: {}, expiry: {}, use_base64_secret: {} }}",
+            "{{ algorithm: {}, audience: {}, access_token_expiry: {}, use_base64_secret: {} }}",
             self.algorithm, self.audience, self.access_token_expiry, self.use_base64_secret
         )
     }

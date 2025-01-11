@@ -354,7 +354,7 @@ async fn refresh_token(
         .jwt_manager
         .refresh_token(&command.token)
         .await
-        .with_error_context(|_| "{COMPONENT} - failed to refresh token")?;
+        .with_error_context(|_| format!("{COMPONENT} - failed to refresh token"))?;
     Ok(Json(map_generated_access_token_to_identity_info(token)))
 }
 

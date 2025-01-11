@@ -16,7 +16,7 @@ use std::ops::Deref;
 use std::str::FromStr;
 use std::sync::Arc;
 
-const UNAUTHORIZED_PATHS: &[&str] = &[
+const PUBLIC_PATHS: &[&str] = &[
     "/",
     "/metrics",
     "/ping",
@@ -278,7 +278,7 @@ impl HttpClient {
     }
 
     async fn fail_if_not_authenticated(&self, path: &str) -> Result<(), IggyError> {
-        if UNAUTHORIZED_PATHS.contains(&path) {
+        if PUBLIC_PATHS.contains(&path) {
             return Ok(());
         }
         if !self.is_authenticated().await {

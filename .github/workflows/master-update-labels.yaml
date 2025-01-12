@@ -1,0 +1,32 @@
+name: Update repository labels
+on:
+  push:
+    branches:
+      - master
+    paths:
+      - ".github/workflows/uptdate-label.yml"
+      - ".github/update-labels.sh"
+
+jobs:
+  checks:
+    name: Update labels
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - uses: actions/create-github-app-token@v1
+        id: app-token
+        with:
+          app-id: ${{ secrets.DEPLOY_APP_ID }}
+          private-key: ${{ secrets.DEPLOY_APP_KEY }}
+
+      - name: Call script
+        env:
+          GITHUB_TOKEN: ${{ steps.app-token.outputs.token }}
+        run: |
+          chmod +x .github/update-labels.sh
+          .github/update-labels.sh

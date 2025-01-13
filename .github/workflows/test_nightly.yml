@@ -75,7 +75,7 @@ jobs:
         if: ${{ matrix.platform.cross }}
 
       - name: Build binary
-        uses: houseabsolute/actions-rust-cross@v0
+        uses: houseabsolute/actions-rust-cross@v1
         with:
           command: "build"
           target: ${{ matrix.platform.target }}
@@ -83,7 +83,7 @@ jobs:
           args: " --features ci-qemu --verbose ${{ matrix.platform.profile == 'release' && '--release' || '' }}"
 
       - name: Run tests
-        uses: houseabsolute/actions-rust-cross@v0
+        uses: houseabsolute/actions-rust-cross@v1
         with:
           command: "test"
           target: ${{ matrix.platform.target }}

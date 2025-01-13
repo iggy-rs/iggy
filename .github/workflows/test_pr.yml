@@ -75,7 +75,7 @@ jobs:
         if: ${{ matrix.platform.os == 'ubuntu-latest' }}
 
       - name: Build binary (Linux)
-        uses: houseabsolute/actions-rust-cross@v0
+        uses: houseabsolute/actions-rust-cross@v1
         with:
           command: "build"
           target: ${{ matrix.platform.target }}
@@ -84,7 +84,7 @@ jobs:
         if: ${{ matrix.platform.os == 'ubuntu-latest' }}
 
       - name: Build binary (Windows)
-        uses: houseabsolute/actions-rust-cross@v0
+        uses: houseabsolute/actions-rust-cross@v1
         env:
           AWS_LC_SYS_NO_ASM: 1
         with:
@@ -95,7 +95,7 @@ jobs:
         if: ${{ matrix.platform.os == 'windows-latest' }}
 
       - name: Run tests
-        uses: houseabsolute/actions-rust-cross@v0
+        uses: houseabsolute/actions-rust-cross@v1
         with:
           command: "test"
           target: ${{ matrix.platform.target }}

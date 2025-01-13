@@ -10,7 +10,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
-      - uses: clechasseur/rs-cargo@v2
+      - uses: clechasseur/rs-cargo@v3
         with:
           command: check
   fmt:
@@ -20,7 +20,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
       - run: rustup component add rustfmt
-      - uses: clechasseur/rs-cargo@v2
+      - uses: clechasseur/rs-cargo@v3
         with:
           command: fmt
           args: --all -- --check
@@ -30,7 +30,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
-      - uses: clechasseur/rs-cargo@v2
+      - uses: clechasseur/rs-cargo@v3
         with:
           command: clippy
           args: --all-targets --all-features -- -D warnings

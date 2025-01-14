@@ -1,7 +1,8 @@
-use crate::http::jwt::json_web_token::RevokedAccessToken;
 use crate::http::jwt::COMPONENT;
-use crate::streaming::persistence::persister::Persister;
 use crate::streaming::utils::file;
+use crate::{
+    http::jwt::json_web_token::RevokedAccessToken, streaming::persistence::persister::PersisterKind,
+};
 use anyhow::Context;
 use bytes::{BufMut, BytesMut};
 use error_set::ErrContext;
@@ -13,12 +14,12 @@ use tracing::{error, info};
 
 #[derive(Debug)]
 pub struct TokenStorage {
-    persister: Arc<dyn Persister>,
+    persister: Arc<PersisterKind>,
     path: String,
 }
 
 impl TokenStorage {
-    pub fn new(persister: Arc<dyn Persister>, path: &str) -> Self {
+    pub fn new(persister: Arc<PersisterKind>, path: &str) -> Self {
         Self {
             persister,
             path: path.to_owned(),

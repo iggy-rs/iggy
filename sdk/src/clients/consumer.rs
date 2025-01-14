@@ -7,7 +7,7 @@ use crate::locking::{IggySharedMut, IggySharedMutFn};
 use crate::messages::poll_messages::{PollingKind, PollingStrategy};
 use crate::models::messages::{PolledMessage, PolledMessages};
 use crate::utils::byte_size::IggyByteSize;
-use crate::utils::crypto::Encryptor;
+use crate::utils::crypto::EncryptorKind;
 use crate::utils::duration::IggyDuration;
 use crate::utils::timestamp::IggyTimestamp;
 use bytes::Bytes;
@@ -81,7 +81,7 @@ pub struct IggyConsumer {
     current_offsets: Arc<DashMap<u32, AtomicU64>>,
     poll_future: Option<PollMessagesFuture>,
     buffered_messages: VecDeque<PolledMessage>,
-    encryptor: Option<Arc<dyn Encryptor>>,
+    encryptor: Option<Arc<EncryptorKind>>,
     store_offset_sender: flume::Sender<(u32, u64)>,
     store_offset_after_each_message: bool,
     store_offset_after_all_messages: bool,
@@ -107,7 +107,7 @@ impl IggyConsumer {
         auto_commit: AutoCommit,
         auto_join_consumer_group: bool,
         create_consumer_group_if_not_exists: bool,
-        encryptor: Option<Arc<dyn Encryptor>>,
+        encryptor: Option<Arc<EncryptorKind>>,
         retry_interval: IggyDuration,
         allow_replay: bool,
     ) -> Self {
@@ -866,7 +866,7 @@ pub struct IggyConsumerBuilder {
     auto_commit: AutoCommit,
     auto_join_consumer_group: bool,
     create_consumer_group_if_not_exists: bool,
-    encryptor: Option<Arc<dyn Encryptor>>,
+    encryptor: Option<Arc<EncryptorKind>>,
     retry_interval: IggyDuration,
     allow_replay: bool,
 }
@@ -880,7 +880,7 @@ impl IggyConsumerBuilder {
         stream_id: Identifier,
         topic_id: Identifier,
         partition_id: Option<u32>,
-        encryptor: Option<Arc<dyn Encryptor>>,
+        encryptor: Option<Arc<EncryptorKind>>,
         polling_interval: Option<IggyDuration>,
     ) -> Self {
         Self {
@@ -990,7 +990,7 @@ impl IggyConsumerBuilder {
     }
 
     /// Sets the encryptor for decrypting the messages' payloads.
-    pub fn encryptor(self, encryptor: Arc<dyn Encryptor>) -> Self {
+    pub fn encryptor(self, encryptor: Arc<EncryptorKind>) -> Self {
         Self {
             encryptor: Some(encryptor),
             ..self

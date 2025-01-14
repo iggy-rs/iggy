@@ -5,7 +5,25 @@ use aes_gcm::aead::{Aead, OsRng};
 use aes_gcm::{AeadCore, Aes256Gcm, KeyInit};
 use std::fmt::Debug;
 
-pub trait Encryptor: Send + Sync + Debug {
+#[derive(Debug)]
+pub enum EncryptorKind {
+    Aes256Gcm(Aes256GcmEncryptor),
+}
+
+impl EncryptorKind {
+    pub fn encrypt(&self, data: &[u8]) -> Result<Vec<u8>, IggyError> {
+        match self {
+            EncryptorKind::Aes256Gcm(e) => e.encrypt(data),
+        }
+    }
+    pub fn decrypt(&self, data: &[u8]) -> Result<Vec<u8>, IggyError> {
+        match self {
+            EncryptorKind::Aes256Gcm(e) => e.decrypt(data),
+        }
+    }
+}
+
+pub trait Encryptor {
     fn encrypt(&self, data: &[u8]) -> Result<Vec<u8>, IggyError>;
     fn decrypt(&self, data: &[u8]) -> Result<Vec<u8>, IggyError>;
 }
@@ -13,9 +31,6 @@ pub trait Encryptor: Send + Sync + Debug {
 pub struct Aes256GcmEncryptor {
     cipher: Aes256Gcm,
 }
-
-unsafe impl Send for Aes256GcmEncryptor {}
-unsafe impl Sync for Aes256GcmEncryptor {}
 
 impl Debug for Aes256GcmEncryptor {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {

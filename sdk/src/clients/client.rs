@@ -31,7 +31,7 @@ use crate::partitioner::Partitioner;
 use crate::snapshot::{SnapshotCompression, SystemSnapshotType};
 use crate::tcp::client::TcpClient;
 use crate::utils::byte_size::IggyByteSize;
-use crate::utils::crypto::Encryptor;
+use crate::utils::crypto::EncryptorKind;
 use crate::utils::duration::IggyDuration;
 use crate::utils::expiry::IggyExpiry;
 use crate::utils::personal_access_token_expiry::PersonalAccessTokenExpiry;
@@ -55,7 +55,7 @@ use tracing::{debug, error, info};
 pub struct IggyClient {
     client: IggySharedMut<Box<dyn Client>>,
     partitioner: Option<Arc<dyn Partitioner>>,
-    encryptor: Option<Arc<dyn Encryptor>>,
+    encryptor: Option<Arc<EncryptorKind>>,
 }
 
 impl Default for IggyClient {
@@ -96,7 +96,7 @@ impl IggyClient {
     pub fn create(
         client: Box<dyn Client>,
         partitioner: Option<Arc<dyn Partitioner>>,
-        encryptor: Option<Arc<dyn Encryptor>>,
+        encryptor: Option<Arc<EncryptorKind>>,
     ) -> Self {
         if partitioner.is_some() {
             info!("Partitioner is enabled.");

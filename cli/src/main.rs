@@ -65,7 +65,7 @@ use iggy::cli::{
 use iggy::cli_command::{CliCommand, PRINT_TARGET};
 use iggy::client_provider::{self, ClientProviderConfig};
 use iggy::clients::client::IggyClient;
-use iggy::utils::crypto::{Aes256GcmEncryptor, Encryptor};
+use iggy::utils::crypto::{Aes256GcmEncryptor, EncryptorKind};
 use iggy::utils::personal_access_token_expiry::PersonalAccessTokenExpiry;
 use std::sync::Arc;
 use tracing::{event, Level};
@@ -339,11 +339,11 @@ async fn main() -> Result<(), IggyCmdError> {
     // Create credentials based on command line arguments and command
     let mut credentials = IggyCredentials::new(&cli_options, &iggy_args, command.login_required())?;
 
-    let encryptor: Option<Arc<dyn Encryptor>> = match iggy_args.encryption_key.is_empty() {
+    let encryptor = match iggy_args.encryption_key.is_empty() {
         true => None,
-        false => Some(Arc::new(
+        false => Some(Arc::new(EncryptorKind::Aes256Gcm(
             Aes256GcmEncryptor::from_base64_key(&iggy_args.encryption_key).unwrap(),
-        )),
+        ))),
     };
     let client_provider_config = Arc::new(ClientProviderConfig::from_args_set_autologin(
         iggy_args.clone(),

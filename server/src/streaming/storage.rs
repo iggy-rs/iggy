@@ -1,9 +1,9 @@
 use super::batching::message_batch::RetainedMessageBatch;
+use super::persistence::persister::PersisterKind;
 use crate::configs::system::SystemConfig;
 use crate::state::system::{PartitionState, StreamState, TopicState};
 use crate::streaming::partitions::partition::{ConsumerOffset, Partition};
 use crate::streaming::partitions::storage::FilePartitionStorage;
-use crate::streaming::persistence::persister::Persister;
 use crate::streaming::segments::index::{Index, IndexRange};
 use crate::streaming::segments::segment::Segment;
 use crate::streaming::segments::storage::FileSegmentStorage;
@@ -93,7 +93,7 @@ pub trait SegmentStorage: Send + Sync {
         segment: &Segment,
         timestamp: u64,
     ) -> Result<Option<Index>, IggyError>;
-    fn persister(&self) -> Arc<dyn Persister>;
+    fn persister(&self) -> Arc<PersisterKind>;
 }
 
 #[derive(Debug)]
@@ -103,11 +103,11 @@ pub struct SystemStorage {
     pub topic: Arc<dyn TopicStorage>,
     pub partition: Arc<dyn PartitionStorage>,
     pub segment: Arc<dyn SegmentStorage>,
-    pub persister: Arc<dyn Persister>,
+    pub persister: Arc<PersisterKind>,
 }
 
 impl SystemStorage {
-    pub fn new(config: Arc<SystemConfig>, persister: Arc<dyn Persister>) -> Self {
+    pub fn new(config: Arc<SystemConfig>, persister: Arc<PersisterKind>) -> Self {
         Self {
             info: Arc::new(FileSystemInfoStorage::new(
                 config.get_state_info_path(),
@@ -155,6 +155,7 @@ impl Debug for dyn SegmentStorage {
 #[cfg(test)]
 pub(crate) mod tests {
     use crate::streaming::partitions::partition::Partition;
+    use crate::streaming::persistence::persister::MockPersister;
     use crate::streaming::segments::index::{Index, IndexRange};
     use crate::streaming::segments::segment::Segment;
     use crate::streaming::storage::*;
@@ -163,28 +164,12 @@ pub(crate) mod tests {
     use async_trait::async_trait;
     use std::sync::Arc;
 
-    struct TestPersister {}
     struct TestSystemInfoStorage {}
     struct TestStreamStorage {}
     struct TestTopicStorage {}
     struct TestPartitionStorage {}
     struct TestSegmentStorage {
-        persister: Arc<TestPersister>,
-    }
-
-    #[async_trait]
-    impl Persister for TestPersister {
-        async fn append(&self, _path: &str, _bytes: &[u8]) -> Result<(), IggyError> {
-            Ok(())
-        }
-
-        async fn overwrite(&self, _path: &str, _bytes: &[u8]) -> Result<(), IggyError> {
-            Ok(())
-        }
-
-        async fn delete(&self, _path: &str) -> Result<(), IggyError> {
-            Ok(())
-        }
+        persister: Arc<PersisterKind>,
     }
 
     #[async_trait]
@@ -339,13 +324,13 @@ pub(crate) mod tests {
             Ok(None)
         }
 
-        fn persister(&self) -> Arc<dyn Persister> {
+        fn persister(&self) -> Arc<PersisterKind> {
             self.persister.clone()
         }
     }
 
     pub fn get_test_system_storage() -> SystemStorage {
-        let persister = Arc::new(TestPersister {});
+        let persister = Arc::new(PersisterKind::Mock(MockPersister::new()));
         SystemStorage {
             info: Arc::new(TestSystemInfoStorage {}),
             stream: Arc::new(TestStreamStorage {}),

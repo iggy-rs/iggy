@@ -1,7 +1,7 @@
 use crate::streaming::batching::iterator::IntoMessagesIterator;
 use crate::streaming::batching::message_batch::RetainedMessageBatch;
 use crate::streaming::models::messages::RetainedMessage;
-use crate::streaming::persistence::persister::Persister;
+use crate::streaming::persistence::persister::PersisterKind;
 use crate::streaming::segments::index::{Index, IndexRange};
 use crate::streaming::segments::segment::Segment;
 use crate::streaming::segments::COMPONENT;
@@ -29,11 +29,11 @@ const BUF_READER_CAPACITY_BYTES: usize = 512 * 1000;
 
 #[derive(Debug)]
 pub struct FileSegmentStorage {
-    persister: Arc<dyn Persister>,
+    persister: Arc<PersisterKind>,
 }
 
 impl FileSegmentStorage {
-    pub fn new(persister: Arc<dyn Persister>) -> Self {
+    pub fn new(persister: Arc<PersisterKind>) -> Self {
         Self { persister }
     }
 }
@@ -594,7 +594,7 @@ impl SegmentStorage for FileSegmentStorage {
         }
     }
 
-    fn persister(&self) -> Arc<dyn Persister> {
+    fn persister(&self) -> Arc<PersisterKind> {
         self.persister.clone()
     }
 }

@@ -375,6 +375,16 @@ pub trait ConsumerOffsetClient {
         topic_id: &Identifier,
         partition_id: Option<u32>,
     ) -> Result<Option<ConsumerOffsetInfo>, IggyError>;
+    /// Delete the consumer offset for a specific consumer or consumer group for the given stream and topic by unique IDs or names.
+    ///
+    /// Authentication is required, and the permission to poll the messages.
+    async fn delete_consumer_offset(
+        &self,
+        consumer: &Consumer,
+        stream_id: &Identifier,
+        topic_id: &Identifier,
+        partition_id: Option<u32>,
+    ) -> Result<(), IggyError>;
 }
 
 /// This trait defines the methods to interact with the consumer group module.

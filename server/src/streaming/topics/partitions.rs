@@ -63,7 +63,7 @@ impl Topic {
             let partition = partition.read().await;
             partition.persist().await.with_error_context(|_| {
                 format!(
-                    "{COMPONENT} - failed to persist partiton with id: {}",
+                    "{COMPONENT} - failed to persist partition with id: {}",
                     partition.partition_id
                 )
             })?;
@@ -94,7 +94,7 @@ impl Topic {
             messages_count += partition_messages_count;
             partition.delete().await.with_error_context(|_| {
                 format!(
-                    "{COMPONENT} - failed to delete partiton with id: {}",
+                    "{COMPONENT} - failed to delete partition with id: {}",
                     partition.partition_id
                 )
             })?;

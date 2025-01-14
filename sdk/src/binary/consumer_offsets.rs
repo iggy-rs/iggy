@@ -2,6 +2,7 @@ use crate::binary::binary_client::BinaryClient;
 use crate::binary::{fail_if_not_authenticated, mapper};
 use crate::client::ConsumerOffsetClient;
 use crate::consumer::Consumer;
+use crate::consumer_offsets::delete_consumer_offset::DeleteConsumerOffset;
 use crate::consumer_offsets::get_consumer_offset::GetConsumerOffset;
 use crate::consumer_offsets::store_consumer_offset::StoreConsumerOffset;
 use crate::error::IggyError;
@@ -51,5 +52,23 @@ impl<B: BinaryClient> ConsumerOffsetClient for B {
         }
 
         mapper::map_consumer_offset(response).map(Some)
+    }
+
+    async fn delete_consumer_offset(
+        &self,
+        consumer: &Consumer,
+        stream_id: &Identifier,
+        topic_id: &Identifier,
+        partition_id: Option<u32>,
+    ) -> Result<(), IggyError> {
+        fail_if_not_authenticated(self).await?;
+        self.send_with_response(&DeleteConsumerOffset {
+            consumer: consumer.clone(),
+            stream_id: stream_id.clone(),
+            topic_id: topic_id.clone(),
+            partition_id,
+        })
+        .await?;
+        Ok(())
     }
 }

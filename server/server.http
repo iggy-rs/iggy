@@ -308,6 +308,10 @@ GET {{url}}/streams/{{stream_id}}/topics/{{topic_id}}/consumer-offsets?consumer_
 Authorization: Bearer {{access_token}}
 
 ###
+DELETE {{url}}/streams/{{stream_id}}/topics/{{topic_id}}/consumer-offsets/{{consumer_id}}?partition_id={{partition_id}}
+Authorization: Bearer {{access_token}}
+
+###
 GET {{url}}/streams/{{stream_id}}/topics/{{topic_id}}/consumer-groups
 Authorization: Bearer {{access_token}}
 

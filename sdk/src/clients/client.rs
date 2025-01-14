@@ -644,6 +644,20 @@ impl ConsumerOffsetClient for IggyClient {
             .get_consumer_offset(consumer, stream_id, topic_id, partition_id)
             .await
     }
+
+    async fn delete_consumer_offset(
+        &self,
+        consumer: &Consumer,
+        stream_id: &Identifier,
+        topic_id: &Identifier,
+        partition_id: Option<u32>,
+    ) -> Result<(), IggyError> {
+        self.client
+            .read()
+            .await
+            .delete_consumer_offset(consumer, stream_id, topic_id, partition_id)
+            .await
+    }
 }
 
 #[async_trait]

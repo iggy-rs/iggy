@@ -8,7 +8,10 @@ use iggy::error::IggyError;
 use tracing::trace;
 
 impl Partition {
-    pub async fn get_consumer_offset(&self, consumer: PollingConsumer) -> Result<u64, IggyError> {
+    pub async fn get_consumer_offset(
+        &self,
+        consumer: PollingConsumer,
+    ) -> Result<Option<u64>, IggyError> {
         trace!(
             "Getting consumer offset for {}, partition: {}, current: {}...",
             consumer,
@@ -20,18 +23,18 @@ impl Partition {
             PollingConsumer::Consumer(consumer_id, _) => {
                 let consumer_offset = self.consumer_offsets.get(&consumer_id);
                 if let Some(consumer_offset) = consumer_offset {
-                    return Ok(consumer_offset.offset);
+                    return Ok(Some(consumer_offset.offset));
                 }
             }
             PollingConsumer::ConsumerGroup(consumer_group_id, _) => {
                 let consumer_offset = self.consumer_offsets.get(&consumer_group_id);
                 if let Some(consumer_offset) = consumer_offset {
-                    return Ok(consumer_offset.offset);
+                    return Ok(Some(consumer_offset.offset));
                 }
             }
         }
 
-        Ok(0)
+        Ok(None)
     }
 
     pub async fn store_consumer_offset(
@@ -109,11 +112,11 @@ impl Partition {
 
     pub async fn load_consumer_offsets(&mut self) -> Result<(), IggyError> {
         trace!(
-                "Loading consumer offsets for partition with ID: {} for topic with ID: {} and stream with ID: {}...",
-                self.partition_id,
-                self.topic_id,
-                self.stream_id
-            );
+            "Loading consumer offsets for partition with ID: {} for topic with ID: {} and stream with ID: {}...",
+            self.partition_id,
+            self.topic_id,
+            self.stream_id
+        );
         self.load_consumer_offsets_from_storage(ConsumerKind::Consumer)
             .await
             .with_error_context(|_| {
@@ -163,5 +166,35 @@ impl Partition {
                 self.topic_id,
                 self.stream_id
             );
+    }
+
+    pub async fn delete_consumer_offset(
+        &mut self,
+        consumer: PollingConsumer,
+    ) -> Result<(), IggyError> {
+        let partition_id = self.partition_id;
+        trace!(
+            "Deleting consumer offset for consumer: {consumer}, partition ID: {partition_id}..."
+        );
+        match consumer {
+            PollingConsumer::Consumer(consumer_id, _) => {
+                let (_, offset) = self
+                    .consumer_offsets
+                    .remove(&consumer_id)
+                    .ok_or(IggyError::ConsumerOffsetNotFound(consumer_id))?;
+                self.storage.partition.delete_consumer_offset(&offset.path).await
+                    .with_error_context(|_| format!("{COMPONENT} - failed to delete consumer offset, consumer ID: {consumer_id}, partition ID: {partition_id}"))?;
+            }
+            PollingConsumer::ConsumerGroup(consumer_id, _) => {
+                let (_, offset) = self
+                    .consumer_group_offsets
+                    .remove(&consumer_id)
+                    .ok_or(IggyError::ConsumerOffsetNotFound(consumer_id))?;
+                self.storage.partition.delete_consumer_offset(&offset.path).await
+                    .with_error_context(|_| format!("{COMPONENT} - failed to delete consumer group offset, consumer ID: {consumer_id}, partition ID: {partition_id}"))?;
+            }
+        };
+        trace!("Deleted consumer offset for consumer: {consumer}, partition ID: {partition_id}.");
+        Ok(())
     }
 }

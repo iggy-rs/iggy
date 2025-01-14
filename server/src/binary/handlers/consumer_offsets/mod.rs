@@ -1,3 +1,4 @@
+pub mod delete_consumer_offset_handler;
 pub mod get_consumer_offset_handler;
 pub mod store_consumer_offset_handler;
 

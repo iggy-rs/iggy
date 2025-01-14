@@ -8,7 +8,7 @@ use crate::models::identity_info::IdentityInfo;
 use crate::utils::duration::IggyDuration;
 use async_broadcast::{broadcast, Receiver, Sender};
 use async_trait::async_trait;
-use reqwest::{Response, Url};
+use reqwest::{Response, StatusCode, Url};
 use reqwest_middleware::{ClientBuilder, ClientWithMiddleware};
 use reqwest_retry::{policies::ExponentialBackoff, RetryTransientMiddleware};
 use serde::Serialize;
@@ -268,12 +268,18 @@ impl HttpClient {
     }
 
     async fn handle_response(response: Response) -> Result<Response, IggyError> {
-        match response.status().is_success() {
+        let status = response.status();
+        match status.is_success() {
             true => Ok(response),
-            false => Err(IggyError::HttpResponseError(
-                response.status().as_u16(),
-                response.text().await.unwrap_or("error".to_string()),
-            )),
+            false => {
+                let reason = response.text().await.unwrap_or("error".to_string());
+                match status {
+                    StatusCode::UNAUTHORIZED => Err(IggyError::Unauthenticated),
+                    StatusCode::FORBIDDEN => Err(IggyError::Unauthorized),
+                    StatusCode::NOT_FOUND => Err(IggyError::ResourceNotFound(reason)),
+                    _ => Err(IggyError::HttpResponseError(status.as_u16(), reason)),
+                }
+            }
         }
     }
 

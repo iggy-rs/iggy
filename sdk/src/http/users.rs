@@ -19,12 +19,16 @@ const PATH: &str = "/users";
 #[async_trait]
 impl UserClient for HttpClient {
     async fn get_user(&self, user_id: &Identifier) -> Result<Option<UserInfoDetails>, IggyError> {
-        let response = self.get(&format!("{PATH}/{}", user_id)).await?;
-        if response.status() == 404 {
-            return Ok(None);
+        let response = self.get(&format!("{PATH}/{}", user_id)).await;
+        if let Err(error) = response {
+            if matches!(error, IggyError::ResourceNotFound(_)) {
+                return Ok(None);
+            }
+
+            return Err(error);
         }
 
-        let user = response
+        let user = response?
             .json()
             .await
             .map_err(|_| IggyError::InvalidJsonResponse)?;

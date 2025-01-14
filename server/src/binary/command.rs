@@ -137,6 +137,9 @@ async fn try_handle(
         ServerCommand::StoreConsumerOffset(command) => {
             store_consumer_offset_handler::handle(command, sender, session, system).await
         }
+        ServerCommand::DeleteConsumerOffset(command) => {
+            delete_consumer_offset_handler::handle(command, sender, session, system).await
+        }
         ServerCommand::GetStream(command) => {
             get_stream_handler::handle(command, sender, session, system).await
         }

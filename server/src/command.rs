@@ -6,6 +6,7 @@ use iggy::consumer_groups::get_consumer_group::GetConsumerGroup;
 use iggy::consumer_groups::get_consumer_groups::GetConsumerGroups;
 use iggy::consumer_groups::join_consumer_group::JoinConsumerGroup;
 use iggy::consumer_groups::leave_consumer_group::LeaveConsumerGroup;
+use iggy::consumer_offsets::delete_consumer_offset::DeleteConsumerOffset;
 use iggy::consumer_offsets::get_consumer_offset::GetConsumerOffset;
 use iggy::consumer_offsets::store_consumer_offset::StoreConsumerOffset;
 use iggy::error::IggyError;
@@ -76,6 +77,7 @@ pub enum ServerCommand {
     FlushUnsavedBuffer(FlushUnsavedBuffer),
     GetConsumerOffset(GetConsumerOffset),
     StoreConsumerOffset(StoreConsumerOffset),
+    DeleteConsumerOffset(DeleteConsumerOffset),
     GetStream(GetStream),
     GetStreams(GetStreams),
     CreateStream(CreateStream),
@@ -123,6 +125,7 @@ impl BytesSerializable for ServerCommand {
             ServerCommand::SendMessages(payload) => as_bytes(payload),
             ServerCommand::PollMessages(payload) => as_bytes(payload),
             ServerCommand::StoreConsumerOffset(payload) => as_bytes(payload),
+            ServerCommand::DeleteConsumerOffset(payload) => as_bytes(payload),
             ServerCommand::GetConsumerOffset(payload) => as_bytes(payload),
             ServerCommand::GetStream(payload) => as_bytes(payload),
             ServerCommand::GetStreams(payload) => as_bytes(payload),
@@ -200,6 +203,9 @@ impl BytesSerializable for ServerCommand {
             )),
             STORE_CONSUMER_OFFSET_CODE => Ok(ServerCommand::StoreConsumerOffset(
                 StoreConsumerOffset::from_bytes(payload)?,
+            )),
+            DELETE_CONSUMER_OFFSET_CODE => Ok(ServerCommand::DeleteConsumerOffset(
+                DeleteConsumerOffset::from_bytes(payload)?,
             )),
             GET_CONSUMER_OFFSET_CODE => Ok(ServerCommand::GetConsumerOffset(
                 GetConsumerOffset::from_bytes(payload)?,
@@ -294,6 +300,7 @@ impl Validatable<IggyError> for ServerCommand {
             ServerCommand::SendMessages(command) => command.validate(),
             ServerCommand::PollMessages(command) => command.validate(),
             ServerCommand::StoreConsumerOffset(command) => command.validate(),
+            ServerCommand::DeleteConsumerOffset(command) => command.validate(),
             ServerCommand::GetConsumerOffset(command) => command.validate(),
             ServerCommand::GetStream(command) => command.validate(),
             ServerCommand::GetStreams(command) => command.validate(),
@@ -376,6 +383,9 @@ impl Display for ServerCommand {
             ServerCommand::SendMessages(payload) => write!(formatter, "{SEND_MESSAGES}|{payload}"),
             ServerCommand::StoreConsumerOffset(payload) => {
                 write!(formatter, "{STORE_CONSUMER_OFFSET}|{payload}")
+            }
+            ServerCommand::DeleteConsumerOffset(payload) => {
+                write!(formatter, "{DELETE_CONSUMER_OFFSET}|{payload}")
             }
             ServerCommand::GetConsumerOffset(payload) => {
                 write!(formatter, "{GET_CONSUMER_OFFSET}|{payload}")

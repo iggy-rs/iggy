@@ -89,6 +89,7 @@ pub struct IggyConsumer {
     last_polled_at: Arc<AtomicU64>,
     current_partition_id: Arc<AtomicU32>,
     retry_interval: IggyDuration,
+    allow_replay: bool,
 }
 
 impl IggyConsumer {
@@ -108,6 +109,7 @@ impl IggyConsumer {
         create_consumer_group_if_not_exists: bool,
         encryptor: Option<Arc<dyn Encryptor>>,
         retry_interval: IggyDuration,
+        allow_replay: bool,
     ) -> Self {
         let (store_offset_sender, _) = flume::unbounded();
         Self {
@@ -159,6 +161,7 @@ impl IggyConsumer {
             last_polled_at: Arc::new(AtomicU64::new(0)),
             current_partition_id: Arc::new(AtomicU32::new(0)),
             retry_interval,
+            allow_replay,
         }
     }
 
@@ -201,8 +204,22 @@ impl IggyConsumer {
             partition_id,
             offset,
             &self.last_stored_offsets,
+            self.allow_replay,
         )
         .await
+    }
+
+    /// Deletes the consumer offset on the server either for the current partition or the provided partition ID.
+    pub async fn delete_offset(&self, partition_id: Option<u32>) -> Result<(), IggyError> {
+        let client = self.client.read().await;
+        client
+            .delete_consumer_offset(
+                &self.consumer,
+                &self.stream_id,
+                &self.topic_id,
+                partition_id,
+            )
+            .await
     }
 
     /// Initializes the consumer by subscribing to diagnostic events, initializing the consumer group if needed, storing the offsets in the background etc.
@@ -261,6 +278,7 @@ impl IggyConsumer {
                     partition_id,
                     offset,
                     &last_stored_offsets,
+                    false,
                 )
                 .await
             }
@@ -270,6 +288,7 @@ impl IggyConsumer {
         Ok(())
     }
 
+    #[allow(clippy::too_many_arguments)]
     async fn store_consumer_offset(
         client: &IggySharedMut<Box<dyn Client>>,
         consumer: &Consumer,
@@ -278,6 +297,7 @@ impl IggyConsumer {
         partition_id: u32,
         offset: u64,
         last_stored_offsets: &DashMap<u32, AtomicU64>,
+        allow_replay: bool,
     ) -> Result<(), IggyError> {
         trace!("Storing offset: {offset} for consumer: {consumer}, partition ID: {partition_id}, topic: {topic_id}, stream: {stream_id}...");
         let stored_offset;
@@ -288,7 +308,7 @@ impl IggyConsumer {
             last_stored_offsets.insert(partition_id, AtomicU64::new(0));
         }
 
-        if offset <= stored_offset && offset >= 1 {
+        if !allow_replay && (offset <= stored_offset && offset >= 1) {
             trace!("Offset: {offset} is less than or equal to the last stored offset: {stored_offset} for consumer: {consumer}, partition ID: {partition_id}, topic: {topic_id}, stream: {stream_id}. Skipping storing the offset.");
             return Ok(());
         }
@@ -331,6 +351,7 @@ impl IggyConsumer {
                         partition_id,
                         consumed_offset,
                         &last_stored_offsets,
+                        false,
                     )
                     .await;
                 }
@@ -480,6 +501,7 @@ impl IggyConsumer {
         let retry_interval = self.retry_interval;
         let last_stored_offset = self.last_stored_offsets.clone();
         let last_consumed_offset = self.last_consumed_offsets.clone();
+        let allow_replay = self.allow_replay;
 
         async move {
             if interval > 0 {
@@ -524,7 +546,7 @@ impl IggyConsumer {
                     last_consumed_offset.insert(partition_id, AtomicU64::new(0));
                 }
 
-                if has_consumed_offset {
+                if !allow_replay && has_consumed_offset {
                     polled_messages
                         .messages
                         .retain(|message| message.offset > consumed_offset);
@@ -559,7 +581,9 @@ impl IggyConsumer {
                     polled_messages.current_offset
                 );
 
-                if has_consumed_offset && polled_messages.current_offset == consumed_offset {
+                if !allow_replay
+                    && (has_consumed_offset && polled_messages.current_offset == consumed_offset)
+                {
                     trace!("No new messages to consume in partition ID: {partition_id}, topic: {topic_id}, stream: {stream_id}, consumer: {consumer}");
                     if auto_commit_enabled && stored_offset < consumed_offset {
                         trace!("Auto-committing the offset: {consumed_offset} in partition ID: {partition_id}, topic: {topic_id}, stream: {stream_id}, consumer: {consumer}");
@@ -844,6 +868,7 @@ pub struct IggyConsumerBuilder {
     create_consumer_group_if_not_exists: bool,
     encryptor: Option<Arc<dyn Encryptor>>,
     retry_interval: IggyDuration,
+    allow_replay: bool,
 }
 
 impl IggyConsumerBuilder {
@@ -876,6 +901,7 @@ impl IggyConsumerBuilder {
             encryptor,
             polling_interval,
             retry_interval: IggyDuration::ONE_SECOND,
+            allow_replay: false,
         }
     }
 
@@ -987,6 +1013,14 @@ impl IggyConsumerBuilder {
         }
     }
 
+    /// Allows replaying the messages, `false` by default.
+    pub fn allow_replay(self) -> Self {
+        Self {
+            allow_replay: true,
+            ..self
+        }
+    }
+
     /// Builds the consumer.
     ///
     /// Note: After building the consumer, `init()` must be invoked before producing messages.
@@ -1006,6 +1040,7 @@ impl IggyConsumerBuilder {
             self.create_consumer_group_if_not_exists,
             self.encryptor,
             self.retry_interval,
+            self.allow_replay,
         )
     }
 }

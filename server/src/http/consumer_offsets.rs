@@ -5,10 +5,11 @@ use crate::http::COMPONENT;
 use crate::streaming::session::Session;
 use axum::extract::{Path, Query, State};
 use axum::http::StatusCode;
-use axum::routing::get;
+use axum::routing::{delete, get};
 use axum::{Extension, Json, Router};
 use error_set::ErrContext;
 use iggy::consumer::Consumer;
+use iggy::consumer_offsets::delete_consumer_offset::DeleteConsumerOffset;
 use iggy::consumer_offsets::get_consumer_offset::GetConsumerOffset;
 use iggy::consumer_offsets::store_consumer_offset::StoreConsumerOffset;
 use iggy::identifier::Identifier;
@@ -21,6 +22,10 @@ pub fn router(state: Arc<AppState>) -> Router {
         .route(
             "/streams/{stream_id}/topics/{topic_id}/consumer-offsets",
             get(get_consumer_offset).put(store_consumer_offset),
+        )
+        .route(
+            "/streams/{stream_id}/topics/{topic_id}/consumer-offsets/{consumer_id}",
+            delete(delete_consumer_offset),
         )
         .with_state(state)
 }
@@ -50,7 +55,11 @@ async fn get_consumer_offset(
         return Err(CustomError::ResourceNotFound);
     }
 
-    Ok(Json(offset?))
+    let Some(offset) = offset? else {
+        return Err(CustomError::ResourceNotFound);
+    };
+
+    Ok(Json(offset))
 }
 
 async fn store_consumer_offset(
@@ -75,5 +84,26 @@ async fn store_consumer_offset(
         )
         .await
         .with_error_context(|_| format!("{COMPONENT} - failed to store consumer offset, stream ID: {}, topic ID: {}, partition ID: {:?}", stream_id, topic_id, command.0.partition_id))?;
+    Ok(StatusCode::NO_CONTENT)
+}
+
+async fn delete_consumer_offset(
+    State(state): State<Arc<AppState>>,
+    Extension(identity): Extension<Identity>,
+    Path((stream_id, topic_id, consumer_id)): Path<(String, String, String)>,
+    query: Query<DeleteConsumerOffset>,
+) -> Result<StatusCode, CustomError> {
+    let consumer = Consumer::new(consumer_id.try_into()?);
+    let system = state.system.read().await;
+    system
+        .delete_consumer_offset(
+            &Session::stateless(identity.user_id, identity.ip_address),
+            consumer,
+            &query.stream_id,
+            &query.topic_id,
+            query.partition_id,
+        )
+        .await
+        .with_error_context(|_| format!("{COMPONENT} - failed to delete consumer offset, stream ID: {}, topic ID: {}, partition ID: {:?}", stream_id, topic_id, query.partition_id))?;
     Ok(StatusCode::NO_CONTENT)
 }

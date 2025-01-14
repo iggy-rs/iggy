@@ -36,6 +36,7 @@ impl IntoResponse for CustomError {
                     IggyError::ConsumerGroupIdNotFound(_, _) => StatusCode::NOT_FOUND,
                     IggyError::ConsumerGroupNameNotFound(_, _) => StatusCode::NOT_FOUND,
                     IggyError::ConsumerGroupMemberNotFound(_, _, _) => StatusCode::NOT_FOUND,
+                    IggyError::ConsumerOffsetNotFound(_) => StatusCode::NOT_FOUND,
                     IggyError::ResourceNotFound(_) => StatusCode::NOT_FOUND,
                     IggyError::Unauthenticated => StatusCode::UNAUTHORIZED,
                     IggyError::AccessTokenMissing => StatusCode::UNAUTHORIZED,

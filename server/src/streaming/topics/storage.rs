@@ -153,7 +153,7 @@ impl TopicStorage for FileTopicStorage {
                 )
                 .await;
                 partition.persist().await.with_error_context(|_| {
-                    format!("{COMPONENT} - failed to persist partiton: {partition}")
+                    format!("{COMPONENT} - failed to persist partition: {partition}")
                 })?;
                 partition.segments.clear();
                 unloaded_partitions.push(partition);

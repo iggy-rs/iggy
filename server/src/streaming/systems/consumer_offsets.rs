@@ -37,7 +37,7 @@ impl System {
         stream_id: &Identifier,
         topic_id: &Identifier,
         partition_id: Option<u32>,
-    ) -> Result<ConsumerOffsetInfo, IggyError> {
+    ) -> Result<Option<ConsumerOffsetInfo>, IggyError> {
         self.ensure_authenticated(session)?;
         let topic = self.find_topic(session, stream_id, topic_id).with_error_context(|_| format!("{COMPONENT} - topic not found for stream_id: {stream_id}, topic_id: {topic_id}"))?;
         self.permissioner.get_consumer_offset(
@@ -55,6 +55,27 @@ impl System {
 
         topic
             .get_consumer_offset(consumer, partition_id, session.client_id)
+            .await
+    }
+
+    pub async fn delete_consumer_offset(
+        &self,
+        session: &Session,
+        consumer: Consumer,
+        stream_id: &Identifier,
+        topic_id: &Identifier,
+        partition_id: Option<u32>,
+    ) -> Result<(), IggyError> {
+        self.ensure_authenticated(session)?;
+        let topic = self.find_topic(session, stream_id, topic_id).with_error_context(|_| format!("{COMPONENT} - topic not found for stream_id: {stream_id}, topic_id: {topic_id}"))?;
+        self.permissioner.delete_consumer_offset(
+            session.get_user_id(),
+            topic.stream_id,
+            topic.topic_id,
+        )?;
+
+        topic
+            .delete_consumer_offset(consumer, partition_id, session.client_id)
             .await
     }
 }

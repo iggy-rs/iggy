@@ -59,7 +59,7 @@ uuid = { version = "1.11.0", features = ["v7", "fast-rng", "zerocopy"] }
 webpki-roots = { version = "0.26.7" }
 
 [build-dependencies]
-convert_case = "0.6.0"
+convert_case = "0.7.1"
 serde = { version = "1.0.217", features = ["derive", "rc"] }
 serde_derive = "1.0.217"
 

@@ -53,10 +53,9 @@ impl BenchmarkRunner {
         benchmark.display_settings();
         info!("{results}");
 
-        if let Some(output_directory) = benchmark.args().output_directory() {
-            results.dump_to_toml(&output_directory);
+        if let Some(output_file) = benchmark.args().output() {
             let params = BenchmarkParams::from(benchmark.args());
-            params.dump_to_toml(&output_directory);
+            results.dump_to_json(&output_file, params);
         }
 
         Ok(())

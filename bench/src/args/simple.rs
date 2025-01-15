@@ -1,6 +1,7 @@
 use derive_more::Display;
+use serde::Serialize;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Display)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Display, Serialize)]
 pub enum BenchmarkKind {
     #[display("send messages")]
     Send,

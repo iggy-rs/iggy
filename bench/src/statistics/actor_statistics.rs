@@ -1,27 +1,39 @@
 use super::record::BenchmarkRecord;
+use super::serializer::round_float;
 use serde::Serialize;
 
 #[derive(Debug, Serialize, Clone, PartialEq)]
-pub struct BenchmarkActorStatistics {
+pub struct BenchmarkActorSummary {
     pub total_time_secs: f64,
     pub total_user_data_bytes: u64,
     pub total_bytes: u64,
     pub total_messages: u64,
+    #[serde(serialize_with = "round_float")]
     pub throughput_megabytes_per_second: f64,
+    #[serde(serialize_with = "round_float")]
     pub throughput_messages_per_second: f64,
+    #[serde(serialize_with = "round_float")]
     pub p50_latency_ms: f64,
+    #[serde(serialize_with = "round_float")]
     pub p90_latency_ms: f64,
+    #[serde(serialize_with = "round_float")]
     pub p95_latency_ms: f64,
+    #[serde(serialize_with = "round_float")]
     pub p99_latency_ms: f64,
+    #[serde(serialize_with = "round_float")]
     pub p999_latency_ms: f64,
+    #[serde(serialize_with = "round_float")]
     pub avg_latency_ms: f64,
+    #[serde(serialize_with = "round_float")]
     pub median_latency_ms: f64,
+    #[serde(skip_serializing)]
+    pub raw_data: Vec<BenchmarkRecord>,
 }
 
-impl BenchmarkActorStatistics {
+impl BenchmarkActorSummary {
     pub fn from_records(records: &[BenchmarkRecord]) -> Self {
         if records.is_empty() {
-            return BenchmarkActorStatistics {
+            return BenchmarkActorSummary {
                 total_time_secs: 0.0,
                 total_user_data_bytes: 0,
                 total_bytes: 0,
@@ -35,6 +47,7 @@ impl BenchmarkActorStatistics {
                 p999_latency_ms: 0.0,
                 avg_latency_ms: 0.0,
                 median_latency_ms: 0.0,
+                raw_data: Vec::new(),
             };
         }
 
@@ -76,7 +89,7 @@ impl BenchmarkActorStatistics {
             latencies_ms[len]
         };
 
-        BenchmarkActorStatistics {
+        BenchmarkActorSummary {
             total_time_secs,
             total_user_data_bytes,
             total_bytes,
@@ -90,6 +103,7 @@ impl BenchmarkActorStatistics {
             p999_latency_ms,
             avg_latency_ms,
             median_latency_ms,
+            raw_data: records.to_vec(),
         }
     }
 

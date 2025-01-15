@@ -1,6 +1,6 @@
 use crate::args::simple::BenchmarkKind;
 use crate::benchmark_result::BenchmarkResult;
-use crate::statistics::actor_statistics::BenchmarkActorStatistics;
+use crate::statistics::actor_statistics::BenchmarkActorSummary;
 use crate::statistics::record::BenchmarkRecord;
 use iggy::client::{ConsumerGroupClient, MessageClient};
 use iggy::clients::client::IggyClient;
@@ -24,7 +24,6 @@ pub struct Consumer {
     messages_per_batch: u32,
     message_batches: u32,
     warmup_time: IggyDuration,
-    output_directory: Option<String>,
 }
 
 impl Consumer {
@@ -37,7 +36,6 @@ impl Consumer {
         messages_per_batch: u32,
         message_batches: u32,
         warmup_time: IggyDuration,
-        output_directory: Option<String>,
     ) -> Self {
         Self {
             client_factory,
@@ -47,7 +45,6 @@ impl Consumer {
             messages_per_batch,
             message_batches,
             warmup_time,
-            output_directory,
         }
     }
 
@@ -222,33 +219,7 @@ impl Consumer {
             ));
         }
 
-        let statistics = BenchmarkActorStatistics::from_records(&records);
-
-        if let Some(output_directory) = &self.output_directory {
-            std::fs::create_dir_all(format!("{}/raw_data", output_directory)).unwrap();
-
-            // Dump raw data to file
-            let output_file = format!(
-                "{}/raw_data/consumer_{}_data.csv",
-                output_directory, self.consumer_id
-            );
-            info!(
-                "Consumer #{} → writing the results to {}...",
-                self.consumer_id, output_file
-            );
-            let mut writer = csv::Writer::from_path(output_file).unwrap();
-            for sample in records {
-                writer.serialize(sample).unwrap();
-            }
-            writer.flush().unwrap();
-
-            // Dump summary to file
-            let summary_file = format!(
-                "{}/raw_data/consumer_{}_summary.toml",
-                output_directory, self.consumer_id
-            );
-            statistics.dump_to_toml(&summary_file);
-        }
+        let statistics = BenchmarkActorSummary::from_records(&records);
 
         Self::log_consumer_statistics(
             self.consumer_id,
@@ -269,7 +240,7 @@ impl Consumer {
         total_messages: u64,
         message_batches: u32,
         messages_per_batch: u32,
-        stats: &BenchmarkActorStatistics,
+        stats: &BenchmarkActorSummary,
     ) {
         info!(
             "Consumer #{} → polled {} messages, {} batches of {} messages in {:.2} s, total size: {}, average throughput: {:.2} MB/s, \

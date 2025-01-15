@@ -1,26 +1,36 @@
-use std::io::Write;
-
-use super::actor_statistics::BenchmarkActorStatistics;
+use super::actor_statistics::BenchmarkActorSummary;
+use super::serializer::round_float;
 use colored::{ColoredString, Colorize};
 use serde::Serialize;
 
 #[derive(Debug, Serialize, Clone, PartialEq)]
-pub struct BenchmarkAggregateStatistics {
+pub struct BenchmarkSummary {
+    #[serde(serialize_with = "round_float")]
     pub total_throughput_megabytes_per_second: f64,
+    #[serde(serialize_with = "round_float")]
     pub total_throughput_messages_per_second: f64,
+    #[serde(serialize_with = "round_float")]
     pub average_throughput_megabytes_per_second: f64,
+    #[serde(serialize_with = "round_float")]
     pub average_throughput_messages_per_second: f64,
+    #[serde(serialize_with = "round_float")]
     pub average_p50_latency_ms: f64,
+    #[serde(serialize_with = "round_float")]
     pub average_p90_latency_ms: f64,
+    #[serde(serialize_with = "round_float")]
     pub average_p95_latency_ms: f64,
+    #[serde(serialize_with = "round_float")]
     pub average_p99_latency_ms: f64,
+    #[serde(serialize_with = "round_float")]
     pub average_p999_latency_ms: f64,
+    #[serde(serialize_with = "round_float")]
     pub average_avg_latency_ms: f64,
+    #[serde(serialize_with = "round_float")]
     pub average_median_latency_ms: f64,
 }
 
-impl BenchmarkAggregateStatistics {
-    pub fn from_actors_statistics(stats: &[BenchmarkActorStatistics]) -> Option<Self> {
+impl BenchmarkSummary {
+    pub fn from_actors_statistics(stats: &[BenchmarkActorSummary]) -> Option<Self> {
         if stats.is_empty() {
             return None;
         }
@@ -50,7 +60,7 @@ impl BenchmarkAggregateStatistics {
         let average_median_latency_ms =
             stats.iter().map(|r| r.median_latency_ms).sum::<f64>() / count;
 
-        Some(BenchmarkAggregateStatistics {
+        Some(BenchmarkSummary {
             total_throughput_megabytes_per_second,
             total_throughput_messages_per_second,
             average_throughput_megabytes_per_second,
@@ -79,14 +89,5 @@ impl BenchmarkAggregateStatistics {
             self.average_avg_latency_ms,
             self.average_median_latency_ms
         ).green()
-    }
-
-    pub fn dump_to_toml(&self, file_name: &str) {
-        let toml_str = toml::to_string(self).unwrap();
-        Write::write_all(
-            &mut std::fs::File::create(file_name).unwrap(),
-            toml_str.as_bytes(),
-        )
-        .unwrap();
     }
 }

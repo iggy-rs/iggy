@@ -8,3 +8,7 @@ members = ["bench", "cli", "examples", "integration", "sdk", "server", "tools"]
 
 [workspace.metadata.cargo-machete]
 ignored = ["openssl"]
+
+
+[workspace.dependencies]
+rkyv = "0.8.9"

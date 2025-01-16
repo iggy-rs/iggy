@@ -18,7 +18,6 @@ use crate::models::client_info::{ClientInfo, ClientInfoDetails};
 use crate::models::consumer_group::{ConsumerGroup, ConsumerGroupDetails};
 use crate::models::consumer_offset_info::ConsumerOffsetInfo;
 use crate::models::identity_info::IdentityInfo;
-use crate::models::messages::PolledMessages;
 use crate::models::permissions::Permissions;
 use crate::models::personal_access_token::{PersonalAccessTokenInfo, RawPersonalAccessToken};
 use crate::models::snapshot::Snapshot;
@@ -543,7 +542,8 @@ impl MessageClient for IggyClient {
         strategy: &PollingStrategy,
         count: u32,
         auto_commit: bool,
-    ) -> Result<PolledMessages, IggyError> {
+    ) -> Result<(), IggyError> {
+        todo!();
         if count == 0 {
             return Err(IggyError::InvalidMessagesCount);
         }
@@ -563,6 +563,7 @@ impl MessageClient for IggyClient {
             )
             .await?;
 
+        /*
         if let Some(ref encryptor) = self.encryptor {
             for message in &mut polled_messages.messages {
                 let payload = encryptor.decrypt(&message.payload)?;
@@ -570,6 +571,7 @@ impl MessageClient for IggyClient {
                 message.length = IggyByteSize::from(message.payload.len() as u64);
             }
         }
+        */
 
         Ok(polled_messages)
     }
@@ -579,15 +581,15 @@ impl MessageClient for IggyClient {
         stream_id: &Identifier,
         topic_id: &Identifier,
         partitioning: &Partitioning,
-        messages: &mut [Message],
+        messages: Vec<Message>,
     ) -> Result<(), IggyError> {
         if messages.is_empty() {
             return Err(IggyError::InvalidMessagesCount);
         }
-
+        let mut messages = messages;
         if let Some(encryptor) = &self.encryptor {
-            for message in &mut *messages {
-                message.payload = Bytes::from(encryptor.encrypt(&message.payload)?);
+            for message in &mut messages {
+                message.payload = encryptor.encrypt(&message.payload)?;
                 message.length = message.payload.len() as u32;
             }
         }

@@ -14,7 +14,6 @@ use iggy::consumer::Consumer;
 use iggy::identifier::Identifier;
 use iggy::messages::poll_messages::PollMessages;
 use iggy::messages::send_messages::SendMessages;
-use iggy::models::messages::PolledMessages;
 use iggy::validatable::Validatable;
 use std::sync::Arc;
 use tracing::instrument;
@@ -37,7 +36,8 @@ async fn poll_messages(
     Extension(identity): Extension<Identity>,
     Path((stream_id, topic_id)): Path<(String, String)>,
     mut query: Query<PollMessages>,
-) -> Result<Json<PolledMessages>, CustomError> {
+) -> Result<Json<()>, CustomError> {
+    /*
     query.stream_id = Identifier::from_str_value(&stream_id)?;
     query.topic_id = Identifier::from_str_value(&topic_id)?;
     query.validate()?;
@@ -60,7 +60,8 @@ async fn poll_messages(
                 stream_id, topic_id, query.0.partition_id
             )
         })?;
-    Ok(Json(polled_messages))
+        */
+    Ok(Json(()))
 }
 
 async fn send_messages(
@@ -69,6 +70,7 @@ async fn send_messages(
     Path((stream_id, topic_id)): Path<(String, String)>,
     Json(mut command): Json<SendMessages>,
 ) -> Result<StatusCode, CustomError> {
+    /*
     command.stream_id = Identifier::from_str_value(&stream_id)?;
     command.topic_id = Identifier::from_str_value(&topic_id)?;
     command.partitioning.length = command.partitioning.value.len() as u8;
@@ -101,6 +103,7 @@ async fn send_messages(
                 stream_id, topic_id
             )
         })?;
+        */
     Ok(StatusCode::CREATED)
 }
 

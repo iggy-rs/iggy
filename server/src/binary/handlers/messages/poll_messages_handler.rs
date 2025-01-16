@@ -16,6 +16,7 @@ pub async fn handle(
     session: &Session,
     system: &SharedSystem,
 ) -> Result<(), IggyError> {
+    /*
     debug!("session: {session}, command: {command}");
     let system = system.read().await;
     let messages = system
@@ -34,5 +35,6 @@ pub async fn handle(
         ))?;
     let messages = mapper::map_polled_messages(&messages);
     sender.send_ok_response(&messages).await?;
+    */
     Ok(())
 }

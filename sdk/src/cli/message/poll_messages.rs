@@ -6,7 +6,6 @@ use crate::identifier::Identifier;
 use crate::messages::poll_messages::{PollMessages, PollingStrategy};
 use crate::messages::send_messages::Message;
 use crate::models::header::{HeaderKey, HeaderKind};
-use crate::models::messages::PolledMessages;
 use crate::utils::sizeable::Sizeable;
 use crate::utils::timestamp::IggyTimestamp;
 use crate::utils::{byte_size::IggyByteSize, duration::IggyDuration};
@@ -24,6 +23,7 @@ pub struct PollMessagesCmd {
     output_file: Option<String>,
 }
 
+/*
 impl PollMessagesCmd {
     #[allow(clippy::too_many_arguments)]
     pub fn new(
@@ -138,6 +138,7 @@ impl PollMessagesCmd {
             .collect::<_>()
     }
 }
+    */
 
 #[async_trait]
 impl CliCommand for PollMessagesCmd {
@@ -149,6 +150,7 @@ impl CliCommand for PollMessagesCmd {
     }
 
     async fn execute_cmd(&mut self, client: &dyn Client) -> anyhow::Result<(), anyhow::Error> {
+        /*
         let start = std::time::Instant::now();
         let messages = client
             .poll_messages(
@@ -227,6 +229,7 @@ impl CliCommand for PollMessagesCmd {
 
             event!(target: PRINT_TARGET, Level::INFO, "{table}");
         }
+        */
 
         Ok(())
     }

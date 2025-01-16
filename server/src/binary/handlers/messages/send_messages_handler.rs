@@ -14,12 +14,13 @@ pub async fn handle(
     session: &Session,
     system: &SharedSystem,
 ) -> Result<(), IggyError> {
+    /*
     debug!("session: {session}, command: {command}");
     let system = system.read().await;
     let stream_id = command.stream_id.clone();
     let topic_id = command.topic_id.clone();
     let partitioning = command.partitioning.clone();
-    let messages = command.messages;
+    let messages = command.batch;
     // TODO(haze): Add confirmation level after testing is complete
     system
         .append_messages(session, stream_id, topic_id, partitioning, messages, None)
@@ -31,5 +32,6 @@ pub async fn handle(
             )
         })?;
     sender.send_empty_ok_response().await?;
+    */
     Ok(())
 }

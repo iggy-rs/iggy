@@ -5,7 +5,6 @@ use crate::error::IggyError;
 use crate::identifier::{IdKind, Identifier};
 use crate::locking::{IggySharedMut, IggySharedMutFn};
 use crate::messages::poll_messages::{PollingKind, PollingStrategy};
-use crate::models::messages::{PolledMessage, PolledMessages};
 use crate::utils::byte_size::IggyByteSize;
 use crate::utils::crypto::EncryptorKind;
 use crate::utils::duration::IggyDuration;
@@ -24,10 +23,8 @@ use std::time::Duration;
 use tokio::time::sleep;
 use tracing::{error, info, trace, warn};
 
-const EMPTY_MESSAGES: Vec<PolledMessage> = Vec::new();
-
 const ORDERING: std::sync::atomic::Ordering = std::sync::atomic::Ordering::SeqCst;
-type PollMessagesFuture = Pin<Box<dyn Future<Output = Result<PolledMessages, IggyError>>>>;
+//type PollMessagesFuture = Pin<Box<dyn Future<Output = Result<PolledMessages, IggyError>>>>;
 
 /// The auto-commit configuration for storing the offset on the server.
 #[derive(Debug, PartialEq, Copy, Clone)]
@@ -128,7 +125,7 @@ impl IggyConsumer {
             last_stored_offsets: Arc::new(DashMap::new()),
             last_consumed_offsets: Arc::new(DashMap::new()),
             current_offsets: Arc::new(DashMap::new()),
-            poll_future: None,
+            //poll_future: None,
             batch_size,
             auto_commit,
             auto_commit_after_polling: matches!(
@@ -138,7 +135,7 @@ impl IggyConsumer {
             ),
             auto_join_consumer_group,
             create_consumer_group_if_not_exists,
-            buffered_messages: VecDeque::new(),
+            //buffered_messages: VecDeque::new(),
             encryptor,
             store_offset_sender,
             store_offset_after_each_message: matches!(
@@ -483,9 +480,11 @@ impl IggyConsumer {
         });
     }
 
+    /*
     fn create_poll_messages_future(
         &self,
-    ) -> impl Future<Output = Result<PolledMessages, IggyError>> {
+    ) -> impl Future<Output = Result<(), IggyError>> {
+        todo!();
         let stream_id = self.stream_id.clone();
         let topic_id = self.topic_id.clone();
         let partition_id = self.partition_id;
@@ -628,6 +627,7 @@ impl IggyConsumer {
             Err(error)
         }
     }
+    */
 
     async fn wait_before_polling(interval: u64, last_sent_at: u64) {
         if interval == 0 {
@@ -704,6 +704,7 @@ impl IggyConsumer {
     }
 }
 
+/*
 pub struct ReceivedMessage {
     pub message: PolledMessage,
     pub current_offset: u64,
@@ -851,6 +852,7 @@ impl Stream for IggyConsumer {
         Poll::Pending
     }
 }
+    */
 
 #[derive(Debug)]
 pub struct IggyConsumerBuilder {

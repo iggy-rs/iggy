@@ -174,6 +174,33 @@ impl Sizeable for Identifier {
     }
 }
 
+impl Identifier {
+    pub fn from_bytes_new(bytes: &[u8]) -> Result<(usize, Self), IggyError>
+    where
+        Self: Sized,
+    {
+        if bytes.len() < 3 {
+            return Err(IggyError::InvalidIdentifier);
+        }
+
+        let kind = IdKind::from_code(bytes[0])?;
+        let length = bytes[1];
+        // Hmm this one is called on hot path, could we somehow optimize away this small allocation ?
+        let value = bytes[2..2 + length as usize].to_vec();
+        if value.len() != length as usize {
+            return Err(IggyError::InvalidIdentifier);
+        }
+        let read = 1 + 1 + length as usize;
+
+        let identifier = Identifier {
+            kind,
+            length,
+            value,
+        };
+        Ok((read, identifier))
+    }
+}
+
 impl BytesSerializable for Identifier {
     fn to_bytes(&self) -> Bytes {
         let mut bytes = BytesMut::with_capacity(2 + self.length as usize);

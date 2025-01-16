@@ -9,7 +9,7 @@ use crate::messages::flush_unsaved_buffer::FlushUnsavedBuffer;
 use crate::messages::poll_messages::PollingStrategy;
 use crate::messages::send_messages::{Message, Partitioning};
 use crate::messages::{poll_messages, send_messages};
-use crate::models::messages::PolledMessages;
+use crate::models::batch::IggyBatch;
 
 #[async_trait::async_trait]
 impl<B: BinaryClient> MessageClient for B {
@@ -22,7 +22,8 @@ impl<B: BinaryClient> MessageClient for B {
         strategy: &PollingStrategy,
         count: u32,
         auto_commit: bool,
-    ) -> Result<PolledMessages, IggyError> {
+    ) -> Result<(), IggyError> {
+        todo!();
         fail_if_not_authenticated(self).await?;
         let response = self
             .send_raw_with_response(
@@ -38,7 +39,7 @@ impl<B: BinaryClient> MessageClient for B {
                 ),
             )
             .await?;
-        mapper::map_polled_messages(response)
+        //mapper::map_polled_messages(response)
     }
 
     async fn send_messages(
@@ -46,12 +47,13 @@ impl<B: BinaryClient> MessageClient for B {
         stream_id: &Identifier,
         topic_id: &Identifier,
         partitioning: &Partitioning,
-        messages: &mut [Message],
+        messages: Vec<Message>,
     ) -> Result<(), IggyError> {
         fail_if_not_authenticated(self).await?;
-        self.send_raw_with_response(
+        let batch = IggyBatch::new(messages);
+        self.send_rkyv_with_response(
             SEND_MESSAGES_CODE,
-            send_messages::as_bytes(stream_id, topic_id, partitioning, messages),
+            send_messages::as_bytes(stream_id, topic_id, partitioning, &batch),
         )
         .await?;
         Ok(())

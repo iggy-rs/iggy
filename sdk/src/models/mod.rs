@@ -1,3 +1,4 @@
+pub mod batch;
 pub mod client_info;
 pub mod consumer_group;
 pub mod consumer_offset_info;

@@ -5,9 +5,8 @@ use crate::http::client::HttpClient;
 use crate::http::HttpTransport;
 use crate::identifier::Identifier;
 use crate::messages::flush_unsaved_buffer::FlushUnsavedBuffer;
-use crate::messages::poll_messages::{PollMessages, PollingStrategy};
+use crate::messages::poll_messages::PollingStrategy;
 use crate::messages::send_messages::{Message, Partitioning, SendMessages};
-use crate::models::messages::PolledMessages;
 use async_trait::async_trait;
 
 #[async_trait]
@@ -21,7 +20,8 @@ impl MessageClient for HttpClient {
         strategy: &PollingStrategy,
         count: u32,
         auto_commit: bool,
-    ) -> Result<PolledMessages, IggyError> {
+    ) -> Result<(), IggyError> {
+        /*
         let response = self
             .get_with_query(
                 &get_path(&stream_id.as_cow_str(), &topic_id.as_cow_str()),
@@ -41,6 +41,8 @@ impl MessageClient for HttpClient {
             .await
             .map_err(|_| IggyError::InvalidJsonResponse)?;
         Ok(messages)
+        */
+        Ok(())
     }
 
     async fn send_messages(
@@ -48,18 +50,21 @@ impl MessageClient for HttpClient {
         stream_id: &Identifier,
         topic_id: &Identifier,
         partitioning: &Partitioning,
-        messages: &mut [Message],
+        messages: Vec<Message>,
     ) -> Result<(), IggyError> {
-        self.post(
-            &get_path(&stream_id.as_cow_str(), &topic_id.as_cow_str()),
-            &SendMessages {
-                stream_id: stream_id.clone(),
-                topic_id: topic_id.clone(),
-                partitioning: partitioning.clone(),
-                messages: messages.to_vec(),
-            },
-        )
-        .await?;
+        todo!();
+        /*
+            self.post(
+                &get_path(&stream_id.as_cow_str(), &topic_id.as_cow_str()),
+                &SendMessages {
+                    stream_id: stream_id.clone(),
+                    topic_id: topic_id.clone(),
+                    partitioning: partitioning.clone(),
+                    messages: messages.to_vec(),
+                },
+            )
+            .await?;
+        */
         Ok(())
     }
 

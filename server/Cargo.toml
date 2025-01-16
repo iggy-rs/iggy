@@ -19,6 +19,7 @@ axum = "0.8.1"
 axum-server = { version = "0.7.1", features = ["tls-rustls"] }
 bcrypt = "0.16.0"
 bincode = "1.3.3"
+rkyv = { workspace = true }
 blake3 = "1.5.5"
 bytes = "1.9.0"
 chrono = "0.4.39"

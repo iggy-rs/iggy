@@ -9,7 +9,6 @@ use bytes::{BufMut, Bytes, BytesMut};
 use iggy::bytes_serializable::BytesSerializable;
 use iggy::locking::{IggySharedMut, IggySharedMutFn};
 use iggy::models::consumer_offset_info::ConsumerOffsetInfo;
-use iggy::models::messages::PolledMessages;
 use iggy::models::stats::Stats;
 use iggy::models::user_info::UserId;
 use iggy::utils::byte_size::IggyByteSize;
@@ -122,6 +121,7 @@ pub fn map_personal_access_tokens(personal_access_tokens: &[&PersonalAccessToken
     bytes.freeze()
 }
 
+/*
 pub fn map_polled_messages(polled_messages: &PolledMessages) -> Bytes {
     let messages_count = polled_messages.messages.len() as u32;
     let messages_size = polled_messages
@@ -140,6 +140,7 @@ pub fn map_polled_messages(polled_messages: &PolledMessages) -> Bytes {
 
     bytes.freeze()
 }
+    */
 
 pub fn map_stream(stream: &Stream) -> Bytes {
     let mut bytes = BytesMut::new();

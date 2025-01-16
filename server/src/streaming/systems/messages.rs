@@ -13,6 +13,7 @@ use iggy::models::messages::{PolledMessage, PolledMessages};
 use iggy::utils::byte_size::IggyByteSize;
 use iggy::utils::sizeable::Sizeable;
 use iggy::{error::IggyError, identifier::Identifier};
+use rkyv::util::AlignedVec;
 use tracing::{error, trace};
 
 impl System {
@@ -103,7 +104,7 @@ impl System {
         stream_id: Identifier,
         topic_id: Identifier,
         partitioning: Partitioning,
-        messages: Vec<Message>,
+        batch: AlignedVec<512>,
         confirmation: Option<Confirmation>,
     ) -> Result<(), IggyError> {
         self.ensure_authenticated(session)?;

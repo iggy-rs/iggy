@@ -12,6 +12,7 @@ use async_trait::async_trait;
 use bytes::Bytes;
 use quinn::crypto::rustls::QuicClientConfig as QuinnQuicClientConfig;
 use quinn::{ClientConfig, Connection, Endpoint, IdleTimeout, RecvStream, VarInt};
+use rkyv::util::AlignedVec;
 use rustls::client::danger::{HandshakeSignatureValid, ServerCertVerified, ServerCertVerifier};
 use rustls::crypto::CryptoProvider;
 use rustls::pki_types::{CertificateDer, ServerName, UnixTime};
@@ -118,6 +119,13 @@ impl BinaryTransport for QuicClient {
 
     fn get_heartbeat_interval(&self) -> IggyDuration {
         self.config.heartbeat_interval
+    }
+    async fn send_rkyv_with_response(
+        &self,
+        code: u32,
+        payload: AlignedVec<512>,
+    ) -> Result<Bytes, IggyError> {
+        todo!();
     }
 }
 

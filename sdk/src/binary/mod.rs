@@ -5,6 +5,7 @@ use crate::utils::duration::IggyDuration;
 use async_trait::async_trait;
 use bytes::Bytes;
 use derive_more::Display;
+use rkyv::util::AlignedVec;
 
 #[allow(deprecated)]
 pub mod binary_client;
@@ -61,6 +62,11 @@ pub trait BinaryTransport {
     /// Sends a command and returns the response.
     async fn send_with_response<T: Command>(&self, command: &T) -> Result<Bytes, IggyError>;
     async fn send_raw_with_response(&self, code: u32, payload: Bytes) -> Result<Bytes, IggyError>;
+    async fn send_rkyv_with_response(
+        &self,
+        code: u32,
+        payload: AlignedVec<512>,
+    ) -> Result<Bytes, IggyError>;
     fn get_heartbeat_interval(&self) -> IggyDuration;
 }
 

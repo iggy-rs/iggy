@@ -80,6 +80,7 @@ impl CliCommand for SendMessagesCmd {
     }
 
     async fn execute_cmd(&mut self, client: &dyn Client) -> anyhow::Result<(), anyhow::Error> {
+        /*
         let mut messages = if let Some(input_file) = &self.input_file {
             let mut file = tokio::fs::OpenOptions::new()
                 .read(true)
@@ -158,6 +159,7 @@ impl CliCommand for SendMessagesCmd {
             self.topic_id,
             self.stream_id,
         );
+        */
 
         Ok(())
     }

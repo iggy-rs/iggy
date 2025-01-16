@@ -72,7 +72,6 @@ pub enum ServerCommand {
     CreatePersonalAccessToken(CreatePersonalAccessToken),
     DeletePersonalAccessToken(DeletePersonalAccessToken),
     LoginWithPersonalAccessToken(LoginWithPersonalAccessToken),
-    SendMessages(SendMessages),
     PollMessages(PollMessages),
     FlushUnsavedBuffer(FlushUnsavedBuffer),
     GetConsumerOffset(GetConsumerOffset),
@@ -101,8 +100,8 @@ pub enum ServerCommand {
     GetSnapshotFile(GetSnapshot),
 }
 
-impl BytesSerializable for ServerCommand {
-    fn to_bytes(&self) -> Bytes {
+impl ServerCommand {
+    pub fn to_bytes(&self) -> Bytes {
         match self {
             ServerCommand::Ping(payload) => as_bytes(payload),
             ServerCommand::GetStats(payload) => as_bytes(payload),
@@ -122,7 +121,6 @@ impl BytesSerializable for ServerCommand {
             ServerCommand::CreatePersonalAccessToken(payload) => as_bytes(payload),
             ServerCommand::DeletePersonalAccessToken(payload) => as_bytes(payload),
             ServerCommand::LoginWithPersonalAccessToken(payload) => as_bytes(payload),
-            ServerCommand::SendMessages(payload) => as_bytes(payload),
             ServerCommand::PollMessages(payload) => as_bytes(payload),
             ServerCommand::StoreConsumerOffset(payload) => as_bytes(payload),
             ServerCommand::DeleteConsumerOffset(payload) => as_bytes(payload),
@@ -152,12 +150,7 @@ impl BytesSerializable for ServerCommand {
         }
     }
 
-    fn from_bytes(bytes: Bytes) -> Result<Self, IggyError> {
-        let code = u32::from_le_bytes(
-            bytes[..4]
-                .try_into()
-                .map_err(|_| IggyError::InvalidNumberEncoding)?,
-        );
+    pub fn from_bytes(code: u32, bytes: Bytes) -> Result<Self, IggyError> {
         let payload = bytes.slice(4..);
         match code {
             PING_CODE => Ok(ServerCommand::Ping(Ping::from_bytes(payload)?)),
@@ -192,9 +185,6 @@ impl BytesSerializable for ServerCommand {
                     LoginWithPersonalAccessToken::from_bytes(payload)?,
                 ))
             }
-            SEND_MESSAGES_CODE => Ok(ServerCommand::SendMessages(SendMessages::from_bytes(
-                payload,
-            )?)),
             POLL_MESSAGES_CODE => Ok(ServerCommand::PollMessages(PollMessages::from_bytes(
                 payload,
             )?)),
@@ -297,7 +287,6 @@ impl Validatable<IggyError> for ServerCommand {
             ServerCommand::CreatePersonalAccessToken(command) => command.validate(),
             ServerCommand::DeletePersonalAccessToken(command) => command.validate(),
             ServerCommand::LoginWithPersonalAccessToken(command) => command.validate(),
-            ServerCommand::SendMessages(command) => command.validate(),
             ServerCommand::PollMessages(command) => command.validate(),
             ServerCommand::StoreConsumerOffset(command) => command.validate(),
             ServerCommand::DeleteConsumerOffset(command) => command.validate(),
@@ -380,7 +369,6 @@ impl Display for ServerCommand {
                 write!(formatter, "{DELETE_PARTITIONS}|{payload}")
             }
             ServerCommand::PollMessages(payload) => write!(formatter, "{POLL_MESSAGES}|{payload}"),
-            ServerCommand::SendMessages(payload) => write!(formatter, "{SEND_MESSAGES}|{payload}"),
             ServerCommand::StoreConsumerOffset(payload) => {
                 write!(formatter, "{STORE_CONSUMER_OFFSET}|{payload}")
             }
@@ -513,11 +501,6 @@ mod tests {
             &ServerCommand::LoginWithPersonalAccessToken(LoginWithPersonalAccessToken::default()),
             LOGIN_WITH_PERSONAL_ACCESS_TOKEN_CODE,
             &LoginWithPersonalAccessToken::default(),
-        );
-        assert_serialized_as_bytes_and_deserialized_from_bytes(
-            &ServerCommand::SendMessages(SendMessages::default()),
-            SEND_MESSAGES_CODE,
-            &SendMessages::default(),
         );
         assert_serialized_as_bytes_and_deserialized_from_bytes(
             &ServerCommand::PollMessages(PollMessages::default()),

@@ -113,6 +113,7 @@ async fn handle_stream(
             request.len()
         ));
     }
+    /*
 
     debug!("Trying to read command...");
     let length = request[..INITIAL_BYTES_LENGTH]
@@ -135,4 +136,6 @@ async fn handle_stream(
     command::handle(command, &mut sender, session.as_ref(), system.clone())
         .await
         .with_context(|| "Error when handling the QUIC request.")
+        */
+    Ok(())
 }

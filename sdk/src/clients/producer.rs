@@ -306,10 +306,18 @@ impl IggyProducer {
         self.encrypt_messages(&mut messages)?;
         let partitioning = self.get_partitioning(&stream, &topic, &messages, partitioning)?;
         let batch_size = self.batch_size.unwrap_or(MAX_BATCH_SIZE);
-        let batches = messages.chunks_mut(batch_size);
+        // Dunno how to deal with it, for now leave it as it is.
+        let batches = if batch_size <= messages.len() {
+            vec![messages]
+        } else {
+            messages
+                .chunks(batch_size)
+                .map(|batch| batch.to_owned())
+                .collect()
+        };
         let mut current_batch = 1;
         let batches_count = batches.len();
-        for batch in batches {
+        for messages in batches {
             if self.send_interval_micros > 0 {
                 Self::wait_before_sending(
                     self.send_interval_micros,
@@ -318,7 +326,7 @@ impl IggyProducer {
                 .await;
             }
 
-            let messages_count = batch.len();
+            let messages_count = messages.len();
             trace!(
                 "Sending {messages_count} messages ({current_batch}/{batches_count} batch(es))..."
             );
@@ -326,7 +334,7 @@ impl IggyProducer {
                 .store(IggyTimestamp::now().into(), ORDERING);
             let client = self.client.read().await;
             client
-                .send_messages(&self.stream_id, &self.topic_id, &partitioning, batch)
+                .send_messages(&self.stream_id, &self.topic_id, &partitioning, messages)
                 .await?;
             trace!("Sent {messages_count} messages ({current_batch}/{batches_count} batch(es)).");
             current_batch += 1;
@@ -350,12 +358,12 @@ impl IggyProducer {
             self.last_sent_at
                 .store(IggyTimestamp::now().into(), ORDERING);
             client
-                .send_messages(stream, topic, &partitioning, &mut messages)
+                .send_messages(stream, topic, &partitioning, messages)
                 .await?;
             return Ok(());
         }
 
-        for batch in messages.chunks_mut(batch_size) {
+        for batch in messages.chunks(batch_size).map(|batch| batch.to_owned()) {
             self.last_sent_at
                 .store(IggyTimestamp::now().into(), ORDERING);
             client
@@ -385,7 +393,7 @@ impl IggyProducer {
     fn encrypt_messages(&self, messages: &mut [Message]) -> Result<(), IggyError> {
         if let Some(encryptor) = &self.encryptor {
             for message in messages {
-                message.payload = Bytes::from(encryptor.encrypt(&message.payload)?);
+                message.payload = encryptor.encrypt(&message.payload)?;
                 message.length = message.payload.len() as u32;
             }
         }

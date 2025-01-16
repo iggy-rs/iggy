@@ -12,6 +12,7 @@ use crate::utils::timestamp::IggyTimestamp;
 use async_broadcast::{broadcast, Receiver, Sender};
 use async_trait::async_trait;
 use bytes::{BufMut, Bytes, BytesMut};
+use rkyv::util::AlignedVec;
 use rustls::pki_types::{pem::PemObject, CertificateDer, ServerName};
 use std::fmt::Debug;
 use std::net::SocketAddr;
@@ -219,7 +220,7 @@ impl BinaryTransport for TcpClient {
     }
 
     async fn send_raw_with_response(&self, code: u32, payload: Bytes) -> Result<Bytes, IggyError> {
-        let result = self.send_raw(code, payload.clone()).await;
+        let result = self.send_raw(code, &payload).await;
         if result.is_ok() {
             return result;
         }
@@ -250,7 +251,7 @@ impl BinaryTransport for TcpClient {
         }
 
         self.connect().await?;
-        self.send_raw(code, payload).await
+        self.send_raw(code, &payload).await
     }
 
     async fn publish_event(&self, event: DiagnosticEvent) {
@@ -261,6 +262,15 @@ impl BinaryTransport for TcpClient {
 
     fn get_heartbeat_interval(&self) -> IggyDuration {
         self.config.heartbeat_interval
+    }
+
+    async fn send_rkyv_with_response(
+        &self,
+        code: u32,
+        payload: AlignedVec<512>,
+    ) -> Result<Bytes, IggyError> {
+        let result = self.send_raw(code, &payload).await;
+        result
     }
 }
 
@@ -571,7 +581,7 @@ impl TcpClient {
         Ok(())
     }
 
-    async fn send_raw(&self, code: u32, payload: Bytes) -> Result<Bytes, IggyError> {
+    async fn send_raw(&self, code: u32, payload: &[u8]) -> Result<Bytes, IggyError> {
         match self.get_state().await {
             ClientState::Shutdown => {
                 trace!("Cannot send data. Client is shutdown.");
@@ -594,7 +604,7 @@ impl TcpClient {
             trace!("Sending a TCP request with code: {code}");
             stream.write(&(payload_length as u32).to_le_bytes()).await?;
             stream.write(&code.to_le_bytes()).await?;
-            stream.write(&payload).await?;
+            stream.write(payload).await?;
             stream.flush().await?;
             trace!("Sent a TCP request with code: {code}, waiting for a response...");
 

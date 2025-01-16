@@ -1,8 +1,5 @@
-use crate::bytes_serializable::BytesSerializable;
 use crate::error::IggyError;
 use crate::utils::byte_size::IggyByteSize;
-use bytes::{BufMut, Bytes, BytesMut};
-use serde::{Deserialize, Serialize};
 use serde_with::base64::Base64;
 use serde_with::serde_as;
 use std::collections::HashMap;
@@ -11,7 +8,18 @@ use std::hash::{Hash, Hasher};
 use std::str::FromStr;
 
 /// Represents a header key with a unique name. The name is case-insensitive and wraps a string.
-#[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Eq)]
+#[derive(
+    Debug,
+    Clone,
+    Eq,
+    PartialEq,
+    serde::Serialize,
+    serde::Deserialize,
+    rkyv::Serialize,
+    rkyv::Deserialize,
+    rkyv::Archive,
+)]
+#[rkyv(derive(Debug, Eq, PartialEq), compare(PartialEq))]
 pub struct HeaderKey(String);
 
 impl HeaderKey {
@@ -31,6 +39,12 @@ impl HeaderKey {
 impl Display for HeaderKey {
     fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
         write!(f, "{}", self.as_str())
+    }
+}
+
+impl Hash for ArchivedHeaderKey {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.0.hash(state);
     }
 }
 
@@ -59,17 +73,40 @@ impl TryFrom<&str> for HeaderKey {
 /// - `kind`: the kind of the header value.
 /// - `value`: the value of the header.
 #[serde_as]
-#[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Eq)]
+#[derive(
+    Debug,
+    Clone,
+    PartialEq,
+    Eq,
+    serde::Serialize,
+    serde::Deserialize,
+    rkyv::Serialize,
+    rkyv::Deserialize,
+    rkyv::Archive,
+)]
+#[rkyv(derive(Debug, Hash, Eq, PartialEq), compare(PartialEq))]
 pub struct HeaderValue {
     /// The kind of the header value.
     pub kind: HeaderKind,
     /// The binary value of the header payload.
     #[serde_as(as = "Base64")]
-    pub value: Bytes,
+    pub value: Vec<u8>,
 }
 
 /// Represents the kind of a header value.
-#[derive(Debug, Serialize, Deserialize, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(
+    Debug,
+    Clone,
+    Hash,
+    Eq,
+    PartialEq,
+    serde::Serialize,
+    serde::Deserialize,
+    rkyv::Serialize,
+    rkyv::Deserialize,
+    rkyv::Archive,
+)]
+#[rkyv(derive(Debug, Hash, Eq, PartialEq), compare(PartialEq))]
 #[serde(rename_all = "snake_case")]
 pub enum HeaderKind {
     Raw,
@@ -522,7 +559,7 @@ impl HeaderValue {
 
         Ok(Self {
             kind,
-            value: Bytes::from(value.to_vec()),
+            value: value.to_vec(),
         })
     }
 
@@ -581,78 +618,6 @@ impl HeaderValue {
                 f64::from_le_bytes(self.value.to_vec().try_into().unwrap())
             ),
         }
-    }
-}
-
-impl BytesSerializable for HashMap<HeaderKey, HeaderValue> {
-    fn to_bytes(&self) -> Bytes {
-        if self.is_empty() {
-            return Bytes::new();
-        }
-
-        let mut bytes = BytesMut::new();
-        for (key, value) in self {
-            #[allow(clippy::cast_possible_truncation)]
-            bytes.put_u32_le(key.0.len() as u32);
-            bytes.put_slice(key.0.as_bytes());
-            bytes.put_u8(value.kind.as_code());
-            #[allow(clippy::cast_possible_truncation)]
-            bytes.put_u32_le(value.value.len() as u32);
-            bytes.put_slice(&value.value);
-        }
-
-        bytes.freeze()
-    }
-
-    fn from_bytes(bytes: Bytes) -> Result<Self, IggyError>
-    where
-        Self: Sized,
-    {
-        if bytes.is_empty() {
-            return Ok(Self::new());
-        }
-
-        let mut headers = Self::new();
-        let mut position = 0;
-        while position < bytes.len() {
-            let key_length = u32::from_le_bytes(
-                bytes[position..position + 4]
-                    .try_into()
-                    .map_err(|_| IggyError::InvalidNumberEncoding)?,
-            ) as usize;
-            if key_length == 0 || key_length > 255 {
-                return Err(IggyError::InvalidHeaderKey);
-            }
-            position += 4;
-            let key = String::from_utf8(bytes[position..position + key_length].to_vec());
-            if key.is_err() {
-                return Err(IggyError::InvalidHeaderKey);
-            }
-            let key = key.unwrap();
-            position += key_length;
-            let kind = HeaderKind::from_code(bytes[position])?;
-            position += 1;
-            let value_length = u32::from_le_bytes(
-                bytes[position..position + 4]
-                    .try_into()
-                    .map_err(|_| IggyError::InvalidNumberEncoding)?,
-            ) as usize;
-            if value_length == 0 || value_length > 255 {
-                return Err(IggyError::InvalidHeaderValue);
-            }
-            position += 4;
-            let value = bytes[position..position + value_length].to_vec();
-            position += value_length;
-            headers.insert(
-                HeaderKey(key),
-                HeaderValue {
-                    kind,
-                    value: Bytes::from(value),
-                },
-            );
-        }
-
-        Ok(headers)
     }
 }
 
@@ -721,7 +686,7 @@ mod tests {
         let value = b"Value 1";
         let header_value = HeaderValue::from_raw(value);
         assert!(header_value.is_ok());
-        assert_eq!(header_value.unwrap().value.as_ref(), value);
+        assert_eq!(header_value.unwrap().value, value);
     }
 
     #[test]
@@ -1197,6 +1162,7 @@ mod tests {
         assert_eq!(header_value.value_only_to_string(), "1234.01234");
     }
 
+    /*
     #[test]
     fn should_be_serialized_as_bytes() {
         let mut headers = HashMap::new();
@@ -1240,7 +1206,9 @@ mod tests {
 
         assert_eq!(headers_count, headers.len());
     }
+    */
 
+    /*
     #[test]
     fn should_be_deserialized_from_bytes() {
         let mut headers = HashMap::new();
@@ -1280,4 +1248,5 @@ mod tests {
             assert_eq!(deserialized_value.value, value.value);
         }
     }
+    */
 }

@@ -958,11 +958,10 @@ checksum = "5b63caa9aa9397e2d9480a9b13673856c78d8ac123288526c37d7839f2a86990"
 
 [[package]]
 name = "colored"
-version = "2.2.0"
+version = "3.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "117725a109d387c937a1533ce01b450cbde6b88abceea8473c4d7a85853cda3c"
+checksum = "fde0e0ec90c9dfb3b4b1a0891a7dcd0e2bffde2f7efed5fe7c9bb00e5bfb915e"
 dependencies = [
- "lazy_static",
  "windows-sys 0.59.0",
 ]
 
@@ -1067,6 +1066,15 @@ name = "convert_case"
 version = "0.6.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ec182b0ca2f35d8fc196cf3404988fd8b8c739a4d270ff118a398feb0cbec1ca"
+dependencies = [
+ "unicode-segmentation",
+]
+
+[[package]]
+name = "convert_case"
+version = "0.7.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "bb402b8d4c85569410425650ce3eddc7d698ed96d39a73f941b08fb63082f1e7"
 dependencies = [
  "unicode-segmentation",
 ]
@@ -1391,7 +1399,7 @@ version = "1.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "cb7330aeadfbe296029522e6c40f315320aba36fc43a5b3632f3795348f3bd22"
 dependencies = [
- "convert_case",
+ "convert_case 0.6.0",
  "proc-macro2",
  "quote",
  "syn 2.0.96",
@@ -1417,23 +1425,23 @@ dependencies = [
 
 [[package]]
 name = "dirs"
-version = "5.0.1"
+version = "6.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "44c45a9d03d6676652bcb5e724c7e988de1acad23a711b5217ab9cbecbec2225"
+checksum = "c3e8aa94d75141228480295a7d0e7feb620b1a5ad9f12bc40be62411e38cce4e"
 dependencies = [
  "dirs-sys",
 ]
 
 [[package]]
 name = "dirs-sys"
-version = "0.4.1"
+version = "0.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "520f05a5cbd335fae5a99ff7a6ab8627577660ee5cfd6a94a6a929b52ff0321c"
+checksum = "e01a3366d27ee9890022452ee61b2b63a67e6f13f58900b651ff5665f0bb1fab"
 dependencies = [
  "libc",
  "option-ext",
  "redox_users",
- "windows-sys 0.48.0",
+ "windows-sys 0.59.0",
 ]
 
 [[package]]
@@ -2310,7 +2318,7 @@ dependencies = [
 
 [[package]]
 name = "iggy"
-version = "0.6.70"
+version = "0.6.71"
 dependencies = [
  "aes-gcm",
  "ahash 0.8.11",
@@ -2324,7 +2332,7 @@ dependencies = [
  "chrono",
  "clap",
  "comfy-table",
- "convert_case",
+ "convert_case 0.7.1",
  "crc32fast",
  "dashmap",
  "derive_more",
@@ -2359,7 +2367,7 @@ dependencies = [
 
 [[package]]
 name = "iggy-cli"
-version = "0.8.5"
+version = "0.8.6"
 dependencies = [
  "ahash 0.8.11",
  "anyhow",
@@ -3475,9 +3483,9 @@ dependencies = [
 
 [[package]]
 name = "prometheus-client"
-version = "0.22.3"
+version = "0.23.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "504ee9ff529add891127c4827eb481bd69dc0ebc72e9a682e187db4caa60c3ca"
+checksum = "cf41c1a7c32ed72abe5082fb19505b969095c12da9f5732a4bc9878757fd087c"
 dependencies = [
  "dtoa",
  "itoa",
@@ -3709,13 +3717,13 @@ dependencies = [
 
 [[package]]
 name = "redox_users"
-version = "0.4.6"
+version = "0.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ba009ff324d1fc1b900bd1fdb31564febe58a8ccc8a6fdbb93b543d33b13ca43"
+checksum = "dd6f9d3d47bdd2ad6945c5015a226ec6155d0bcdfd8f7cd29f86b71f8de99d2b"
 dependencies = [
  "getrandom",
  "libredox",
- "thiserror 1.0.69",
+ "thiserror 2.0.11",
 ]
 
 [[package]]
@@ -4334,7 +4342,7 @@ dependencies = [
 
 [[package]]
 name = "server"
-version = "0.4.111"
+version = "0.4.112"
 dependencies = [
  "ahash 0.8.11",
  "anyhow",
@@ -4525,7 +4533,7 @@ version = "1.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b4df9e050de84b640ece7b8959a4a040600598c15f007bb39a7eeefe52f7a8cf"
 dependencies = [
- "convert_case",
+ "convert_case 0.6.0",
  "proc-macro-error",
  "proc-macro2",
  "quote",

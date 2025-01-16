@@ -1,6 +1,7 @@
 use crate::configs::server::{TelemetryConfig, TelemetryTransport};
 use crate::configs::system::LoggingConfig;
 use crate::server_error::LogError;
+use crate::VERSION;
 use opentelemetry::trace::TracerProvider;
 use opentelemetry::{global, KeyValue};
 use opentelemetry_appender_tracing::layer::OpenTelemetryTracingBridge;
@@ -23,7 +24,6 @@ use tracing_subscriber::{
 };
 
 const IGGY_LOG_FILE_PREFIX: &str = "iggy-server.log";
-const VERSION: &str = env!("CARGO_PKG_VERSION");
 
 // Writer that does nothing
 struct NullWriter;

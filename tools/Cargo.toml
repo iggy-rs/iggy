@@ -13,6 +13,6 @@ anyhow = "1.0.95"
 clap = { version = "4.5.23", features = ["derive"] }
 iggy = { path = "../sdk" }
 rand = "0.8.5"
-tokio = { version = "1.42.0", features = ["full"] }
+tokio = { version = "1.43.0", features = ["full"] }
 tracing = { version = "0.1.41" }
 tracing-subscriber = { version = "0.3.19", features = ["fmt", "env-filter"] }

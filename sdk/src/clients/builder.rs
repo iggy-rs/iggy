@@ -8,7 +8,7 @@ use crate::quic::client::QuicClient;
 use crate::quic::config::QuicClientConfigBuilder;
 use crate::tcp::client::TcpClient;
 use crate::tcp::config::TcpClientConfigBuilder;
-use crate::utils::crypto::Encryptor;
+use crate::utils::crypto::EncryptorKind;
 use crate::utils::duration::IggyDuration;
 use std::sync::Arc;
 use tracing::error;
@@ -18,7 +18,7 @@ use tracing::error;
 pub struct IggyClientBuilder {
     client: Option<Box<dyn Client>>,
     partitioner: Option<Arc<dyn Partitioner>>,
-    encryptor: Option<Arc<dyn Encryptor>>,
+    encryptor: Option<Arc<EncryptorKind>>,
 }
 
 impl IggyClientBuilder {
@@ -49,7 +49,7 @@ impl IggyClientBuilder {
     }
 
     /// Use the custom encryptor implementation.
-    pub fn with_encryptor(mut self, encryptor: Arc<dyn Encryptor>) -> Self {
+    pub fn with_encryptor(mut self, encryptor: Arc<EncryptorKind>) -> Self {
         self.encryptor = Some(encryptor);
         self
     }

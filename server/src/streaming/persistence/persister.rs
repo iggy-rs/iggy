@@ -7,19 +7,52 @@ use std::fmt::Debug;
 use tokio::fs;
 use tokio::io::AsyncWriteExt;
 
+#[cfg(test)]
+use mockall::automock;
+
+#[derive(Debug)]
+pub enum PersisterKind {
+    File(FilePersister),
+    FileWithSync(FileWithSyncPersister),
+    #[cfg(test)]
+    Mock(MockPersister),
+}
+
+impl PersisterKind {
+    pub async fn append(&self, path: &str, bytes: &[u8]) -> Result<(), IggyError> {
+        match self {
+            PersisterKind::File(p) => p.append(path, bytes).await,
+            PersisterKind::FileWithSync(p) => p.append(path, bytes).await,
+            #[cfg(test)]
+            PersisterKind::Mock(p) => p.append(path, bytes).await,
+        }
+    }
+
+    pub async fn overwrite(&self, path: &str, bytes: &[u8]) -> Result<(), IggyError> {
+        match self {
+            PersisterKind::File(p) => p.overwrite(path, bytes).await,
+            PersisterKind::FileWithSync(p) => p.overwrite(path, bytes).await,
+            #[cfg(test)]
+            PersisterKind::Mock(p) => p.overwrite(path, bytes).await,
+        }
+    }
+
+    pub async fn delete(&self, path: &str) -> Result<(), IggyError> {
+        match self {
+            PersisterKind::File(p) => p.delete(path).await,
+            PersisterKind::FileWithSync(p) => p.delete(path).await,
+            #[cfg(test)]
+            PersisterKind::Mock(p) => p.delete(path).await,
+        }
+    }
+}
+
 #[async_trait]
-pub trait Persister: Sync + Send {
+#[cfg_attr(test, automock)]
+pub trait Persister {
     async fn append(&self, path: &str, bytes: &[u8]) -> Result<(), IggyError>;
     async fn overwrite(&self, path: &str, bytes: &[u8]) -> Result<(), IggyError>;
     async fn delete(&self, path: &str) -> Result<(), IggyError>;
-}
-
-impl Debug for dyn Persister {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("Persister")
-            .field("type", &"Persister")
-            .finish()
-    }
 }
 
 #[derive(Debug)]
@@ -27,12 +60,6 @@ pub struct FilePersister;
 
 #[derive(Debug)]
 pub struct FileWithSyncPersister;
-
-unsafe impl Send for FilePersister {}
-unsafe impl Sync for FilePersister {}
-
-unsafe impl Send for FileWithSyncPersister {}
-unsafe impl Sync for FileWithSyncPersister {}
 
 #[async_trait]
 impl Persister for FilePersister {

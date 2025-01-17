@@ -167,6 +167,27 @@ pub fn map_stats(payload: Bytes) -> Result<Stats, IggyError> {
         from_utf8(&payload[current_position + 4..current_position + 4 + kernel_version_length])
             .map_err(|_| IggyError::InvalidUtf8)?
             .to_string();
+    current_position += 4 + kernel_version_length;
+    let iggy_version_length = u32::from_le_bytes(
+        payload[current_position..current_position + 4]
+            .try_into()
+            .map_err(|_| IggyError::InvalidUtf8)?,
+    ) as usize;
+    let iggy_version =
+        from_utf8(&payload[current_position + 4..current_position + 4 + iggy_version_length])
+            .map_err(|_| IggyError::InvalidUtf8)?
+            .to_string();
+    current_position += 4 + iggy_version_length;
+    let iggy_semver = u32::from_le_bytes(
+        payload[current_position..current_position + 4]
+            .try_into()
+            .map_err(|_| IggyError::InvalidNumberEncoding)?,
+    );
+    let iggy_semver = if iggy_semver == 0 {
+        None
+    } else {
+        Some(iggy_semver)
+    };
 
     Ok(Stats {
         process_id,
@@ -191,6 +212,8 @@ pub fn map_stats(payload: Bytes) -> Result<Stats, IggyError> {
         os_name,
         os_version,
         kernel_version,
+        iggy_server_version: iggy_version,
+        iggy_server_semver: iggy_semver,
     })
 }
 

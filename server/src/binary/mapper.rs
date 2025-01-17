@@ -44,6 +44,9 @@ pub fn map_stats(stats: &Stats) -> Bytes {
     bytes.put_slice(stats.os_version.as_bytes());
     bytes.put_u32_le(stats.kernel_version.len() as u32);
     bytes.put_slice(stats.kernel_version.as_bytes());
+    bytes.put_u32_le(stats.iggy_server_version.len() as u32);
+    bytes.put_slice(stats.iggy_server_version.as_bytes());
+    bytes.put_u32_le(stats.iggy_server_semver.unwrap_or(0));
     bytes.freeze()
 }
 

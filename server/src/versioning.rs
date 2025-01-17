@@ -1,8 +1,7 @@
+use crate::VERSION;
 use iggy::error::IggyError;
 use std::fmt::Display;
 use std::str::FromStr;
-
-const VERSION: &str = env!("CARGO_PKG_VERSION");
 
 #[derive(Debug)]
 pub struct SemanticVersion {
@@ -103,9 +102,7 @@ impl Display for SemanticVersion {
 mod tests {
     #[test]
     fn should_load_the_expected_version_from_package_definition() {
-        use super::VERSION;
-
         const CARGO_TOML_VERSION: &str = env!("CARGO_PKG_VERSION");
-        assert_eq!(VERSION, CARGO_TOML_VERSION);
+        assert_eq!(crate::VERSION, CARGO_TOML_VERSION);
     }
 }

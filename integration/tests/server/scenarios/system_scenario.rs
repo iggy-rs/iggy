@@ -536,6 +536,10 @@ pub async fn run(client_factory: &dyn ClientFactory) {
     assert_eq!(stats.partitions_count, PARTITIONS_COUNT);
     assert_eq!(stats.segments_count, PARTITIONS_COUNT);
     assert_eq!(stats.messages_count, MESSAGES_COUNT as u64);
+    assert!(!stats.iggy_server_version.is_empty());
+    assert!(stats.iggy_server_semver.is_some());
+    let iggy_server_semver = stats.iggy_server_semver.unwrap();
+    assert!(iggy_server_semver > 0);
 
     // 35. Delete the consumer group
     client

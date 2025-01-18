@@ -11,7 +11,7 @@ use std::sync::Arc;
 
 pub const LOG_EXTENSION: &str = "log";
 pub const INDEX_EXTENSION: &str = "index";
-pub const MAX_SIZE_BYTES: u64 = 1000 * 1000 * 1000;
+pub const MAX_SIZE_BYTES: u64 = 1000 * 1000 * 1000 * 1000;
 
 #[derive(Debug)]
 pub struct Segment {

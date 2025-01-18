@@ -16,13 +16,13 @@ use rkyv::util::AlignedVec;
 use serde::{Deserialize, Serialize};
 use serde_with::base64::Base64;
 use serde_with::serde_as;
-use tokio::time::Instant;
-use tracing::error;
 use std::collections::HashMap;
 use std::fmt::Display;
 use std::hash::{Hash, Hasher};
 use std::io::Write;
 use std::str::FromStr;
+use tokio::time::Instant;
+use tracing::{error, warn};
 
 const EMPTY_KEY_VALUE: Vec<u8> = vec![];
 
@@ -409,7 +409,7 @@ pub(crate) fn as_bytes(
     topic_id: &Identifier,
     partitioning: &Partitioning,
     batch: &IggyBatch,
-) -> AlignedVec<512> {
+) -> AlignedVec {
     let messages_size = batch
         .messages
         .iter()
@@ -417,21 +417,24 @@ pub(crate) fn as_bytes(
         .sum::<IggyByteSize>();
     // shit ton of small allocations, can we move it to stack ?
     let key_bytes = partitioning.to_bytes();
+    warn!("key_size: {}", key_bytes.len());
     let stream_id_bytes = stream_id.to_bytes();
+    warn!("stream_id_bytes: {}", stream_id_bytes.len());
     let topic_id_bytes = topic_id.to_bytes();
+    warn!("topic_id_bytes: {}", topic_id_bytes.len());
     let total_size = messages_size.as_bytes_usize()
         + key_bytes.len()
         + stream_id_bytes.len()
-        + topic_id_bytes.len();
-    let total_size = val_align_up(total_size as _, 512);
+        + topic_id_bytes.len()
+        + 97;
+    warn!("total_size: {}", total_size);
+    let acc_total_size = val_align_up(total_size as _, 16);
+    warn!("aligned_total_size: {}", acc_total_size);
 
-    let instant = Instant::now();
-    let mut bytes = AlignedVec::<512>::with_capacity(total_size as _);
-    // TODO: create abstraction over this shit.
-    unsafe { bytes.set_len(total_size as _) };
     let mut bytes =
-        rkyv::api::high::to_bytes_in::<AlignedVec<512>, rkyv::rancor::Error>(batch, bytes)
+        rkyv::api::high::to_bytes::<rkyv::rancor::Error>(batch)
             .expect("Failed to serialize batcherino");
+    warn!("after serialization bytes len: {}", bytes.len());
 
     // The idea is to use the padding required by reykjavik, to fit the metadata about request.
     let mut position = 0;
@@ -440,8 +443,6 @@ pub(crate) fn as_bytes(
     bytes[position..position + stream_id_bytes.len()].copy_from_slice(&stream_id_bytes);
     position += stream_id_bytes.len();
     bytes[position..position + topic_id_bytes.len()].copy_from_slice(&topic_id_bytes);
-    let elapsed = instant.elapsed();
-    error!("serializing batch took: {} micros", elapsed.as_micros());
     bytes
 }
 
@@ -465,7 +466,7 @@ impl FromStr for Message {
 }
 
 impl SendMessages {
-    fn to_bytes(&self) -> AlignedVec<512> {
+    fn to_bytes(&self) -> AlignedVec {
         as_bytes(
             &self.stream_id,
             &self.topic_id,

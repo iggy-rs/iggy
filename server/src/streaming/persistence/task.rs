@@ -12,7 +12,7 @@ use super::persister::PersisterKind;
 
 #[derive(Debug)]
 pub struct LogPersisterTask {
-    _sender: Option<Sender<AlignedVec>>,
+    _sender: Option<Sender<AlignedVec<512>>>,
     _task_handle: Option<task::JoinHandle<()>>,
 }
 
@@ -23,7 +23,7 @@ impl LogPersisterTask {
         max_retries: u32,
         retry_sleep: Duration,
     ) -> Self {
-        let (sender, receiver): (Sender<AlignedVec>, Receiver<AlignedVec>) = unbounded();
+        let (sender, receiver): (Sender<AlignedVec<512>>, Receiver<AlignedVec<512>>) = unbounded();
 
         let task_handle = task::spawn(async move {
             loop {
@@ -85,7 +85,7 @@ impl LogPersisterTask {
         ))
     }
 
-    pub async fn send(&self, data: AlignedVec) -> Result<(), IggyError> {
+    pub async fn send(&self, data: AlignedVec<512>) -> Result<(), IggyError> {
         if let Some(sender) = &self._sender {
             sender
                 .send_async(data)

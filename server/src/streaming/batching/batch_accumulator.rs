@@ -36,7 +36,7 @@ impl BatchAccumulator {
     }
 
     pub fn append(&mut self, batch_size: IggyByteSize, batch: AlignedVec<512>) {
-        let access_batch = rkyv::access::<ArchivedIggyBatch, rkyv::rancor::Error>(&batch).unwrap();
+        let access_batch = unsafe { rkyv::access_unchecked::<ArchivedIggyBatch>(&batch) };
         let batch_base_offset = access_batch.base_offset.to_native();
         let batch_base_timestamp = access_batch.base_timestamp.to_native();
         self.current_size += batch_size;
@@ -85,24 +85,8 @@ impl BatchAccumulator {
         self.base_offset
     }
 
-    pub fn materialize_batch_and_maybe_update_state(&mut self) -> AlignedVec {
-        let mut capacity = 0;
-        for batch in &self.batches {
-            let access_batch =
-                rkyv::access::<ArchivedIggyBatch, rkyv::rancor::Error>(batch).unwrap();
-            capacity += access_batch.messages.len();
-        }
-
-        let mut messages = Vec::with_capacity(capacity);
-        for batch in &self.batches {
-            let archived_batch =
-                rkyv::access::<ArchivedIggyBatch, rkyv::rancor::Error>(&batch).unwrap();
-            let batch =
-                rkyv::deserialize::<IggyBatch, rkyv::rancor::Error>(archived_batch).unwrap();
-            messages.extend(batch.messages);
-        }
-        let batch = IggyBatch::accumulated(self.base_offset, self.current_timestamp, messages);
-        rkyv::to_bytes::<rkyv::rancor::Error>(&batch).unwrap()
+    pub fn materialize_batch_and_maybe_update_state(self) -> Vec<AlignedVec<512>> {
+        self.batches
     }
 }
 

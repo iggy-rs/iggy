@@ -453,7 +453,7 @@ messages_required_to_save = 5000
 # Defines the soft limit for the size of a storage segment.
 # When a segment reaches this size, a new segment is created for subsequent data.
 # Example: if `size` is set "1GB", the actual segment size may be 1GB + the size of remaining messages in received batch.
-size = "1 GB"
+size = "4 GB"
 # Configures the message time-based expiry setting.
 # "none" means messages are kept indefinitely.
 # A time value in human-readable format determines the lifespan of messages.

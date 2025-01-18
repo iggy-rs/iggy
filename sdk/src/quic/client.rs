@@ -123,7 +123,7 @@ impl BinaryTransport for QuicClient {
     async fn send_rkyv_with_response(
         &self,
         code: u32,
-        payload: AlignedVec<512>,
+        payload: AlignedVec,
     ) -> Result<Bytes, IggyError> {
         todo!();
     }

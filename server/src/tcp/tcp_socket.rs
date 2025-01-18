@@ -1,5 +1,6 @@
 use std::num::TryFromIntError;
 
+use iggy::utils::duration::IggyDuration;
 use tokio::net::TcpSocket;
 
 use crate::configs::tcp::TcpSocketConfig;

@@ -214,8 +214,7 @@ impl Segment {
                 self.partition_id,
             ));
         }
-        error!("appending batch  with messages count:{}", messages_count);
-        let access_batch = rkyv::access::<ArchivedIggyBatch, rkyv::rancor::Error>(&batch).unwrap();
+        let access_batch = unsafe { rkyv::access_unchecked::<ArchivedIggyBatch>(&batch) };
         let messages_cap = self.config.partition.messages_required_to_save as usize;
         let batch_base_offset = access_batch.base_offset.to_native();
         let batch_accumulator = self
@@ -267,7 +266,6 @@ impl Segment {
         if self.unsaved_messages.is_none() {
             return Ok(0);
         }
-        warn!("PERSISTING MESSAGES!");
 
         let mut batch_accumulator = self.unsaved_messages.take().unwrap();
         if batch_accumulator.is_empty() {
@@ -286,18 +284,27 @@ impl Segment {
             self.partition_id
         );
 
-        let raw_batch = batch_accumulator.materialize_batch_and_maybe_update_state();
-        let batch_size = raw_batch.len();
+        let raw_batches = batch_accumulator.materialize_batch_and_maybe_update_state();
+        let mut batch_size = 0;
         let confirmation = Confirmation::Wait;
-        let saved_bytes = storage
-            .save_batches_raw(self, raw_batch, confirmation)
-            .await?;
+        for raw_batch in raw_batches {
+            batch_size += raw_batch.len();
+            let saved_bytes = storage
+                .save_batches_raw(self, raw_batch, confirmation)
+                .await?;
+            trace!(
+                "Saved {} messages on disk in segment with start offset: {} for partition with ID: {}, total bytes written: {}.",
+                unsaved_messages_number,
+                self.start_offset,
+                self.partition_id,
+                saved_bytes
+        );
+        }
         storage.save_index(&self.index_path, index).await.with_error_context(|_| format!(
             "STREAMING_SEGMENT - failed to save index, stream ID: {}, topic ID: {}, partition ID: {}, path: {}",
             self.stream_id, self.topic_id, self.partition_id, self.index_path,
         ))?;
         self.last_index_position += batch_size as u32;
-        self.size_bytes += IggyByteSize::from(RETAINED_BATCH_OVERHEAD);
         self.size_of_parent_stream
             .fetch_add(RETAINED_BATCH_OVERHEAD, Ordering::AcqRel);
         self.size_of_parent_topic
@@ -305,13 +312,6 @@ impl Segment {
         self.size_of_parent_partition
             .fetch_add(RETAINED_BATCH_OVERHEAD, Ordering::AcqRel);
 
-        trace!(
-            "Saved {} messages on disk in segment with start offset: {} for partition with ID: {}, total bytes written: {}.",
-            unsaved_messages_number,
-            self.start_offset,
-            self.partition_id,
-            saved_bytes
-        );
 
         if self.is_full().await {
             self.end_offset = self.current_offset;

@@ -76,7 +76,7 @@ pub trait SegmentStorage: Send + Sync {
     async fn save_batches_raw(
         &self,
         segment: &Segment,
-        batch: AlignedVec,
+        batch: AlignedVec<512>,
         confirmation: Confirmation,
     ) -> Result<IggyByteSize, IggyError>;
     async fn load_message_ids(&self, segment: &Segment) -> Result<Vec<u128>, IggyError>;
@@ -286,7 +286,7 @@ pub(crate) mod tests {
         async fn save_batches_raw(
             &self,
             _segment: &Segment,
-            _batch: AlignedVec,
+            _batch: AlignedVec<512>,
             _confirmation: Confirmation,
         ) -> Result<IggyByteSize, IggyError> {
             Ok(IggyByteSize::default())

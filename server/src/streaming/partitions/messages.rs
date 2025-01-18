@@ -15,7 +15,8 @@ use rkyv::rend::{u32_le, u64_le};
 use rkyv::util::AlignedVec;
 use std::sync::{atomic::Ordering, Arc};
 use std::time::Duration;
-use tracing::{trace, warn};
+use tokio::time::Instant;
+use tracing::{error, trace, warn};
 
 const EMPTY_MESSAGES: Vec<RetainedMessage> = vec![];
 
@@ -462,9 +463,9 @@ impl Partition {
              }
          } else {
         */
+        let start = Instant::now();
         let mut bytes = batch;
-        let batch: rkyv::seal::Seal<'_, ArchivedIggyBatch> =
-            rkyv::access_mut::<ArchivedIggyBatch, rkyv::rancor::Error>(&mut bytes).unwrap();
+        let batch = unsafe { rkyv::access_unchecked_mut::<ArchivedIggyBatch>(&mut bytes) };
         rkyv::munge::munge!(let ArchivedIggyBatch {mut base_offset, mut base_timestamp, messages, ..} = batch);
         let mut batch_base_timestamp = 0;
         let mut batch_base_offset = part_base_offset;
@@ -498,6 +499,7 @@ impl Partition {
         let max_alpha: f64 = 0.7;
         let dynamic_range = 10.00;
         self.update_avg_timestamp_delta(avg_timestamp_delta, min_alpha, max_alpha, dynamic_range);
+        let elapsed = start.elapsed();
 
         let last_offset = batch_base_offset + (messages_count - 1) as u64;
         if self.should_increment_offset {

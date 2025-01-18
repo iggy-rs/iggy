@@ -259,7 +259,7 @@ impl SegmentStorage for FileSegmentStorage {
     async fn save_batches_raw(
         &self,
         segment: &Segment,
-        batch: AlignedVec,
+        batch: AlignedVec<512>,
         confirmation: Confirmation,
     ) -> Result<IggyByteSize, IggyError> {
         let len = IggyByteSize::from(batch.len() as u64);

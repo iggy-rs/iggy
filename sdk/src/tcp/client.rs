@@ -267,7 +267,7 @@ impl BinaryTransport for TcpClient {
     async fn send_rkyv_with_response(
         &self,
         code: u32,
-        payload: AlignedVec<512>,
+        payload: AlignedVec,
     ) -> Result<Bytes, IggyError> {
         let result = self.send_raw(code, &payload).await;
         result

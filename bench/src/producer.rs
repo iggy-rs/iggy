@@ -92,6 +92,7 @@ impl Producer {
             2.. => Partitioning::balanced(),
         };
 
+        /*
         if self.warmup_time.get_duration() != Duration::from_millis(0) {
             info!(
                 "Producer #{} → warming up for {}...",
@@ -105,6 +106,7 @@ impl Producer {
                     .await?;
             }
         }
+        */
 
         info!(
             "Producer #{} → sending {} messages in {} batches of {} messages...",
@@ -122,7 +124,11 @@ impl Producer {
                 .send_messages(&stream_id, &topic_id, &partitioning, messages)
                 .await?;
             let latency = before_send.elapsed();
-            error!("send_messages took: {} ms, iter: {}", latency.as_millis(), i);
+            error!(
+                "send_messages took: {} ms, iter: {}",
+                latency.as_millis(),
+                i
+            );
 
             let messages_processed = (i * messages_per_batch) as u64;
             let batches_processed = i as u64;

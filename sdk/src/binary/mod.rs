@@ -65,7 +65,7 @@ pub trait BinaryTransport {
     async fn send_rkyv_with_response(
         &self,
         code: u32,
-        payload: AlignedVec<512>,
+        payload: AlignedVec,
     ) -> Result<Bytes, IggyError>;
     fn get_heartbeat_interval(&self) -> IggyDuration;
 }

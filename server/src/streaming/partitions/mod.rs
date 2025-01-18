@@ -23,6 +23,6 @@ fn create_messages() -> Vec<send_messages::Message> {
 }
 
 fn create_message(id: u128, payload: &str) -> send_messages::Message {
-    let payload = Bytes::from(payload.to_string());
+    let payload = Bytes::from(payload.to_string()).to_vec();
     send_messages::Message::new(Some(id), payload, None)
 }

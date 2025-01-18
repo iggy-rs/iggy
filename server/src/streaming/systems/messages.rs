@@ -1,4 +1,5 @@
 use crate::streaming::cache::memory_tracker::CacheMemoryTracker;
+use crate::streaming::models::messages::PolledMessages;
 use crate::streaming::session::Session;
 use crate::streaming::systems::system::System;
 use crate::streaming::systems::COMPONENT;
@@ -9,7 +10,6 @@ use iggy::consumer::Consumer;
 use iggy::messages::poll_messages::PollingStrategy;
 use iggy::messages::send_messages::Message;
 use iggy::messages::send_messages::Partitioning;
-use iggy::models::messages::{PolledMessage, PolledMessages};
 use iggy::utils::byte_size::IggyByteSize;
 use iggy::utils::sizeable::Sizeable;
 use iggy::{error::IggyError, identifier::Identifier};
@@ -58,7 +58,8 @@ impl System {
             return Ok(polled_messages);
         }
 
-        let offset = polled_messages.messages.last().unwrap().offset;
+        //let offset = polled_messages.messages.last().unwrap().offset;
+        let offset = 0;
         if args.auto_commit {
             trace!("Last offset: {} will be automatically stored for {}, stream: {}, topic: {}, partition: {}", offset, consumer, stream_id, topic_id, partition_id);
             topic
@@ -72,6 +73,7 @@ impl System {
         }
 
         let encryptor = self.encryptor.as_ref().unwrap();
+        /*
         let mut decrypted_messages = Vec::with_capacity(polled_messages.messages.len());
         for message in polled_messages.messages.iter() {
             let payload = encryptor.decrypt(&message.payload);
@@ -95,6 +97,7 @@ impl System {
             }
         }
         polled_messages.messages = decrypted_messages;
+        */
         Ok(polled_messages)
     }
 
@@ -121,6 +124,8 @@ impl System {
         ))?;
 
         let mut batch_size_bytes = IggyByteSize::default();
+        batch_size_bytes = (batch.len() as u64).into();
+        /*
         let mut messages = messages;
         if let Some(encryptor) = &self.encryptor {
             for message in messages.iter_mut() {
@@ -150,10 +155,11 @@ impl System {
             }
         }
         let messages_count = messages.len() as u64;
+        */
         topic
-            .append_messages(batch_size_bytes, partitioning, messages, confirmation)
+            .append_messages(batch_size_bytes, partitioning, batch, confirmation)
             .await?;
-        self.metrics.increment_messages(messages_count);
+        //self.metrics.increment_messages(messages_count);
         Ok(())
     }
 

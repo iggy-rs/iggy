@@ -7,11 +7,13 @@ use crate::streaming::segments::segment::Segment;
 use error_set::ErrContext;
 use iggy::confirmation::Confirmation;
 use iggy::error::IggyError;
+use iggy::models::batch::ArchivedIggyBatch;
 use iggy::utils::byte_size::IggyByteSize;
 use iggy::utils::sizeable::Sizeable;
+use rkyv::util::AlignedVec;
 use std::sync::atomic::Ordering;
 use std::sync::Arc;
-use tracing::{info, trace, warn};
+use tracing::{error, info, trace, warn};
 
 const EMPTY_MESSAGES: Vec<RetainedMessage> = vec![];
 
@@ -204,7 +206,7 @@ impl Segment {
         &mut self,
         batch_size: IggyByteSize,
         messages_count: u32,
-        batch: &[Arc<RetainedMessage>],
+        batch: AlignedVec<512>,
     ) -> Result<(), IggyError> {
         if self.is_closed {
             return Err(IggyError::SegmentClosed(
@@ -212,8 +214,10 @@ impl Segment {
                 self.partition_id,
             ));
         }
+        error!("appending batch  with messages count:{}", messages_count);
+        let access_batch = rkyv::access::<ArchivedIggyBatch, rkyv::rancor::Error>(&batch).unwrap();
         let messages_cap = self.config.partition.messages_required_to_save as usize;
-        let batch_base_offset = batch.first().unwrap().offset;
+        let batch_base_offset = access_batch.base_offset.to_native();
         let batch_accumulator = self
             .unsaved_messages
             .get_or_insert_with(|| BatchAccumulator::new(batch_base_offset, messages_cap));
@@ -263,6 +267,7 @@ impl Segment {
         if self.unsaved_messages.is_none() {
             return Ok(0);
         }
+        warn!("PERSISTING MESSAGES!");
 
         let mut batch_accumulator = self.unsaved_messages.take().unwrap();
         if batch_accumulator.is_empty() {
@@ -281,21 +286,17 @@ impl Segment {
             self.partition_id
         );
 
-        let (has_remainder, batch) = batch_accumulator.materialize_batch_and_maybe_update_state();
-        let batch_size = batch.get_size_bytes();
-        if has_remainder {
-            self.unsaved_messages = Some(batch_accumulator);
-        }
-        let confirmation = match confirmation {
-            Some(val) => val,
-            None => self.config.segment.server_confirmation,
-        };
-        let saved_bytes = storage.save_batches(self, batch, confirmation).await?;
+        let raw_batch = batch_accumulator.materialize_batch_and_maybe_update_state();
+        let batch_size = raw_batch.len();
+        let confirmation = Confirmation::Wait;
+        let saved_bytes = storage
+            .save_batches_raw(self, raw_batch, confirmation)
+            .await?;
         storage.save_index(&self.index_path, index).await.with_error_context(|_| format!(
             "STREAMING_SEGMENT - failed to save index, stream ID: {}, topic ID: {}, partition ID: {}, path: {}",
             self.stream_id, self.topic_id, self.partition_id, self.index_path,
         ))?;
-        self.last_index_position += batch_size.as_bytes_u64() as u32;
+        self.last_index_position += batch_size as u32;
         self.size_bytes += IggyByteSize::from(RETAINED_BATCH_OVERHEAD);
         self.size_of_parent_stream
             .fetch_add(RETAINED_BATCH_OVERHEAD, Ordering::AcqRel);

@@ -18,6 +18,7 @@ use iggy::confirmation::Confirmation;
 use iggy::consumer::ConsumerKind;
 use iggy::error::IggyError;
 use iggy::utils::byte_size::IggyByteSize;
+use rkyv::util::AlignedVec;
 use std::fmt::{Debug, Formatter};
 use std::sync::Arc;
 
@@ -72,10 +73,10 @@ pub trait SegmentStorage: Send + Sync {
         segment: &Segment,
         size_bytes: u64,
     ) -> Result<Vec<RetainedMessageBatch>, IggyError>;
-    async fn save_batches(
+    async fn save_batches_raw(
         &self,
         segment: &Segment,
-        batch: RetainedMessageBatch,
+        batch: AlignedVec,
         confirmation: Confirmation,
     ) -> Result<IggyByteSize, IggyError>;
     async fn load_message_ids(&self, segment: &Segment) -> Result<Vec<u128>, IggyError>;
@@ -282,10 +283,10 @@ pub(crate) mod tests {
             Ok(vec![])
         }
 
-        async fn save_batches(
+        async fn save_batches_raw(
             &self,
             _segment: &Segment,
-            _batch: RetainedMessageBatch,
+            _batch: AlignedVec,
             _confirmation: Confirmation,
         ) -> Result<IggyByteSize, IggyError> {
             Ok(IggyByteSize::default())

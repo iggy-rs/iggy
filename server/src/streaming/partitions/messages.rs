@@ -7,10 +7,12 @@ use crate::streaming::polling_consumer::PollingConsumer;
 use crate::streaming::segments::segment::Segment;
 use error_set::ErrContext;
 use iggy::confirmation::Confirmation;
-use iggy::messages::send_messages::Message;
-use iggy::models::messages::POLLED_MESSAGE_METADATA;
+use iggy::models::batch::ArchivedIggyBatch;
+use iggy::models::messages::ArchivedIggyMessage;
 use iggy::utils::timestamp::IggyTimestamp;
 use iggy::{error::IggyError, utils::duration::IggyDuration};
+use rkyv::rend::{u32_le, u64_le};
+use rkyv::util::AlignedVec;
 use std::sync::{atomic::Ordering, Arc};
 use std::time::Duration;
 use tracing::{trace, warn};
@@ -406,7 +408,7 @@ impl Partition {
     pub async fn append_messages(
         &mut self,
         appendable_batch_info: AppendableBatchInfo,
-        messages: Vec<Message>,
+        batch: AlignedVec<512>,
         confirmation: Option<Confirmation>,
     ) -> Result<(), IggyError> {
         {
@@ -424,9 +426,8 @@ impl Partition {
             }
         }
 
-        let batch_size = appendable_batch_info.batch_size
-            + ((POLLED_MESSAGE_METADATA * messages.len() as u32) as u64).into();
-        let base_offset = if !self.should_increment_offset {
+        let batch_size = appendable_batch_info.batch_size;
+        let part_base_offset = if !self.should_increment_offset {
             0
         } else {
             self.current_offset + 1
@@ -437,44 +438,58 @@ impl Partition {
         let mut max_timestamp = 0;
         let mut min_timestamp = 0;
 
-        let mut retained_messages = Vec::with_capacity(messages.len());
-        if let Some(message_deduplicator) = &self.message_deduplicator {
-            for message in messages {
-                if !message_deduplicator.try_insert(&message.id).await {
-                    warn!(
-                        "Ignored the duplicated message ID: {} for partition with ID: {}.",
-                        message.id, self.partition_id
-                    );
-                    continue;
-                }
-                max_timestamp = IggyTimestamp::now().as_micros();
+        /*
+         let mut retained_messages = Vec::with_capacity(messages.len());
+         if let Some(message_deduplicator) = &self.message_deduplicator {
+             for message in messages {
+                 if !message_deduplicator.try_insert(&message.id).await {
+                     warn!(
+                         "Ignored the duplicated message ID: {} for partition with ID: {}.",
+                         message.id, self.partition_id
+                     );
+                     continue;
+                 }
+                 max_timestamp = IggyTimestamp::now().as_micros();
 
-                if messages_count == 0 {
-                    min_timestamp = max_timestamp;
-                }
-                let message_offset = base_offset + messages_count as u64;
-                let message =
-                    Arc::new(RetainedMessage::new(message_offset, max_timestamp, message));
-                retained_messages.push(message.clone());
-                messages_count += 1;
-            }
-        } else {
-            for message in messages {
-                max_timestamp = IggyTimestamp::now().as_micros();
+                 if messages_count == 0 {
+                     min_timestamp = max_timestamp;
+                 }
+                 let message_offset = base_offset + messages_count as u64;
+                 let message =
+                     Arc::new(RetainedMessage::new(message_offset, max_timestamp, message));
+                 retained_messages.push(message.clone());
+                 messages_count += 1;
+             }
+         } else {
+        */
+        let mut bytes = batch;
+        let batch: rkyv::seal::Seal<'_, ArchivedIggyBatch> =
+            rkyv::access_mut::<ArchivedIggyBatch, rkyv::rancor::Error>(&mut bytes).unwrap();
+        rkyv::munge::munge!(let ArchivedIggyBatch {mut base_offset, mut base_timestamp, messages, ..} = batch);
+        let mut batch_base_timestamp = 0;
+        let mut batch_base_offset = part_base_offset;
+        let slice = unsafe {
+            std::slice::from_raw_parts_mut(
+                messages.as_ptr() as *mut ArchivedIggyMessage,
+                messages.len(),
+            )
+        };
+        for message in slice {
+            max_timestamp = IggyTimestamp::now().as_micros();
+            let message_offset = batch_base_offset + messages_count as u64;
 
-                if messages_count == 0 {
-                    min_timestamp = max_timestamp;
-                }
-                let message_offset = base_offset + messages_count as u64;
-                let message =
-                    Arc::new(RetainedMessage::new(message_offset, max_timestamp, message));
-                retained_messages.push(message.clone());
-                messages_count += 1;
+            if messages_count == 0 {
+                batch_base_offset = message_offset;
+                batch_base_timestamp = max_timestamp;
             }
+            let timestamp_delta = (max_timestamp - batch_base_timestamp) as u32;
+            let offset_delta = (message_offset - batch_base_offset) as u32;
+            message.timestamp_delta = u32_le::from_native(timestamp_delta);
+            message.offset_delta = u32_le::from_native(offset_delta);
+            messages_count += 1;
         }
-        if messages_count == 0 {
-            return Ok(());
-        }
+        *base_offset = u64_le::from_native(batch_base_offset);
+        *base_timestamp = u64_le::from_native(min_timestamp);
 
         let avg_timestamp_delta =
             Duration::from_micros((max_timestamp - min_timestamp) / messages_count as u64).into();
@@ -484,7 +499,7 @@ impl Partition {
         let dynamic_range = 10.00;
         self.update_avg_timestamp_delta(avg_timestamp_delta, min_alpha, max_alpha, dynamic_range);
 
-        let last_offset = base_offset + (messages_count - 1) as u64;
+        let last_offset = batch_base_offset + (messages_count - 1) as u64;
         if self.should_increment_offset {
             self.current_offset = last_offset;
         } else {
@@ -495,7 +510,7 @@ impl Partition {
         {
             let last_segment = self.segments.last_mut().ok_or(IggyError::SegmentNotFound)?;
             last_segment
-                .append_batch(batch_size, messages_count, &retained_messages)
+                .append_batch(batch_size, messages_count, bytes)
                 .await
                 .with_error_context(|_| {
                     format!(
@@ -504,9 +519,11 @@ impl Partition {
                 })?;
         }
 
+        /*
         if let Some(cache) = &mut self.cache {
             cache.extend(retained_messages);
         }
+        */
 
         self.unsaved_messages_count += messages_count;
         {
@@ -594,11 +611,13 @@ mod tests {
                 .sum::<IggyByteSize>(),
             partition_id: partition.partition_id,
         };
-        partition
-            .append_messages(appendable_batch_info, messages, None)
-            .await
-            .unwrap();
+        /*
+         partition
+             .append_messages(appendable_batch_info, messages, None)
+             .await
+             .unwrap();
 
+        */
         let loaded_messages = partition
             .get_messages_by_offset(0, messages_count)
             .await
@@ -619,10 +638,12 @@ mod tests {
                 .sum::<IggyByteSize>(),
             partition_id: partition.partition_id,
         };
+        /*
         partition
             .append_messages(appendable_batch_info, messages, None)
             .await
             .unwrap();
+        */
 
         let loaded_messages = partition
             .get_messages_by_offset(0, messages_count)

@@ -3,6 +3,7 @@ use bytes::Bytes;
 use error_set::ErrContext;
 use flume::{unbounded, Receiver, Sender};
 use iggy::error::IggyError;
+use rkyv::util::AlignedVec;
 use std::{sync::Arc, time::Duration};
 use tokio::task;
 use tracing::error;
@@ -11,7 +12,7 @@ use super::persister::PersisterKind;
 
 #[derive(Debug)]
 pub struct LogPersisterTask {
-    _sender: Option<Sender<Bytes>>,
+    _sender: Option<Sender<AlignedVec>>,
     _task_handle: Option<task::JoinHandle<()>>,
 }
 
@@ -22,7 +23,7 @@ impl LogPersisterTask {
         max_retries: u32,
         retry_sleep: Duration,
     ) -> Self {
-        let (sender, receiver): (Sender<Bytes>, Receiver<Bytes>) = unbounded();
+        let (sender, receiver): (Sender<AlignedVec>, Receiver<AlignedVec>) = unbounded();
 
         let task_handle = task::spawn(async move {
             loop {
@@ -31,7 +32,7 @@ impl LogPersisterTask {
                         if let Err(e) = Self::persist_with_retries(
                             &path,
                             &persister,
-                            data,
+                            &data,
                             max_retries,
                             retry_sleep,
                         )
@@ -57,14 +58,14 @@ impl LogPersisterTask {
     async fn persist_with_retries(
         path: &str,
         persister: &Arc<PersisterKind>,
-        data: Bytes,
+        data: &[u8],
         max_retries: u32,
         retry_sleep: Duration,
     ) -> Result<(), String> {
         let mut retries = 0;
 
         while retries < max_retries {
-            match persister.append(path, &data).await {
+            match persister.append(path, data).await {
                 Ok(_) => return Ok(()),
                 Err(e) => {
                     error!(
@@ -84,7 +85,7 @@ impl LogPersisterTask {
         ))
     }
 
-    pub async fn send(&self, data: Bytes) -> Result<(), IggyError> {
+    pub async fn send(&self, data: AlignedVec) -> Result<(), IggyError> {
         if let Some(sender) = &self._sender {
             sender
                 .send_async(data)

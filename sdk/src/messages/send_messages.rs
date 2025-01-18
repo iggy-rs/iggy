@@ -16,6 +16,8 @@ use rkyv::util::AlignedVec;
 use serde::{Deserialize, Serialize};
 use serde_with::base64::Base64;
 use serde_with::serde_as;
+use tokio::time::Instant;
+use tracing::error;
 use std::collections::HashMap;
 use std::fmt::Display;
 use std::hash::{Hash, Hasher};
@@ -423,6 +425,7 @@ pub(crate) fn as_bytes(
         + topic_id_bytes.len();
     let total_size = val_align_up(total_size as _, 512);
 
+    let instant = Instant::now();
     let mut bytes = AlignedVec::<512>::with_capacity(total_size as _);
     // TODO: create abstraction over this shit.
     unsafe { bytes.set_len(total_size as _) };
@@ -437,7 +440,8 @@ pub(crate) fn as_bytes(
     bytes[position..position + stream_id_bytes.len()].copy_from_slice(&stream_id_bytes);
     position += stream_id_bytes.len();
     bytes[position..position + topic_id_bytes.len()].copy_from_slice(&topic_id_bytes);
-
+    let elapsed = instant.elapsed();
+    error!("serializing batch took: {} micros", elapsed.as_micros());
     bytes
 }
 

@@ -1,3 +1,6 @@
+use tokio::time::Instant;
+use tracing::error;
+
 use crate::binary::binary_client::BinaryClient;
 use crate::binary::{fail_if_not_authenticated, mapper};
 use crate::client::MessageClient;
@@ -50,7 +53,10 @@ impl<B: BinaryClient> MessageClient for B {
         messages: Vec<Message>,
     ) -> Result<(), IggyError> {
         fail_if_not_authenticated(self).await?;
+        let instant = Instant::now();
         let batch = IggyBatch::new(messages);
+        let elapsed = instant.elapsed();
+        error!("creating batch took: {} micros", elapsed.as_micros());
         self.send_rkyv_with_response(
             SEND_MESSAGES_CODE,
             send_messages::as_bytes(stream_id, topic_id, partitioning, &batch),

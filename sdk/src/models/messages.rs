@@ -17,16 +17,22 @@ pub const IGGY_MESSAGE_METADATA: u32 = 8 + 1 + 8 + 4;
 /// - `payload`: the binary payload of the message.
 #[serde_as]
 #[derive(
-    Debug, serde::Serialize, serde::Deserialize, rkyv::Serialize, rkyv::Deserialize, rkyv::Archive,
+    Default,
+    Debug,
+    serde::Serialize,
+    serde::Deserialize,
+    rkyv::Serialize,
+    rkyv::Deserialize,
+    rkyv::Archive,
 )]
 #[rkyv(derive(Debug))]
 pub struct IggyMessage {
     /// The identifier of the message.
     pub id: u128,
     /// The offset of the message.
-    offset_delta: u32,
+    pub offset_delta: u32,
     /// The timestamp of the message.
-    timestamp_delta: u32,
+    pub timestamp_delta: u32,
     /// The length of the payload.
     #[serde(skip)]
     pub length: u64,

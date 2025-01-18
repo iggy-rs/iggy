@@ -587,12 +587,14 @@ impl MessageClient for IggyClient {
             return Err(IggyError::InvalidMessagesCount);
         }
         let mut messages = messages;
+        /*
         if let Some(encryptor) = &self.encryptor {
             for message in &mut messages {
                 message.payload = encryptor.encrypt(&message.payload)?;
                 message.length = message.payload.len() as u32;
             }
         }
+        */
 
         self.client
             .read()

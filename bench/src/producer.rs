@@ -14,7 +14,7 @@ use std::str::FromStr;
 use std::sync::Arc;
 use std::time::Duration;
 use tokio::time::Instant;
-use tracing::info;
+use tracing::{error, info};
 
 pub struct Producer {
     client_factory: Arc<dyn ClientFactory>,
@@ -54,6 +54,20 @@ impl Producer {
         }
     }
 
+    fn generate_messages(messages_per_batch: u32, message_size: u32) -> (u64, u64, Vec<Message>) {
+        let payload = Self::create_payload(message_size);
+        let mut messages = Vec::with_capacity(messages_per_batch as usize);
+        let mut batch_user_data_bytes = 0;
+        let mut batch_total_bytes = 0;
+        for _ in 0..messages_per_batch {
+            let message = Message::from_str(&payload).unwrap();
+            batch_user_data_bytes += message.length as u64;
+            batch_total_bytes += message.get_size_bytes().as_bytes_u64();
+            messages.push(message);
+        }
+        (batch_user_data_bytes, batch_total_bytes, messages)
+    }
+
     pub async fn run(&self) -> Result<BenchmarkResult, IggyError> {
         let topic_id: u32 = 1;
         let default_partition_id: u32 = 1;
@@ -70,19 +84,6 @@ impl Producer {
             "Producer #{} → preparing the test messages...",
             self.producer_id
         );
-        let payload = Self::create_payload(message_size);
-        let mut batch_user_data_bytes = 0;
-        let mut batch_total_bytes = 0;
-        let mut messages = Vec::with_capacity(messages_per_batch as usize);
-        for _ in 0..messages_per_batch {
-            let message = Message::from_str(&payload).unwrap();
-            batch_user_data_bytes += message.length as u64;
-            batch_total_bytes += message.get_size_bytes().as_bytes_u64();
-            messages.push(message);
-        }
-        let batch_user_data_bytes = batch_user_data_bytes;
-        let batch_total_bytes = batch_total_bytes;
-
         let stream_id = self.stream_id.try_into()?;
         let topic_id = topic_id.try_into()?;
         let partitioning = match partitions_count {
@@ -98,8 +99,9 @@ impl Producer {
             );
             let warmup_end = Instant::now() + self.warmup_time.get_duration();
             while Instant::now() < warmup_end {
+                let (_, _, messages) = Self::generate_messages(messages_per_batch, message_size);
                 client
-                    .send_messages(&stream_id, &topic_id, &partitioning, &mut messages)
+                    .send_messages(&stream_id, &topic_id, &partitioning, messages)
                     .await?;
             }
         }
@@ -113,11 +115,14 @@ impl Producer {
         let mut latencies: Vec<Duration> = Vec::with_capacity(message_batches as usize);
         let mut records: Vec<BenchmarkRecord> = Vec::with_capacity(message_batches as usize);
         for i in 1..=message_batches {
+            let (batch_user_data_bytes, batch_total_bytes, messages) =
+                Self::generate_messages(messages_per_batch, message_size);
             let before_send = Instant::now();
             client
-                .send_messages(&stream_id, &topic_id, &partitioning, &mut messages)
+                .send_messages(&stream_id, &topic_id, &partitioning, messages)
                 .await?;
             let latency = before_send.elapsed();
+            error!("send_messages took: {} ms, iter: {}", latency.as_millis(), i);
 
             let messages_processed = (i * messages_per_batch) as u64;
             let batches_processed = i as u64;

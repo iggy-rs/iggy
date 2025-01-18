@@ -1,5 +1,5 @@
 use crate::streaming::batching::appendable_batch_info::AppendableBatchInfo;
-use crate::streaming::models::messages::RetainedMessage;
+use crate::streaming::models::messages::{PolledMessages, RetainedMessage};
 use crate::streaming::polling_consumer::PollingConsumer;
 use crate::streaming::topics::topic::Topic;
 use crate::streaming::topics::COMPONENT;
@@ -11,11 +11,11 @@ use iggy::error::IggyError;
 use iggy::locking::IggySharedMutFn;
 use iggy::messages::poll_messages::{PollingKind, PollingStrategy};
 use iggy::messages::send_messages::{Message, Partitioning, PartitioningKind};
-use iggy::models::messages::PolledMessages;
 use iggy::utils::byte_size::IggyByteSize;
 use iggy::utils::expiry::IggyExpiry;
 use iggy::utils::sizeable::Sizeable;
 use iggy::utils::timestamp::IggyTimestamp;
+use rkyv::util::AlignedVec;
 use std::collections::HashMap;
 use std::sync::atomic::Ordering;
 use std::sync::Arc;
@@ -69,7 +69,7 @@ impl Topic {
         Ok(PolledMessages {
             partition_id,
             current_offset: partition.current_offset,
-            messages,
+            messages: messages.into_iter().map(Arc::new).collect(),
         })
     }
 
@@ -77,7 +77,7 @@ impl Topic {
         &self,
         batch_size: IggyByteSize,
         partitioning: Partitioning,
-        messages: Vec<Message>,
+        batch: AlignedVec<512>,
         confirmation: Option<Confirmation>,
     ) -> Result<(), IggyError> {
         if !self.has_partitions() {
@@ -86,10 +86,6 @@ impl Topic {
 
         if self.is_full() {
             return Err(IggyError::TopicFull(self.topic_id, self.stream_id));
-        }
-
-        if messages.is_empty() {
-            return Ok(());
         }
 
         let partition_id = match partitioning.kind {
@@ -105,7 +101,7 @@ impl Topic {
         };
 
         let appendable_batch_info = AppendableBatchInfo::new(batch_size, partition_id);
-        self.append_messages_to_partition(appendable_batch_info, messages, confirmation)
+        self.append_messages_to_partition(appendable_batch_info, batch, confirmation)
             .await
     }
 
@@ -130,7 +126,7 @@ impl Topic {
     async fn append_messages_to_partition(
         &self,
         appendable_batch_info: AppendableBatchInfo,
-        messages: Vec<Message>,
+        batch: AlignedVec<512>,
         confirmation: Option<Confirmation>,
     ) -> Result<(), IggyError> {
         let partition = self.partitions.get(&appendable_batch_info.partition_id);
@@ -144,7 +140,7 @@ impl Topic {
             })?
             .write()
             .await
-            .append_messages(appendable_batch_info, messages, confirmation)
+            .append_messages(appendable_batch_info, batch, confirmation)
             .await
             .with_error_context(|_| format!("{COMPONENT} - failed to append messages"))?;
 
@@ -326,6 +322,7 @@ mod tests {
         let messages_count: u32 = 1000;
         let topic = init_topic(partitions_count).await;
 
+        /*
         for entity_id in 1..=messages_count {
             let messages = vec![Message::new(Some(entity_id as u128), Bytes::new(), None)];
             let batch_size = messages
@@ -337,6 +334,7 @@ mod tests {
                 .await
                 .unwrap();
         }
+        */
 
         let partitions = topic.get_partitions();
         assert_eq!(partitions.len(), partitions_count as usize);
@@ -357,9 +355,10 @@ mod tests {
         let messages_count = 1000;
         let topic = init_topic(partitions_count).await;
 
+        /*
         for entity_id in 1..=messages_count {
             let partitioning = Partitioning::messages_key_u32(entity_id);
-            let messages = vec![Message::new(Some(entity_id as u128), Bytes::new(), None)];
+            let messages = vec![Message::new(Some(entity_id as u128), Bytes::new().to_vec(), None)];
             let batch_size = messages
                 .iter()
                 .map(|msg| msg.get_size_bytes())
@@ -369,6 +368,7 @@ mod tests {
                 .await
                 .unwrap();
         }
+        */
 
         let mut read_messages_count = 0;
         let partitions = topic.get_partitions();

@@ -44,12 +44,14 @@ pub(crate) async fn handle_connection(
             ))).await?;
             continue;
         }
-
-        sender.read(&mut code_buffer).await?;
         let length = u32::from_le_bytes(initial_buffer) - 4;
+        sender.read(&mut code_buffer).await?;
         let code = u32::from_le_bytes(code_buffer);
         if code == SEND_MESSAGES_CODE {
             let mut buf = AlignedVec::<512>::with_capacity(length as _);
+            unsafe {
+                buf.set_len(length as _);
+            }
             sender.read(&mut buf).await?;
 
             let mut position = 0;
@@ -57,25 +59,23 @@ pub(crate) async fn handle_connection(
             position += read;
             let (read, stream_id) = Identifier::from_bytes_new(&buf[position..]).unwrap();
             position += read;
-            let (read, topic_id) = Identifier::from_bytes_new(&buf[position..]).unwrap();
+            let (_, topic_id) = Identifier::from_bytes_new(&buf[position..]).unwrap();
             let batch = buf;
-            system
-                .write()
-                .await
-                .append_messages(
-                    &session,
-                    stream_id,
-                    topic_id,
-                    partitioning,
-                    batch,
-                    None,
-                )
-                .await?;
+            {
+                system
+                    .read()
+                    .await
+                    .append_messages(&session, stream_id, topic_id, partitioning, batch, None)
+                    .await?;
+            }
+            sender.send_empty_ok_response().await?;
         } else {
             debug!("Received a TCP request, length: {length}");
             let mut command_buffer = BytesMut::with_capacity(length as usize);
             command_buffer.put_bytes(0, length as usize);
-            sender.read(&mut command_buffer).await?;
+            if length > 0 {
+                sender.read(&mut command_buffer).await?;
+            }
             let command_buffer = command_buffer.freeze();
             let command = ServerCommand::from_bytes(code, command_buffer);
             if command.is_err() {

@@ -16,6 +16,7 @@ use iggy::error::IggyError;
 use iggy::utils::byte_size::IggyByteSize;
 use iggy::utils::checksum;
 use iggy::utils::sizeable::Sizeable;
+use rkyv::util::AlignedVec;
 use std::io::SeekFrom;
 use std::path::Path;
 use std::sync::atomic::Ordering;
@@ -255,19 +256,17 @@ impl SegmentStorage for FileSegmentStorage {
         Ok(batches)
     }
 
-    async fn save_batches(
+    async fn save_batches_raw(
         &self,
         segment: &Segment,
-        batch: RetainedMessageBatch,
+        batch: AlignedVec,
         confirmation: Confirmation,
     ) -> Result<IggyByteSize, IggyError> {
-        let batch_size = batch.get_size_bytes();
-        let mut bytes = BytesMut::with_capacity(batch_size.as_bytes_usize());
-        batch.extend(&mut bytes);
+        let len = IggyByteSize::from(batch.len() as u64);
 
         let save_result = match confirmation {
-            Confirmation::Wait => self.persister.append(&segment.log_path, &bytes).await,
-            Confirmation::NoWait => segment.persister_task.send(bytes.into()).await,
+            Confirmation::Wait => self.persister.append(&segment.log_path, &batch).await,
+            Confirmation::NoWait => segment.persister_task.send(batch).await,
         };
 
         save_result
@@ -279,7 +278,7 @@ impl SegmentStorage for FileSegmentStorage {
             })
             .map_err(|_| IggyError::CannotSaveMessagesToSegment)?;
 
-        Ok(batch_size)
+        Ok(len)
     }
 
     async fn load_message_ids(&self, segment: &Segment) -> Result<Vec<u128>, IggyError> {

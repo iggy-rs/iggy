@@ -8,6 +8,7 @@ use bytes::{BufMut, Bytes, BytesMut};
 use serde::{Deserialize, Serialize};
 use std::fmt::Display;
 use std::str::from_utf8;
+use tracing::warn;
 
 /// `LoginUser` command is used to login a user by username and password.
 /// It has additional payload:

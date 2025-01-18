@@ -1,12 +1,12 @@
 .config
+.dockerignore
+.git
 .github
+.gitignore
 /assets
-/local_data
 /certs
+/local_data
 /scripts
 /target
 Dockerfile
 docker-compose.yml
-.dockerignore
-.git
-.gitignore

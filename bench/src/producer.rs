@@ -124,7 +124,7 @@ impl Producer {
                 .send_messages(&stream_id, &topic_id, &partitioning, messages)
                 .await?;
             let latency = before_send.elapsed();
-            error!(
+              error!(
                 "send_messages took: {} ms, iter: {}",
                 latency.as_millis(),
                 i

@@ -29,7 +29,12 @@ pub async fn handle(
         return Ok(());
     }
 
-    let offset = mapper::map_consumer_offset(&offset?);
+    let Some(offset) = offset? else {
+        sender.send_empty_ok_response().await?;
+        return Ok(());
+    };
+
+    let offset = mapper::map_consumer_offset(&offset);
     sender.send_ok_response(&offset).await?;
     Ok(())
 }

@@ -6,6 +6,7 @@ use crate::streaming::partitions::COMPONENT;
 use crate::streaming::polling_consumer::PollingConsumer;
 use crate::streaming::segments::segment::Segment;
 use error_set::ErrContext;
+use iggy::confirmation::Confirmation;
 use iggy::messages::send_messages::Message;
 use iggy::models::messages::POLLED_MESSAGE_METADATA;
 use iggy::utils::timestamp::IggyTimestamp;
@@ -406,6 +407,7 @@ impl Partition {
         &mut self,
         appendable_batch_info: AppendableBatchInfo,
         messages: Vec<Message>,
+        confirmation: Option<Confirmation>,
     ) -> Result<(), IggyError> {
         {
             let last_segment = self.segments.last_mut().ok_or(IggyError::SegmentNotFound)?;
@@ -518,7 +520,7 @@ impl Partition {
                     self.partition_id
                 );
 
-                last_segment.persist_messages().await.unwrap();
+                last_segment.persist_messages(confirmation).await.unwrap();
                 self.unsaved_messages_count = 0;
             }
         }
@@ -542,7 +544,7 @@ impl Partition {
         // Make sure all of the messages from the accumulator are persisted
         // no leftover from one round trip.
         while last_segment.unsaved_messages.is_some() {
-            last_segment.persist_messages().await.unwrap();
+            last_segment.persist_messages(None).await.unwrap();
         }
         self.unsaved_messages_count = 0;
         Ok(())
@@ -582,7 +584,7 @@ mod tests {
 
     #[tokio::test]
     async fn given_disabled_message_deduplication_all_messages_should_be_appended() {
-        let mut partition = create_partition(false);
+        let mut partition = create_partition(false).await;
         let messages = create_messages();
         let messages_count = messages.len() as u32;
         let appendable_batch_info = AppendableBatchInfo {
@@ -593,7 +595,7 @@ mod tests {
             partition_id: partition.partition_id,
         };
         partition
-            .append_messages(appendable_batch_info, messages)
+            .append_messages(appendable_batch_info, messages, None)
             .await
             .unwrap();
 
@@ -606,7 +608,7 @@ mod tests {
 
     #[tokio::test]
     async fn given_enabled_message_deduplication_only_messages_with_unique_id_should_be_appended() {
-        let mut partition = create_partition(true);
+        let mut partition = create_partition(true).await;
         let messages = create_messages();
         let messages_count = messages.len() as u32;
         let unique_messages_count = 3;
@@ -618,7 +620,7 @@ mod tests {
             partition_id: partition.partition_id,
         };
         partition
-            .append_messages(appendable_batch_info, messages)
+            .append_messages(appendable_batch_info, messages, None)
             .await
             .unwrap();
 
@@ -629,7 +631,7 @@ mod tests {
         assert_eq!(loaded_messages.len(), unique_messages_count);
     }
 
-    fn create_partition(deduplication_enabled: bool) -> Partition {
+    async fn create_partition(deduplication_enabled: bool) -> Partition {
         let storage = Arc::new(get_test_system_storage());
         let stream_id = 1;
         let topic_id = 2;
@@ -657,5 +659,6 @@ mod tests {
             Arc::new(AtomicU32::new(0)),
             IggyTimestamp::now(),
         )
+        .await
     }
 }

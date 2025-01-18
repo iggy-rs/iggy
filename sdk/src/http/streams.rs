@@ -13,12 +13,16 @@ const PATH: &str = "/streams";
 #[async_trait]
 impl StreamClient for HttpClient {
     async fn get_stream(&self, stream_id: &Identifier) -> Result<Option<StreamDetails>, IggyError> {
-        let response = self.get(&get_details_path(&stream_id.as_cow_str())).await?;
-        if response.status() == 404 {
-            return Ok(None);
+        let response = self.get(&get_details_path(&stream_id.as_cow_str())).await;
+        if let Err(error) = response {
+            if matches!(error, IggyError::ResourceNotFound(_)) {
+                return Ok(None);
+            }
+
+            return Err(error);
         }
 
-        let stream = response
+        let stream = response?
             .json()
             .await
             .map_err(|_| IggyError::InvalidJsonResponse)?;

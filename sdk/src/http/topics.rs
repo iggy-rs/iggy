@@ -23,12 +23,16 @@ impl TopicClient for HttpClient {
                 &stream_id.as_cow_str(),
                 &topic_id.as_cow_str(),
             ))
-            .await?;
-        if response.status() == 404 {
-            return Ok(None);
+            .await;
+        if let Err(error) = response {
+            if matches!(error, IggyError::ResourceNotFound(_)) {
+                return Ok(None);
+            }
+
+            return Err(error);
         }
 
-        let topic = response
+        let topic = response?
             .json()
             .await
             .map_err(|_| IggyError::InvalidJsonResponse)?;

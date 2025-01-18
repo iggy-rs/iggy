@@ -1,4 +1,6 @@
 use crate::streaming::systems::system::System;
+use crate::versioning::SemanticVersion;
+use crate::VERSION;
 use iggy::error::IggyError;
 use iggy::locking::IggySharedMutFn;
 use iggy::models::stats::Stats;
@@ -45,6 +47,10 @@ impl System {
             os_name,
             os_version,
             kernel_version,
+            iggy_server_version: VERSION.to_owned(),
+            iggy_server_semver: SemanticVersion::current()
+                .ok()
+                .and_then(|v| v.get_numeric_version().ok()),
             ..Default::default()
         };
 

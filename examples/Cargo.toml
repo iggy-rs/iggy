@@ -2,6 +2,7 @@
 name = "iggy_examples"
 version = "0.0.5"
 edition = "2021"
+license = "Apache-2.0"
 
 [[example]]
 name = "getting-started-consumer"
@@ -60,7 +61,7 @@ futures-util = "0.3.31"
 iggy = { path = "../sdk" }
 rand = "0.8.5"
 serde = { version = "1.0.217", features = ["derive", "rc"] }
-serde_json = "1.0.134"
-tokio = { version = "1.42.0", features = ["full"] }
+serde_json = "1.0.135"
+tokio = { version = "1.43.0", features = ["full"] }
 tracing = { version = "0.1.41" }
 tracing-subscriber = { version = "0.3.19", features = ["fmt", "env-filter"] }

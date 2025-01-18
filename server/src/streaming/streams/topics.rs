@@ -69,7 +69,8 @@ impl Stream {
             compression_algorithm,
             max_topic_size,
             replication_factor,
-        )?;
+        )
+        .await?;
         topic
             .persist()
             .await

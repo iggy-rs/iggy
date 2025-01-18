@@ -18,7 +18,7 @@ impl Topic {
         self.partitions.len() as u32
     }
 
-    pub fn add_partitions(&mut self, count: u32) -> Result<Vec<u32>, IggyError> {
+    pub async fn add_partitions(&mut self, count: u32) -> Result<Vec<u32>, IggyError> {
         if count == 0 {
             return Ok(vec![]);
         }
@@ -44,7 +44,8 @@ impl Topic {
                 self.size_bytes.clone(),
                 self.segments_count_of_parent_stream.clone(),
                 IggyTimestamp::now(),
-            );
+            )
+            .await;
             self.partitions
                 .insert(partition_id, IggySharedMut::new(partition));
             partition_ids.push(partition_id)
@@ -54,7 +55,7 @@ impl Topic {
     }
 
     pub async fn add_persisted_partitions(&mut self, count: u32) -> Result<Vec<u32>, IggyError> {
-        let partition_ids = self.add_partitions(count).with_error_context(|_| {
+        let partition_ids = self.add_partitions(count).await.with_error_context(|_| {
             format!("{COMPONENT} - failed to add partitions, count: {count}")
         })?;
         for partition_id in &partition_ids {
@@ -62,7 +63,7 @@ impl Topic {
             let partition = partition.read().await;
             partition.persist().await.with_error_context(|_| {
                 format!(
-                    "{COMPONENT} - failed to persist partiton with id: {}",
+                    "{COMPONENT} - failed to persist partition with id: {}",
                     partition.partition_id
                 )
             })?;
@@ -93,7 +94,7 @@ impl Topic {
             messages_count += partition_messages_count;
             partition.delete().await.with_error_context(|_| {
                 format!(
-                    "{COMPONENT} - failed to delete partiton with id: {}",
+                    "{COMPONENT} - failed to delete partition with id: {}",
                     partition.partition_id
                 )
             })?;

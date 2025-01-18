@@ -21,6 +21,7 @@ pub mod streaming;
 pub mod tcp;
 pub mod versioning;
 
+const VERSION: &str = env!("CARGO_PKG_VERSION");
 const IGGY_ROOT_USERNAME_ENV: &str = "IGGY_ROOT_USERNAME";
 const IGGY_ROOT_PASSWORD_ENV: &str = "IGGY_ROOT_PASSWORD";
 

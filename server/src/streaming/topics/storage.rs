@@ -96,7 +96,8 @@ impl TopicStorage for FileTopicStorage {
                 topic.size_bytes.clone(),
                 topic.segments_count_of_parent_stream.clone(),
                 partition_state.created_at,
-            );
+            )
+            .await;
             unloaded_partitions.push(partition);
         }
 
@@ -149,9 +150,10 @@ impl TopicStorage for FileTopicStorage {
                     topic.size_bytes.clone(),
                     topic.segments_count_of_parent_stream.clone(),
                     partition_state.created_at,
-                );
+                )
+                .await;
                 partition.persist().await.with_error_context(|_| {
-                    format!("{COMPONENT} - failed to persist partiton: {partition}")
+                    format!("{COMPONENT} - failed to persist partition: {partition}")
                 })?;
                 partition.segments.clear();
                 unloaded_partitions.push(partition);

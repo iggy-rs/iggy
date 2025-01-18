@@ -185,6 +185,7 @@ impl JwtManager {
         })
     }
 
+    // The access token can be refreshed only once and if it is not expired
     pub async fn refresh_token(&self, token: &str) -> Result<GeneratedToken, IggyError> {
         if token.is_empty() {
             return Err(IggyError::InvalidAccessToken);
@@ -212,7 +213,7 @@ impl JwtManager {
             })
             .await
             .with_error_context(|_| {
-                format!("{COMPONENT} - failed to save revoked access token: {}", id)
+                format!("{COMPONENT} - failed to save revoked access token: {id}")
             })?;
         self.generate(jwt_claims.claims.sub)
     }

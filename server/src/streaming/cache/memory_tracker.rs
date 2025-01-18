@@ -4,12 +4,11 @@ use crate::configs::resource_quota::MemoryResourceQuota;
 use crate::configs::system::CacheConfig;
 use iggy::utils::byte_size::IggyByteSize;
 use std::sync::atomic::{AtomicU64, Ordering};
-use std::sync::{Arc, Once};
+use std::sync::{Arc, OnceLock};
 use sysinfo::System;
 use tracing::info;
 
-static ONCE: Once = Once::new();
-static mut INSTANCE: Option<Arc<CacheMemoryTracker>> = None;
+static INSTANCE: OnceLock<Option<Arc<CacheMemoryTracker>>> = OnceLock::new();
 
 #[derive(Debug)]
 pub struct CacheMemoryTracker {
@@ -21,22 +20,20 @@ type MessageSize = u64;
 
 impl CacheMemoryTracker {
     pub fn initialize(config: &CacheConfig) -> Option<Arc<CacheMemoryTracker>> {
-        unsafe {
-            ONCE.call_once(|| {
+        INSTANCE
+            .get_or_init(|| {
                 if config.enabled {
-                    INSTANCE = Some(Arc::new(CacheMemoryTracker::new(config.size.clone())));
-                    info!("Cache memory tracker initialized");
+                    Some(Arc::new(CacheMemoryTracker::new(config.size.clone())))
                 } else {
-                    INSTANCE = None;
                     info!("Cache memory tracker disabled");
+                    None
                 }
-            });
-            INSTANCE.clone()
-        }
+            })
+            .clone()
     }
 
     pub fn get_instance() -> Option<Arc<CacheMemoryTracker>> {
-        unsafe { INSTANCE.clone() }
+        INSTANCE.get().cloned().flatten()
     }
 
     fn new(limit: MemoryResourceQuota) -> Self {

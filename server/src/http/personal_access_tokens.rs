@@ -29,7 +29,7 @@ pub fn router(state: Arc<AppState>) -> Router {
             get(get_personal_access_tokens).post(create_personal_access_token),
         )
         .route(
-            "/personal-access-tokens/:name",
+            "/personal-access-tokens/{name}",
             delete(delete_personal_access_token),
         )
         .route(
@@ -152,7 +152,9 @@ async fn login_with_personal_access_token(
     let user = system
         .login_with_personal_access_token(&command.token, None)
         .await
-        .with_error_context(|_| "{COMPONENT} - failed to login with personal access token")?;
+        .with_error_context(|_| {
+            format!("{COMPONENT} - failed to login with personal access token")
+        })?;
     let tokens = state.jwt_manager.generate(user.id)?;
     Ok(Json(map_generated_access_token_to_identity_info(tokens)))
 }

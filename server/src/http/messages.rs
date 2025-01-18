@@ -22,11 +22,11 @@ use tracing::instrument;
 pub fn router(state: Arc<AppState>) -> Router {
     Router::new()
         .route(
-            "/streams/:stream_id/topics/:topic_id/messages",
+            "/streams/{stream_id}/topics/{topic_id}/messages",
             get(poll_messages).post(send_messages),
         )
         .route(
-            "/streams/:stream_id/topics/:topic_id/messages/flush/:partition_id/:fsync",
+            "/streams/{stream_id}/topics/{topic_id}/messages/flush/{partition_id}/{fsync}",
             get(flush_unsaved_buffer),
         )
         .with_state(state)
@@ -84,6 +84,7 @@ async fn send_messages(
     let command_topic_id = command.topic_id;
     let partitioning = command.partitioning;
     let system = state.system.read().await;
+    // TODO(haze): Add confirmation level after testing is complete
     system
         .append_messages(
             &Session::stateless(identity.user_id, identity.ip_address),
@@ -91,6 +92,7 @@ async fn send_messages(
             command_topic_id,
             partitioning,
             messages,
+            None,
         )
         .await
         .with_error_context(|_| {

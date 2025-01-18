@@ -18,7 +18,6 @@ use iggy::utils::expiry::IggyExpiry;
 use iggy::utils::topic_size::MaxTopicSize;
 use iggy::validatable::Validatable;
 use sysinfo::{Pid, ProcessesToUpdate, System};
-use tracing::{info, warn};
 
 impl Validatable<ConfigError> for ServerConfig {
     fn validate(&self) -> Result<(), ConfigError> {
@@ -74,7 +73,7 @@ impl Validatable<ConfigError> for CompressionConfig {
         let compression_alg = &self.default_algorithm;
         if *compression_alg != CompressionAlgorithm::None {
             // TODO(numinex): Change this message once server side compression is fully developed.
-            warn!(
+            println!(
                 "Server started with server-side compression enabled, using algorithm: {}, this feature is not implemented yet!",
                 compression_alg
             );
@@ -108,6 +107,11 @@ impl Validatable<ConfigError> for TelemetryConfig {
 
 impl Validatable<ConfigError> for CacheConfig {
     fn validate(&self) -> Result<(), ConfigError> {
+        if !self.enabled {
+            println!("Cache configuration -> cache is disabled.");
+            return Ok(());
+        }
+
         let limit_bytes = self.size.clone().into();
         let mut sys = System::new_all();
         sys.refresh_all();
@@ -128,20 +132,16 @@ impl Validatable<ConfigError> for CacheConfig {
         }
 
         if limit_bytes > (total_memory as f64 * 0.75) as u64 {
-            warn!(
+            println!(
                 "Cache configuration -> cache size exceeds 75% of total memory. Set to: {} ({:.2}% of total memory: {}).",
                 pretty_cache_limit, cache_percentage, pretty_total_memory
             );
         }
 
-        if self.enabled {
-            info!(
+        println!(
             "Cache configuration -> cache size set to {} ({:.2}% of total memory: {}, free memory: {}).",
             pretty_cache_limit, cache_percentage, pretty_total_memory, pretty_free_memory
         );
-        } else {
-            info!("Cache configuration -> cache is disabled.");
-        }
 
         Ok(())
     }

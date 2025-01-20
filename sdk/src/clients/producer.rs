@@ -6,7 +6,7 @@ use crate::identifier::{IdKind, Identifier};
 use crate::locking::{IggySharedMut, IggySharedMutFn};
 use crate::messages::send_messages::{Message, Partitioning};
 use crate::partitioner::Partitioner;
-use crate::utils::crypto::Encryptor;
+use crate::utils::crypto::EncryptorKind;
 use crate::utils::duration::IggyDuration;
 use crate::utils::expiry::IggyExpiry;
 use crate::utils::timestamp::IggyTimestamp;
@@ -35,7 +35,7 @@ pub struct IggyProducer {
     topic_name: String,
     batch_size: Option<usize>,
     partitioning: Option<Arc<Partitioning>>,
-    encryptor: Option<Arc<dyn Encryptor>>,
+    encryptor: Option<Arc<EncryptorKind>>,
     partitioner: Option<Arc<dyn Partitioner>>,
     send_interval_micros: u64,
     create_stream_if_not_exists: bool,
@@ -60,7 +60,7 @@ impl IggyProducer {
         topic_name: String,
         batch_size: Option<usize>,
         partitioning: Option<Partitioning>,
-        encryptor: Option<Arc<dyn Encryptor>>,
+        encryptor: Option<Arc<EncryptorKind>>,
         partitioner: Option<Arc<dyn Partitioner>>,
         interval: Option<IggyDuration>,
         create_stream_if_not_exists: bool,
@@ -423,7 +423,7 @@ pub struct IggyProducerBuilder {
     topic_name: String,
     batch_size: Option<usize>,
     partitioning: Option<Partitioning>,
-    encryptor: Option<Arc<dyn Encryptor>>,
+    encryptor: Option<Arc<EncryptorKind>>,
     partitioner: Option<Arc<dyn Partitioner>>,
     send_interval: Option<IggyDuration>,
     create_stream_if_not_exists: bool,
@@ -443,7 +443,7 @@ impl IggyProducerBuilder {
         stream_name: String,
         topic: Identifier,
         topic_name: String,
-        encryptor: Option<Arc<dyn Encryptor>>,
+        encryptor: Option<Arc<EncryptorKind>>,
         partitioner: Option<Arc<dyn Partitioner>>,
     ) -> Self {
         Self {
@@ -514,7 +514,7 @@ impl IggyProducerBuilder {
     }
 
     /// Sets the encryptor for encrypting the messages' payloads.
-    pub fn encryptor(self, encryptor: Arc<dyn Encryptor>) -> Self {
+    pub fn encryptor(self, encryptor: Arc<EncryptorKind>) -> Self {
         Self {
             encryptor: Some(encryptor),
             ..self

@@ -2,7 +2,7 @@ use crate::configs::http::HttpJwtConfig;
 use crate::http::jwt::json_web_token::{GeneratedToken, JwtClaims, RevokedAccessToken};
 use crate::http::jwt::storage::TokenStorage;
 use crate::http::jwt::COMPONENT;
-use crate::streaming::persistence::persister::Persister;
+use crate::streaming::persistence::persister::PersisterKind;
 use error_set::ErrContext;
 use iggy::error::IggyError;
 use iggy::locking::IggySharedMut;
@@ -42,7 +42,7 @@ pub struct JwtManager {
 
 impl JwtManager {
     pub fn new(
-        persister: Arc<dyn Persister>,
+        persister: Arc<PersisterKind>,
         path: &str,
         issuer: IssuerOptions,
         validator: ValidatorOptions,
@@ -64,7 +64,7 @@ impl JwtManager {
     }
 
     pub fn from_config(
-        persister: Arc<dyn Persister>,
+        persister: Arc<PersisterKind>,
         path: &str,
         config: &HttpJwtConfig,
     ) -> Result<Self, IggyError> {

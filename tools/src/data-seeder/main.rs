@@ -7,7 +7,7 @@ use iggy::client::{Client, UserClient};
 use iggy::client_provider;
 use iggy::client_provider::ClientProviderConfig;
 use iggy::clients::client::IggyClient;
-use iggy::utils::crypto::{Aes256GcmEncryptor, Encryptor};
+use iggy::utils::crypto::{Aes256GcmEncryptor, EncryptorKind};
 use std::error::Error;
 use std::sync::Arc;
 use tracing::info;
@@ -37,11 +37,11 @@ async fn main() -> Result<(), Box<dyn Error>> {
         .with(tracing_subscriber::fmt::layer())
         .with(EnvFilter::try_from_default_env().unwrap_or(EnvFilter::new("INFO")))
         .init();
-    let encryptor: Option<Arc<dyn Encryptor>> = match iggy_args.encryption_key.is_empty() {
+    let encryptor: Option<Arc<EncryptorKind>> = match iggy_args.encryption_key.is_empty() {
         true => None,
-        false => Some(Arc::new(
+        false => Some(Arc::new(EncryptorKind::Aes256Gcm(
             Aes256GcmEncryptor::from_base64_key(&iggy_args.encryption_key).unwrap(),
-        )),
+        ))),
     };
     info!("Selected transport: {}", iggy_args.transport);
     let username = args.username.clone();

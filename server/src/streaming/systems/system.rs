@@ -12,7 +12,7 @@ use crate::streaming::users::permissioner::Permissioner;
 use error_set::ErrContext;
 use iggy::error::IggyError;
 use iggy::utils::byte_size::IggyByteSize;
-use iggy::utils::crypto::{Aes256GcmEncryptor, Encryptor};
+use iggy::utils::crypto::{Aes256GcmEncryptor, EncryptorKind};
 use std::collections::HashMap;
 use std::path::Path;
 use std::sync::Arc;
@@ -72,7 +72,7 @@ pub struct System {
     pub(crate) users: HashMap<UserId, User>,
     pub(crate) config: Arc<SystemConfig>,
     pub(crate) client_manager: IggySharedMut<ClientManager>,
-    pub(crate) encryptor: Option<Arc<dyn Encryptor>>,
+    pub(crate) encryptor: Option<Arc<EncryptorKind>>,
     pub(crate) metrics: Metrics,
     pub(crate) state: Arc<dyn State>,
     pub(crate) archiver: Option<Arc<dyn Archiver>>,
@@ -95,10 +95,10 @@ impl System {
             map_toggle_str(config.encryption.enabled)
         );
 
-        let encryptor: Option<Arc<dyn Encryptor>> = match config.encryption.enabled {
-            true => Some(Arc::new(
+        let encryptor: Option<Arc<EncryptorKind>> = match config.encryption.enabled {
+            true => Some(Arc::new(EncryptorKind::Aes256Gcm(
                 Aes256GcmEncryptor::from_base64_key(&config.encryption.key).unwrap(),
-            )),
+            ))),
             false => None,
         };
 
@@ -121,10 +121,10 @@ impl System {
         )
     }
 
-    fn resolve_persister(enforce_fsync: bool) -> Arc<dyn Persister> {
+    fn resolve_persister(enforce_fsync: bool) -> Arc<PersisterKind> {
         match enforce_fsync {
-            true => Arc::new(FileWithSyncPersister),
-            false => Arc::new(FilePersister),
+            true => Arc::new(PersisterKind::FileWithSync(FileWithSyncPersister)),
+            false => Arc::new(PersisterKind::File(FilePersister)),
         }
     }
 
@@ -132,7 +132,7 @@ impl System {
         system_config: Arc<SystemConfig>,
         storage: SystemStorage,
         state: Arc<dyn State>,
-        encryptor: Option<Arc<dyn Encryptor>>,
+        encryptor: Option<Arc<EncryptorKind>>,
         data_maintenance_config: DataMaintenanceConfig,
         pat_config: PersonalAccessTokenConfig,
     ) -> System {

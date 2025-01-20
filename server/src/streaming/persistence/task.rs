@@ -1,4 +1,3 @@
-use crate::streaming::persistence::persister::Persister;
 use crate::streaming::persistence::COMPONENT;
 use bytes::Bytes;
 use error_set::ErrContext;
@@ -7,6 +6,8 @@ use iggy::error::IggyError;
 use std::{sync::Arc, time::Duration};
 use tokio::task;
 use tracing::error;
+
+use super::persister::PersisterKind;
 
 #[derive(Debug)]
 pub struct LogPersisterTask {
@@ -17,7 +18,7 @@ pub struct LogPersisterTask {
 impl LogPersisterTask {
     pub fn new(
         path: String,
-        persister: Arc<dyn Persister>,
+        persister: Arc<PersisterKind>,
         max_retries: u32,
         retry_sleep: Duration,
     ) -> Self {
@@ -55,7 +56,7 @@ impl LogPersisterTask {
 
     async fn persist_with_retries(
         path: &str,
-        persister: &Arc<dyn Persister>,
+        persister: &Arc<PersisterKind>,
         data: Bytes,
         max_retries: u32,
         retry_sleep: Duration,

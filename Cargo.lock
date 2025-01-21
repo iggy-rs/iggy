@@ -427,11 +427,11 @@ dependencies = [
 
 [[package]]
 name = "axum"
-version = "0.8.1"
+version = "0.8.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6d6fd624c75e18b3b4c6b9caf42b1afe24437daaee904069137d8bab077be8b8"
+checksum = "efea76243612a2436fb4074ba0cf3ba9ea29efdeb72645d8fc63f116462be1de"
 dependencies = [
- "axum-core 0.5.0",
+ "axum-core 0.5.1",
  "bytes",
  "form_urlencoded",
  "futures-util",
@@ -481,12 +481,12 @@ dependencies = [
 
 [[package]]
 name = "axum-core"
-version = "0.5.0"
+version = "0.5.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "df1362f362fd16024ae199c1970ce98f9661bf5ef94b9808fee734bc3698b733"
+checksum = "eab1b0df7cded837c40dacaa2e1c33aa17c84fc3356ae67b5645f1e83190753e"
 dependencies = [
  "bytes",
- "futures-util",
+ "futures-core",
  "http 1.2.0",
  "http-body 1.0.1",
  "http-body-util",
@@ -4386,7 +4386,7 @@ dependencies = [
  "anyhow",
  "async-trait",
  "atone",
- "axum 0.8.1",
+ "axum 0.8.2",
  "axum-server",
  "bcrypt",
  "bincode",

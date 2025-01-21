@@ -1,5 +1,4 @@
-use crate::binary::command;
-use crate::binary::sender::Sender;
+use crate::binary::{command, sender::SenderKind};
 use crate::command::ServerCommand;
 use crate::server_error::ConnectionError;
 use crate::streaming::session::Session;
@@ -16,7 +15,7 @@ const INITIAL_BYTES_LENGTH: usize = 4;
 
 pub(crate) async fn handle_connection(
     session: Arc<Session>,
-    sender: &mut dyn Sender,
+    sender: &mut SenderKind,
     system: SharedSystem,
 ) -> Result<(), ConnectionError> {
     let mut initial_buffer = [0u8; INITIAL_BYTES_LENGTH];

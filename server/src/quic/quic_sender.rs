@@ -1,6 +1,5 @@
-use crate::binary::sender::Sender;
+// use crate::binary::sender::Sender;
 use crate::quic::COMPONENT;
-use async_trait::async_trait;
 use error_set::ErrContext;
 use iggy::error::IggyError;
 use quinn::{RecvStream, SendStream};
@@ -14,12 +13,8 @@ pub struct QuicSender {
     pub(crate) recv: RecvStream,
 }
 
-unsafe impl Send for QuicSender {}
-unsafe impl Sync for QuicSender {}
-
-#[async_trait]
-impl Sender for QuicSender {
-    async fn read(&mut self, buffer: &mut [u8]) -> Result<usize, IggyError> {
+impl QuicSender {
+    pub async fn read(&mut self, buffer: &mut [u8]) -> Result<usize, IggyError> {
         let read_bytes = self.recv.read(buffer).await.map_err(|error| {
             error!("Failed to read from the stream: {:?}", error);
             IggyError::QuicError
@@ -28,15 +23,15 @@ impl Sender for QuicSender {
         Ok(read_bytes.ok_or(IggyError::QuicError)?)
     }
 
-    async fn send_empty_ok_response(&mut self) -> Result<(), IggyError> {
+    pub async fn send_empty_ok_response(&mut self) -> Result<(), IggyError> {
         self.send_ok_response(&[]).await
     }
 
-    async fn send_ok_response(&mut self, payload: &[u8]) -> Result<(), IggyError> {
+    pub async fn send_ok_response(&mut self, payload: &[u8]) -> Result<(), IggyError> {
         self.send_response(STATUS_OK, payload).await
     }
 
-    async fn send_error_response(&mut self, error: IggyError) -> Result<(), IggyError> {
+    pub async fn send_error_response(&mut self, error: IggyError) -> Result<(), IggyError> {
         self.send_response(&error.as_code().to_le_bytes(), &[])
             .await
     }

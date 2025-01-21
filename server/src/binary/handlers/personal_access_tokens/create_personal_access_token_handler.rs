@@ -1,6 +1,5 @@
-use crate::binary::handlers::personal_access_tokens::COMPONENT;
+use crate::binary::{handlers::personal_access_tokens::COMPONENT, sender::SenderKind};
 use crate::binary::mapper;
-use crate::binary::sender::Sender;
 use crate::state::command::EntryCommand;
 use crate::state::models::CreatePersonalAccessTokenWithHash;
 use crate::streaming::personal_access_tokens::personal_access_token::PersonalAccessToken;
@@ -15,7 +14,7 @@ use tracing::{debug, instrument};
 #[instrument(skip_all, name = "trace_create_personal_access_token", fields(iggy_user_id = session.get_user_id(), iggy_client_id = session.client_id))]
 pub async fn handle(
     command: CreatePersonalAccessToken,
-    sender: &mut dyn Sender,
+    sender: &mut SenderKind,
     session: &Session,
     system: &SharedSystem,
 ) -> Result<(), IggyError> {

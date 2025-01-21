@@ -27,7 +27,7 @@ server = { path = "../server" }
 tempfile = "3.14.0"
 tokio = { version = "1.43.0", features = ["full"] }
 tracing-subscriber = { version = "0.3.19", features = ["fmt", "env-filter"] }
-uuid = { version = "1.11.0", features = ["v7", "fast-rng", "zerocopy"] }
+uuid = { version = "1.12.1", features = ["v7", "fast-rng", "zerocopy"] }
 xxhash-rust = { version = "0.8.15", features = ["xxh32"] }
 zip = "2.2.2"
 

@@ -73,11 +73,8 @@ impl S3Archiver {
         debug!("File: {path} copied to temporary S3 upload path: {destination_path}");
         Ok(destination_path)
     }
-}
 
-#[async_trait]
-impl Archiver for S3Archiver {
-    async fn init(&self) -> Result<(), ArchiverError> {
+    pub async fn init(&self) -> Result<(), ArchiverError> {
         let response = self.bucket.list("/".to_string(), None).await;
         if let Err(error) = response {
             error!("Cannot initialize S3 archiver: {error}");
@@ -99,7 +96,7 @@ impl Archiver for S3Archiver {
         Ok(())
     }
 
-    async fn is_archived(
+    pub async fn is_archived(
         &self,
         file: &str,
         base_directory: Option<String>,
@@ -124,7 +121,7 @@ impl Archiver for S3Archiver {
         Ok(false)
     }
 
-    async fn archive(
+    pub async fn archive(
         &self,
         files: &[&str],
         base_directory: Option<String>,

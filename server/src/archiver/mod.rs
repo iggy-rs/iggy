@@ -1,12 +1,15 @@
 pub mod disk;
 pub mod s3;
 
+use crate::configs::server::{DiskArchiverConfig, S3ArchiverConfig};
 use crate::server_error::ArchiverError;
-use async_trait::async_trait;
 use derive_more::Display;
 use serde::{Deserialize, Serialize};
-use std::fmt::{Debug, Formatter};
+use std::fmt::Debug;
 use std::str::FromStr;
+
+use crate::archiver::disk::DiskArchiver;
+use crate::archiver::s3::S3Archiver;
 
 pub const COMPONENT: &str = "ARCHIVER";
 
@@ -31,23 +34,48 @@ impl FromStr for ArchiverKind {
     }
 }
 
-#[async_trait]
-pub trait Archiver: Sync + Send {
-    async fn init(&self) -> Result<(), ArchiverError>;
-    async fn is_archived(
+#[derive(Debug)]
+pub enum Archiver {
+    Disk(DiskArchiver),
+    S3(S3Archiver),
+}
+
+impl Archiver {
+    pub fn get_disk_arhiver(config: DiskArchiverConfig) -> Self {
+        Self::Disk(DiskArchiver::new(config))
+    }
+
+    pub fn get_s3_archiver(config: S3ArchiverConfig) -> Result<Self, ArchiverError> {
+        let archiver = S3Archiver::new(config)?;
+        Ok(Self::S3(archiver))
+    }
+
+    pub async fn init(&self) -> Result<(), ArchiverError> {
+        match self {
+            Self::Disk(a) => a.init().await,
+            Self::S3(a) => a.init().await
+        }
+    }
+
+    pub async fn is_archived(
         &self,
         file: &str,
         base_directory: Option<String>,
-    ) -> Result<bool, ArchiverError>;
-    async fn archive(
+    ) -> Result<bool, ArchiverError> {
+        match self {
+            Self::Disk(a) => a.is_archived(file, base_directory).await,
+            Self::S3(a) => a.is_archived(file, base_directory).await,
+        }
+    }
+
+    pub async fn archive(
         &self,
         files: &[&str],
         base_directory: Option<String>,
-    ) -> Result<(), ArchiverError>;
-}
-
-impl Debug for dyn Archiver {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "Archiver")
+    ) -> Result<(), ArchiverError> {
+        match self {
+            Self::Disk(a) => a.archive(files, base_directory).await,
+            Self::S3(a) => a.archive(files, base_directory).await,
+        }
     }
 }

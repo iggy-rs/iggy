@@ -197,7 +197,7 @@ impl ServerCommand<MaintainMessagesCommand> for MaintainMessagesExecutor {
 
 async fn handle_expired_segments(
     topic: &Topic,
-    archiver: Option<Arc<dyn Archiver>>,
+    archiver: Option<Arc<Archiver>>,
     archive: bool,
     clean: bool,
 ) -> Result<HandledSegments, IggyError> {
@@ -269,7 +269,7 @@ async fn get_expired_segments(topic: &Topic, now: IggyTimestamp) -> Vec<Segments
 
 async fn handle_oldest_segments(
     topic: &Topic,
-    archiver: Option<Arc<dyn Archiver>>,
+    archiver: Option<Arc<Archiver>>,
     delete_oldest_segments: bool,
 ) -> Result<HandledSegments, IggyError> {
     if let Some(archiver) = archiver {
@@ -420,7 +420,7 @@ impl HandledSegments {
 async fn archive_segments(
     topic: &Topic,
     segments_to_archive: &[SegmentsToHandle],
-    archiver: Arc<dyn Archiver>,
+    archiver: Arc<Archiver>,
 ) -> Result<u64, IggyError> {
     if segments_to_archive.is_empty() {
         return Ok(0);

@@ -75,7 +75,7 @@ pub struct System {
     pub(crate) encryptor: Option<Arc<EncryptorKind>>,
     pub(crate) metrics: Metrics,
     pub(crate) state: Arc<dyn State>,
-    pub(crate) archiver: Option<Arc<dyn Archiver>>,
+    pub(crate) archiver: Option<Arc<Archiver>>,
     pub personal_access_token: PersonalAccessTokenConfig,
 }
 
@@ -137,17 +137,17 @@ impl System {
         pat_config: PersonalAccessTokenConfig,
     ) -> System {
         let archiver_config = data_maintenance_config.archiver;
-        let archiver: Option<Arc<dyn Archiver>> = if archiver_config.enabled {
+        let archiver: Option<Arc<Archiver>> = if archiver_config.enabled {
             info!("Archiving is enabled, kind: {}", archiver_config.kind);
             match archiver_config.kind {
-                ArchiverKind::Disk => Some(Arc::new(DiskArchiver::new(
+                ArchiverKind::Disk => Some(Arc::new(Archiver::get_disk_arhiver(
                     archiver_config
                         .disk
                         .clone()
                         .expect("Disk archiver config is missing"),
                 ))),
                 ArchiverKind::S3 => Some(Arc::new(
-                    S3Archiver::new(
+                    Archiver::get_s3_archiver(
                         archiver_config
                             .s3
                             .clone()

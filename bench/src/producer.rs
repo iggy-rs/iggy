@@ -125,8 +125,8 @@ impl Producer {
                 .await?;
             let latency = before_send.elapsed();
               error!(
-                "send_messages took: {} ms, iter: {}",
-                latency.as_millis(),
+                "send_messages took: {} us, iter: {}",
+                latency.as_micros(),
                 i
             );
 

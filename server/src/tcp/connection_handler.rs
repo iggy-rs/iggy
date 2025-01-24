@@ -27,6 +27,7 @@ pub(crate) async fn handle_connection(
     let mut initial_buffer = [0u8; INITIAL_BYTES_LENGTH];
     let mut code_buffer = [0u8; INITIAL_BYTES_LENGTH];
     loop {
+        let xp = Instant::now();
         let read_length: usize = match sender.read(&mut initial_buffer).await {
             Ok(read_length) => read_length,
             Err(error) => {
@@ -46,7 +47,7 @@ pub(crate) async fn handle_connection(
             continue;
         }
         let length = u32::from_le_bytes(initial_buffer) - 4;
-        println!("req length: {}", length);
+        println!("reading length took: {} us", xp.elapsed().as_micros());
         sender.read(&mut code_buffer).await?;
         let code = u32::from_le_bytes(code_buffer);
         if code == SEND_MESSAGES_CODE {
@@ -71,9 +72,7 @@ pub(crate) async fn handle_connection(
             }
             sender.read(&mut batch).await?;
 
-            println!("reading from socket request + metadata took: {} us", xp.elapsed().as_micros());
 
-            let xd = Instant::now();
             {
                 system
                     .read()
@@ -81,7 +80,8 @@ pub(crate) async fn handle_connection(
                     .append_messages(&session, stream_id, topic_id, partitioning, batch, None)
                     .await?;
             }
-            println!("system append_messages took: {} us", xd.elapsed().as_micros());
+            let xd = xp.elapsed().as_micros();
+            println!("reading request + metadata {} us", xd);
             sender.send_empty_ok_response().await?;
         } else {
             debug!("Received a TCP request, length: {length}");

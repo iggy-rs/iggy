@@ -417,7 +417,6 @@ pub(crate) fn as_bytes(
     partitioning: &Partitioning,
     messages: &Vec<IggyMessage>,
 ) -> AlignedVec {
-    let xd = Instant::now();
     let messages_size = messages
         .iter()
         .map(IggyMessage::get_size_bytes)
@@ -458,7 +457,6 @@ pub(crate) fn as_bytes(
         buffer.clear();
         share.clear();
     }
-    println!("elapsed: {} us", xd.elapsed().as_micros());
     result
 }
 

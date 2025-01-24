@@ -1,5 +1,5 @@
-use crate::binary::{handlers::consumer_groups::COMPONENT, sender::SenderKind};
 use crate::binary::mapper;
+use crate::binary::{handlers::consumer_groups::COMPONENT, sender::SenderKind};
 use crate::state::command::EntryCommand;
 use crate::streaming::session::Session;
 use crate::streaming::systems::system::SharedSystem;

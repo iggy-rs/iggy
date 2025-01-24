@@ -1,5 +1,5 @@
-use crate::binary::{handlers::personal_access_tokens::COMPONENT, sender::SenderKind};
 use crate::binary::mapper;
+use crate::binary::{handlers::personal_access_tokens::COMPONENT, sender::SenderKind};
 use crate::state::command::EntryCommand;
 use crate::state::models::CreatePersonalAccessTokenWithHash;
 use crate::streaming::personal_access_tokens::personal_access_token::PersonalAccessToken;

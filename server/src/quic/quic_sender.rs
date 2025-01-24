@@ -20,7 +20,7 @@ impl QuicSender {
             IggyError::QuicError
         })?;
 
-        Ok(read_bytes.ok_or(IggyError::QuicError)?)
+        read_bytes.ok_or(IggyError::QuicError)
     }
 
     pub async fn send_empty_ok_response(&mut self) -> Result<(), IggyError> {

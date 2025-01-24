@@ -53,7 +53,7 @@ impl Archiver {
     pub async fn init(&self) -> Result<(), ArchiverError> {
         match self {
             Self::Disk(a) => a.init().await,
-            Self::S3(a) => a.init().await
+            Self::S3(a) => a.init().await,
         }
     }
 

@@ -1,5 +1,5 @@
-use crate::{server_error::ServerError, tcp::sender};
 use crate::tcp::COMPONENT;
+use crate::{server_error::ServerError, tcp::sender};
 use error_set::ErrContext;
 use iggy::error::IggyError;
 use tokio::{io::AsyncWriteExt, net::TcpStream};
@@ -27,8 +27,10 @@ impl TcpSender {
     }
 
     pub async fn shutdown(&mut self) -> Result<(), ServerError> {
-        self.stream.shutdown().await.with_error_context(|_| format!(
-            "{COMPONENT} - failed to shutdown tcp stream"
-        )).map_err(|err| ServerError::IoError(err))
+        self.stream
+            .shutdown()
+            .await
+            .with_error_context(|_| format!("{COMPONENT} - failed to shutdown tcp stream"))
+            .map_err(ServerError::IoError)
     }
 }

@@ -1,8 +1,7 @@
-use crate::archiver::{Archiver, COMPONENT};
+use crate::archiver::COMPONENT;
 use crate::configs::server::S3ArchiverConfig;
 use crate::server_error::ArchiverError;
 use crate::streaming::utils::file;
-use async_trait::async_trait;
 use error_set::ErrContext;
 use s3::creds::Credentials;
 use s3::{Bucket, Region};

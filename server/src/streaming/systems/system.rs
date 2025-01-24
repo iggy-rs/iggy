@@ -20,13 +20,11 @@ use tokio::fs::{create_dir, remove_dir_all};
 use tokio::time::Instant;
 use tracing::{error, info, instrument, trace};
 
-use crate::archiver::disk::DiskArchiver;
-use crate::archiver::s3::S3Archiver;
 use crate::archiver::{Archiver, ArchiverKind};
 use crate::map_toggle_str;
 use crate::state::file::FileState;
 use crate::state::system::SystemState;
-use crate::state::State;
+use crate::state::StateKind;
 use crate::streaming::users::user::User;
 use crate::versioning::SemanticVersion;
 use iggy::locking::IggySharedMut;
@@ -74,7 +72,7 @@ pub struct System {
     pub(crate) client_manager: IggySharedMut<ClientManager>,
     pub(crate) encryptor: Option<Arc<EncryptorKind>>,
     pub(crate) metrics: Metrics,
-    pub(crate) state: Arc<dyn State>,
+    pub(crate) state: Arc<StateKind>,
     pub(crate) archiver: Option<Arc<Archiver>>,
     pub personal_access_token: PersonalAccessTokenConfig,
 }
@@ -105,12 +103,12 @@ impl System {
         let state_persister = Self::resolve_persister(config.state.enforce_fsync);
         let partition_persister = Self::resolve_persister(config.partition.enforce_fsync);
 
-        let state = Arc::new(FileState::new(
+        let state = Arc::new(StateKind::File(FileState::new(
             &config.get_state_log_path(),
             &version,
             state_persister,
             encryptor.clone(),
-        ));
+        )));
         Self::create(
             config.clone(),
             SystemStorage::new(config, partition_persister),
@@ -131,7 +129,7 @@ impl System {
     pub fn create(
         system_config: Arc<SystemConfig>,
         storage: SystemStorage,
-        state: Arc<dyn State>,
+        state: Arc<StateKind>,
         encryptor: Option<Arc<EncryptorKind>>,
         data_maintenance_config: DataMaintenanceConfig,
         pat_config: PersonalAccessTokenConfig,

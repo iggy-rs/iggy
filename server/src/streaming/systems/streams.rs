@@ -405,12 +405,9 @@ mod tests {
     use super::*;
     use crate::configs::server::{DataMaintenanceConfig, PersonalAccessTokenConfig};
     use crate::configs::system::SystemConfig;
-    use crate::state::command::EntryCommand;
-    use crate::state::entry::StateEntry;
-    use crate::state::State;
+    use crate::state::{MockState, StateKind};
     use crate::streaming::storage::tests::get_test_system_storage;
     use crate::streaming::users::user::User;
-    use async_trait::async_trait;
     use iggy::users::defaults::{DEFAULT_ROOT_PASSWORD, DEFAULT_ROOT_USERNAME};
     use std::{
         net::{Ipv4Addr, SocketAddr},
@@ -426,7 +423,7 @@ mod tests {
         let mut system = System::create(
             config,
             storage,
-            Arc::new(TestState::default()),
+            Arc::new(StateKind::Mock(MockState::new())),
             None,
             DataMaintenanceConfig::default(),
             PersonalAccessTokenConfig::default(),
@@ -457,23 +454,5 @@ mod tests {
         let stream = stream.unwrap();
         assert_eq!(stream.stream_id, stream_id);
         assert_eq!(stream.name, stream_name);
-    }
-
-    #[derive(Debug, Default)]
-    struct TestState {}
-
-    #[async_trait]
-    impl State for TestState {
-        async fn init(&self) -> Result<Vec<StateEntry>, IggyError> {
-            Ok(Vec::new())
-        }
-
-        async fn load_entries(&self) -> Result<Vec<StateEntry>, IggyError> {
-            Ok(Vec::new())
-        }
-
-        async fn apply(&self, _: u32, _: EntryCommand) -> Result<(), IggyError> {
-            Ok(())
-        }
     }
 }

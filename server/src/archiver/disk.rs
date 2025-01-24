@@ -1,4 +1,4 @@
-use crate::archiver::{Archiver, COMPONENT};
+use crate::archiver::COMPONENT;
 use crate::configs::server::DiskArchiverConfig;
 use crate::server_error::ArchiverError;
 use error_set::ErrContext;

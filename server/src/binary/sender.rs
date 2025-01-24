@@ -1,10 +1,10 @@
-use crate::{quic::quic_sender::QuicSender, server_error::ServerError};
 use crate::tcp::tcp_sender::TcpSender;
 use crate::tcp::tcp_tls_sender::TcpTlsSender;
+use crate::{quic::quic_sender::QuicSender, server_error::ServerError};
 use iggy::error::IggyError;
+use quinn::{RecvStream, SendStream};
 use tokio::net::TcpStream;
 use tokio_native_tls::TlsStream;
-use quinn::{RecvStream, SendStream};
 
 pub enum SenderKind {
     Tcp(TcpSender),
@@ -14,15 +14,18 @@ pub enum SenderKind {
 
 impl SenderKind {
     pub fn get_tcp_sender(stream: TcpStream) -> Self {
-        Self::Tcp(TcpSender{stream})
+        Self::Tcp(TcpSender { stream })
     }
 
     pub fn get_tcp_tls_sender(stream: TlsStream<TcpStream>) -> Self {
-        Self::TcpTls(TcpTlsSender{stream})
+        Self::TcpTls(TcpTlsSender { stream })
     }
 
     pub fn get_quic_sender(send_stream: SendStream, recv_stream: RecvStream) -> Self {
-        Self::Quic(QuicSender{send: send_stream, recv: recv_stream})
+        Self::Quic(QuicSender {
+            send: send_stream,
+            recv: recv_stream,
+        })
     }
 
     pub async fn read(&mut self, buffer: &mut [u8]) -> Result<usize, IggyError> {
@@ -61,7 +64,7 @@ impl SenderKind {
         match self {
             Self::Tcp(s) => s.shutdown().await,
             Self::TcpTls(s) => s.shutdown().await,
-            Self::Quic(_) => Ok(())
+            Self::Quic(_) => Ok(()),
         }
     }
 }

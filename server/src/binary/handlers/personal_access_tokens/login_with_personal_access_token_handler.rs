@@ -1,5 +1,5 @@
-use crate::binary::{handlers::personal_access_tokens::COMPONENT, sender::SenderKind};
 use crate::binary::mapper;
+use crate::binary::{handlers::personal_access_tokens::COMPONENT, sender::SenderKind};
 use crate::streaming::session::Session;
 use crate::streaming::systems::system::SharedSystem;
 use anyhow::Result;

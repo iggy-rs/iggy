@@ -938,15 +938,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "clap_complete"
-version = "4.5.42"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "33a7e468e750fa4b6be660e8b5651ad47372e8fb114030b594c2d75d48c5ffd0"
-dependencies = [
- "clap",
-]
-
-[[package]]
 name = "clap_derive"
 version = "4.5.24"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2399,43 +2390,6 @@ dependencies = [
  "tracing",
  "uuid",
  "webpki-roots",
-]
-
-[[package]]
-name = "iggy-cli"
-version = "0.8.7"
-dependencies = [
- "ahash 0.8.11",
- "anyhow",
- "clap",
- "clap_complete",
- "figlet-rs",
- "iggy",
- "keyring",
- "passterm",
- "thiserror 2.0.11",
- "tokio",
- "tracing",
- "tracing-appender",
- "tracing-subscriber",
-]
-
-[[package]]
-name = "iggy_examples"
-version = "0.0.5"
-dependencies = [
- "ahash 0.8.11",
- "anyhow",
- "bytes",
- "clap",
- "futures-util",
- "iggy",
- "rand",
- "serde",
- "serde_json",
- "tokio",
- "tracing",
- "tracing-subscriber",
 ]
 
 [[package]]
@@ -5104,19 +5058,6 @@ dependencies = [
  "tower-layer",
  "tower-service",
  "tracing",
-]
-
-[[package]]
-name = "tools"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "clap",
- "iggy",
- "rand",
- "tokio",
- "tracing",
- "tracing-subscriber",
 ]
 
 [[package]]

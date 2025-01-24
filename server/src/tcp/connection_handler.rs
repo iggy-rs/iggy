@@ -50,6 +50,7 @@ pub(crate) async fn handle_connection(
         sender.read(&mut code_buffer).await?;
         let code = u32::from_le_bytes(code_buffer);
         if code == SEND_MESSAGES_CODE {
+            let xp = Instant::now();
             let mut metadata_len_buf = [0u8; 8];
             sender.read(&mut metadata_len_buf).await?;
             let metadata_len = u64::from_le_bytes(metadata_len_buf.try_into().unwrap());
@@ -64,13 +65,15 @@ pub(crate) async fn handle_connection(
             let (_, topic_id) = Identifier::from_bytes_new(&metadata_buf[position..]).unwrap();
 
             let messages_len = length - metadata_len as u32 - 8;
-            println!("messages len: {}", messages_len);
             let mut batch = AlignedVec::with_capacity(messages_len as _);
             unsafe {
                 batch.set_len(messages_len as _);
             }
             sender.read(&mut batch).await?;
 
+            println!("reading from socket request + metadata took: {} us", xp.elapsed().as_micros());
+
+            let xd = Instant::now();
             {
                 system
                     .read()
@@ -78,6 +81,7 @@ pub(crate) async fn handle_connection(
                     .append_messages(&session, stream_id, topic_id, partitioning, batch, None)
                     .await?;
             }
+            println!("system append_messages took: {} us", xd.elapsed().as_micros());
             sender.send_empty_ok_response().await?;
         } else {
             debug!("Received a TCP request, length: {length}");

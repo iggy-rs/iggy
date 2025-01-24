@@ -53,14 +53,10 @@ impl<B: BinaryClient> MessageClient for B {
         messages: Vec<Message>,
     ) -> Result<(), IggyError> {
         fail_if_not_authenticated(self).await?;
-        let batch = IggyBatch::new(messages);
-        let bytes = send_messages::as_bytes(stream_id, topic_id, partitioning, &batch);
-        warn!("length: {}", bytes.len());
-        self.send_rkyv_with_response(
-            SEND_MESSAGES_CODE,
-            bytes
-        )
-        .await?;
+        let messages = messages.into_iter().map(Into::into).collect();
+        let bytes = send_messages::as_bytes(stream_id, topic_id, partitioning, &messages);
+        self.send_rkyv_with_response(SEND_MESSAGES_CODE, bytes)
+            .await?;
         Ok(())
     }
 

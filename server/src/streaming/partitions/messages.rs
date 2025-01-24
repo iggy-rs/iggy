@@ -7,7 +7,7 @@ use crate::streaming::polling_consumer::PollingConsumer;
 use crate::streaming::segments::segment::Segment;
 use error_set::ErrContext;
 use iggy::confirmation::Confirmation;
-use iggy::models::batch::ArchivedIggyBatch;
+use iggy::models::batch::{IggyBatch};
 use iggy::models::messages::ArchivedIggyMessage;
 use iggy::utils::timestamp::IggyTimestamp;
 use iggy::{error::IggyError, utils::duration::IggyDuration};
@@ -409,7 +409,7 @@ impl Partition {
     pub async fn append_messages(
         &mut self,
         appendable_batch_info: AppendableBatchInfo,
-        batch: AlignedVec<512>,
+        mut batch: IggyBatch,
         confirmation: Option<Confirmation>,
     ) -> Result<(), IggyError> {
         {
@@ -436,70 +436,44 @@ impl Partition {
 
         let mut messages_count = 0u32;
         // assume that messages have monotonic timestamps
-        let mut max_timestamp = 0;
-        let mut min_timestamp = 0;
+        let mut max_timestamp = 1;
 
-        /*
-         let mut retained_messages = Vec::with_capacity(messages.len());
-         if let Some(message_deduplicator) = &self.message_deduplicator {
-             for message in messages {
-                 if !message_deduplicator.try_insert(&message.id).await {
-                     warn!(
-                         "Ignored the duplicated message ID: {} for partition with ID: {}.",
-                         message.id, self.partition_id
-                     );
-                     continue;
-                 }
-                 max_timestamp = IggyTimestamp::now().as_micros();
+        let batch_base_timestamp = IggyTimestamp::now().as_micros();
+        let batch_base_offset = part_base_offset;
 
-                 if messages_count == 0 {
-                     min_timestamp = max_timestamp;
-                 }
-                 let message_offset = base_offset + messages_count as u64;
-                 let message =
-                     Arc::new(RetainedMessage::new(message_offset, max_timestamp, message));
-                 retained_messages.push(message.clone());
-                 messages_count += 1;
-             }
-         } else {
-        */
-        let start = Instant::now();
-        let mut bytes = batch;
-        let batch = unsafe { rkyv::access_unchecked_mut::<ArchivedIggyBatch>(&mut bytes) };
-        rkyv::munge::munge!(let ArchivedIggyBatch {mut base_offset, mut base_timestamp, messages, ..} = batch);
-        let mut batch_base_timestamp = 0;
-        let mut batch_base_offset = part_base_offset;
-        let slice = unsafe {
-            std::slice::from_raw_parts_mut(
-                messages.as_ptr() as *mut ArchivedIggyMessage,
-                messages.len(),
-            )
-        };
-        for message in slice {
+        let xd = Instant::now();
+        let mut batch_payload = batch.messages;
+        let mut position = 0;
+        while position < batch_payload.len() {
             max_timestamp = IggyTimestamp::now().as_micros();
-            let message_offset = batch_base_offset + messages_count as u64;
-
-            if messages_count == 0 {
-                batch_base_offset = message_offset;
-                batch_base_timestamp = max_timestamp;
-            }
-            let timestamp_delta = (max_timestamp - batch_base_timestamp) as u32;
-            let offset_delta = (message_offset - batch_base_offset) as u32;
-            message.timestamp_delta = u32_le::from_native(timestamp_delta);
-            message.offset_delta = u32_le::from_native(offset_delta);
+            let timestamp_delta = (max_timestamp - batch_base_timestamp) as u32; 
+            let offset_delta = messages_count;
+            let length =
+                u64::from_le_bytes(batch_payload[position..position + 8].try_into().unwrap());
+            let length = length as usize;
+            position += 16;
+            let message = unsafe {
+                rkyv::access_unchecked_mut::<ArchivedIggyMessage>(
+                    &mut batch_payload[position..length + position],
+                )
+            };
+            let message = unsafe { message.unseal_unchecked() };
+            message.offset_delta = u32_le::from(offset_delta);
+            message.timestamp_delta = u32_le::from(timestamp_delta);
+            position += length;
             messages_count += 1;
         }
-        *base_offset = u64_le::from_native(batch_base_offset);
-        *base_timestamp = u64_le::from_native(min_timestamp);
+        batch.base_timestamp = batch_base_timestamp;
+        batch.base_offset = batch_base_offset;
+        println!("setting up batch took: {} us", xd.elapsed().as_micros());
 
         let avg_timestamp_delta =
-            Duration::from_micros((max_timestamp - min_timestamp) / messages_count as u64).into();
+            Duration::from_micros((max_timestamp - batch_base_timestamp) / messages_count as u64).into();
 
         let min_alpha: f64 = 0.3;
         let max_alpha: f64 = 0.7;
         let dynamic_range = 10.00;
         self.update_avg_timestamp_delta(avg_timestamp_delta, min_alpha, max_alpha, dynamic_range);
-        let elapsed = start.elapsed();
 
         let last_offset = batch_base_offset + (messages_count - 1) as u64;
         if self.should_increment_offset {
@@ -510,6 +484,7 @@ impl Partition {
         }
 
         {
+            /*
             let last_segment = self.segments.last_mut().ok_or(IggyError::SegmentNotFound)?;
             last_segment
                 .append_batch(batch_size, messages_count, bytes)
@@ -519,6 +494,7 @@ impl Partition {
                         "{COMPONENT} - failed to append batch into last segment: {last_segment}",
                     )
                 })?;
+                */
         }
 
         /*
@@ -527,6 +503,7 @@ impl Partition {
         }
         */
 
+        /*
         self.unsaved_messages_count += messages_count;
         {
             let last_segment = self.segments.last_mut().ok_or(IggyError::SegmentNotFound)?;
@@ -543,6 +520,7 @@ impl Partition {
                 self.unsaved_messages_count = 0;
             }
         }
+        */
 
         Ok(())
     }

@@ -10,6 +10,7 @@ use iggy::consumer::Consumer;
 use iggy::messages::poll_messages::PollingStrategy;
 use iggy::messages::send_messages::Message;
 use iggy::messages::send_messages::Partitioning;
+use iggy::models::batch::IggyBatch;
 use iggy::utils::byte_size::IggyByteSize;
 use iggy::utils::sizeable::Sizeable;
 use iggy::{error::IggyError, identifier::Identifier};
@@ -107,7 +108,7 @@ impl System {
         stream_id: Identifier,
         topic_id: Identifier,
         partitioning: Partitioning,
-        batch: AlignedVec<512>,
+        bytes: AlignedVec,
         confirmation: Option<Confirmation>,
     ) -> Result<(), IggyError> {
         self.ensure_authenticated(session)?;
@@ -124,7 +125,7 @@ impl System {
         ))?;
 
         let mut batch_size_bytes = IggyByteSize::default();
-        batch_size_bytes = (batch.len() as u64).into();
+        batch_size_bytes = (bytes.len() as u64).into();
         /*
         let mut messages = messages;
         if let Some(encryptor) = &self.encryptor {
@@ -156,6 +157,7 @@ impl System {
         }
         let messages_count = messages.len() as u64;
         */
+        let batch = IggyBatch::new(bytes);
         topic
             .append_messages(batch_size_bytes, partitioning, batch, confirmation)
             .await?;

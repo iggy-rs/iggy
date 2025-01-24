@@ -46,22 +46,31 @@ pub(crate) async fn handle_connection(
             continue;
         }
         let length = u32::from_le_bytes(initial_buffer) - 4;
+        println!("req length: {}", length);
         sender.read(&mut code_buffer).await?;
         let code = u32::from_le_bytes(code_buffer);
         if code == SEND_MESSAGES_CODE {
-            let mut buf = AlignedVec::<512>::with_capacity(length as _);
-            unsafe {
-                buf.set_len(length as _);
-            }
-            sender.read(&mut buf).await?;
-
+            let mut metadata_len_buf = [0u8; 8];
+            sender.read(&mut metadata_len_buf).await?;
+            let metadata_len = u64::from_le_bytes(metadata_len_buf.try_into().unwrap());
+            let mut metadata_buf = vec![0u8; metadata_len as _];
+            sender.read(&mut metadata_buf).await?;
             let mut position = 0;
-            let (read, partitioning) = Partitioning::from_bytes_new(&buf[position..]).unwrap();
+            let (read, partitioning) =
+                Partitioning::from_bytes_new(&metadata_buf[position..]).unwrap();
             position += read;
-            let (read, stream_id) = Identifier::from_bytes_new(&buf[position..]).unwrap();
+            let (read, stream_id) = Identifier::from_bytes_new(&metadata_buf[position..]).unwrap();
             position += read;
-            let (_, topic_id) = Identifier::from_bytes_new(&buf[position..]).unwrap();
-            let batch = buf;
+            let (_, topic_id) = Identifier::from_bytes_new(&metadata_buf[position..]).unwrap();
+
+            let messages_len = length - metadata_len as u32 - 8;
+            println!("messages len: {}", messages_len);
+            let mut batch = AlignedVec::with_capacity(messages_len as _);
+            unsafe {
+                batch.set_len(messages_len as _);
+            }
+            sender.read(&mut batch).await?;
+
             {
                 system
                     .read()

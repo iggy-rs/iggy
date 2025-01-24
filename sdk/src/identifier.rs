@@ -185,7 +185,6 @@ impl Identifier {
 
         let kind = IdKind::from_code(bytes[0])?;
         let length = bytes[1];
-        // Hmm this one is called on hot path, could we somehow optimize away this small allocation ?
         let value = bytes[2..2 + length as usize].to_vec();
         if value.len() != length as usize {
             return Err(IggyError::InvalidIdentifier);

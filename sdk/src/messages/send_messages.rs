@@ -6,12 +6,15 @@ use crate::messages::{MAX_HEADERS_SIZE, MAX_PAYLOAD_SIZE};
 use crate::models::batch::IggyBatch;
 use crate::models::header;
 use crate::models::header::{HeaderKey, HeaderValue};
-use crate::models::messages::IggyMessage;
+use crate::models::messages::{ArchivedIggyMessage, IggyMessage};
 use crate::utils::byte_size::IggyByteSize;
 use crate::utils::sizeable::Sizeable;
 use crate::utils::val_align_up;
 use crate::validatable::Validatable;
 use bytes::{BufMut, Bytes, BytesMut};
+use rkyv::ser::allocator::Arena;
+use rkyv::ser::sharing::Share;
+use rkyv::ser::{Serializer, WriterExt};
 use rkyv::util::AlignedVec;
 use serde::{Deserialize, Serialize};
 use serde_with::base64::Base64;
@@ -21,6 +24,7 @@ use std::fmt::Display;
 use std::hash::{Hash, Hasher};
 use std::io::Write;
 use std::str::FromStr;
+use tokio::io::AsyncWriteExt;
 use tokio::time::Instant;
 use tracing::{error, warn};
 
@@ -42,8 +46,7 @@ pub struct SendMessages {
     pub topic_id: Identifier,
     /// To which partition the messages should be sent - either provided by the client or calculated by the server.
     pub partitioning: Partitioning,
-    /// Batch of messages to be sent.
-    pub batch: IggyBatch,
+    //pub batch: IggyBatch,
 }
 
 /// `Partitioning` is used to specify to which partition the messages should be sent.
@@ -124,7 +127,7 @@ impl Default for SendMessages {
             stream_id: Identifier::default(),
             topic_id: Identifier::default(),
             partitioning: Partitioning::default(),
-            batch: Default::default(),
+            //batch: Default::default(),
         }
     }
 }
@@ -238,9 +241,11 @@ impl BytesSerializable for SendMessages {
 
 impl Validatable<IggyError> for SendMessages {
     fn validate(&self) -> Result<(), IggyError> {
+        /*
         if self.batch.messages.is_empty() {
             return Err(IggyError::InvalidMessagesCount);
         }
+        */
 
         let key_value_length = self.partitioning.value.len();
         if key_value_length > 255
@@ -251,6 +256,7 @@ impl Validatable<IggyError> for SendMessages {
 
         let mut headers_size = 0;
         let mut payload_size = 0;
+        /*
         for message in &self.batch.messages {
             if let Some(headers) = &message.headers {
                 for value in headers.values() {
@@ -265,6 +271,7 @@ impl Validatable<IggyError> for SendMessages {
                 return Err(IggyError::TooBigMessagePayload);
             }
         }
+        */
 
         if payload_size == 0 {
             return Err(IggyError::EmptyMessagePayload);
@@ -408,42 +415,51 @@ pub(crate) fn as_bytes(
     stream_id: &Identifier,
     topic_id: &Identifier,
     partitioning: &Partitioning,
-    batch: &IggyBatch,
+    messages: &Vec<IggyMessage>,
 ) -> AlignedVec {
-    let messages_size = batch
-        .messages
+    let xd = Instant::now();
+    let messages_size = messages
         .iter()
         .map(IggyMessage::get_size_bytes)
+        .map(|size| size + (size_of::<ArchivedIggyMessage>() as u64).into())
         .sum::<IggyByteSize>();
     // shit ton of small allocations, can we move it to stack ?
-    let key_bytes = partitioning.to_bytes();
-    warn!("key_size: {}", key_bytes.len());
-    let stream_id_bytes = stream_id.to_bytes();
-    warn!("stream_id_bytes: {}", stream_id_bytes.len());
-    let topic_id_bytes = topic_id.to_bytes();
-    warn!("topic_id_bytes: {}", topic_id_bytes.len());
+    let key_bytes = partitioning.to_bytes().to_vec();
+    let stream_id_bytes = stream_id.to_bytes().to_vec();
+    let topic_id_bytes = topic_id.to_bytes().to_vec();
     let total_size = messages_size.as_bytes_usize()
         + key_bytes.len()
         + stream_id_bytes.len()
-        + topic_id_bytes.len()
-        + 97;
-    warn!("total_size: {}", total_size);
-    let acc_total_size = val_align_up(total_size as _, 16);
-    warn!("aligned_total_size: {}", acc_total_size);
+        + topic_id_bytes.len();
+    println!("total_size: {}", total_size);
+    let mut result = AlignedVec::with_capacity(total_size);
 
-    let mut bytes =
-        rkyv::api::high::to_bytes::<rkyv::rancor::Error>(batch)
-            .expect("Failed to serialize batcherino");
-    warn!("after serialization bytes len: {}", bytes.len());
+    //TODO: init those with capacity of max message to avoid random allocations.
+    let mut arena = Arena::new();
+    let mut buffer = AlignedVec::<16>::new();
+    let mut share = Share::new();
+    let metadata_len = key_bytes.len() + stream_id_bytes.len() + topic_id_bytes.len();
 
-    // The idea is to use the padding required by reykjavik, to fit the metadata about request.
-    let mut position = 0;
-    bytes[position..position + key_bytes.len()].copy_from_slice(&key_bytes);
-    position += key_bytes.len();
-    bytes[position..position + stream_id_bytes.len()].copy_from_slice(&stream_id_bytes);
-    position += stream_id_bytes.len();
-    bytes[position..position + topic_id_bytes.len()].copy_from_slice(&topic_id_bytes);
-    bytes
+    result.extend_from_slice(&(metadata_len as u64).to_le_bytes());
+    result.extend_from_slice(&key_bytes);
+    result.extend_from_slice(&stream_id_bytes);
+    result.extend_from_slice(&topic_id_bytes);
+    for message in messages {
+        let size = message.length as usize + size_of::<ArchivedIggyMessage>();
+        let size = val_align_up(size as _, 16);
+        buffer.reserve(size as _);
+        let mut ser = Serializer::new(&mut buffer, arena.acquire(), &mut share);
+        rkyv::api::serialize_using::<_, rkyv::rancor::Error>(message, &mut ser).unwrap();
+        let len = buffer.len(); 
+        result.extend_from_slice(&(len as u64).to_le_bytes());
+        result.extend_from_slice(&(len as u64).to_le_bytes());
+        result.extend_from_slice(&buffer);
+
+        buffer.clear();
+        share.clear();
+    }
+    println!("elapsed: {} us", xd.elapsed().as_micros());
+    result
 }
 
 impl FromStr for Message {
@@ -466,16 +482,11 @@ impl FromStr for Message {
 }
 
 impl SendMessages {
-    fn to_bytes(&self) -> AlignedVec {
-        as_bytes(
-            &self.stream_id,
-            &self.topic_id,
-            &self.partitioning,
-            &self.batch,
-        )
+    fn _to_bytes(&self) -> AlignedVec {
+        todo!();
     }
 
-    fn from_bytes(bytes: Vec<u8>) -> Result<SendMessages, IggyError> {
+    fn _from_bytes(bytes: Vec<u8>) -> Result<SendMessages, IggyError> {
         if bytes.len() < 11 {
             return Err(IggyError::InvalidCommand);
         }
@@ -487,16 +498,18 @@ impl Display for SendMessages {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
-            "{}|{}|{}|{}",
+            "{}|{}|{}|",
             self.stream_id,
             self.topic_id,
             self.partitioning,
+            /* 
             self.batch
                 .messages
                 .iter()
                 .map(std::string::ToString::to_string)
                 .collect::<Vec<String>>()
                 .join("|")
+                */
         )
     }
 }

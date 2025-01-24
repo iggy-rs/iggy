@@ -7,7 +7,6 @@ use crate::streaming::segments::segment::Segment;
 use error_set::ErrContext;
 use iggy::confirmation::Confirmation;
 use iggy::error::IggyError;
-use iggy::models::batch::ArchivedIggyBatch;
 use iggy::utils::byte_size::IggyByteSize;
 use iggy::utils::sizeable::Sizeable;
 use rkyv::util::AlignedVec;
@@ -214,7 +213,7 @@ impl Segment {
                 self.partition_id,
             ));
         }
-        let access_batch = unsafe { rkyv::access_unchecked::<ArchivedIggyBatch>(&batch) };
+        /*
         let messages_cap = self.config.partition.messages_required_to_save as usize;
         let batch_base_offset = access_batch.base_offset.to_native();
         let batch_accumulator = self
@@ -238,7 +237,7 @@ impl Segment {
             .fetch_add(messages_count as u64, Ordering::SeqCst);
         self.messages_count_of_parent_partition
             .fetch_add(messages_count as u64, Ordering::SeqCst);
-
+        */
         Ok(())
     }
 
@@ -311,7 +310,6 @@ impl Segment {
             .fetch_add(RETAINED_BATCH_OVERHEAD, Ordering::AcqRel);
         self.size_of_parent_partition
             .fetch_add(RETAINED_BATCH_OVERHEAD, Ordering::AcqRel);
-
 
         if self.is_full().await {
             self.end_offset = self.current_offset;

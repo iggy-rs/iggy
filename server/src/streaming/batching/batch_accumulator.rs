@@ -5,7 +5,7 @@ use bytes::BytesMut;
 use iggy::models::batch::IggyBatch;
 use iggy::models::messages::{ArchivedIggyMessage, IggyMessage};
 use iggy::utils::sizeable::Sizeable;
-use iggy::{models::batch::ArchivedIggyBatch, utils::byte_size::IggyByteSize};
+use iggy::{utils::byte_size::IggyByteSize};
 use rkyv::de::Pool;
 use rkyv::rancor::{Fallible, Strategy};
 use rkyv::util::{Align, AlignedVec};
@@ -36,7 +36,7 @@ impl BatchAccumulator {
     }
 
     pub fn append(&mut self, batch_size: IggyByteSize, batch: AlignedVec<512>) {
-        let access_batch = unsafe { rkyv::access_unchecked::<ArchivedIggyBatch>(&batch) };
+        /*
         let batch_base_offset = access_batch.base_offset.to_native();
         let batch_base_timestamp = access_batch.base_timestamp.to_native();
         self.current_size += batch_size;
@@ -55,6 +55,7 @@ impl BatchAccumulator {
             .to_native() as u64
             + batch_base_timestamp;
         self.batches.push(batch);
+        */
     }
 
     pub fn get_messages_by_offset(

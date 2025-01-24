@@ -2379,7 +2379,7 @@ dependencies = [
 
 [[package]]
 name = "iggy-cli"
-version = "0.8.6"
+version = "0.8.7"
 dependencies = [
  "ahash 0.8.11",
  "anyhow",

@@ -63,7 +63,9 @@ impl System {
             stats.cpu_usage = process.cpu_usage();
             stats.memory_usage = process.memory().into();
             stats.run_time = IggyDuration::new_from_secs(process.run_time());
-            stats.start_time = process.start_time().into();
+            stats.start_time = IggyDuration::new_from_secs(process.start_time())
+                .as_micros()
+                .into();
 
             let disk_usage = process.disk_usage();
             stats.read_bytes = disk_usage.total_read_bytes.into();

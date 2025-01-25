@@ -17,6 +17,7 @@ pub const IGGY_MESSAGE_METADATA: u32 = 8 + 1 + 8 + 4;
 /// - `payload`: the binary payload of the message.
 #[serde_as]
 #[derive(
+    Clone,
     Default,
     Debug,
     serde::Serialize,

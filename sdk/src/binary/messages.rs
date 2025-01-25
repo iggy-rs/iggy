@@ -55,7 +55,7 @@ impl<B: BinaryClient> MessageClient for B {
         fail_if_not_authenticated(self).await?;
         let now = Instant::now();
         let messages = messages.into_iter().map(Into::into).collect();
-        let bytes = send_messages::as_bytes(stream_id, topic_id, partitioning, &messages);
+        let bytes = send_messages::as_bytes(stream_id, topic_id, partitioning, messages);
         error!(
             "serialization of msgs took {} us",
             now.elapsed().as_micros()

@@ -3,7 +3,7 @@ use crate::command::{Command, SEND_MESSAGES_CODE};
 use crate::error::IggyError;
 use crate::identifier::Identifier;
 use crate::messages::{MAX_HEADERS_SIZE, MAX_PAYLOAD_SIZE};
-use crate::models::batch::IggyBatch;
+use crate::models::batch::{IggyBatch, IggyBatchTwo};
 use crate::models::header;
 use crate::models::header::{HeaderKey, HeaderValue};
 use crate::models::messages::{ArchivedIggyMessage, IggyMessage};
@@ -411,11 +411,11 @@ impl BytesSerializable for Partitioning {
 }
 
 // This method is used by the new version of `IggyClient` to serialize `SendMessages` without copying the messages.
-pub(crate) fn as_bytes(
+pub fn as_bytes(
     stream_id: &Identifier,
     topic_id: &Identifier,
     partitioning: &Partitioning,
-    messages: &Vec<IggyMessage>,
+    messages: Vec<IggyMessage>,
 ) -> AlignedVec {
     let messages_size = messages
         .iter()
@@ -430,9 +430,11 @@ pub(crate) fn as_bytes(
         + key_bytes.len()
         + stream_id_bytes.len()
         + topic_id_bytes.len();
-    println!("total_size: {}", total_size);
-    let mut result = AlignedVec::with_capacity(total_size);
+    let result = AlignedVec::with_capacity(total_size + 6000);
+    let batch = IggyBatchTwo::new(messages);
+    let result = rkyv::api::high::to_bytes_in::<_, rkyv::rancor::Error>(&batch, result).unwrap();
 
+    /*
     //TODO: init those with capacity of max message to avoid random allocations.
     let mut arena = Arena::new();
     let mut buffer = Vec::new();
@@ -449,7 +451,55 @@ pub(crate) fn as_bytes(
         buffer.reserve(size as _);
         let mut ser = Serializer::new(&mut buffer, arena.acquire(), &mut share);
         rkyv::api::serialize_using::<_, rkyv::rancor::Error>(message, &mut ser).unwrap();
-        let len = buffer.len(); 
+        let len = buffer.len();
+        result.extend_from_slice(&(len as u64).to_le_bytes());
+        result.extend_from_slice(&(len as u64).to_le_bytes());
+        result.extend_from_slice(&buffer);
+
+        buffer.clear();
+        share.clear();
+    }
+    */
+    result
+}
+
+pub fn as_bytes_encoded_len(
+    stream_id: &Identifier,
+    topic_id: &Identifier,
+    partitioning: &Partitioning,
+    messages: Vec<IggyMessage>,
+) -> AlignedVec {
+    let messages_size = messages
+        .iter()
+        .map(IggyMessage::get_size_bytes)
+        .map(|size| size + (size_of::<ArchivedIggyMessage>() as u64).into())
+        .sum::<IggyByteSize>();
+    // shit ton of small allocations, can we move it to stack ?
+    let key_bytes = partitioning.to_bytes().to_vec();
+    let stream_id_bytes = stream_id.to_bytes().to_vec();
+    let topic_id_bytes = topic_id.to_bytes().to_vec();
+    let total_size = messages_size.as_bytes_usize()
+        + key_bytes.len()
+        + stream_id_bytes.len()
+        + topic_id_bytes.len();
+    let mut result = AlignedVec::with_capacity(total_size);
+    //TODO: init those with capacity of max message to avoid random allocations.
+    let mut arena = Arena::new();
+    let mut buffer = Vec::new();
+    let mut share = Share::new();
+    let metadata_len = key_bytes.len() + stream_id_bytes.len() + topic_id_bytes.len();
+
+    result.extend_from_slice(&(metadata_len as u64).to_le_bytes());
+    result.extend_from_slice(&key_bytes);
+    result.extend_from_slice(&stream_id_bytes);
+    result.extend_from_slice(&topic_id_bytes);
+    for message in messages {
+        let size = message.length as usize + size_of::<ArchivedIggyMessage>();
+        let size = val_align_up(size as _, 16);
+        buffer.reserve(size as _);
+        let mut ser = Serializer::new(&mut buffer, arena.acquire(), &mut share);
+        rkyv::api::serialize_using::<_, rkyv::rancor::Error>(&message, &mut ser).unwrap();
+        let len = buffer.len();
         result.extend_from_slice(&(len as u64).to_le_bytes());
         result.extend_from_slice(&(len as u64).to_le_bytes());
         result.extend_from_slice(&buffer);
@@ -500,7 +550,7 @@ impl Display for SendMessages {
             self.stream_id,
             self.topic_id,
             self.partitioning,
-            /* 
+            /*
             self.batch
                 .messages
                 .iter()

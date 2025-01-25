@@ -1,7 +1,4 @@
-use derive_new::new;
-use serde::Serialize;
-
-#[derive(Debug, Clone, PartialEq, Serialize, new)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct BenchmarkRecord {
     pub elapsed_time_us: u64,
     pub latency_us: u64,

@@ -1,8 +1,8 @@
 use super::benchmark::{BenchmarkFutures, Benchmarkable};
+use crate::actors::producer::Producer;
 use crate::args::common::IggyBenchArgs;
-use crate::args::simple::BenchmarkKind;
-use crate::producer::Producer;
 use async_trait::async_trait;
+use iggy_benchmark_report::benchmark_kind::BenchmarkKind;
 use integration::test_server::ClientFactory;
 use std::sync::Arc;
 use tracing::info;
@@ -42,7 +42,6 @@ impl Benchmarkable for SendMessagesBenchmark {
             let args = args.clone();
             let start_stream_id = args.start_stream_id();
             let client_factory = client_factory.clone();
-            let output_directory = args.output_directory.clone();
 
             let parallel_producer_streams = !args.disable_parallel_producer_streams();
             let stream_id = match parallel_producer_streams {
@@ -59,7 +58,8 @@ impl Benchmarkable for SendMessagesBenchmark {
                 message_batches,
                 message_size,
                 warmup_time,
-                output_directory,
+                args.sampling_time(),
+                args.moving_average_window(),
             );
             let future = Box::pin(async move { producer.run().await });
             futures.as_mut().unwrap().push(future);
@@ -85,21 +85,5 @@ impl Benchmarkable for SendMessagesBenchmark {
 
     fn client_factory(&self) -> &Arc<dyn ClientFactory> {
         &self.client_factory
-    }
-
-    fn display_settings(&self) {
-        let total_messages = self.total_messages();
-        let total_size_bytes = total_messages * self.args().message_size() as u64;
-        info!(
-                "\x1B[32mBenchmark: {}, total messages: {}, total size: {} bytes, {} streams, {} messages per batch, {} batches, {} bytes per message, {} producers\x1B[0m",
-                self.kind(),
-                total_messages,
-                total_size_bytes,
-                self.args().number_of_streams(),
-                self.args().messages_per_batch(),
-                self.args().message_batches(),
-                self.args().message_size(),
-                self.args().producers(),
-            );
     }
 }

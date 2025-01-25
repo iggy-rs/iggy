@@ -34,3 +34,6 @@ pub const DEFAULT_SERVER_STDOUT_VISIBILITY: bool = false;
 
 pub const DEFAULT_WARMUP_TIME: &str = "1 s";
 pub const DEFAULT_SKIP_SERVER_START: bool = false;
+
+pub const DEFAULT_SAMPLING_TIME: &str = "10 ms";
+pub const DEFAULT_MOVING_AVERAGE_WINDOW: u32 = 20;

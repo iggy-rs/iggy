@@ -2,11 +2,7 @@ use super::{
     consumer_group_benchmark::ConsumerGroupBenchmark, poll_benchmark::PollMessagesBenchmark,
     send_and_poll_benchmark::SendAndPollMessagesBenchmark, send_benchmark::SendMessagesBenchmark,
 };
-use crate::{
-    args::{common::IggyBenchArgs, simple::BenchmarkKind},
-    benchmark_result::BenchmarkResult,
-    client_factory::create_client_factory,
-};
+use crate::{args::common::IggyBenchArgs, utils::client_factory::create_client_factory};
 use async_trait::async_trait;
 use futures::Future;
 use iggy::client::{StreamClient, TopicClient};
@@ -15,12 +11,14 @@ use iggy::compression::compression_algorithm::CompressionAlgorithm;
 use iggy::error::IggyError;
 use iggy::utils::expiry::IggyExpiry;
 use iggy::utils::topic_size::MaxTopicSize;
+use iggy_benchmark_report::benchmark_kind::BenchmarkKind;
+use iggy_benchmark_report::individual_metrics::BenchmarkIndividualMetrics;
 use integration::test_server::{login_root, ClientFactory};
 use std::{pin::Pin, sync::Arc};
 use tracing::info;
 
 pub type BenchmarkFutures = Result<
-    Vec<Pin<Box<dyn Future<Output = Result<BenchmarkResult, IggyError>> + Send>>>,
+    Vec<Pin<Box<dyn Future<Output = Result<BenchmarkIndividualMetrics, IggyError>> + Send>>>,
     IggyError,
 >;
 
@@ -52,7 +50,6 @@ pub trait Benchmarkable {
     fn kind(&self) -> BenchmarkKind;
     fn args(&self) -> &IggyBenchArgs;
     fn client_factory(&self) -> &Arc<dyn ClientFactory>;
-    fn display_settings(&self);
 
     /// Below methods have common implementation for all benchmarks.
     /// Initializes the streams and topics for the benchmark.

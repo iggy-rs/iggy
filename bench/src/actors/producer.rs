@@ -1,7 +1,5 @@
-use crate::args::simple::BenchmarkKind;
-use crate::benchmark_result::BenchmarkResult;
-use crate::statistics::actor_statistics::BenchmarkActorStatistics;
-use crate::statistics::record::BenchmarkRecord;
+use crate::analytics::metrics::individual::from_records;
+use crate::analytics::record::BenchmarkRecord;
 use iggy::client::MessageClient;
 use iggy::clients::client::IggyClient;
 use iggy::error::IggyError;
@@ -9,6 +7,9 @@ use iggy::messages::send_messages::{Message, Partitioning};
 use iggy::utils::byte_size::IggyByteSize;
 use iggy::utils::duration::IggyDuration;
 use iggy::utils::sizeable::Sizeable;
+use iggy_benchmark_report::actor_kind::ActorKind;
+use iggy_benchmark_report::benchmark_kind::BenchmarkKind;
+use iggy_benchmark_report::individual_metrics::BenchmarkIndividualMetrics;
 use integration::test_server::{login_root, ClientFactory};
 use std::str::FromStr;
 use std::sync::Arc;
@@ -25,7 +26,8 @@ pub struct Producer {
     messages_per_batch: u32,
     message_size: u32,
     warmup_time: IggyDuration,
-    output_directory: Option<String>,
+    sampling_time: IggyDuration,
+    moving_average_window: u32,
 }
 
 impl Producer {
@@ -39,7 +41,8 @@ impl Producer {
         message_batches: u32,
         message_size: u32,
         warmup_time: IggyDuration,
-        output_directory: Option<String>,
+        sampling_time: IggyDuration,
+        moving_average_window: u32,
     ) -> Self {
         Producer {
             client_factory,
@@ -50,11 +53,12 @@ impl Producer {
             message_batches,
             message_size,
             warmup_time,
-            output_directory,
+            sampling_time,
+            moving_average_window,
         }
     }
 
-    pub async fn run(&self) -> Result<BenchmarkResult, IggyError> {
+    pub async fn run(&self) -> Result<BenchmarkIndividualMetrics, IggyError> {
         let topic_id: u32 = 1;
         let default_partition_id: u32 = 1;
         let partitions_count = self.partitions_count;
@@ -111,7 +115,7 @@ impl Producer {
 
         let start_timestamp = Instant::now();
         let mut latencies: Vec<Duration> = Vec::with_capacity(message_batches as usize);
-        let mut records: Vec<BenchmarkRecord> = Vec::with_capacity(message_batches as usize);
+        let mut records = Vec::with_capacity(message_batches as usize);
         for i in 1..=message_batches {
             let before_send = Instant::now();
             client
@@ -121,60 +125,37 @@ impl Producer {
 
             let messages_processed = (i * messages_per_batch) as u64;
             let batches_processed = i as u64;
-            let total_user_data_bytes = batches_processed * batch_user_data_bytes;
+            let user_data_bytes = batches_processed * batch_user_data_bytes;
             let total_bytes = batches_processed * batch_total_bytes;
 
             latencies.push(latency);
-            records.push(BenchmarkRecord::new(
-                start_timestamp.elapsed().as_micros() as u64,
-                latency.as_micros() as u64,
-                messages_processed,
-                batches_processed,
-                total_user_data_bytes,
+            records.push(BenchmarkRecord {
+                elapsed_time_us: start_timestamp.elapsed().as_micros() as u64,
+                latency_us: latency.as_micros() as u64,
+                messages: messages_processed,
+                message_batches: batches_processed,
+                user_data_bytes,
                 total_bytes,
-            ));
+            });
         }
-        let statistics = BenchmarkActorStatistics::from_records(&records);
-
-        if let Some(output_directory) = &self.output_directory {
-            std::fs::create_dir_all(format!("{}/raw_data", output_directory)).unwrap();
-
-            // Dump raw data to file
-            let results_file = format!(
-                "{}/raw_data/producer_{}_data.csv",
-                output_directory, self.producer_id
-            );
-            info!(
-                "Producer #{} → writing the results to {}...",
-                self.producer_id, results_file
-            );
-
-            let mut writer = csv::Writer::from_path(results_file).unwrap();
-            for sample in records {
-                writer.serialize(sample).unwrap();
-            }
-            writer.flush().unwrap();
-
-            // Dump summary to file
-            let summary_file = format!(
-                "{}/raw_data/producer_{}_summary.toml",
-                output_directory, self.producer_id
-            );
-            statistics.dump_to_toml(&summary_file);
-        }
+        let metrics = from_records(
+            records,
+            BenchmarkKind::Send,
+            ActorKind::Producer,
+            self.producer_id,
+            self.sampling_time,
+            self.moving_average_window,
+        );
 
         Self::log_producer_statistics(
             self.producer_id,
             total_messages,
             message_batches,
             messages_per_batch,
-            &statistics,
+            &metrics,
         );
 
-        Ok(BenchmarkResult {
-            kind: BenchmarkKind::Send,
-            statistics,
-        })
+        Ok(metrics)
     }
 
     fn create_payload(size: u32) -> String {
@@ -192,7 +173,7 @@ impl Producer {
         total_messages: u64,
         message_batches: u32,
         messages_per_batch: u32,
-        stats: &BenchmarkActorStatistics,
+        stats: &BenchmarkIndividualMetrics,
     ) {
         info!(
             "Producer #{} → sent {} messages in {} batches of {} messages in {:.2} s, total size: {}, average throughput: {:.2} MB/s, \
@@ -202,16 +183,16 @@ impl Producer {
             total_messages,
             message_batches,
             messages_per_batch,
-            stats.total_time_secs,
-            IggyByteSize::from(stats.total_bytes),
-            stats.throughput_megabytes_per_second,
-            stats.p50_latency_ms,
-            stats.p90_latency_ms,
-            stats.p95_latency_ms,
-            stats.p99_latency_ms,
-            stats.p999_latency_ms,
-            stats.avg_latency_ms,
-            stats.median_latency_ms
+            stats.summary.total_time_secs,
+            IggyByteSize::from(stats.summary.total_user_data_bytes),
+            stats.summary.throughput_megabytes_per_second,
+            stats.summary.p50_latency_ms,
+            stats.summary.p90_latency_ms,
+            stats.summary.p95_latency_ms,
+            stats.summary.p99_latency_ms,
+            stats.summary.p999_latency_ms,
+            stats.summary.avg_latency_ms,
+            stats.summary.median_latency_ms
         );
     }
 }

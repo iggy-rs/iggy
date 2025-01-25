@@ -22,6 +22,18 @@ const SECRET_KEYS: [&str; 6] = [
     "IGGY_SYSTEM_ENCRYPTION_KEY",
 ];
 
+pub enum ConfigProviderKind {
+    File(FileConfigProvider),
+}
+
+impl ConfigProviderKind {
+    pub async fn load_config(&self) -> Result<ServerConfig, ConfigError> {
+        match self {
+            Self::File(p) => p.load_config().await,
+        }
+    }
+}
+
 #[async_trait]
 pub trait ConfigProvider {
     async fn load_config(&self) -> Result<ServerConfig, ConfigError>;
@@ -216,12 +228,12 @@ impl Provider for CustomEnvProvider {
     }
 }
 
-pub fn resolve(config_provider_type: &str) -> Result<Box<dyn ConfigProvider>, ConfigError> {
+pub fn resolve(config_provider_type: &str) -> Result<ConfigProviderKind, ConfigError> {
     match config_provider_type {
         DEFAULT_CONFIG_PROVIDER => {
             let path =
                 env::var("IGGY_CONFIG_PATH").unwrap_or_else(|_| DEFAULT_CONFIG_PATH.to_string());
-            Ok(Box::new(FileConfigProvider::new(path)))
+            Ok(ConfigProviderKind::File(FileConfigProvider::new(path)))
         }
         _ => Err(ConfigError::InvalidConfigurationProvider {
             provider_type: config_provider_type.to_string(),

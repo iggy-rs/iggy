@@ -4,7 +4,7 @@ use std::array::TryFromSliceError;
 use tokio::io;
 
 error_set!(
-    ServerError = ConfigError || ArchiverError || ConnectionError || LogError || CompatError;
+    ServerError = ConfigError || ArchiverError || ConnectionError || LogError || CompatError || QuicError;
 
     IoError = {
         #[display("IO error")]
@@ -72,5 +72,16 @@ error_set!(
 
         #[display("SDK error")]
         SdkError(iggy::error::IggyError),
+    };
+
+    QuicError = {
+        #[display("Cert load error")]
+        CertLoadError,
+        #[display("Cert generation error")]
+        CertGenerationError,
+        #[display("Config creation error")]
+        ConfigCreationError,
+        #[display("Transport config error")]
+        TransportConfigError,
     };
 );

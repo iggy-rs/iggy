@@ -1,4 +1,4 @@
-use crate::client::Client;
+use crate::client::{AutoLogin, Client};
 use crate::clients::client::IggyClient;
 use crate::error::IggyError;
 use crate::http::client::HttpClient;
@@ -111,6 +111,12 @@ impl TcpClientBuilder {
         self
     }
 
+    /// Sets the auto sign in during connection.
+    pub fn with_auto_sign_in(mut self, auto_sign_in: AutoLogin) -> Self {
+        self.config = self.config.with_auto_sign_in(auto_sign_in);
+        self
+    }
+
     /// Sets the number of max retries when connecting to the server.
     pub fn with_reconnection_max_retries(mut self, reconnection_retries: Option<u32>) -> Self {
         self.config = self
@@ -162,6 +168,12 @@ impl QuicClientBuilder {
     /// Sets the server address for the QUIC client.
     pub fn with_server_address(mut self, server_address: String) -> Self {
         self.config = self.config.with_server_address(server_address);
+        self
+    }
+
+    /// Sets the auto sign in during connection.
+    pub fn with_auto_sign_in(mut self, auto_sign_in: AutoLogin) -> Self {
+        self.config = self.config.with_auto_sign_in(auto_sign_in);
         self
     }
 

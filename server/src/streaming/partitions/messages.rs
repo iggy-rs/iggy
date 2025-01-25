@@ -11,6 +11,7 @@ use iggy::models::batch::{IggyBatch};
 use iggy::models::messages::ArchivedIggyMessage;
 use iggy::utils::timestamp::IggyTimestamp;
 use iggy::{error::IggyError, utils::duration::IggyDuration};
+use rkyv::rend::unaligned::u32_ule;
 use rkyv::rend::{u32_le, u64_le};
 use rkyv::util::AlignedVec;
 use std::sync::{atomic::Ordering, Arc};
@@ -450,15 +451,15 @@ impl Partition {
             let length =
                 u64::from_le_bytes(batch_payload[position..position + 8].try_into().unwrap());
             let length = length as usize;
-            position += 16;
+            position += 8;
             let message = unsafe {
                 rkyv::access_unchecked_mut::<ArchivedIggyMessage>(
                     &mut batch_payload[position..length + position],
                 )
             };
             let message = unsafe { message.unseal_unchecked() };
-            message.offset_delta = u32_le::from(offset_delta);
-            message.timestamp_delta = u32_le::from(timestamp_delta);
+            message.offset_delta = u32_ule::from(offset_delta);
+            message.timestamp_delta = u32_ule::from(timestamp_delta);
             position += length;
             messages_count += 1;
         }

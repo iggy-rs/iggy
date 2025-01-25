@@ -11,4 +11,4 @@ ignored = ["openssl"]
 
 
 [workspace.dependencies]
-rkyv = "0.8.9"
+rkyv = { version = "0.8.9" , features = ["unaligned"] }

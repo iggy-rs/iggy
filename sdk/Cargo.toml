@@ -69,3 +69,4 @@ default = ["tokio_lock"]
 iggy-cli = ["dep:comfy-table", "dep:keyring", "dep:passterm"]
 tokio_lock = []
 fast_async_lock = ["dep:fast-async-mutex"]
+

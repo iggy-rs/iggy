@@ -23,9 +23,6 @@ use tracing::{error, info, warn};
 #[derive(Debug)]
 pub struct FileTopicStorage;
 
-unsafe impl Send for FileTopicStorage {}
-unsafe impl Sync for FileTopicStorage {}
-
 #[derive(Debug, Serialize, Deserialize)]
 struct ConsumerGroupData {
     id: u32,

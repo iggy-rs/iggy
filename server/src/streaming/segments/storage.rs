@@ -38,9 +38,6 @@ impl FileSegmentStorage {
     }
 }
 
-unsafe impl Send for FileSegmentStorage {}
-unsafe impl Sync for FileSegmentStorage {}
-
 #[async_trait]
 impl SegmentStorage for FileSegmentStorage {
     async fn load(&self, segment: &mut Segment) -> Result<(), IggyError> {

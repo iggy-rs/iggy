@@ -30,8 +30,6 @@ impl FilePartitionStorage {
         Self { persister }
     }
 }
-unsafe impl Send for FilePartitionStorage {}
-unsafe impl Sync for FilePartitionStorage {}
 
 #[async_trait]
 impl PartitionStorage for FilePartitionStorage {

@@ -48,6 +48,12 @@ impl IggyBatch {
             checksum_body: 0,
         }
     }
+
+    pub fn header_bytes(&self) -> [u8; 69] {
+        let header_bytes = [0u8; 69];
+        header_bytes
+    }
+
 }
 
 impl Sizeable for IggyBatch {

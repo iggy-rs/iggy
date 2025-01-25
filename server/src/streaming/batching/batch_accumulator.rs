@@ -20,7 +20,7 @@ pub struct BatchAccumulator {
     current_offset: u64,
     current_timestamp: u64,
     capacity: u64,
-    batches: Vec<AlignedVec<512>>,
+    pub batches: Vec<IggyBatch>,
 }
 
 impl BatchAccumulator {
@@ -35,27 +35,11 @@ impl BatchAccumulator {
         }
     }
 
-    pub fn append(&mut self, batch_size: IggyByteSize, batch: AlignedVec<512>) {
-        /*
-        let batch_base_offset = access_batch.base_offset.to_native();
-        let batch_base_timestamp = access_batch.base_timestamp.to_native();
+    pub fn append(&mut self, batch_size: IggyByteSize, batch: IggyBatch) {
+        let batch_base_offset = batch.base_offset;
+        let batch_base_timestamp = batch.base_timestamp;
         self.current_size += batch_size;
-        self.current_offset = access_batch
-            .messages
-            .last()
-            .unwrap()
-            .offset_delta
-            .to_native() as u64
-            + batch_base_offset;
-        self.current_timestamp = access_batch
-            .messages
-            .last()
-            .unwrap()
-            .timestamp_delta
-            .to_native() as u64
-            + batch_base_timestamp;
         self.batches.push(batch);
-        */
     }
 
     pub fn get_messages_by_offset(
@@ -84,10 +68,6 @@ impl BatchAccumulator {
 
     pub fn batch_base_offset(&self) -> u64 {
         self.base_offset
-    }
-
-    pub fn materialize_batch_and_maybe_update_state(self) -> Vec<AlignedVec<512>> {
-        self.batches
     }
 }
 

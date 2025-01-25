@@ -7,6 +7,7 @@ use crate::streaming::segments::segment::Segment;
 use error_set::ErrContext;
 use iggy::confirmation::Confirmation;
 use iggy::error::IggyError;
+use iggy::models::batch::IggyBatch;
 use iggy::utils::byte_size::IggyByteSize;
 use iggy::utils::sizeable::Sizeable;
 use rkyv::util::AlignedVec;
@@ -205,7 +206,7 @@ impl Segment {
         &mut self,
         batch_size: IggyByteSize,
         messages_count: u32,
-        batch: AlignedVec<512>,
+        batch: IggyBatch,
     ) -> Result<(), IggyError> {
         if self.is_closed {
             return Err(IggyError::SegmentClosed(
@@ -213,9 +214,8 @@ impl Segment {
                 self.partition_id,
             ));
         }
-        /*
         let messages_cap = self.config.partition.messages_required_to_save as usize;
-        let batch_base_offset = access_batch.base_offset.to_native();
+        let batch_base_offset = batch.base_offset;
         let batch_accumulator = self
             .unsaved_messages
             .get_or_insert_with(|| BatchAccumulator::new(batch_base_offset, messages_cap));
@@ -237,7 +237,6 @@ impl Segment {
             .fetch_add(messages_count as u64, Ordering::SeqCst);
         self.messages_count_of_parent_partition
             .fetch_add(messages_count as u64, Ordering::SeqCst);
-        */
         Ok(())
     }
 
@@ -283,13 +282,10 @@ impl Segment {
             self.partition_id
         );
 
-        let raw_batches = batch_accumulator.materialize_batch_and_maybe_update_state();
         let mut batch_size = 0;
         let confirmation = Confirmation::Wait;
-        for raw_batch in raw_batches {
-            batch_size += raw_batch.len();
             let saved_bytes = storage
-                .save_batches_raw(self, raw_batch, confirmation)
+                .save_batches_raw(self, batch_accumulator, confirmation)
                 .await?;
             trace!(
                 "Saved {} messages on disk in segment with start offset: {} for partition with ID: {}, total bytes written: {}.",
@@ -298,7 +294,6 @@ impl Segment {
                 self.partition_id,
                 saved_bytes
         );
-        }
         storage.save_index(&self.index_path, index).await.with_error_context(|_| format!(
             "STREAMING_SEGMENT - failed to save index, stream ID: {}, topic ID: {}, partition ID: {}, path: {}",
             self.stream_id, self.topic_id, self.partition_id, self.index_path,

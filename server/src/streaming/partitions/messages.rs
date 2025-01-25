@@ -441,8 +441,7 @@ impl Partition {
         let batch_base_timestamp = IggyTimestamp::now().as_micros();
         let batch_base_offset = part_base_offset;
 
-        let xd = Instant::now();
-        let mut batch_payload = batch.messages;
+        let batch_payload = &mut batch.messages;
         let mut position = 0;
         while position < batch_payload.len() {
             max_timestamp = IggyTimestamp::now().as_micros();
@@ -465,7 +464,6 @@ impl Partition {
         }
         batch.base_timestamp = batch_base_timestamp;
         batch.base_offset = batch_base_offset;
-        println!("setting up batch took: {} us", xd.elapsed().as_micros());
 
         let avg_timestamp_delta =
             Duration::from_micros((max_timestamp - batch_base_timestamp) / messages_count as u64).into();
@@ -484,17 +482,15 @@ impl Partition {
         }
 
         {
-            /*
             let last_segment = self.segments.last_mut().ok_or(IggyError::SegmentNotFound)?;
             last_segment
-                .append_batch(batch_size, messages_count, bytes)
+                .append_batch(batch_size, messages_count, batch)
                 .await
                 .with_error_context(|_| {
                     format!(
                         "{COMPONENT} - failed to append batch into last segment: {last_segment}",
                     )
                 })?;
-                */
         }
 
         /*
@@ -503,7 +499,6 @@ impl Partition {
         }
         */
 
-        /*
         self.unsaved_messages_count += messages_count;
         {
             let last_segment = self.segments.last_mut().ok_or(IggyError::SegmentNotFound)?;
@@ -520,7 +515,6 @@ impl Partition {
                 self.unsaved_messages_count = 0;
             }
         }
-        */
 
         Ok(())
     }

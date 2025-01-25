@@ -435,7 +435,7 @@ pub(crate) fn as_bytes(
 
     //TODO: init those with capacity of max message to avoid random allocations.
     let mut arena = Arena::new();
-    let mut buffer = AlignedVec::<16>::new();
+    let mut buffer = Vec::new();
     let mut share = Share::new();
     let metadata_len = key_bytes.len() + stream_id_bytes.len() + topic_id_bytes.len();
 

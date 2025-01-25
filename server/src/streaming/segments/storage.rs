@@ -1,3 +1,4 @@
+use crate::streaming::batching::batch_accumulator::BatchAccumulator;
 use crate::streaming::batching::iterator::IntoMessagesIterator;
 use crate::streaming::batching::message_batch::RetainedMessageBatch;
 use crate::streaming::models::messages::RetainedMessage;
@@ -259,16 +260,25 @@ impl SegmentStorage for FileSegmentStorage {
     async fn save_batches_raw(
         &self,
         segment: &Segment,
-        batch: AlignedVec<512>,
+        batch_accumulator: BatchAccumulator, 
         confirmation: Confirmation,
     ) -> Result<IggyByteSize, IggyError> {
-        let len = IggyByteSize::from(batch.len() as u64);
+        //let len = IggyByteSize::from(batch.len() as u64);
 
+        for batch in batch_accumulator.batches {
+            let header_bytes = batch.header_bytes();
+            self.persister.append(&segment.log_path, &header_bytes).await;
+            self.persister.append(&segment.log_path, &batch.messages).await;
+        }
+
+        /*
         let save_result = match confirmation {
             Confirmation::Wait => self.persister.append(&segment.log_path, &batch).await,
             Confirmation::NoWait => segment.persister_task.send(batch).await,
         };
+        */
 
+        /*
         save_result
             .with_error_context(|err| {
                 format!(
@@ -278,7 +288,8 @@ impl SegmentStorage for FileSegmentStorage {
             })
             .map_err(|_| IggyError::CannotSaveMessagesToSegment)?;
 
-        Ok(len)
+            */
+        Ok(0.into())
     }
 
     async fn load_message_ids(&self, segment: &Segment) -> Result<Vec<u128>, IggyError> {

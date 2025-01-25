@@ -20,7 +20,7 @@ use tokio::fs::{create_dir, remove_dir_all};
 use tokio::time::Instant;
 use tracing::{error, info, instrument, trace};
 
-use crate::archiver::{Archiver, ArchiverKind};
+use crate::archiver::{ArchiverKind, ArchiverKindType};
 use crate::map_toggle_str;
 use crate::state::file::FileState;
 use crate::state::system::SystemState;
@@ -73,7 +73,7 @@ pub struct System {
     pub(crate) encryptor: Option<Arc<EncryptorKind>>,
     pub(crate) metrics: Metrics,
     pub(crate) state: Arc<StateKind>,
-    pub(crate) archiver: Option<Arc<Archiver>>,
+    pub(crate) archiver: Option<Arc<ArchiverKind>>,
     pub personal_access_token: PersonalAccessTokenConfig,
 }
 
@@ -135,17 +135,17 @@ impl System {
         pat_config: PersonalAccessTokenConfig,
     ) -> System {
         let archiver_config = data_maintenance_config.archiver;
-        let archiver: Option<Arc<Archiver>> = if archiver_config.enabled {
+        let archiver: Option<Arc<ArchiverKind>> = if archiver_config.enabled {
             info!("Archiving is enabled, kind: {}", archiver_config.kind);
             match archiver_config.kind {
-                ArchiverKind::Disk => Some(Arc::new(Archiver::get_disk_arhiver(
+                ArchiverKindType::Disk => Some(Arc::new(ArchiverKind::get_disk_arhiver(
                     archiver_config
                         .disk
                         .clone()
                         .expect("Disk archiver config is missing"),
                 ))),
-                ArchiverKind::S3 => Some(Arc::new(
-                    Archiver::get_s3_archiver(
+                ArchiverKindType::S3 => Some(Arc::new(
+                    ArchiverKind::get_s3_archiver(
                         archiver_config
                             .s3
                             .clone()

@@ -1,4 +1,4 @@
-use crate::archiver::ArchiverKind;
+use crate::archiver::ArchiverKindType;
 use crate::configs::config_provider::ConfigProviderKind;
 use crate::configs::http::HttpConfig;
 use crate::configs::quic::QuicConfig;
@@ -40,7 +40,7 @@ pub struct DataMaintenanceConfig {
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct ArchiverConfig {
     pub enabled: bool,
-    pub kind: ArchiverKind,
+    pub kind: ArchiverKindType,
     pub disk: Option<DiskArchiverConfig>,
     pub s3: Option<S3ArchiverConfig>,
 }

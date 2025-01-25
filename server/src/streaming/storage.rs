@@ -18,10 +18,10 @@ use iggy::confirmation::Confirmation;
 use iggy::consumer::ConsumerKind;
 use iggy::error::IggyError;
 use iggy::utils::byte_size::IggyByteSize;
-use std::fmt::Debug;
-use std::sync::Arc;
 #[cfg(test)]
 use mockall::automock;
+use std::fmt::Debug;
+use std::sync::Arc;
 
 macro_rules! forward_async_methods {
     (
@@ -75,7 +75,7 @@ pub enum PartitionStorageKind {
 pub enum SegmentStorageKind {
     File(FileSegmentStorage),
     #[cfg(test)]
-    Mock(MockSegmentStorage),
+    Mock(Box<MockSegmentStorage>),
 }
 
 #[async_trait]
@@ -120,7 +120,7 @@ pub trait PartitionStorage {
 
 #[async_trait]
 #[cfg_attr(test, automock)]
-pub trait SegmentStorage: {
+pub trait SegmentStorage {
     async fn load(&self, segment: &mut Segment) -> Result<(), IggyError>;
     async fn save(&self, segment: &Segment) -> Result<(), IggyError>;
     async fn delete(&self, segment: &Segment) -> Result<(), IggyError>;
@@ -177,8 +177,12 @@ impl SystemStorage {
             ))),
             stream: Arc::new(StreamStorageKind::File(FileStreamStorage)),
             topic: Arc::new(TopicStorageKind::File(FileTopicStorage)),
-            partition: Arc::new(PartitionStorageKind::File(FilePartitionStorage::new(persister.clone()))),
-            segment: Arc::new(SegmentStorageKind::File(FileSegmentStorage::new(persister.clone()))),
+            partition: Arc::new(PartitionStorageKind::File(FilePartitionStorage::new(
+                persister.clone(),
+            ))),
+            segment: Arc::new(SegmentStorageKind::File(FileSegmentStorage::new(
+                persister.clone(),
+            ))),
             persister,
         }
     }
@@ -279,60 +283,56 @@ pub(crate) mod tests {
 
     pub fn get_test_system_storage() -> SystemStorage {
         let persister = Arc::new(PersisterKind::Mock(MockPersister::new()));
-    
+
         let system_info_storage = create_mock_system_info_storage();
         let stream_storage = create_mock_stream_storage();
         let topic_storage = create_mock_topic_storage();
         let partition_storage = create_mock_partition_storage();
         let segment_storage = create_mock_segment_storage();
-    
+
         SystemStorage {
             info: Arc::new(SystemInfoStorageKind::Mock(system_info_storage)),
             stream: Arc::new(StreamStorageKind::Mock(stream_storage)),
             topic: Arc::new(TopicStorageKind::Mock(topic_storage)),
             partition: Arc::new(PartitionStorageKind::Mock(partition_storage)),
-            segment: Arc::new(SegmentStorageKind::Mock(segment_storage)),
+            segment: Arc::new(SegmentStorageKind::Mock(Box::new(segment_storage))),
             persister,
         }
     }
-    
+
     fn create_mock_system_info_storage() -> MockSystemInfoStorage {
         let mut mock = MockSystemInfoStorage::new();
         mock.expect_load()
             .returning(|| Box::pin(async { Ok(SystemInfo::default()) }));
-        mock.expect_save()
-            .returning(|_| Box::pin(async { Ok(()) }));
+        mock.expect_save().returning(|_| Box::pin(async { Ok(()) }));
         mock
     }
-    
+
     fn create_mock_stream_storage() -> MockStreamStorage {
         let mut mock = MockStreamStorage::new();
         mock.expect_load()
             .returning(|_, _| Box::pin(async { Ok(()) }));
-        mock.expect_save()
-            .returning(|_| Box::pin(async { Ok(()) }));
+        mock.expect_save().returning(|_| Box::pin(async { Ok(()) }));
         mock.expect_delete()
             .returning(|_| Box::pin(async { Ok(()) }));
         mock
     }
-    
+
     fn create_mock_topic_storage() -> MockTopicStorage {
         let mut mock = MockTopicStorage::new();
         mock.expect_load()
             .returning(|_, _| Box::pin(async { Ok(()) }));
-        mock.expect_save()
-            .returning(|_| Box::pin(async { Ok(()) }));
+        mock.expect_save().returning(|_| Box::pin(async { Ok(()) }));
         mock.expect_delete()
             .returning(|_| Box::pin(async { Ok(()) }));
         mock
     }
-    
+
     fn create_mock_partition_storage() -> MockPartitionStorage {
         let mut mock = MockPartitionStorage::new();
         mock.expect_load()
             .returning(|_, _| Box::pin(async { Ok(()) }));
-        mock.expect_save()
-            .returning(|_| Box::pin(async { Ok(()) }));
+        mock.expect_save().returning(|_| Box::pin(async { Ok(()) }));
         mock.expect_delete()
             .returning(|_| Box::pin(async { Ok(()) }));
         mock.expect_save_consumer_offset()
@@ -345,13 +345,11 @@ pub(crate) mod tests {
             .returning(|_| Box::pin(async { Ok(()) }));
         mock
     }
-    
+
     fn create_mock_segment_storage() -> MockSegmentStorage {
         let mut mock = MockSegmentStorage::new();
-        mock.expect_load()
-            .returning(|_| Box::pin(async { Ok(()) }));
-        mock.expect_save()
-            .returning(|_| Box::pin(async { Ok(()) }));
+        mock.expect_load().returning(|_| Box::pin(async { Ok(()) }));
+        mock.expect_save().returning(|_| Box::pin(async { Ok(()) }));
         mock.expect_delete()
             .returning(|_| Box::pin(async { Ok(()) }));
         mock.expect_load_message_batches()
@@ -373,5 +371,5 @@ pub(crate) mod tests {
         mock.expect_try_load_index_for_timestamp()
             .returning(|_, _| Box::pin(async { Ok(None) }));
         mock
-    }    
+    }
 }

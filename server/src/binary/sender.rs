@@ -1,10 +1,40 @@
 use crate::tcp::tcp_sender::TcpSender;
 use crate::tcp::tcp_tls_sender::TcpTlsSender;
 use crate::{quic::quic_sender::QuicSender, server_error::ServerError};
+use async_trait::async_trait;
 use iggy::error::IggyError;
 use quinn::{RecvStream, SendStream};
 use tokio::net::TcpStream;
 use tokio_native_tls::TlsStream;
+
+macro_rules! forward_async_methods {
+    (
+        $(
+            async fn $method_name:ident(
+                &mut self $(, $arg:ident : $arg_ty:ty )*
+            ) -> $ret:ty ;
+        )*
+    ) => {
+        $(
+            pub async fn $method_name(&mut self, $( $arg: $arg_ty ),* ) -> $ret {
+                match self {
+                    Self::Tcp(d) => d.$method_name($( $arg ),*).await,
+                    Self::TcpTls(s) => s.$method_name($( $arg ),*).await,
+                    Self::Quic(s) => s.$method_name($( $arg ),*).await,
+                }
+            }
+        )*
+    }
+}
+
+#[async_trait]
+pub trait Sender {
+    async fn read(&mut self, buffer: &mut [u8]) -> Result<usize, IggyError>;
+    async fn send_empty_ok_response(&mut self) -> Result<(), IggyError>;
+    async fn send_ok_response(&mut self, payload: &[u8]) -> Result<(), IggyError>;
+    async fn send_error_response(&mut self, error: IggyError) -> Result<(), IggyError>;
+    async fn shutdown(&mut self) -> Result<(), ServerError>;
+}
 
 pub enum SenderKind {
     Tcp(TcpSender),
@@ -28,43 +58,11 @@ impl SenderKind {
         })
     }
 
-    pub async fn read(&mut self, buffer: &mut [u8]) -> Result<usize, IggyError> {
-        match self {
-            Self::Tcp(s) => s.read(buffer).await,
-            Self::TcpTls(s) => s.read(buffer).await,
-            Self::Quic(s) => s.read(buffer).await,
-        }
-    }
-
-    pub async fn send_empty_ok_response(&mut self) -> Result<(), IggyError> {
-        match self {
-            Self::Tcp(s) => s.send_empty_ok_response().await,
-            Self::TcpTls(s) => s.send_empty_ok_response().await,
-            Self::Quic(s) => s.send_empty_ok_response().await,
-        }
-    }
-
-    pub async fn send_ok_response(&mut self, payload: &[u8]) -> Result<(), IggyError> {
-        match self {
-            Self::Tcp(s) => s.send_ok_response(payload).await,
-            Self::TcpTls(s) => s.send_ok_response(payload).await,
-            Self::Quic(s) => s.send_ok_response(payload).await,
-        }
-    }
-
-    pub async fn send_error_response(&mut self, error: IggyError) -> Result<(), IggyError> {
-        match self {
-            Self::Tcp(s) => s.send_error_response(error).await,
-            Self::TcpTls(s) => s.send_error_response(error).await,
-            Self::Quic(s) => s.send_error_response(error).await,
-        }
-    }
-
-    pub async fn shutdown(&mut self) -> Result<(), ServerError> {
-        match self {
-            Self::Tcp(s) => s.shutdown().await,
-            Self::TcpTls(s) => s.shutdown().await,
-            Self::Quic(_) => Ok(()),
-        }
+    forward_async_methods! {
+        async fn read(&mut self, buffer: &mut [u8]) -> Result<usize, IggyError>;
+        async fn send_empty_ok_response(&mut self) -> Result<(), IggyError>;
+        async fn send_ok_response(&mut self, payload: &[u8]) -> Result<(), IggyError>;
+        async fn send_error_response(&mut self, error: IggyError) -> Result<(), IggyError>;
+        async fn shutdown(&mut self) -> Result<(), ServerError>;
     }
 }

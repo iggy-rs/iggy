@@ -33,7 +33,7 @@ const NAME: &str = "Iggy";
 /// It requires a valid server address.
 #[derive(Debug)]
 pub struct TcpClient {
-    pub(crate) stream: Mutex<Option<ConnectionStream>>,
+    pub(crate) stream: Mutex<Option<ConnectionStreamKind>>,
     pub(crate) config: Arc<TcpClientConfig>,
     pub(crate) state: Mutex<ClientState>,
     client_address: Mutex<Option<SocketAddr>>,
@@ -41,13 +41,21 @@ pub struct TcpClient {
     connected_at: Mutex<Option<IggyTimestamp>>,
 }
 
+#[async_trait]
+pub(crate) trait ConnectionStream {
+    async fn read(&mut self, buf: &mut [u8]) -> Result<usize, IggyError>;
+    async fn write(&mut self, buf: &[u8]) -> Result<(), IggyError>;
+    async fn flush(&mut self) -> Result<(), IggyError>;
+    async fn shutdown(&mut self) -> Result<(), IggyError>;
+}
+
 #[derive(Debug)]
-pub(crate) enum ConnectionStream {
+pub(crate) enum ConnectionStreamKind {
     Tcp(TcpConnectionStream),
     TcpTls(TcpTlsConnectionStream),
 }
 
-impl ConnectionStream {
+impl ConnectionStreamKind {
     pub async fn read(&mut self, buf: &mut [u8]) -> Result<usize, IggyError> {
         match self {
             Self::Tcp(c) => c.read(buf).await,
@@ -110,8 +118,9 @@ impl TcpTlsConnectionStream {
     }
 }
 
-impl TcpConnectionStream {
-    pub async fn read(&mut self, buf: &mut [u8]) -> Result<usize, IggyError> {
+#[async_trait]
+impl ConnectionStream for TcpConnectionStream {
+    async fn read(&mut self, buf: &mut [u8]) -> Result<usize, IggyError> {
         self.reader.read_exact(buf).await.map_err(|error| {
             error!(
                 "Failed to read data by client: {} from the TCP connection: {error}",
@@ -121,7 +130,7 @@ impl TcpConnectionStream {
         })
     }
 
-    pub async fn write(&mut self, buf: &[u8]) -> Result<(), IggyError> {
+    async fn write(&mut self, buf: &[u8]) -> Result<(), IggyError> {
         self.writer.write_all(buf).await.map_err(|error| {
             error!(
                 "Failed to write data by client: {} to the TCP connection: {error}",
@@ -131,7 +140,7 @@ impl TcpConnectionStream {
         })
     }
 
-    pub async fn flush(&mut self) -> Result<(), IggyError> {
+    async fn flush(&mut self) -> Result<(), IggyError> {
         self.writer.flush().await.map_err(|error| {
             error!(
                 "Failed to flush data by client: {} to the TCP connection: {error}",
@@ -141,7 +150,7 @@ impl TcpConnectionStream {
         })
     }
 
-    pub async fn shutdown(&mut self) -> Result<(), IggyError> {
+    async fn shutdown(&mut self) -> Result<(), IggyError> {
         self.writer.shutdown().await.map_err(|error| {
             error!(
                 "Failed to shutdown the TCP connection by client: {} to the TCP connection: {error}",
@@ -152,8 +161,9 @@ impl TcpConnectionStream {
     }
 }
 
-impl TcpTlsConnectionStream {
-    pub async fn read(&mut self, buf: &mut [u8]) -> Result<usize, IggyError> {
+#[async_trait]
+impl ConnectionStream for TcpTlsConnectionStream {
+    async fn read(&mut self, buf: &mut [u8]) -> Result<usize, IggyError> {
         self.stream.read(buf).await.map_err(|error| {
             error!(
                 "Failed to read data by client: {} from the TCP TLS connection: {error}",
@@ -163,7 +173,7 @@ impl TcpTlsConnectionStream {
         })
     }
 
-    pub async fn write(&mut self, buf: &[u8]) -> Result<(), IggyError> {
+    async fn write(&mut self, buf: &[u8]) -> Result<(), IggyError> {
         self.stream.write_all(buf).await.map_err(|error| {
             error!(
                 "Failed to write data by client: {} to the TCP TLS connection: {error}",
@@ -173,7 +183,7 @@ impl TcpTlsConnectionStream {
         })
     }
 
-    pub async fn flush(&mut self) -> Result<(), IggyError> {
+    async fn flush(&mut self) -> Result<(), IggyError> {
         self.stream.flush().await.map_err(|error| {
             error!(
                 "Failed to flush data by client: {} to the TCP TLS connection: {error}",
@@ -183,7 +193,7 @@ impl TcpTlsConnectionStream {
         })
     }
 
-    pub async fn shutdown(&mut self) -> Result<(), IggyError> {
+    async fn shutdown(&mut self) -> Result<(), IggyError> {
         self.stream.shutdown().await.map_err(|error| {
             error!(
                 "Failed to shutdown the TCP TLS connection by client: {} to the TCP TLS connection: {error}",
@@ -337,7 +347,7 @@ impl TcpClient {
         &self,
         status: u32,
         length: u32,
-        stream: &mut ConnectionStream,
+        stream: &mut ConnectionStreamKind,
     ) -> Result<Bytes, IggyError> {
         if status != 0 {
             // TEMP: See https://github.com/iggy-rs/iggy/pull/604 for context.
@@ -413,7 +423,7 @@ impl TcpClient {
 
         let tls_enabled = self.config.tls_enabled;
         let mut retry_count = 0;
-        let connection_stream: ConnectionStream;
+        let connection_stream: ConnectionStreamKind;
         let remote_address;
         let client_address;
         loop {
@@ -474,7 +484,7 @@ impl TcpClient {
 
             if !tls_enabled {
                 connection_stream =
-                    ConnectionStream::Tcp(TcpConnectionStream::new(client_address, stream));
+                    ConnectionStreamKind::Tcp(TcpConnectionStream::new(client_address, stream));
                 break;
             }
 
@@ -518,7 +528,7 @@ impl TcpClient {
                 error!("Failed to establish a TLS connection to the server: {error}",);
                 IggyError::CannotEstablishConnection
             })?;
-            connection_stream = ConnectionStream::TcpTls(TcpTlsConnectionStream::new(
+            connection_stream = ConnectionStreamKind::TcpTls(TcpTlsConnectionStream::new(
                 client_address,
                 TlsStream::Client(stream),
             ));

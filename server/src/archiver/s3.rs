@@ -1,7 +1,8 @@
-use crate::archiver::COMPONENT;
+use crate::archiver::{Archiver, COMPONENT};
 use crate::configs::server::S3ArchiverConfig;
 use crate::server_error::ArchiverError;
 use crate::streaming::utils::file;
+use async_trait::async_trait;
 use error_set::ErrContext;
 use s3::creds::Credentials;
 use s3::{Bucket, Region};
@@ -72,8 +73,11 @@ impl S3Archiver {
         debug!("File: {path} copied to temporary S3 upload path: {destination_path}");
         Ok(destination_path)
     }
+}
 
-    pub async fn init(&self) -> Result<(), ArchiverError> {
+#[async_trait]
+impl Archiver for S3Archiver {
+    async fn init(&self) -> Result<(), ArchiverError> {
         let response = self.bucket.list("/".to_string(), None).await;
         if let Err(error) = response {
             error!("Cannot initialize S3 archiver: {error}");
@@ -95,7 +99,7 @@ impl S3Archiver {
         Ok(())
     }
 
-    pub async fn is_archived(
+    async fn is_archived(
         &self,
         file: &str,
         base_directory: Option<String>,
@@ -120,7 +124,7 @@ impl S3Archiver {
         Ok(false)
     }
 
-    pub async fn archive(
+    async fn archive(
         &self,
         files: &[&str],
         base_directory: Option<String>,

@@ -3,6 +3,7 @@ pub mod s3;
 
 use crate::configs::server::{DiskArchiverConfig, S3ArchiverConfig};
 use crate::server_error::ArchiverError;
+use async_trait::async_trait;
 use derive_more::Display;
 use serde::{Deserialize, Serialize};
 use std::fmt::Debug;
@@ -15,7 +16,7 @@ pub const COMPONENT: &str = "ARCHIVER";
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Default, Display, Copy, Clone)]
 #[serde(rename_all = "lowercase")]
-pub enum ArchiverKind {
+pub enum ArchiverKindType {
     #[default]
     #[display("disk")]
     Disk,
@@ -23,43 +24,39 @@ pub enum ArchiverKind {
     S3,
 }
 
-impl FromStr for ArchiverKind {
+impl FromStr for ArchiverKindType {
     type Err = String;
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s.to_lowercase().as_str() {
-            "disk" => Ok(ArchiverKind::Disk),
-            "s3" => Ok(ArchiverKind::S3),
+            "disk" => Ok(ArchiverKindType::Disk),
+            "s3" => Ok(ArchiverKindType::S3),
             _ => Err(format!("Unknown archiver kind: {}", s)),
         }
     }
 }
 
-macro_rules! forward_async_methods {
-    (
-        $(
-            fn $method_name:ident(
-                &self $(, $arg:ident : $arg_ty:ty )*
-            ) -> $ret:ty ;
-        )*
-    ) => {
-        $(
-            pub async fn $method_name(&self, $( $arg: $arg_ty ),* ) -> $ret {
-                match self {
-                    Self::Disk(d) => d.$method_name($( $arg ),*).await,
-                    Self::S3(s) => s.$method_name($( $arg ),*).await,
-                }
-            }
-        )*
-    }
+#[async_trait]
+pub trait Archiver {
+    async fn init(&self) -> Result<(), ArchiverError>;
+    async fn is_archived(
+        &self,
+        file: &str,
+        base_directory: Option<String>,
+    ) -> Result<bool, ArchiverError>;
+    async fn archive(
+        &self,
+        files: &[&str],
+        base_directory: Option<String>,
+    ) -> Result<(), ArchiverError>;
 }
 
 #[derive(Debug)]
-pub enum Archiver {
+pub enum ArchiverKind {
     Disk(DiskArchiver),
     S3(S3Archiver),
 }
 
-impl Archiver {
+impl ArchiverKind {
     pub fn get_disk_arhiver(config: DiskArchiverConfig) -> Self {
         Self::Disk(DiskArchiver::new(config))
     }
@@ -76,8 +73,25 @@ impl Archiver {
         }
     }
 
-    forward_async_methods! {
-        fn is_archived(&self, file: &str, base_directory: Option<String>) -> Result<bool, ArchiverError>;
-        fn archive(&self, files: &[&str], base_directory: Option<String>) -> Result<(), ArchiverError>;
+    pub async fn is_archived(
+        &self,
+        file: &str,
+        base_directory: Option<String>,
+    ) -> Result<bool, ArchiverError> {
+        match self {
+            Self::Disk(d) => d.is_archived(file, base_directory).await,
+            Self::S3(d) => d.is_archived(file, base_directory).await,
+        }
+    }
+
+    pub async fn archive(
+        &self,
+        files: &[&str],
+        base_directory: Option<String>,
+    ) -> Result<(), ArchiverError> {
+        match self {
+            Self::Disk(d) => d.archive(files, base_directory).await,
+            Self::S3(d) => d.archive(files, base_directory).await,
+        }
     }
 }

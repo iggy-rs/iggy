@@ -5,7 +5,7 @@ use super::server::{
     StateMaintenanceConfig, TelemetryConfig,
 };
 use super::system::CompressionConfig;
-use crate::archiver::ArchiverKind;
+use crate::archiver::ArchiverKindType;
 use crate::configs::server::{PersonalAccessTokenConfig, ServerConfig};
 use crate::configs::system::{CacheConfig, SegmentConfig};
 use crate::configs::COMPONENT;
@@ -189,7 +189,7 @@ impl Validatable<ConfigError> for ArchiverConfig {
         }
 
         match self.kind {
-            ArchiverKind::Disk => {
+            ArchiverKindType::Disk => {
                 if self.disk.is_none() {
                     return Err(ConfigError::InvalidConfiguration);
                 }
@@ -200,7 +200,7 @@ impl Validatable<ConfigError> for ArchiverConfig {
                 }
                 Ok(())
             }
-            ArchiverKind::S3 => {
+            ArchiverKindType::S3 => {
                 if self.s3.is_none() {
                     return Err(ConfigError::InvalidConfiguration);
                 }

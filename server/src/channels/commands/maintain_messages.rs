@@ -1,4 +1,4 @@
-use crate::archiver::Archiver;
+use crate::archiver::ArchiverKind;
 use crate::channels::server_command::ServerCommand;
 use crate::configs::server::MessagesMaintenanceConfig;
 use crate::map_toggle_str;
@@ -197,7 +197,7 @@ impl ServerCommand<MaintainMessagesCommand> for MaintainMessagesExecutor {
 
 async fn handle_expired_segments(
     topic: &Topic,
-    archiver: Option<Arc<Archiver>>,
+    archiver: Option<Arc<ArchiverKind>>,
     archive: bool,
     clean: bool,
 ) -> Result<HandledSegments, IggyError> {
@@ -269,7 +269,7 @@ async fn get_expired_segments(topic: &Topic, now: IggyTimestamp) -> Vec<Segments
 
 async fn handle_oldest_segments(
     topic: &Topic,
-    archiver: Option<Arc<Archiver>>,
+    archiver: Option<Arc<ArchiverKind>>,
     delete_oldest_segments: bool,
 ) -> Result<HandledSegments, IggyError> {
     if let Some(archiver) = archiver {
@@ -420,7 +420,7 @@ impl HandledSegments {
 async fn archive_segments(
     topic: &Topic,
     segments_to_archive: &[SegmentsToHandle],
-    archiver: Arc<Archiver>,
+    archiver: Arc<ArchiverKind>,
 ) -> Result<u64, IggyError> {
     if segments_to_archive.is_empty() {
         return Ok(0);

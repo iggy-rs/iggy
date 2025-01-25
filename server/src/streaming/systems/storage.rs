@@ -23,8 +23,6 @@ impl FileSystemInfoStorage {
         Self { path, persister }
     }
 }
-unsafe impl Send for FileSystemInfoStorage {}
-unsafe impl Sync for FileSystemInfoStorage {}
 
 #[async_trait]
 impl SystemInfoStorage for FileSystemInfoStorage {

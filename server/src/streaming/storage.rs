@@ -18,31 +18,92 @@ use iggy::confirmation::Confirmation;
 use iggy::consumer::ConsumerKind;
 use iggy::error::IggyError;
 use iggy::utils::byte_size::IggyByteSize;
-use std::fmt::{Debug, Formatter};
+use std::fmt::Debug;
 use std::sync::Arc;
+#[cfg(test)]
+use mockall::automock;
+
+macro_rules! forward_async_methods {
+    (
+        $(
+            async fn $method_name:ident(
+                &self $(, $arg:ident : $arg_ty:ty )*
+            ) -> $ret:ty ;
+        )*
+    ) => {
+        $(
+            pub async fn $method_name(&self, $( $arg: $arg_ty ),* ) -> $ret {
+                match self {
+                    Self::File(d) => d.$method_name($( $arg ),*).await,
+                    #[cfg(test)]
+                    Self::Mock(s) => s.$method_name($( $arg ),*).await,
+                }
+            }
+        )*
+    }
+}
+
+#[derive(Debug)]
+pub enum SystemInfoStorageKind {
+    File(FileSystemInfoStorage),
+    #[cfg(test)]
+    Mock(MockSystemInfoStorage),
+}
+
+#[derive(Debug)]
+pub enum StreamStorageKind {
+    File(FileStreamStorage),
+    #[cfg(test)]
+    Mock(MockStreamStorage),
+}
+
+#[derive(Debug)]
+pub enum TopicStorageKind {
+    File(FileTopicStorage),
+    #[cfg(test)]
+    Mock(MockTopicStorage),
+}
+
+#[derive(Debug)]
+pub enum PartitionStorageKind {
+    File(FilePartitionStorage),
+    #[cfg(test)]
+    Mock(MockPartitionStorage),
+}
+
+#[derive(Debug)]
+pub enum SegmentStorageKind {
+    File(FileSegmentStorage),
+    #[cfg(test)]
+    Mock(MockSegmentStorage),
+}
 
 #[async_trait]
-pub trait SystemInfoStorage: Sync + Send {
+#[cfg_attr(test, automock)]
+pub trait SystemInfoStorage {
     async fn load(&self) -> Result<SystemInfo, IggyError>;
     async fn save(&self, system_info: &SystemInfo) -> Result<(), IggyError>;
 }
 
 #[async_trait]
-pub trait StreamStorage: Send + Sync {
+#[cfg_attr(test, automock)]
+pub trait StreamStorage {
     async fn load(&self, stream: &mut Stream, state: StreamState) -> Result<(), IggyError>;
     async fn save(&self, stream: &Stream) -> Result<(), IggyError>;
     async fn delete(&self, stream: &Stream) -> Result<(), IggyError>;
 }
 
 #[async_trait]
-pub trait TopicStorage: Send + Sync {
+#[cfg_attr(test, automock)]
+pub trait TopicStorage {
     async fn load(&self, topic: &mut Topic, state: TopicState) -> Result<(), IggyError>;
     async fn save(&self, topic: &Topic) -> Result<(), IggyError>;
     async fn delete(&self, topic: &Topic) -> Result<(), IggyError>;
 }
 
 #[async_trait]
-pub trait PartitionStorage: Send + Sync {
+#[cfg_attr(test, automock)]
+pub trait PartitionStorage {
     async fn load(&self, partition: &mut Partition, state: PartitionState)
         -> Result<(), IggyError>;
     async fn save(&self, partition: &Partition) -> Result<(), IggyError>;
@@ -58,7 +119,8 @@ pub trait PartitionStorage: Send + Sync {
 }
 
 #[async_trait]
-pub trait SegmentStorage: Send + Sync {
+#[cfg_attr(test, automock)]
+pub trait SegmentStorage: {
     async fn load(&self, segment: &mut Segment) -> Result<(), IggyError>;
     async fn save(&self, segment: &Segment) -> Result<(), IggyError>;
     async fn delete(&self, segment: &Segment) -> Result<(), IggyError>;
@@ -98,248 +160,218 @@ pub trait SegmentStorage: Send + Sync {
 
 #[derive(Debug)]
 pub struct SystemStorage {
-    pub info: Arc<dyn SystemInfoStorage>,
-    pub stream: Arc<dyn StreamStorage>,
-    pub topic: Arc<dyn TopicStorage>,
-    pub partition: Arc<dyn PartitionStorage>,
-    pub segment: Arc<dyn SegmentStorage>,
+    pub info: Arc<SystemInfoStorageKind>,
+    pub stream: Arc<StreamStorageKind>,
+    pub topic: Arc<TopicStorageKind>,
+    pub partition: Arc<PartitionStorageKind>,
+    pub segment: Arc<SegmentStorageKind>,
     pub persister: Arc<PersisterKind>,
 }
 
 impl SystemStorage {
     pub fn new(config: Arc<SystemConfig>, persister: Arc<PersisterKind>) -> Self {
         Self {
-            info: Arc::new(FileSystemInfoStorage::new(
+            info: Arc::new(SystemInfoStorageKind::File(FileSystemInfoStorage::new(
                 config.get_state_info_path(),
                 persister.clone(),
-            )),
-            stream: Arc::new(FileStreamStorage),
-            topic: Arc::new(FileTopicStorage),
-            partition: Arc::new(FilePartitionStorage::new(persister.clone())),
-            segment: Arc::new(FileSegmentStorage::new(persister.clone())),
+            ))),
+            stream: Arc::new(StreamStorageKind::File(FileStreamStorage)),
+            topic: Arc::new(TopicStorageKind::File(FileTopicStorage)),
+            partition: Arc::new(PartitionStorageKind::File(FilePartitionStorage::new(persister.clone()))),
+            segment: Arc::new(SegmentStorageKind::File(FileSegmentStorage::new(persister.clone()))),
             persister,
         }
     }
 }
 
-impl Debug for dyn SystemInfoStorage {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "SystemInfoStorage")
+impl SystemInfoStorageKind {
+    forward_async_methods! {
+        async fn load(&self) -> Result<SystemInfo, IggyError>;
+        async fn save(&self, system_info: &SystemInfo) -> Result<(), IggyError>;
     }
 }
 
-impl Debug for dyn StreamStorage {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "StreamStorage")
+impl StreamStorageKind {
+    forward_async_methods! {
+        async fn load(&self, stream: &mut Stream, state: StreamState) -> Result<(), IggyError>;
+        async fn save(&self, stream: &Stream) -> Result<(), IggyError>;
+        async fn delete(&self, stream: &Stream) -> Result<(), IggyError>;
     }
 }
 
-impl Debug for dyn TopicStorage {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "TopicStorage")
+impl TopicStorageKind {
+    forward_async_methods! {
+        async fn load(&self, topic: &mut Topic, state: TopicState) -> Result<(), IggyError>;
+        async fn save(&self, topic: &Topic) -> Result<(), IggyError>;
+        async fn delete(&self, topic: &Topic) -> Result<(), IggyError>;
     }
 }
 
-impl Debug for dyn PartitionStorage {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "PartitionStorage")
+impl PartitionStorageKind {
+    forward_async_methods! {
+        async fn load(&self, partition: &mut Partition, state: PartitionState)
+            -> Result<(), IggyError>;
+        async fn save(&self, partition: &Partition) -> Result<(), IggyError>;
+        async fn delete(&self, partition: &Partition) -> Result<(), IggyError>;
+        async fn save_consumer_offset(&self, offset: &ConsumerOffset) -> Result<(), IggyError>;
+        async fn load_consumer_offsets(
+            &self,
+            kind: ConsumerKind,
+            path: &str
+        ) -> Result<Vec<ConsumerOffset>, IggyError>;
+        async fn delete_consumer_offsets(&self, path: &str) -> Result<(), IggyError>;
+        async fn delete_consumer_offset(&self, path: &str) -> Result<(), IggyError>;
     }
 }
 
-impl Debug for dyn SegmentStorage {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "SegmentStorage")
+impl SegmentStorageKind {
+    forward_async_methods! {
+        async fn load(&self, segment: &mut Segment) -> Result<(), IggyError>;
+        async fn save(&self, segment: &Segment) -> Result<(), IggyError>;
+        async fn delete(&self, segment: &Segment) -> Result<(), IggyError>;
+        async fn load_message_batches(
+            &self,
+            segment: &Segment,
+            index_range: &IndexRange
+        ) -> Result<Vec<RetainedMessageBatch>, IggyError>;
+        async fn load_newest_batches_by_size(
+            &self,
+            segment: &Segment,
+            size_bytes: u64
+        ) -> Result<Vec<RetainedMessageBatch>, IggyError>;
+        async fn save_batches(
+            &self,
+            segment: &Segment,
+            batch: RetainedMessageBatch,
+            confirmation: Confirmation
+        ) -> Result<IggyByteSize, IggyError>;
+        async fn load_message_ids(&self, segment: &Segment) -> Result<Vec<u128>, IggyError>;
+        async fn load_checksums(&self, segment: &Segment) -> Result<(), IggyError>;
+        async fn load_all_indexes(&self, segment: &Segment) -> Result<Vec<Index>, IggyError>;
+        async fn load_index_range(
+            &self,
+            segment: &Segment,
+            index_start_offset: u64,
+            index_end_offset: u64
+        ) -> Result<Option<IndexRange>, IggyError>;
+        async fn save_index(&self, index_path: &str, index: Index) -> Result<(), IggyError>;
+        async fn try_load_index_for_timestamp(
+            &self,
+            segment: &Segment,
+            timestamp: u64
+        ) -> Result<Option<Index>, IggyError>;
+    }
+
+    pub fn persister(&self) -> Arc<PersisterKind> {
+        match self {
+            Self::File(s) => s.persister(),
+            #[cfg(test)]
+            Self::Mock(s) => s.persister(),
+        }
     }
 }
 
 #[cfg(test)]
 pub(crate) mod tests {
-    use crate::streaming::partitions::partition::Partition;
     use crate::streaming::persistence::persister::MockPersister;
-    use crate::streaming::segments::index::{Index, IndexRange};
-    use crate::streaming::segments::segment::Segment;
     use crate::streaming::storage::*;
-    use crate::streaming::streams::stream::Stream;
-    use crate::streaming::topics::topic::Topic;
-    use async_trait::async_trait;
     use std::sync::Arc;
-
-    struct TestSystemInfoStorage {}
-    struct TestStreamStorage {}
-    struct TestTopicStorage {}
-    struct TestPartitionStorage {}
-    struct TestSegmentStorage {
-        persister: Arc<PersisterKind>,
-    }
-
-    #[async_trait]
-    impl SystemInfoStorage for TestSystemInfoStorage {
-        async fn load(&self) -> Result<SystemInfo, IggyError> {
-            Ok(SystemInfo::default())
-        }
-
-        async fn save(&self, _system_info: &SystemInfo) -> Result<(), IggyError> {
-            Ok(())
-        }
-    }
-
-    #[async_trait]
-    impl StreamStorage for TestStreamStorage {
-        async fn load(&self, _stream: &mut Stream, _state: StreamState) -> Result<(), IggyError> {
-            Ok(())
-        }
-
-        async fn save(&self, _stream: &Stream) -> Result<(), IggyError> {
-            Ok(())
-        }
-
-        async fn delete(&self, _stream: &Stream) -> Result<(), IggyError> {
-            Ok(())
-        }
-    }
-
-    #[async_trait]
-    impl TopicStorage for TestTopicStorage {
-        async fn load(&self, _topic: &mut Topic, _state: TopicState) -> Result<(), IggyError> {
-            Ok(())
-        }
-
-        async fn save(&self, _topic: &Topic) -> Result<(), IggyError> {
-            Ok(())
-        }
-
-        async fn delete(&self, _topic: &Topic) -> Result<(), IggyError> {
-            Ok(())
-        }
-    }
-
-    #[async_trait]
-    impl PartitionStorage for TestPartitionStorage {
-        async fn load(
-            &self,
-            _partition: &mut Partition,
-            _state: PartitionState,
-        ) -> Result<(), IggyError> {
-            Ok(())
-        }
-
-        async fn save(&self, _partition: &Partition) -> Result<(), IggyError> {
-            Ok(())
-        }
-
-        async fn delete(&self, _partition: &Partition) -> Result<(), IggyError> {
-            Ok(())
-        }
-
-        async fn save_consumer_offset(&self, _offset: &ConsumerOffset) -> Result<(), IggyError> {
-            Ok(())
-        }
-
-        async fn load_consumer_offsets(
-            &self,
-            _kind: ConsumerKind,
-            _path: &str,
-        ) -> Result<Vec<ConsumerOffset>, IggyError> {
-            Ok(vec![])
-        }
-
-        async fn delete_consumer_offsets(&self, _path: &str) -> Result<(), IggyError> {
-            Ok(())
-        }
-
-        async fn delete_consumer_offset(&self, _path: &str) -> Result<(), IggyError> {
-            Ok(())
-        }
-    }
-
-    #[async_trait]
-    impl SegmentStorage for TestSegmentStorage {
-        async fn load(&self, _segment: &mut Segment) -> Result<(), IggyError> {
-            Ok(())
-        }
-
-        async fn save(&self, _segment: &Segment) -> Result<(), IggyError> {
-            Ok(())
-        }
-
-        async fn delete(&self, _segment: &Segment) -> Result<(), IggyError> {
-            Ok(())
-        }
-
-        async fn load_message_batches(
-            &self,
-            _segment: &Segment,
-            _index_range: &IndexRange,
-        ) -> Result<Vec<RetainedMessageBatch>, IggyError> {
-            Ok(vec![])
-        }
-
-        async fn load_newest_batches_by_size(
-            &self,
-            _segment: &Segment,
-            _size: u64,
-        ) -> Result<Vec<RetainedMessageBatch>, IggyError> {
-            Ok(vec![])
-        }
-
-        async fn save_batches(
-            &self,
-            _segment: &Segment,
-            _batch: RetainedMessageBatch,
-            _confirmation: Confirmation,
-        ) -> Result<IggyByteSize, IggyError> {
-            Ok(IggyByteSize::default())
-        }
-
-        async fn load_message_ids(&self, _segment: &Segment) -> Result<Vec<u128>, IggyError> {
-            Ok(vec![])
-        }
-
-        async fn load_checksums(&self, _segment: &Segment) -> Result<(), IggyError> {
-            Ok(())
-        }
-
-        async fn load_all_indexes(&self, _segment: &Segment) -> Result<Vec<Index>, IggyError> {
-            Ok(vec![])
-        }
-
-        async fn load_index_range(
-            &self,
-            _segment: &Segment,
-            _index_start_offset: u64,
-            _index_end_offset: u64,
-        ) -> Result<Option<IndexRange>, IggyError> {
-            Ok(None)
-        }
-
-        async fn save_index(&self, _index_path: &str, _index: Index) -> Result<(), IggyError> {
-            Ok(())
-        }
-
-        async fn try_load_index_for_timestamp(
-            &self,
-            _segment: &Segment,
-            _timestamp: u64,
-        ) -> Result<Option<Index>, IggyError> {
-            Ok(None)
-        }
-
-        fn persister(&self) -> Arc<PersisterKind> {
-            self.persister.clone()
-        }
-    }
 
     pub fn get_test_system_storage() -> SystemStorage {
         let persister = Arc::new(PersisterKind::Mock(MockPersister::new()));
+    
+        let system_info_storage = create_mock_system_info_storage();
+        let stream_storage = create_mock_stream_storage();
+        let topic_storage = create_mock_topic_storage();
+        let partition_storage = create_mock_partition_storage();
+        let segment_storage = create_mock_segment_storage();
+    
         SystemStorage {
-            info: Arc::new(TestSystemInfoStorage {}),
-            stream: Arc::new(TestStreamStorage {}),
-            topic: Arc::new(TestTopicStorage {}),
-            partition: Arc::new(TestPartitionStorage {}),
-            segment: Arc::new(TestSegmentStorage {
-                persister: persister.clone(),
-            }),
+            info: Arc::new(SystemInfoStorageKind::Mock(system_info_storage)),
+            stream: Arc::new(StreamStorageKind::Mock(stream_storage)),
+            topic: Arc::new(TopicStorageKind::Mock(topic_storage)),
+            partition: Arc::new(PartitionStorageKind::Mock(partition_storage)),
+            segment: Arc::new(SegmentStorageKind::Mock(segment_storage)),
             persister,
         }
     }
+    
+    fn create_mock_system_info_storage() -> MockSystemInfoStorage {
+        let mut mock = MockSystemInfoStorage::new();
+        mock.expect_load()
+            .returning(|| Box::pin(async { Ok(SystemInfo::default()) }));
+        mock.expect_save()
+            .returning(|_| Box::pin(async { Ok(()) }));
+        mock
+    }
+    
+    fn create_mock_stream_storage() -> MockStreamStorage {
+        let mut mock = MockStreamStorage::new();
+        mock.expect_load()
+            .returning(|_, _| Box::pin(async { Ok(()) }));
+        mock.expect_save()
+            .returning(|_| Box::pin(async { Ok(()) }));
+        mock.expect_delete()
+            .returning(|_| Box::pin(async { Ok(()) }));
+        mock
+    }
+    
+    fn create_mock_topic_storage() -> MockTopicStorage {
+        let mut mock = MockTopicStorage::new();
+        mock.expect_load()
+            .returning(|_, _| Box::pin(async { Ok(()) }));
+        mock.expect_save()
+            .returning(|_| Box::pin(async { Ok(()) }));
+        mock.expect_delete()
+            .returning(|_| Box::pin(async { Ok(()) }));
+        mock
+    }
+    
+    fn create_mock_partition_storage() -> MockPartitionStorage {
+        let mut mock = MockPartitionStorage::new();
+        mock.expect_load()
+            .returning(|_, _| Box::pin(async { Ok(()) }));
+        mock.expect_save()
+            .returning(|_| Box::pin(async { Ok(()) }));
+        mock.expect_delete()
+            .returning(|_| Box::pin(async { Ok(()) }));
+        mock.expect_save_consumer_offset()
+            .returning(|_| Box::pin(async { Ok(()) }));
+        mock.expect_load_consumer_offsets()
+            .returning(|_, _| Box::pin(async { Ok(vec![]) }));
+        mock.expect_delete_consumer_offsets()
+            .returning(|_| Box::pin(async { Ok(()) }));
+        mock.expect_delete_consumer_offset()
+            .returning(|_| Box::pin(async { Ok(()) }));
+        mock
+    }
+    
+    fn create_mock_segment_storage() -> MockSegmentStorage {
+        let mut mock = MockSegmentStorage::new();
+        mock.expect_load()
+            .returning(|_| Box::pin(async { Ok(()) }));
+        mock.expect_save()
+            .returning(|_| Box::pin(async { Ok(()) }));
+        mock.expect_delete()
+            .returning(|_| Box::pin(async { Ok(()) }));
+        mock.expect_load_message_batches()
+            .returning(|_, _| Box::pin(async { Ok(vec![]) }));
+        mock.expect_load_newest_batches_by_size()
+            .returning(|_, _| Box::pin(async { Ok(vec![]) }));
+        mock.expect_save_batches()
+            .returning(|_, _, _| Box::pin(async { Ok(IggyByteSize::default()) }));
+        mock.expect_load_message_ids()
+            .returning(|_| Box::pin(async { Ok(vec![]) }));
+        mock.expect_load_checksums()
+            .returning(|_| Box::pin(async { Ok(()) }));
+        mock.expect_load_all_indexes()
+            .returning(|_| Box::pin(async { Ok(vec![]) }));
+        mock.expect_load_index_range()
+            .returning(|_, _, _| Box::pin(async { Ok(None) }));
+        mock.expect_save_index()
+            .returning(|_, _| Box::pin(async { Ok(()) }));
+        mock.expect_try_load_index_for_timestamp()
+            .returning(|_, _| Box::pin(async { Ok(None) }));
+        mock
+    }    
 }

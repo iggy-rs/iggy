@@ -34,6 +34,25 @@ impl FromStr for ArchiverKind {
     }
 }
 
+macro_rules! forward_async_methods {
+    (
+        $(
+            fn $method_name:ident(
+                &self $(, $arg:ident : $arg_ty:ty )*
+            ) -> $ret:ty ;
+        )*
+    ) => {
+        $(
+            pub async fn $method_name(&self, $( $arg: $arg_ty ),* ) -> $ret {
+                match self {
+                    Self::Disk(d) => d.$method_name($( $arg ),*).await,
+                    Self::S3(s) => s.$method_name($( $arg ),*).await,
+                }
+            }
+        )*
+    }
+}
+
 #[derive(Debug)]
 pub enum Archiver {
     Disk(DiskArchiver),
@@ -57,25 +76,8 @@ impl Archiver {
         }
     }
 
-    pub async fn is_archived(
-        &self,
-        file: &str,
-        base_directory: Option<String>,
-    ) -> Result<bool, ArchiverError> {
-        match self {
-            Self::Disk(a) => a.is_archived(file, base_directory).await,
-            Self::S3(a) => a.is_archived(file, base_directory).await,
-        }
-    }
-
-    pub async fn archive(
-        &self,
-        files: &[&str],
-        base_directory: Option<String>,
-    ) -> Result<(), ArchiverError> {
-        match self {
-            Self::Disk(a) => a.archive(files, base_directory).await,
-            Self::S3(a) => a.archive(files, base_directory).await,
-        }
+    forward_async_methods! {
+        fn is_archived(&self, file: &str, base_directory: Option<String>) -> Result<bool, ArchiverError>;
+        fn archive(&self, files: &[&str], base_directory: Option<String>) -> Result<(), ArchiverError>;
     }
 }

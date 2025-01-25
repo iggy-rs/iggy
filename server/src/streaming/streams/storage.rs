@@ -20,9 +20,6 @@ use tracing::{error, info, warn};
 #[derive(Debug)]
 pub struct FileStreamStorage;
 
-unsafe impl Send for FileStreamStorage {}
-unsafe impl Sync for FileStreamStorage {}
-
 #[derive(Debug, Serialize, Deserialize)]
 struct StreamData {
     name: String,

@@ -50,6 +50,43 @@ function get_git_iggy_server_tag_or_sha1() {
     fi
 }
 
+# Function to get the commit date (last modified date) for HEAD
+function get_git_commit_date() {
+    local dir="$1"
+
+    if [ -d "$dir" ]; then
+        pushd "$dir" > /dev/null || {
+            echo "Error: Failed to enter directory '$dir'." >&2
+            exit 1
+        }
+
+        if git rev-parse --git-dir > /dev/null 2>&1; then
+            # Get the committer date (last modified) in ISO 8601 format
+            local commit_date
+            commit_date=$(git show -s --format=%cI HEAD 2>/dev/null || echo "")
+
+            popd > /dev/null || {
+                echo "Error: Failed to return from directory '$dir'." >&2
+                exit 1
+            }
+
+            if [ -n "$commit_date" ]; then
+                echo "$commit_date"
+            else
+                echo "Error: Could not get commit date for HEAD." >&2
+                return 1
+            fi
+        else
+            echo "Error: Directory '$dir' is not a git repository." >&2
+            popd > /dev/null || exit 1
+            return 1
+        fi
+    else
+        echo "Error: Directory '$dir' does not exist." >&2
+        return 1
+    fi
+}
+
 # Function to construct a bench command (send or poll)
 function construct_bench_command() {
     local bench_command=$1
@@ -59,33 +96,46 @@ function construct_bench_command() {
     local messages_per_batch=$5
     local message_batches=$6
     local protocol=$7
+    local remark=${8:-""}
 
     # Validate the type
-    if [[ "$type" != "send" && "$type" != "poll" ]]; then
-        echo "Error: Invalid type '$type'. Must be 'send' or 'poll'." >&2
+    if [[ "$type" != "send" && "$type" != "poll" && "$type" != "send-and-poll" && "$type" != "consumer-group-poll" ]]; then
+        echo "Error: Invalid type '$type'. Must be 'send', 'poll', 'send-and-poll', or 'consumer-group-poll'." >&2
         return 1
     fi
 
     # Set variables based on type
+    local producer_arg=""
+    local consumer_arg=""
     if [[ "$type" == "send" ]]; then
-        local role="producers"
-    else
-        local role="consumers"
+        producer_arg="--producers ${count}"
+    elif [[ "$type" == "poll" || "$type" == "consumer-group-poll" ]]; then
+        consumer_arg="--consumers ${count}"
+    elif [[ "$type" == "send-and-poll" ]]; then
+        producer_arg="--producers ${count}"
+        consumer_arg="--consumers ${count}"
     fi
 
     local streams=${count}
 
-    local superdir
-    superdir="performance_results/$(get_git_iggy_server_tag_or_sha1 .)" || { echo "Failed to get git commit or tag."; exit 1; }
-    rm -rf "$superdir" || true
-    mkdir -p "$superdir" || { echo "Failed to create directory '$superdir'."; exit 1; }
-    local output_directory="${superdir}/${type}_${count}${type:0:1}_${message_size}_${messages_per_batch}_${message_batches}_${protocol}"
+    local commit_hash
+    commit_hash=$(get_git_iggy_server_tag_or_sha1 .) || { echo "Failed to get git commit or tag."; exit 1; }
+    local commit_date
+    commit_date=$(get_git_commit_date .) || { echo "Failed to get git commit date."; exit 1; }
+    local hostname
+    hostname=$(hostname)
 
     echo "$bench_command \
     $COMMON_ARGS \
-    --output-directory $output_directory \
+    --output-dir performance_results \
+    --identifier ${hostname} \
+    --remark ${remark} \
+    --extra-info \"\" \
+    --gitref \"${commit_hash}\" \
+    --gitref-date \"${commit_date}\" \
     ${type} \
-    --${role} ${count} \
+    ${producer_arg} \
+    ${consumer_arg} \
     --streams ${streams} \
     --message-size ${message_size} \
     --messages-per-batch ${messages_per_batch} \

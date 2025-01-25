@@ -1,7 +1,5 @@
-use crate::args::simple::BenchmarkKind;
-use crate::benchmark_result::BenchmarkResult;
-use crate::statistics::actor_statistics::BenchmarkActorStatistics;
-use crate::statistics::record::BenchmarkRecord;
+use crate::analytics::metrics::individual::from_records;
+use crate::analytics::record::BenchmarkRecord;
 use iggy::client::{ConsumerGroupClient, MessageClient};
 use iggy::clients::client::IggyClient;
 use iggy::consumer::Consumer as IggyConsumer;
@@ -10,6 +8,9 @@ use iggy::messages::poll_messages::PollingStrategy;
 use iggy::utils::byte_size::IggyByteSize;
 use iggy::utils::duration::IggyDuration;
 use iggy::utils::sizeable::Sizeable;
+use iggy_benchmark_report::actor_kind::ActorKind;
+use iggy_benchmark_report::benchmark_kind::BenchmarkKind;
+use iggy_benchmark_report::individual_metrics::BenchmarkIndividualMetrics;
 use integration::test_server::{login_root, ClientFactory};
 use std::sync::Arc;
 use std::time::Duration;
@@ -24,7 +25,8 @@ pub struct Consumer {
     messages_per_batch: u32,
     message_batches: u32,
     warmup_time: IggyDuration,
-    output_directory: Option<String>,
+    sampling_time: IggyDuration,
+    moving_average_window: u32,
 }
 
 impl Consumer {
@@ -37,7 +39,8 @@ impl Consumer {
         messages_per_batch: u32,
         message_batches: u32,
         warmup_time: IggyDuration,
-        output_directory: Option<String>,
+        sampling_time: IggyDuration,
+        moving_average_window: u32,
     ) -> Self {
         Self {
             client_factory,
@@ -47,11 +50,12 @@ impl Consumer {
             messages_per_batch,
             message_batches,
             warmup_time,
-            output_directory,
+            sampling_time,
+            moving_average_window,
         }
     }
 
-    pub async fn run(&self) -> Result<BenchmarkResult, IggyError> {
+    pub async fn run(&self) -> Result<BenchmarkIndividualMetrics, IggyError> {
         let topic_id: u32 = 1;
         let default_partition_id: u32 = 1;
         let message_batches = self.message_batches as u64;
@@ -213,58 +217,35 @@ impl Consumer {
             total_bytes += IggyByteSize::from(batch_size_total_bytes);
             current_iteration += 1;
             let message_batches = current_iteration;
-            records.push(BenchmarkRecord::new(
-                start_timestamp.elapsed().as_micros() as u64,
-                latency.as_micros() as u64,
-                received_messages,
+            records.push(BenchmarkRecord {
+                elapsed_time_us: start_timestamp.elapsed().as_micros() as u64,
+                latency_us: latency.as_micros() as u64,
+                messages: received_messages,
                 message_batches,
-                total_user_data_bytes.as_bytes_u64(),
-                total_bytes.as_bytes_u64(),
-            ));
+                user_data_bytes: total_user_data_bytes.as_bytes_u64(),
+                total_bytes: total_bytes.as_bytes_u64(),
+            });
         }
 
-        let statistics = BenchmarkActorStatistics::from_records(&records);
-
-        if let Some(output_directory) = &self.output_directory {
-            std::fs::create_dir_all(format!("{}/raw_data", output_directory)).unwrap();
-
-            // Dump raw data to file
-            let output_file = format!(
-                "{}/raw_data/consumer_{}_data.csv",
-                output_directory, self.consumer_id
-            );
-            info!(
-                "Consumer #{} → writing the results to {}...",
-                self.consumer_id, output_file
-            );
-            let mut writer = csv::Writer::from_path(output_file).unwrap();
-            for sample in records {
-                writer.serialize(sample).unwrap();
-            }
-            writer.flush().unwrap();
-
-            // Dump summary to file
-            let summary_file = format!(
-                "{}/raw_data/consumer_{}_summary.toml",
-                output_directory, self.consumer_id
-            );
-            statistics.dump_to_toml(&summary_file);
-        }
+        let metrics = from_records(
+            records,
+            BenchmarkKind::Poll,
+            ActorKind::Consumer,
+            self.consumer_id,
+            self.sampling_time,
+            self.moving_average_window,
+        );
 
         Self::log_consumer_statistics(
             self.consumer_id,
             total_messages,
             message_batches as u32,
             messages_per_batch,
-            &statistics,
+            &metrics,
         );
 
-        Ok(BenchmarkResult {
-            kind: BenchmarkKind::Poll,
-            statistics,
-        })
-        */
-        todo!()
+        Ok(metrics)
+    
     }
 
     pub fn log_consumer_statistics(
@@ -272,7 +253,7 @@ impl Consumer {
         total_messages: u64,
         message_batches: u32,
         messages_per_batch: u32,
-        stats: &BenchmarkActorStatistics,
+        stats: &BenchmarkIndividualMetrics,
     ) {
         info!(
             "Consumer #{} → polled {} messages, {} batches of {} messages in {:.2} s, total size: {}, average throughput: {:.2} MB/s, \
@@ -282,16 +263,16 @@ impl Consumer {
             total_messages,
             message_batches,
             messages_per_batch,
-            stats.total_time_secs,
-            IggyByteSize::from(stats.total_user_data_bytes),
-            stats.throughput_megabytes_per_second,
-            stats.p50_latency_ms,
-            stats.p90_latency_ms,
-            stats.p95_latency_ms,
-            stats.p99_latency_ms,
-            stats.p999_latency_ms,
-            stats.avg_latency_ms,
-            stats.median_latency_ms
+            stats.summary.total_time_secs,
+            IggyByteSize::from(stats.summary.total_user_data_bytes),
+            stats.summary.throughput_megabytes_per_second,
+            stats.summary.p50_latency_ms,
+            stats.summary.p90_latency_ms,
+            stats.summary.p95_latency_ms,
+            stats.summary.p99_latency_ms,
+            stats.summary.p999_latency_ms,
+            stats.summary.avg_latency_ms,
+            stats.summary.median_latency_ms
         );
     }
 }

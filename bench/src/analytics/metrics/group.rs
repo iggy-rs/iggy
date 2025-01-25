@@ -1,0 +1,125 @@
+use crate::analytics::time_series::{
+    calculator::TimeSeriesCalculator,
+    processors::{moving_average::MovingAverageProcessor, TimeSeriesProcessor},
+};
+use iggy_benchmark_report::{
+    actor_kind::ActorKind, group_metrics::BenchmarkGroupMetrics,
+    group_metrics_kind::GroupMetricsKind, group_metrics_summary::BenchmarkGroupMetricsSummary,
+    individual_metrics::BenchmarkIndividualMetrics,
+};
+
+pub fn from_producers_and_consumers_statistics(
+    producers_stats: &[BenchmarkIndividualMetrics],
+    consumers_stats: &[BenchmarkIndividualMetrics],
+    moving_average_window: u32,
+) -> Option<BenchmarkGroupMetrics> {
+    let mut summary = from_individual_metrics(
+        &[producers_stats, consumers_stats].concat(),
+        moving_average_window,
+    )?;
+    summary.summary.kind = GroupMetricsKind::ProducersAndConsumers;
+    Some(summary)
+}
+
+pub fn from_individual_metrics(
+    stats: &[BenchmarkIndividualMetrics],
+    moving_average_window: u32,
+) -> Option<BenchmarkGroupMetrics> {
+    if stats.is_empty() {
+        return None;
+    }
+    let count = stats.len() as f64;
+
+    // Compute aggregate throughput MB/s
+    let total_throughput_megabytes_per_second: f64 = stats
+        .iter()
+        .map(|r| r.summary.throughput_megabytes_per_second)
+        .sum();
+
+    // Compute aggregate throughput messages/s
+    let total_throughput_messages_per_second: f64 = stats
+        .iter()
+        .map(|r| r.summary.throughput_messages_per_second)
+        .sum();
+
+    // Compute average throughput MB/s
+    let average_throughput_megabytes_per_second = total_throughput_megabytes_per_second / count;
+
+    // Compute average throughput messages/s
+    let average_throughput_messages_per_second = total_throughput_messages_per_second / count;
+
+    // Compute average latencies
+    let average_p50_latency_ms =
+        stats.iter().map(|r| r.summary.p50_latency_ms).sum::<f64>() / count;
+    let average_p90_latency_ms =
+        stats.iter().map(|r| r.summary.p90_latency_ms).sum::<f64>() / count;
+    let average_p95_latency_ms =
+        stats.iter().map(|r| r.summary.p95_latency_ms).sum::<f64>() / count;
+    let average_p99_latency_ms =
+        stats.iter().map(|r| r.summary.p99_latency_ms).sum::<f64>() / count;
+    let average_p999_latency_ms: f64 =
+        stats.iter().map(|r| r.summary.p999_latency_ms).sum::<f64>() / count;
+    let average_avg_latency_ms =
+        stats.iter().map(|r| r.summary.avg_latency_ms).sum::<f64>() / count;
+    let average_median_latency_ms = stats
+        .iter()
+        .map(|r| r.summary.median_latency_ms)
+        .sum::<f64>()
+        / count;
+
+    let kind = match stats.iter().next().unwrap().summary.actor_kind {
+        ActorKind::Producer => GroupMetricsKind::Producers,
+        ActorKind::Consumer => GroupMetricsKind::Consumers,
+    };
+
+    let calculator = TimeSeriesCalculator::new();
+
+    let mut avg_throughput_mb_ts = calculator.aggregate_sum(
+        stats
+            .iter()
+            .map(|r| r.throughput_mb_ts.clone())
+            .collect::<Vec<_>>()
+            .as_slice(),
+    );
+    let mut avg_throughput_msg_ts = calculator.aggregate_sum(
+        stats
+            .iter()
+            .map(|r| r.throughput_msg_ts.clone())
+            .collect::<Vec<_>>()
+            .as_slice(),
+    );
+    let mut avg_latency_ts = calculator.aggregate_avg(
+        stats
+            .iter()
+            .map(|r| r.latency_ts.clone())
+            .collect::<Vec<_>>()
+            .as_slice(),
+    );
+
+    let sma = MovingAverageProcessor::new(moving_average_window as usize);
+    avg_throughput_mb_ts = sma.process(&avg_throughput_mb_ts);
+    avg_throughput_msg_ts = sma.process(&avg_throughput_msg_ts);
+    avg_latency_ts = sma.process(&avg_latency_ts);
+
+    let summary = BenchmarkGroupMetricsSummary {
+        kind,
+        total_throughput_megabytes_per_second,
+        total_throughput_messages_per_second,
+        average_throughput_megabytes_per_second,
+        average_throughput_messages_per_second,
+        average_p50_latency_ms,
+        average_p90_latency_ms,
+        average_p95_latency_ms,
+        average_p99_latency_ms,
+        average_p999_latency_ms,
+        average_latency_ms: average_avg_latency_ms,
+        average_median_latency_ms,
+    };
+
+    Some(BenchmarkGroupMetrics {
+        summary,
+        avg_throughput_mb_ts,
+        avg_throughput_msg_ts,
+        avg_latency_ts,
+    })
+}

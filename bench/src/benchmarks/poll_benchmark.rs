@@ -1,9 +1,8 @@
 use super::benchmark::{BenchmarkFutures, Benchmarkable};
+use crate::actors::consumer::Consumer;
 use crate::args::common::IggyBenchArgs;
-use crate::args::simple::BenchmarkKind;
-use crate::consumer::Consumer;
 use async_trait::async_trait;
-use iggy::utils::byte_size::IggyByteSize;
+use iggy_benchmark_report::benchmark_kind::BenchmarkKind;
 use integration::test_server::ClientFactory;
 use std::sync::Arc;
 use tracing::info;
@@ -30,7 +29,6 @@ impl Benchmarkable for PollMessagesBenchmark {
         info!("Creating {} client(s)...", clients_count);
         let messages_per_batch = self.args.messages_per_batch();
         let message_batches = self.args.message_batches();
-        let output_directory = self.args.output_directory();
 
         let mut futures: BenchmarkFutures = Ok(Vec::with_capacity(clients_count as usize));
         for client_id in 1..=clients_count {
@@ -46,7 +44,6 @@ impl Benchmarkable for PollMessagesBenchmark {
                 false => start_stream_id + 1,
             };
             let warmup_time = args.warmup_time();
-            let output_directory = output_directory.clone();
 
             let consumer = Consumer::new(
                 client_factory,
@@ -56,7 +53,8 @@ impl Benchmarkable for PollMessagesBenchmark {
                 messages_per_batch,
                 message_batches,
                 warmup_time,
-                output_directory,
+                args.sampling_time(),
+                args.moving_average_window(),
             );
 
             let future = Box::pin(async move { consumer.run().await });
@@ -76,21 +74,5 @@ impl Benchmarkable for PollMessagesBenchmark {
 
     fn client_factory(&self) -> &Arc<dyn ClientFactory> {
         &self.client_factory
-    }
-
-    fn display_settings(&self) {
-        let total_messages = self.total_messages();
-        let total_size_bytes = total_messages * self.args().message_size() as u64;
-        info!(
-                "\x1B[32mBenchmark: {}, total messages: {}, processed: {}, {} streams, {} messages per batch, {} batches, {} bytes per message, {} consumers\x1B[0m",
-                self.kind(),
-                total_messages,
-                IggyByteSize::from(total_size_bytes),
-                self.args().number_of_streams(),
-                self.args().messages_per_batch(),
-                self.args().message_batches(),
-                self.args().message_size(),
-                self.args().consumers(),
-            );
     }
 }

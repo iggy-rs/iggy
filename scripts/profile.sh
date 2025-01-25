@@ -42,7 +42,15 @@ if [[ "$PROFILING_MODE" == "io" ]]; then
     fi
 fi
 
-# Check system settings for perf
+# Detect OS
+OS="$(uname -s)"
+if [ "$OS" = "Darwin" ]; then
+    echo "Error: Profiling with perf and flamegraph is currently only supported on Linux systems."
+    echo "For macOS profiling, consider using Instruments.app or DTrace."
+    exit 1
+fi
+
+# Linux-specific profiling setup
 paranoid=$(cat /proc/sys/kernel/perf_event_paranoid)
 restrict=$(cat /proc/sys/kernel/kptr_restrict)
 

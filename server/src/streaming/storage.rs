@@ -13,7 +13,6 @@ use crate::streaming::systems::info::SystemInfo;
 use crate::streaming::systems::storage::FileSystemInfoStorage;
 use crate::streaming::topics::storage::FileTopicStorage;
 use crate::streaming::topics::topic::Topic;
-use async_trait::async_trait;
 use iggy::confirmation::Confirmation;
 use iggy::consumer::ConsumerKind;
 use iggy::error::IggyError;
@@ -21,6 +20,7 @@ use iggy::utils::byte_size::IggyByteSize;
 #[cfg(test)]
 use mockall::automock;
 use std::fmt::Debug;
+use std::future::Future;
 use std::sync::Arc;
 
 macro_rules! forward_async_methods {
@@ -78,83 +78,111 @@ pub enum SegmentStorageKind {
     Mock(Box<MockSegmentStorage>),
 }
 
-#[async_trait]
 #[cfg_attr(test, automock)]
-pub trait SystemInfoStorage {
-    async fn load(&self) -> Result<SystemInfo, IggyError>;
-    async fn save(&self, system_info: &SystemInfo) -> Result<(), IggyError>;
+pub trait SystemInfoStorage: Send {
+    fn load(&self) -> impl Future<Output = Result<SystemInfo, IggyError>> + Send;
+    fn save(&self, system_info: &SystemInfo) -> impl Future<Output = Result<(), IggyError>> + Send;
 }
 
-#[async_trait]
 #[cfg_attr(test, automock)]
-pub trait StreamStorage {
-    async fn load(&self, stream: &mut Stream, state: StreamState) -> Result<(), IggyError>;
-    async fn save(&self, stream: &Stream) -> Result<(), IggyError>;
-    async fn delete(&self, stream: &Stream) -> Result<(), IggyError>;
+pub trait StreamStorage: Send {
+    fn load(
+        &self,
+        stream: &mut Stream,
+        state: StreamState,
+    ) -> impl Future<Output = Result<(), IggyError>> + Send;
+    fn save(&self, stream: &Stream) -> impl Future<Output = Result<(), IggyError>> + Send;
+    fn delete(&self, stream: &Stream) -> impl Future<Output = Result<(), IggyError>> + Send;
 }
 
-#[async_trait]
 #[cfg_attr(test, automock)]
-pub trait TopicStorage {
-    async fn load(&self, topic: &mut Topic, state: TopicState) -> Result<(), IggyError>;
-    async fn save(&self, topic: &Topic) -> Result<(), IggyError>;
-    async fn delete(&self, topic: &Topic) -> Result<(), IggyError>;
+pub trait TopicStorage: Send {
+    fn load(
+        &self,
+        topic: &mut Topic,
+        state: TopicState,
+    ) -> impl Future<Output = Result<(), IggyError>> + Send;
+    fn save(&self, topic: &Topic) -> impl Future<Output = Result<(), IggyError>> + Send;
+    fn delete(&self, topic: &Topic) -> impl Future<Output = Result<(), IggyError>> + Send;
 }
 
-#[async_trait]
 #[cfg_attr(test, automock)]
-pub trait PartitionStorage {
-    async fn load(&self, partition: &mut Partition, state: PartitionState)
-        -> Result<(), IggyError>;
-    async fn save(&self, partition: &Partition) -> Result<(), IggyError>;
-    async fn delete(&self, partition: &Partition) -> Result<(), IggyError>;
-    async fn save_consumer_offset(&self, offset: &ConsumerOffset) -> Result<(), IggyError>;
-    async fn load_consumer_offsets(
+pub trait PartitionStorage: Send {
+    fn load(
+        &self,
+        partition: &mut Partition,
+        state: PartitionState,
+    ) -> impl Future<Output = Result<(), IggyError>> + Send;
+    fn save(&self, partition: &Partition) -> impl Future<Output = Result<(), IggyError>> + Send;
+    fn delete(&self, partition: &Partition) -> impl Future<Output = Result<(), IggyError>> + Send;
+    fn save_consumer_offset(
+        &self,
+        offset: &ConsumerOffset,
+    ) -> impl Future<Output = Result<(), IggyError>> + Send;
+    fn load_consumer_offsets(
         &self,
         kind: ConsumerKind,
         path: &str,
-    ) -> Result<Vec<ConsumerOffset>, IggyError>;
-    async fn delete_consumer_offsets(&self, path: &str) -> Result<(), IggyError>;
-    async fn delete_consumer_offset(&self, path: &str) -> Result<(), IggyError>;
+    ) -> impl Future<Output = Result<Vec<ConsumerOffset>, IggyError>> + Send;
+    fn delete_consumer_offsets(
+        &self,
+        path: &str,
+    ) -> impl Future<Output = Result<(), IggyError>> + Send;
+    fn delete_consumer_offset(
+        &self,
+        path: &str,
+    ) -> impl Future<Output = Result<(), IggyError>> + Send;
 }
 
-#[async_trait]
 #[cfg_attr(test, automock)]
-pub trait SegmentStorage {
-    async fn load(&self, segment: &mut Segment) -> Result<(), IggyError>;
-    async fn save(&self, segment: &Segment) -> Result<(), IggyError>;
-    async fn delete(&self, segment: &Segment) -> Result<(), IggyError>;
-    async fn load_message_batches(
+pub trait SegmentStorage: Send {
+    fn load(&self, segment: &mut Segment) -> impl Future<Output = Result<(), IggyError>> + Send;
+    fn save(&self, segment: &Segment) -> impl Future<Output = Result<(), IggyError>> + Send;
+    fn delete(&self, segment: &Segment) -> impl Future<Output = Result<(), IggyError>> + Send;
+    fn load_message_batches(
         &self,
         segment: &Segment,
         index_range: &IndexRange,
-    ) -> Result<Vec<RetainedMessageBatch>, IggyError>;
-    async fn load_newest_batches_by_size(
+    ) -> impl Future<Output = Result<Vec<RetainedMessageBatch>, IggyError>> + Send;
+    fn load_newest_batches_by_size(
         &self,
         segment: &Segment,
         size_bytes: u64,
-    ) -> Result<Vec<RetainedMessageBatch>, IggyError>;
-    async fn save_batches(
+    ) -> impl Future<Output = Result<Vec<RetainedMessageBatch>, IggyError>> + Send;
+    fn save_batches(
         &self,
         segment: &Segment,
         batch: RetainedMessageBatch,
         confirmation: Confirmation,
-    ) -> Result<IggyByteSize, IggyError>;
-    async fn load_message_ids(&self, segment: &Segment) -> Result<Vec<u128>, IggyError>;
-    async fn load_checksums(&self, segment: &Segment) -> Result<(), IggyError>;
-    async fn load_all_indexes(&self, segment: &Segment) -> Result<Vec<Index>, IggyError>;
-    async fn load_index_range(
+    ) -> impl Future<Output = Result<IggyByteSize, IggyError>> + Send;
+    fn load_message_ids(
+        &self,
+        segment: &Segment,
+    ) -> impl Future<Output = Result<Vec<u128>, IggyError>> + Send;
+    fn load_checksums(
+        &self,
+        segment: &Segment,
+    ) -> impl Future<Output = Result<(), IggyError>> + Send;
+    fn load_all_indexes(
+        &self,
+        segment: &Segment,
+    ) -> impl Future<Output = Result<Vec<Index>, IggyError>> + Send;
+    fn load_index_range(
         &self,
         segment: &Segment,
         index_start_offset: u64,
         index_end_offset: u64,
-    ) -> Result<Option<IndexRange>, IggyError>;
-    async fn save_index(&self, index_path: &str, index: Index) -> Result<(), IggyError>;
-    async fn try_load_index_for_timestamp(
+    ) -> impl Future<Output = Result<Option<IndexRange>, IggyError>> + Send;
+    fn save_index(
+        &self,
+        index_path: &str,
+        index: Index,
+    ) -> impl Future<Output = Result<(), IggyError>> + Send;
+    fn try_load_index_for_timestamp(
         &self,
         segment: &Segment,
         timestamp: u64,
-    ) -> Result<Option<Index>, IggyError>;
+    ) -> impl Future<Output = Result<Option<Index>, IggyError>> + Send;
     fn persister(&self) -> Arc<PersisterKind>;
 }
 

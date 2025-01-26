@@ -3,7 +3,6 @@ use crate::streaming::storage::StreamStorage;
 use crate::streaming::streams::stream::Stream;
 use crate::streaming::streams::COMPONENT;
 use crate::streaming::topics::topic::Topic;
-use async_trait::async_trait;
 use error_set::ErrContext;
 use futures::future::join_all;
 use iggy::error::IggyError;
@@ -26,7 +25,6 @@ struct StreamData {
     created_at: IggyTimestamp,
 }
 
-#[async_trait]
 impl StreamStorage for FileStreamStorage {
     async fn load(&self, stream: &mut Stream, mut state: StreamState) -> Result<(), IggyError> {
         info!("Loading stream with ID: {} from disk...", stream.stream_id);

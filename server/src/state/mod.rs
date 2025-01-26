@@ -1,10 +1,10 @@
 use crate::state::command::EntryCommand;
 use crate::state::entry::StateEntry;
-use async_trait::async_trait;
 use iggy::error::IggyError;
 #[cfg(test)]
 use mockall::automock;
 use std::fmt::Debug;
+use std::future::Future;
 
 pub mod command;
 pub mod entry;
@@ -21,12 +21,15 @@ pub enum StateKind {
     Mock(MockState),
 }
 
-#[async_trait]
 #[cfg_attr(test, automock)]
-pub trait State: Send + Sync + Debug {
-    async fn init(&self) -> Result<Vec<StateEntry>, IggyError>;
-    async fn load_entries(&self) -> Result<Vec<StateEntry>, IggyError>;
-    async fn apply(&self, user_id: u32, command: EntryCommand) -> Result<(), IggyError>;
+pub trait State: Send {
+    fn init(&self) -> impl Future<Output = Result<Vec<StateEntry>, IggyError>> + Send;
+    fn load_entries(&self) -> impl Future<Output = Result<Vec<StateEntry>, IggyError>> + Send;
+    fn apply(
+        &self,
+        user_id: u32,
+        command: EntryCommand,
+    ) -> impl Future<Output = Result<(), IggyError>> + Send;
 }
 
 impl StateKind {

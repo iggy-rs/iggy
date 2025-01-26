@@ -3,10 +3,10 @@ pub mod s3;
 
 use crate::configs::server::{DiskArchiverConfig, S3ArchiverConfig};
 use crate::server_error::ArchiverError;
-use async_trait::async_trait;
 use derive_more::Display;
 use serde::{Deserialize, Serialize};
 use std::fmt::Debug;
+use std::future::Future;
 use std::str::FromStr;
 
 use crate::archiver::disk::DiskArchiver;
@@ -35,19 +35,18 @@ impl FromStr for ArchiverKindType {
     }
 }
 
-#[async_trait]
-pub trait Archiver {
-    async fn init(&self) -> Result<(), ArchiverError>;
-    async fn is_archived(
+pub trait Archiver: Send {
+    fn init(&self) -> impl Future<Output = Result<(), ArchiverError>> + Send;
+    fn is_archived(
         &self,
         file: &str,
         base_directory: Option<String>,
-    ) -> Result<bool, ArchiverError>;
-    async fn archive(
+    ) -> impl Future<Output = Result<bool, ArchiverError>> + Send;
+    fn archive(
         &self,
         files: &[&str],
         base_directory: Option<String>,
-    ) -> Result<(), ArchiverError>;
+    ) -> impl Future<Output = Result<(), ArchiverError>> + Send;
 }
 
 #[derive(Debug)]

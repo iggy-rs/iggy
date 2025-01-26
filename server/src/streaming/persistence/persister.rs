@@ -1,9 +1,9 @@
 use crate::streaming::persistence::COMPONENT;
 use crate::streaming::utils::file;
-use async_trait::async_trait;
 use error_set::ErrContext;
 use iggy::error::IggyError;
 use std::fmt::Debug;
+use std::future::Future;
 use tokio::fs;
 use tokio::io::AsyncWriteExt;
 
@@ -47,12 +47,19 @@ impl PersisterKind {
     }
 }
 
-#[async_trait]
 #[cfg_attr(test, automock)]
-pub trait Persister {
-    async fn append(&self, path: &str, bytes: &[u8]) -> Result<(), IggyError>;
-    async fn overwrite(&self, path: &str, bytes: &[u8]) -> Result<(), IggyError>;
-    async fn delete(&self, path: &str) -> Result<(), IggyError>;
+pub trait Persister: Send {
+    fn append(
+        &self,
+        path: &str,
+        bytes: &[u8],
+    ) -> impl Future<Output = Result<(), IggyError>> + Send;
+    fn overwrite(
+        &self,
+        path: &str,
+        bytes: &[u8],
+    ) -> impl Future<Output = Result<(), IggyError>> + Send;
+    fn delete(&self, path: &str) -> impl Future<Output = Result<(), IggyError>> + Send;
 }
 
 #[derive(Debug)]
@@ -61,7 +68,6 @@ pub struct FilePersister;
 #[derive(Debug)]
 pub struct FileWithSyncPersister;
 
-#[async_trait]
 impl Persister for FilePersister {
     async fn append(&self, path: &str, bytes: &[u8]) -> Result<(), IggyError> {
         let mut file = file::append(path)
@@ -96,7 +102,6 @@ impl Persister for FilePersister {
     }
 }
 
-#[async_trait]
 impl Persister for FileWithSyncPersister {
     async fn append(&self, path: &str, bytes: &[u8]) -> Result<(), IggyError> {
         let mut file = file::append(path)

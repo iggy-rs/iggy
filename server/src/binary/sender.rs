@@ -1,7 +1,8 @@
+use std::future::Future;
+
 use crate::tcp::tcp_sender::TcpSender;
 use crate::tcp::tcp_tls_sender::TcpTlsSender;
 use crate::{quic::quic_sender::QuicSender, server_error::ServerError};
-use async_trait::async_trait;
 use iggy::error::IggyError;
 use quinn::{RecvStream, SendStream};
 use tokio::net::TcpStream;
@@ -27,13 +28,18 @@ macro_rules! forward_async_methods {
     }
 }
 
-#[async_trait]
 pub trait Sender {
-    async fn read(&mut self, buffer: &mut [u8]) -> Result<usize, IggyError>;
-    async fn send_empty_ok_response(&mut self) -> Result<(), IggyError>;
-    async fn send_ok_response(&mut self, payload: &[u8]) -> Result<(), IggyError>;
-    async fn send_error_response(&mut self, error: IggyError) -> Result<(), IggyError>;
-    async fn shutdown(&mut self) -> Result<(), ServerError>;
+    fn read(&mut self, buffer: &mut [u8]) -> impl Future<Output = Result<usize, IggyError>> + Send;
+    fn send_empty_ok_response(&mut self) -> impl Future<Output = Result<(), IggyError>> + Send;
+    fn send_ok_response(
+        &mut self,
+        payload: &[u8],
+    ) -> impl Future<Output = Result<(), IggyError>> + Send;
+    fn send_error_response(
+        &mut self,
+        error: IggyError,
+    ) -> impl Future<Output = Result<(), IggyError>> + Send;
+    fn shutdown(&mut self) -> impl Future<Output = Result<(), ServerError>> + Send;
 }
 
 pub enum SenderKind {

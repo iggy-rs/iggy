@@ -1,7 +1,6 @@
 use crate::channels::server_command::ServerCommand;
 use crate::configs::server::StateMaintenanceConfig;
 use crate::streaming::systems::system::SharedSystem;
-use async_trait::async_trait;
 use flume::Sender;
 use iggy::utils::duration::IggyDuration;
 use iggy::utils::timestamp::IggyTimestamp;
@@ -57,7 +56,6 @@ impl StateArchiver {
     }
 }
 
-#[async_trait]
 impl ServerCommand<ArchiveStateCommand> for ArchiveStateExecutor {
     #[instrument(skip_all, name = "trace_archive_state")]
     async fn execute(&mut self, system: &SharedSystem, command: ArchiveStateCommand) {

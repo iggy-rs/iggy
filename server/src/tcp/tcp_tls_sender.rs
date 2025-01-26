@@ -1,7 +1,6 @@
 use crate::binary::sender::Sender;
 use crate::tcp::COMPONENT;
 use crate::{server_error::ServerError, tcp::sender};
-use async_trait::async_trait;
 use error_set::ErrContext;
 use iggy::error::IggyError;
 use tokio::io::AsyncWriteExt;
@@ -13,7 +12,6 @@ pub struct TcpTlsSender {
     pub(crate) stream: TlsStream<TcpStream>,
 }
 
-#[async_trait]
 impl Sender for TcpTlsSender {
     async fn read(&mut self, buffer: &mut [u8]) -> Result<usize, IggyError> {
         sender::read(&mut self.stream, buffer).await

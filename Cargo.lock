@@ -4443,7 +4443,6 @@ version = "0.4.130"
 dependencies = [
  "ahash 0.8.11",
  "anyhow",
- "async-trait",
  "atone",
  "axum 0.8.1",
  "axum-server",

@@ -4,7 +4,6 @@ use crate::configs::server::MessagesMaintenanceConfig;
 use crate::map_toggle_str;
 use crate::streaming::systems::system::SharedSystem;
 use crate::streaming::topics::topic::Topic;
-use async_trait::async_trait;
 use error_set::ErrContext;
 use flume::Sender;
 use iggy::error::IggyError;
@@ -76,7 +75,6 @@ impl MessagesMaintainer {
     }
 }
 
-#[async_trait]
 impl ServerCommand<MaintainMessagesCommand> for MaintainMessagesExecutor {
     #[instrument(skip_all, name = "trace_maintain_messages")]
     async fn execute(&mut self, system: &SharedSystem, command: MaintainMessagesCommand) {

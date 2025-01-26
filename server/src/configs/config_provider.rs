@@ -1,13 +1,12 @@
 use crate::configs::server::ServerConfig;
 use crate::server_error::ConfigError;
 use crate::IGGY_ROOT_PASSWORD_ENV;
-use async_trait::async_trait;
 use figment::{
     providers::{Format, Toml},
     value::{Dict, Map as FigmentMap, Tag, Value as FigmentValue},
     Error, Figment, Metadata, Profile, Provider,
 };
-use std::{env, path::Path};
+use std::{env, future::Future, path::Path};
 use toml::{map::Map, Value as TomlValue};
 use tracing::debug;
 
@@ -34,9 +33,8 @@ impl ConfigProviderKind {
     }
 }
 
-#[async_trait]
 pub trait ConfigProvider {
-    async fn load_config(&self) -> Result<ServerConfig, ConfigError>;
+    fn load_config(&self) -> impl Future<Output = Result<ServerConfig, ConfigError>>;
 }
 
 #[derive(Debug)]
@@ -268,7 +266,6 @@ fn file_exists<P: AsRef<Path>>(path: P) -> bool {
     }
 }
 
-#[async_trait]
 impl ConfigProvider for FileConfigProvider {
     async fn load_config(&self) -> Result<ServerConfig, ConfigError> {
         println!("Loading config from path: '{}'...", self.path);

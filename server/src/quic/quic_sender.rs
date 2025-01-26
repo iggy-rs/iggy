@@ -1,6 +1,5 @@
-use crate::binary::sender::Sender;
 use crate::quic::COMPONENT;
-use async_trait::async_trait;
+use crate::{binary::sender::Sender, server_error::ServerError};
 use error_set::ErrContext;
 use iggy::error::IggyError;
 use quinn::{RecvStream, SendStream};
@@ -14,10 +13,6 @@ pub struct QuicSender {
     pub(crate) recv: RecvStream,
 }
 
-unsafe impl Send for QuicSender {}
-unsafe impl Sync for QuicSender {}
-
-#[async_trait]
 impl Sender for QuicSender {
     async fn read(&mut self, buffer: &mut [u8]) -> Result<usize, IggyError> {
         let read_bytes = self.recv.read(buffer).await.map_err(|error| {
@@ -25,7 +20,7 @@ impl Sender for QuicSender {
             IggyError::QuicError
         })?;
 
-        Ok(read_bytes.ok_or(IggyError::QuicError)?)
+        read_bytes.ok_or(IggyError::QuicError)
     }
 
     async fn send_empty_ok_response(&mut self) -> Result<(), IggyError> {
@@ -39,6 +34,10 @@ impl Sender for QuicSender {
     async fn send_error_response(&mut self, error: IggyError) -> Result<(), IggyError> {
         self.send_response(&error.as_code().to_le_bytes(), &[])
             .await
+    }
+
+    async fn shutdown(&mut self) -> Result<(), ServerError> {
+        Ok(())
     }
 }
 

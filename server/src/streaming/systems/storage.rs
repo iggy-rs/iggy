@@ -4,7 +4,6 @@ use crate::streaming::systems::info::SystemInfo;
 use crate::streaming::systems::COMPONENT;
 use crate::streaming::utils::file;
 use anyhow::Context;
-use async_trait::async_trait;
 use bytes::{BufMut, BytesMut};
 use error_set::ErrContext;
 use iggy::error::IggyError;
@@ -23,10 +22,7 @@ impl FileSystemInfoStorage {
         Self { path, persister }
     }
 }
-unsafe impl Send for FileSystemInfoStorage {}
-unsafe impl Sync for FileSystemInfoStorage {}
 
-#[async_trait]
 impl SystemInfoStorage for FileSystemInfoStorage {
     async fn load(&self) -> Result<SystemInfo, IggyError> {
         let file = file::open(&self.path).await;

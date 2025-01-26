@@ -45,7 +45,7 @@ async fn main() -> Result<(), ServerError> {
 
     let args = Args::parse();
     let config_provider = config_provider::resolve(&args.config_provider)?;
-    let config = ServerConfig::load(config_provider.as_ref()).await?;
+    let config = ServerConfig::load(&config_provider).await?;
 
     let mut logging = Logging::new(config.telemetry.clone());
     logging.early_init();

@@ -1,7 +1,9 @@
 use crate::binary::sender::Sender;
-use crate::tcp::sender;
-use async_trait::async_trait;
+use crate::tcp::COMPONENT;
+use crate::{server_error::ServerError, tcp::sender};
+use error_set::ErrContext;
 use iggy::error::IggyError;
+use tokio::io::AsyncWriteExt;
 use tokio::net::TcpStream;
 use tokio_native_tls::TlsStream;
 
@@ -10,10 +12,6 @@ pub struct TcpTlsSender {
     pub(crate) stream: TlsStream<TcpStream>,
 }
 
-unsafe impl Send for TcpTlsSender {}
-unsafe impl Sync for TcpTlsSender {}
-
-#[async_trait]
 impl Sender for TcpTlsSender {
     async fn read(&mut self, buffer: &mut [u8]) -> Result<usize, IggyError> {
         sender::read(&mut self.stream, buffer).await
@@ -29,5 +27,13 @@ impl Sender for TcpTlsSender {
 
     async fn send_error_response(&mut self, error: IggyError) -> Result<(), IggyError> {
         sender::send_error_response(&mut self.stream, error).await
+    }
+
+    async fn shutdown(&mut self) -> Result<(), ServerError> {
+        self.stream
+            .shutdown()
+            .await
+            .with_error_context(|_| format!("{COMPONENT} - failed to shutdown tcp tls stream"))
+            .map_err(ServerError::IoError)
     }
 }

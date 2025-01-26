@@ -8,7 +8,6 @@ use crate::streaming::segments::segment::{Segment, INDEX_EXTENSION, LOG_EXTENSIO
 use crate::streaming::storage::PartitionStorage;
 use crate::streaming::utils::file;
 use anyhow::Context;
-use async_trait::async_trait;
 use error_set::ErrContext;
 use iggy::consumer::ConsumerKind;
 use iggy::error::IggyError;
@@ -30,10 +29,7 @@ impl FilePartitionStorage {
         Self { persister }
     }
 }
-unsafe impl Send for FilePartitionStorage {}
-unsafe impl Sync for FilePartitionStorage {}
 
-#[async_trait]
 impl PartitionStorage for FilePartitionStorage {
     async fn load(
         &self,

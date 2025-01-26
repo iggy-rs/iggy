@@ -5,7 +5,6 @@ use crate::streaming::topics::consumer_group::ConsumerGroup;
 use crate::streaming::topics::topic::Topic;
 use crate::streaming::topics::COMPONENT;
 use anyhow::Context;
-use async_trait::async_trait;
 use error_set::ErrContext;
 use futures::future::join_all;
 use iggy::error::IggyError;
@@ -23,16 +22,12 @@ use tracing::{error, info, warn};
 #[derive(Debug)]
 pub struct FileTopicStorage;
 
-unsafe impl Send for FileTopicStorage {}
-unsafe impl Sync for FileTopicStorage {}
-
 #[derive(Debug, Serialize, Deserialize)]
 struct ConsumerGroupData {
     id: u32,
     name: String,
 }
 
-#[async_trait]
 impl TopicStorage for FileTopicStorage {
     async fn load(&self, topic: &mut Topic, mut state: TopicState) -> Result<(), IggyError> {
         info!("Loading topic {} from disk...", topic);

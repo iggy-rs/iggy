@@ -1,6 +1,6 @@
 use crate::binary::command;
+use crate::binary::sender::SenderKind;
 use crate::command::ServerCommand;
-use crate::quic::quic_sender::QuicSender;
 use crate::server_error::ConnectionError;
 use crate::streaming::clients::client_manager::Transport;
 use crate::streaming::session::Session;
@@ -128,10 +128,7 @@ async fn handle_stream(
 
     debug!("Received a QUIC command: {command}, payload size: {length}");
 
-    let mut sender = QuicSender {
-        send: send_stream,
-        recv: recv_stream,
-    };
+    let mut sender = SenderKind::get_quic_sender(send_stream, recv_stream);
     command::handle(command, &mut sender, session.as_ref(), system.clone())
         .await
         .with_context(|| "Error when handling the QUIC request.")

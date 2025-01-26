@@ -3,7 +3,6 @@ use crate::state::{State, StateEntry, COMPONENT};
 use crate::streaming::persistence::persister::PersisterKind;
 use crate::streaming::utils::file;
 use crate::versioning::SemanticVersion;
-use async_trait::async_trait;
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 use error_set::ErrContext;
 use iggy::bytes_serializable::BytesSerializable;
@@ -65,7 +64,6 @@ impl FileState {
     }
 }
 
-#[async_trait]
 impl State for FileState {
     async fn init(&self) -> Result<Vec<StateEntry>, IggyError> {
         if !Path::new(&self.path).exists() {
@@ -94,7 +92,7 @@ impl State for FileState {
             self.current_index.store(last_index, Ordering::SeqCst);
         }
 
-        return Ok(entries);
+        Ok(entries)
     }
 
     async fn load_entries(&self) -> Result<Vec<StateEntry>, IggyError> {

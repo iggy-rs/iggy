@@ -1,7 +1,6 @@
 use crate::channels::server_command::ServerCommand;
 use crate::configs::server::HeartbeatConfig;
 use crate::streaming::systems::system::SharedSystem;
-use async_trait::async_trait;
 use flume::Sender;
 use iggy::locking::IggySharedMutFn;
 use iggy::utils::duration::IggyDuration;
@@ -63,7 +62,6 @@ impl VerifyHeartbeats {
     }
 }
 
-#[async_trait]
 impl ServerCommand<VerifyHeartbeatsCommand> for VerifyHeartbeatsExecutor {
     #[instrument(skip_all, name = "trace_verify_heartbeats")]
     async fn execute(&mut self, system: &SharedSystem, command: VerifyHeartbeatsCommand) {

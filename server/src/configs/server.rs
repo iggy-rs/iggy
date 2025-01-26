@@ -1,5 +1,5 @@
-use crate::archiver::ArchiverKind;
-use crate::configs::config_provider::ConfigProvider;
+use crate::archiver::ArchiverKindType;
+use crate::configs::config_provider::ConfigProviderKind;
 use crate::configs::http::HttpConfig;
 use crate::configs::quic::QuicConfig;
 use crate::configs::system::SystemConfig;
@@ -40,7 +40,7 @@ pub struct DataMaintenanceConfig {
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct ArchiverConfig {
     pub enabled: bool,
-    pub kind: ArchiverKind,
+    pub kind: ArchiverKindType,
     pub disk: Option<DiskArchiverConfig>,
     pub s3: Option<S3ArchiverConfig>,
 }
@@ -150,7 +150,7 @@ impl FromStr for TelemetryTransport {
 }
 
 impl ServerConfig {
-    pub async fn load(config_provider: &dyn ConfigProvider) -> Result<ServerConfig, ConfigError> {
+    pub async fn load(config_provider: &ConfigProviderKind) -> Result<ServerConfig, ConfigError> {
         let server_config = config_provider
             .load_config()
             .await

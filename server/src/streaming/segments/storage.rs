@@ -8,7 +8,6 @@ use crate::streaming::segments::COMPONENT;
 use crate::streaming::storage::SegmentStorage;
 use crate::streaming::utils::file;
 use crate::streaming::utils::head_tail_buf::HeadTailBuffer;
-use async_trait::async_trait;
 use bytes::{BufMut, BytesMut};
 use error_set::ErrContext;
 use iggy::confirmation::Confirmation;
@@ -38,10 +37,6 @@ impl FileSegmentStorage {
     }
 }
 
-unsafe impl Send for FileSegmentStorage {}
-unsafe impl Sync for FileSegmentStorage {}
-
-#[async_trait]
 impl SegmentStorage for FileSegmentStorage {
     async fn load(&self, segment: &mut Segment) -> Result<(), IggyError> {
         info!(

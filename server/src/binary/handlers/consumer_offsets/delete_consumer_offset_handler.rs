@@ -1,5 +1,5 @@
 use crate::binary::handlers::consumer_offsets::COMPONENT;
-use crate::binary::sender::Sender;
+use crate::binary::sender::SenderKind;
 use crate::streaming::session::Session;
 use crate::streaming::systems::system::SharedSystem;
 use anyhow::Result;
@@ -10,7 +10,7 @@ use tracing::debug;
 
 pub async fn handle(
     command: DeleteConsumerOffset,
-    sender: &mut dyn Sender,
+    sender: &mut SenderKind,
     session: &Session,
     system: &SharedSystem,
 ) -> Result<(), IggyError> {

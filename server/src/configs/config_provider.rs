@@ -1,13 +1,12 @@
 use crate::configs::server::ServerConfig;
 use crate::server_error::ConfigError;
 use crate::IGGY_ROOT_PASSWORD_ENV;
-use async_trait::async_trait;
 use figment::{
     providers::{Format, Toml},
     value::{Dict, Map as FigmentMap, Tag, Value as FigmentValue},
     Error, Figment, Metadata, Profile, Provider,
 };
-use std::{env, path::Path};
+use std::{env, future::Future, path::Path};
 use toml::{map::Map, Value as TomlValue};
 use tracing::debug;
 
@@ -22,9 +21,20 @@ const SECRET_KEYS: [&str; 6] = [
     "IGGY_SYSTEM_ENCRYPTION_KEY",
 ];
 
-#[async_trait]
+pub enum ConfigProviderKind {
+    File(FileConfigProvider),
+}
+
+impl ConfigProviderKind {
+    pub async fn load_config(&self) -> Result<ServerConfig, ConfigError> {
+        match self {
+            Self::File(p) => p.load_config().await,
+        }
+    }
+}
+
 pub trait ConfigProvider {
-    async fn load_config(&self) -> Result<ServerConfig, ConfigError>;
+    fn load_config(&self) -> impl Future<Output = Result<ServerConfig, ConfigError>>;
 }
 
 #[derive(Debug)]
@@ -216,12 +226,12 @@ impl Provider for CustomEnvProvider {
     }
 }
 
-pub fn resolve(config_provider_type: &str) -> Result<Box<dyn ConfigProvider>, ConfigError> {
+pub fn resolve(config_provider_type: &str) -> Result<ConfigProviderKind, ConfigError> {
     match config_provider_type {
         DEFAULT_CONFIG_PROVIDER => {
             let path =
                 env::var("IGGY_CONFIG_PATH").unwrap_or_else(|_| DEFAULT_CONFIG_PATH.to_string());
-            Ok(Box::new(FileConfigProvider::new(path)))
+            Ok(ConfigProviderKind::File(FileConfigProvider::new(path)))
         }
         _ => Err(ConfigError::InvalidConfigurationProvider {
             provider_type: config_provider_type.to_string(),
@@ -256,7 +266,6 @@ fn file_exists<P: AsRef<Path>>(path: P) -> bool {
     }
 }
 
-#[async_trait]
 impl ConfigProvider for FileConfigProvider {
     async fn load_config(&self) -> Result<ServerConfig, ConfigError> {
         println!("Loading config from path: '{}'...", self.path);

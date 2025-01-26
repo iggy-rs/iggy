@@ -2,7 +2,6 @@ use crate::channels::server_command::ServerCommand;
 use crate::configs::server::MessageSaverConfig;
 use crate::configs::server::ServerConfig;
 use crate::streaming::systems::system::SharedSystem;
-use async_trait::async_trait;
 use flume::{Receiver, Sender};
 use iggy::utils::duration::IggyDuration;
 use tokio::time;
@@ -56,7 +55,6 @@ impl MessagesSaver {
     }
 }
 
-#[async_trait]
 impl ServerCommand<SaveMessagesCommand> for SaveMessagesExecutor {
     #[instrument(skip_all, name = "trace_save_messages")]
     async fn execute(&mut self, system: &SharedSystem, _command: SaveMessagesCommand) {

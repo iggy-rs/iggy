@@ -1,7 +1,6 @@
 use crate::archiver::{Archiver, COMPONENT};
 use crate::configs::server::DiskArchiverConfig;
 use crate::server_error::ArchiverError;
-use async_trait::async_trait;
 use error_set::ErrContext;
 use std::path::Path;
 use tokio::fs;
@@ -18,7 +17,6 @@ impl DiskArchiver {
     }
 }
 
-#[async_trait]
 impl Archiver for DiskArchiver {
     async fn init(&self) -> Result<(), ArchiverError> {
         if !Path::new(&self.config.path).exists() {

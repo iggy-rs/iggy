@@ -1,5 +1,4 @@
-use crate::binary::handlers::personal_access_tokens::COMPONENT;
-use crate::binary::sender::Sender;
+use crate::binary::{handlers::personal_access_tokens::COMPONENT, sender::SenderKind};
 use crate::state::command::EntryCommand;
 use crate::streaming::session::Session;
 use crate::streaming::systems::system::SharedSystem;
@@ -12,7 +11,7 @@ use tracing::{debug, instrument};
 #[instrument(skip_all, name = "trace_delete_personal_access_token", fields(iggy_user_id = session.get_user_id(), iggy_client_id = session.client_id))]
 pub async fn handle(
     command: DeletePersonalAccessToken,
-    sender: &mut dyn Sender,
+    sender: &mut SenderKind,
     session: &Session,
     system: &SharedSystem,
 ) -> Result<(), IggyError> {

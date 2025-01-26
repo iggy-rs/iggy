@@ -1,9 +1,8 @@
+use crate::binary::sender::SenderKind;
 use crate::streaming::clients::client_manager::Transport;
 use crate::streaming::systems::system::SharedSystem;
 use crate::tcp::connection_handler::{handle_connection, handle_error};
-use crate::tcp::tcp_sender::TcpSender;
 use std::net::SocketAddr;
-use tokio::io::AsyncWriteExt;
 use tokio::net::TcpSocket;
 use tokio::sync::oneshot;
 use tracing::{error, info};
@@ -47,14 +46,14 @@ pub async fn start(address: &str, socket: TcpSocket, system: SharedSystem) -> So
                     let client_id = session.client_id;
                     info!("Created new session: {session}");
                     let system = system.clone();
-                    let mut sender = TcpSender { stream };
+                    let mut sender = SenderKind::get_tcp_sender(stream);
                     tokio::spawn(async move {
                         if let Err(error) =
                             handle_connection(session, &mut sender, system.clone()).await
                         {
                             handle_error(error);
                             system.read().await.delete_client(client_id).await;
-                            if let Err(error) = sender.stream.shutdown().await {
+                            if let Err(error) = sender.shutdown().await {
                                 error!("Failed to shutdown TCP stream for client: {client_id}, address: {address}. {error}");
                             } else {
                                 info!("Successfully closed TCP stream for client: {client_id}, address: {address}.");

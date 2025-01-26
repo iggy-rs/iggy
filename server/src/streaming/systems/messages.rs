@@ -124,8 +124,6 @@ impl System {
             topic.topic_id
         ))?;
 
-        let mut batch_size_bytes = IggyByteSize::default();
-        batch_size_bytes = (bytes.len() as u64).into();
         /*
         let mut messages = messages;
         if let Some(encryptor) = &self.encryptor {
@@ -158,6 +156,7 @@ impl System {
         let messages_count = messages.len() as u64;
         */
         let batch = IggyBatch::new(bytes);
+        let batch_size_bytes = batch.get_size_bytes();
         topic
             .append_messages(batch_size_bytes, partitioning, batch, confirmation)
             .await?;

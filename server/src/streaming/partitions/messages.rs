@@ -7,7 +7,7 @@ use crate::streaming::polling_consumer::PollingConsumer;
 use crate::streaming::segments::segment::Segment;
 use error_set::ErrContext;
 use iggy::confirmation::Confirmation;
-use iggy::models::batch::{IggyBatch};
+use iggy::models::batch::IggyBatch;
 use iggy::models::messages::ArchivedIggyMessage;
 use iggy::utils::timestamp::IggyTimestamp;
 use iggy::{error::IggyError, utils::duration::IggyDuration};
@@ -446,7 +446,7 @@ impl Partition {
         let mut position = 0;
         while position < batch_payload.len() {
             max_timestamp = IggyTimestamp::now().as_micros();
-            let timestamp_delta = (max_timestamp - batch_base_timestamp) as u32; 
+            let timestamp_delta = (max_timestamp - batch_base_timestamp) as u32;
             let offset_delta = messages_count;
             let length =
                 u64::from_le_bytes(batch_payload[position..position + 8].try_into().unwrap());
@@ -467,7 +467,8 @@ impl Partition {
         batch.base_offset = batch_base_offset;
 
         let avg_timestamp_delta =
-            Duration::from_micros((max_timestamp - batch_base_timestamp) / messages_count as u64).into();
+            Duration::from_micros((max_timestamp - batch_base_timestamp) / messages_count as u64)
+                .into();
 
         let min_alpha: f64 = 0.3;
         let max_alpha: f64 = 0.7;

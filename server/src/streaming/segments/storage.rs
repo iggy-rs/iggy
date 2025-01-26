@@ -14,15 +14,18 @@ use bytes::{BufMut, BytesMut};
 use error_set::ErrContext;
 use iggy::confirmation::Confirmation;
 use iggy::error::IggyError;
+use iggy::models::batch::IGGY_BATCH_OVERHEAD;
+use iggy::models::messages::ArchivedIggyMessage;
 use iggy::utils::byte_size::IggyByteSize;
 use iggy::utils::checksum;
 use iggy::utils::sizeable::Sizeable;
+use rkyv::rend::unaligned::u32_ule;
 use rkyv::util::AlignedVec;
 use std::io::SeekFrom;
 use std::path::Path;
 use std::sync::atomic::Ordering;
 use std::sync::Arc;
-use tokio::io::{AsyncReadExt, AsyncSeekExt, BufReader};
+use tokio::io::{AsyncReadExt, AsyncSeekExt, AsyncWriteExt, BufReader};
 use tracing::{error, info, trace, warn};
 
 const EMPTY_INDEXES: Vec<Index> = vec![];
@@ -260,15 +263,52 @@ impl SegmentStorage for FileSegmentStorage {
     async fn save_batches_raw(
         &self,
         segment: &Segment,
-        batch_accumulator: BatchAccumulator, 
-        confirmation: Confirmation,
+        batch_accumulator: BatchAccumulator,
+        _confirmation: Confirmation,
     ) -> Result<IggyByteSize, IggyError> {
-        //let len = IggyByteSize::from(batch.len() as u64);
+        let mut file = file::append(&segment.log_path)
+            .await.unwrap();
+        let mut header = [0u8; IGGY_BATCH_OVERHEAD as usize];
 
-        for batch in batch_accumulator.batches {
-            let header_bytes = batch.header_bytes();
-            self.persister.append(&segment.log_path, &header_bytes).await;
-            self.persister.append(&segment.log_path, &batch.messages).await;
+        //TODO: create our own header writer, once we drop dependency on bytes crate.
+        let mut header_writer = header.writer();
+        let first_batch = batch_accumulator.batches.first().unwrap();
+        let base_offset = first_batch.base_offset;
+        let base_timestamp = first_batch.base_timestamp;
+        first_batch.write_header(&mut header_writer);
+        file.write_all(&header).await.unwrap();
+
+        //TODO: Use write_vectored, instead of looping like this.
+        for (iter, mut batch) in batch_accumulator.batches.into_iter().enumerate() {
+            if iter > 0 {
+                let base_offset_diff = batch.base_offset - base_offset;
+                let base_timestamp_diff = batch.base_timestamp - base_timestamp;
+                let base_offset_diff = base_offset_diff as u32;
+                let base_timestamp_diff = base_timestamp_diff as u32;
+
+                let mut position = 0;
+                let batch_payload = &mut batch.messages;
+                while position < batch_payload.len() {
+                    let length = u64::from_le_bytes(
+                        batch_payload[position..position + 8].try_into().unwrap(),
+                    );
+                    let length = length as usize;
+                    position += 8;
+                    let message = unsafe {
+                        rkyv::access_unchecked_mut::<ArchivedIggyMessage>(
+                            &mut batch_payload[position..length + position],
+                        )
+                    };
+                    position += length;
+                    let message = unsafe { message.unseal_unchecked() };
+                    let offset_delta = message.offset_delta;
+                    let timestamp_delta = message.timestamp_delta;
+
+                    message.offset_delta = (offset_delta + base_offset_diff).into();
+                    message.timestamp_delta = (timestamp_delta + base_timestamp_diff).into();
+                }
+            }
+            batch.write_messages(&mut file).await;
         }
 
         /*

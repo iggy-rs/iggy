@@ -5,7 +5,6 @@ use crate::server_error::ConnectionError;
 use crate::streaming::session::Session;
 use crate::streaming::systems::system::SharedSystem;
 use bytes::{BufMut, BytesMut};
-use iggy::confirmation::Confirmation;
 use iggy::error::IggyError;
 use iggy::identifier::Identifier;
 use iggy::messages::send_messages::Partitioning;
@@ -14,7 +13,6 @@ use iggy::{bytes_serializable::BytesSerializable, command::SEND_MESSAGES_CODE};
 use rkyv::util::AlignedVec;
 use std::io::ErrorKind;
 use std::sync::Arc;
-use tokio::time::Instant;
 use tracing::{debug, error, info, warn};
 
 const INITIAL_BYTES_LENGTH: usize = 4;
@@ -27,7 +25,6 @@ pub(crate) async fn handle_connection(
     let mut initial_buffer = [0u8; INITIAL_BYTES_LENGTH];
     let mut code_buffer = [0u8; INITIAL_BYTES_LENGTH];
     loop {
-        let xp = Instant::now();
         let read_length: usize = match sender.read(&mut initial_buffer).await {
             Ok(read_length) => read_length,
             Err(error) => {
@@ -47,11 +44,9 @@ pub(crate) async fn handle_connection(
             continue;
         }
         let length = u32::from_le_bytes(initial_buffer) - 4;
-        println!("reading length took: {} us", xp.elapsed().as_micros());
         sender.read(&mut code_buffer).await?;
         let code = u32::from_le_bytes(code_buffer);
         if code == SEND_MESSAGES_CODE {
-            let xp = Instant::now();
             let mut metadata_len_buf = [0u8; 8];
             sender.read(&mut metadata_len_buf).await?;
             let metadata_len = u64::from_le_bytes(metadata_len_buf.try_into().unwrap());
@@ -72,7 +67,6 @@ pub(crate) async fn handle_connection(
             }
             sender.read(&mut batch).await?;
 
-
             {
                 system
                     .read()
@@ -80,8 +74,6 @@ pub(crate) async fn handle_connection(
                     .append_messages(&session, stream_id, topic_id, partitioning, batch, None)
                     .await?;
             }
-            let xd = xp.elapsed().as_micros();
-            println!("reading request + metadata {} us", xd);
             sender.send_empty_ok_response().await?;
         } else {
             debug!("Received a TCP request, length: {length}");

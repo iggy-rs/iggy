@@ -124,11 +124,6 @@ impl Producer {
                 .send_messages(&stream_id, &topic_id, &partitioning, messages)
                 .await?;
             let latency = before_send.elapsed();
-              error!(
-                "send_messages took: {} us, iter: {}",
-                latency.as_micros(),
-                i
-            );
 
             let messages_processed = (i * messages_per_batch) as u64;
             let batches_processed = i as u64;

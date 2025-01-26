@@ -284,10 +284,10 @@ impl Segment {
 
         let mut batch_size = 0;
         let confirmation = Confirmation::Wait;
-            let saved_bytes = storage
-                .save_batches_raw(self, batch_accumulator, confirmation)
-                .await?;
-            trace!(
+        let saved_bytes = storage
+            .save_batches_raw(self, batch_accumulator, confirmation)
+            .await?;
+        trace!(
                 "Saved {} messages on disk in segment with start offset: {} for partition with ID: {}, total bytes written: {}.",
                 unsaved_messages_number,
                 self.start_offset,

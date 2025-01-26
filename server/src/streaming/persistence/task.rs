@@ -1,4 +1,4 @@
-use crate::streaming::persistence::COMPONENT;
+use crate::streaming::{batching::batch_accumulator::{self, BatchAccumulator}, persistence::COMPONENT, segments::storage::FileSegmentStorage};
 use bytes::Bytes;
 use error_set::ErrContext;
 use flume::{unbounded, Receiver, Sender};
@@ -12,7 +12,7 @@ use super::persister::PersisterKind;
 
 #[derive(Debug)]
 pub struct LogPersisterTask {
-    _sender: Option<Sender<AlignedVec<512>>>,
+    _sender: Option<Sender<BatchAccumulator>>,
     _task_handle: Option<task::JoinHandle<()>>,
 }
 
@@ -23,7 +23,7 @@ impl LogPersisterTask {
         max_retries: u32,
         retry_sleep: Duration,
     ) -> Self {
-        let (sender, receiver): (Sender<AlignedVec<512>>, Receiver<AlignedVec<512>>) = unbounded();
+        let (sender, receiver): (Sender<BatchAccumulator>, Receiver<BatchAccumulator>) = unbounded();
 
         let task_handle = task::spawn(async move {
             loop {
@@ -32,7 +32,7 @@ impl LogPersisterTask {
                         if let Err(e) = Self::persist_with_retries(
                             &path,
                             &persister,
-                            &data,
+                            data,
                             max_retries,
                             retry_sleep,
                         )
@@ -58,34 +58,28 @@ impl LogPersisterTask {
     async fn persist_with_retries(
         path: &str,
         persister: &Arc<PersisterKind>,
-        data: &[u8],
+        batch_accumulator: BatchAccumulator,
         max_retries: u32,
         retry_sleep: Duration,
     ) -> Result<(), String> {
-        let mut retries = 0;
 
-        while retries < max_retries {
-            match persister.append(path, data).await {
+            match FileSegmentStorage::persist_batches(path, batch_accumulator).await {
                 Ok(_) => return Ok(()),
                 Err(e) => {
                     error!(
-                        "Could not append to persister (attempt {}): {}",
-                        retries + 1,
+                        "Could not append to persister: {}",
                         e
                     );
-                    retries += 1;
                     tokio::time::sleep(retry_sleep).await;
                 }
             }
-        }
-
         Err(format!(
             "{COMPONENT} - failed to persist data after {} retries",
             max_retries
         ))
     }
 
-    pub async fn send(&self, data: AlignedVec<512>) -> Result<(), IggyError> {
+    pub async fn send(&self, data: BatchAccumulator) -> Result<(), IggyError> {
         if let Some(sender) = &self._sender {
             sender
                 .send_async(data)

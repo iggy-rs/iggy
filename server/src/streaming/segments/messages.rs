@@ -265,7 +265,7 @@ impl Segment {
             return Ok(0);
         }
 
-        let mut batch_accumulator = self.unsaved_messages.take().unwrap();
+        let batch_accumulator = self.unsaved_messages.take().unwrap();
         if batch_accumulator.is_empty() {
             return Ok(0);
         }
@@ -281,9 +281,11 @@ impl Segment {
             self.start_offset,
             self.partition_id
         );
-
+        let confirmation = match confirmation {
+            Some(val) => val,
+            None => self.config.segment.server_confirmation,
+        };
         let mut batch_size = 0;
-        let confirmation = Confirmation::Wait;
         let saved_bytes = storage
             .save_batches_raw(self, batch_accumulator, confirmation)
             .await?;

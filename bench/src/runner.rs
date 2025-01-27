@@ -54,10 +54,15 @@ impl BenchmarkRunner {
         info!("All actors finished");
 
         let params = BenchmarkParams::from(benchmark.args());
+
+        let server_version = match get_server_version(&params).await {
+            Ok(v) => v,
+            Err(_) => "unknown".to_string(),
+        };
         let hardware =
             BenchmarkHardware::get_system_info_with_identifier(benchmark.args().identifier());
         let report = BenchmarkReportBuilder::build(
-            get_server_version(&params).await?,
+            server_version,
             hardware,
             params,
             individual_metrics,

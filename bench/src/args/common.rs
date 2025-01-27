@@ -48,6 +48,10 @@ pub struct IggyBenchArgs {
     #[arg(long, default_value_t = DEFAULT_MOVING_AVERAGE_WINDOW)]
     pub moving_average_window: u32,
 
+    /// Skip getting server version (useful for local benchmarking of older versions)
+    #[arg(long, default_value_t = false)]
+    pub legacy: bool,
+
     /// Skip server start
     #[arg(long, short = 'k', default_value_t = DEFAULT_SKIP_SERVER_START)]
     pub skip_server_start: bool,

@@ -55,9 +55,13 @@ impl BenchmarkRunner {
 
         let params = BenchmarkParams::from(benchmark.args());
 
-        let server_version = match get_server_version(&params).await {
-            Ok(v) => v,
-            Err(_) => "unknown".to_string(),
+        let server_version = if benchmark.args().legacy {
+            "unknown".to_string()
+        } else {
+            match get_server_version(&params).await {
+                Ok(v) => v,
+                Err(_) => "unknown".to_string(),
+            }
         };
         let hardware =
             BenchmarkHardware::get_system_info_with_identifier(benchmark.args().identifier());

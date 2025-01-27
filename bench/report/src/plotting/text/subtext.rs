@@ -86,7 +86,7 @@ impl BenchmarkGroupMetrics {
 }
 
 impl BenchmarkParams {
-    fn format_params(&self) -> String {
+    pub fn format_params(&self) -> String {
         let actors_info = self.format_actors_info();
         let message_batches = self.message_batches as u64;
         let messages_per_batch = self.messages_per_batch as u64;

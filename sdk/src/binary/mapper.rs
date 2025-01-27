@@ -128,66 +128,140 @@ pub fn map_stats(payload: Bytes) -> Result<Stats, IggyError> {
             .try_into()
             .map_err(|_| IggyError::InvalidNumberEncoding)?,
     );
+
     let mut current_position = 108;
+
+    //
+    // Safely decode hostname
+    //
+    if current_position + 4 > payload.len() {
+        return Err(IggyError::InvalidNumberEncoding);
+    }
     let hostname_length = u32::from_le_bytes(
         payload[current_position..current_position + 4]
             .try_into()
             .map_err(|_| IggyError::InvalidNumberEncoding)?,
     ) as usize;
-    let hostname =
-        from_utf8(&payload[current_position + 4..current_position + 4 + hostname_length])
-            .map_err(|_| IggyError::InvalidUtf8)?
-            .to_string();
-    current_position += 4 + hostname_length;
+    current_position += 4;
+    if current_position + hostname_length > payload.len() {
+        return Err(IggyError::InvalidNumberEncoding);
+    }
+    let hostname = from_utf8(&payload[current_position..current_position + hostname_length])
+        .map_err(|_| IggyError::InvalidUtf8)?
+        .to_string();
+    current_position += hostname_length;
+
+    //
+    // Safely Decode OS name
+    //
+    if current_position + 4 > payload.len() {
+        return Err(IggyError::InvalidNumberEncoding);
+    }
     let os_name_length = u32::from_le_bytes(
         payload[current_position..current_position + 4]
             .try_into()
             .map_err(|_| IggyError::InvalidNumberEncoding)?,
     ) as usize;
-    let os_name = from_utf8(&payload[current_position + 4..current_position + 4 + os_name_length])
+    current_position += 4;
+    if current_position + os_name_length > payload.len() {
+        return Err(IggyError::InvalidNumberEncoding);
+    }
+    let os_name = from_utf8(&payload[current_position..current_position + os_name_length])
         .map_err(|_| IggyError::InvalidUtf8)?
         .to_string();
-    current_position += 4 + os_name_length;
+    current_position += os_name_length;
+
+    //
+    // Safely decode OS version
+    //
+    if current_position + 4 > payload.len() {
+        return Err(IggyError::InvalidNumberEncoding);
+    }
     let os_version_length = u32::from_le_bytes(
         payload[current_position..current_position + 4]
             .try_into()
             .map_err(|_| IggyError::InvalidNumberEncoding)?,
     ) as usize;
-    let os_version =
-        from_utf8(&payload[current_position + 4..current_position + 4 + os_version_length])
-            .map_err(|_| IggyError::InvalidUtf8)?
-            .to_string();
-    current_position += 4 + os_version_length;
-    let kernel_version_length = u32::from_le_bytes(
-        payload[current_position..current_position + 4]
-            .try_into()
-            .map_err(|_| IggyError::InvalidNumberEncoding)?,
-    ) as usize;
-    let kernel_version =
-        from_utf8(&payload[current_position + 4..current_position + 4 + kernel_version_length])
-            .map_err(|_| IggyError::InvalidUtf8)?
-            .to_string();
-    current_position += 4 + kernel_version_length;
-    let iggy_version_length = u32::from_le_bytes(
-        payload[current_position..current_position + 4]
-            .try_into()
-            .map_err(|_| IggyError::InvalidUtf8)?,
-    ) as usize;
-    let iggy_version =
-        from_utf8(&payload[current_position + 4..current_position + 4 + iggy_version_length])
-            .map_err(|_| IggyError::InvalidUtf8)?
-            .to_string();
-    current_position += 4 + iggy_version_length;
-    let iggy_semver = u32::from_le_bytes(
-        payload[current_position..current_position + 4]
-            .try_into()
-            .map_err(|_| IggyError::InvalidNumberEncoding)?,
-    );
-    let iggy_semver = if iggy_semver == 0 {
-        None
+    current_position += 4;
+    if current_position + os_version_length > payload.len() {
+        return Err(IggyError::InvalidNumberEncoding);
+    }
+    let os_version = from_utf8(&payload[current_position..current_position + os_version_length])
+        .map_err(|_| IggyError::InvalidUtf8)?
+        .to_string();
+    current_position += os_version_length;
+
+    //
+    // Safely decode kernel version (NEW) + server version (NEW) + server semver (NEW)
+    // We'll check if there's enough bytes before reading each new field.
+    //
+
+    // Default them in case payload doesn't have them (older server)
+    let mut kernel_version = String::new();
+    let mut iggy_server_version = String::new();
+    let mut iggy_server_semver: Option<u32> = None;
+
+    // kernel_version (if it exists)
+    if current_position + 4 <= payload.len() {
+        let kernel_version_length = u32::from_le_bytes(
+            payload[current_position..current_position + 4]
+                .try_into()
+                .map_err(|_| IggyError::InvalidNumberEncoding)?,
+        ) as usize;
+        current_position += 4;
+        if current_position + kernel_version_length <= payload.len() {
+            let kv =
+                from_utf8(&payload[current_position..current_position + kernel_version_length])
+                    .map_err(|_| IggyError::InvalidUtf8)?
+                    .to_string();
+            kernel_version = kv;
+            current_position += kernel_version_length;
+        } else {
+            // Not enough bytes for kernel version string, treat as empty or error out
+            // return Err(IggyError::InvalidNumberEncoding);
+            kernel_version = String::new(); // fallback
+        }
     } else {
-        Some(iggy_semver)
-    };
+        // This means older server didn't send kernel_version, so remain empty
+    }
+
+    // iggy_server_version (if it exists)
+    if current_position + 4 <= payload.len() {
+        let iggy_version_length = u32::from_le_bytes(
+            payload[current_position..current_position + 4]
+                .try_into()
+                .map_err(|_| IggyError::InvalidNumberEncoding)?,
+        ) as usize;
+        current_position += 4;
+        if current_position + iggy_version_length <= payload.len() {
+            let iv = from_utf8(&payload[current_position..current_position + iggy_version_length])
+                .map_err(|_| IggyError::InvalidUtf8)?
+                .to_string();
+            iggy_server_version = iv;
+            current_position += iggy_version_length;
+        } else {
+            // Not enough bytes for iggy version string, treat as empty or error out
+            // return Err(IggyError::InvalidNumberEncoding);
+            iggy_server_version = String::new(); // fallback
+        }
+    } else {
+        // older server didn't send iggy_server_version, so remain empty
+    }
+
+    // iggy_server_semver (if it exists)
+    if current_position + 4 <= payload.len() {
+        let semver = u32::from_le_bytes(
+            payload[current_position..current_position + 4]
+                .try_into()
+                .map_err(|_| IggyError::InvalidNumberEncoding)?,
+        );
+        // current_position += 4; // uncomment this when adding new fields
+        if semver != 0 {
+            iggy_server_semver = Some(semver);
+        }
+    } else {
+        // older server didn't send semver
+    }
 
     Ok(Stats {
         process_id,
@@ -212,8 +286,8 @@ pub fn map_stats(payload: Bytes) -> Result<Stats, IggyError> {
         os_name,
         os_version,
         kernel_version,
-        iggy_server_version: iggy_version,
-        iggy_server_semver: iggy_semver,
+        iggy_server_version,
+        iggy_server_semver,
     })
 }
 

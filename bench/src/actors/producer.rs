@@ -1,5 +1,6 @@
 use crate::analytics::metrics::individual::from_records;
 use crate::analytics::record::BenchmarkRecord;
+use crate::rate_limiter::RateLimiter;
 use iggy::client::MessageClient;
 use iggy::clients::client::IggyClient;
 use iggy::error::IggyError;
@@ -28,6 +29,7 @@ pub struct Producer {
     warmup_time: IggyDuration,
     sampling_time: IggyDuration,
     moving_average_window: u32,
+    rate_limiter: Option<RateLimiter>,
 }
 
 impl Producer {
@@ -43,6 +45,7 @@ impl Producer {
         warmup_time: IggyDuration,
         sampling_time: IggyDuration,
         moving_average_window: u32,
+        rate_limiter: Option<RateLimiter>,
     ) -> Self {
         Producer {
             client_factory,
@@ -55,6 +58,7 @@ impl Producer {
             warmup_time,
             sampling_time,
             moving_average_window,
+            rate_limiter,
         }
     }
 
@@ -117,6 +121,10 @@ impl Producer {
         let mut latencies: Vec<Duration> = Vec::with_capacity(message_batches as usize);
         let mut records = Vec::with_capacity(message_batches as usize);
         for i in 1..=message_batches {
+            // Apply rate limiting if configured
+            if let Some(limiter) = &self.rate_limiter {
+                limiter.wait_and_consume(batch_total_bytes).await;
+            }
             let before_send = Instant::now();
             client
                 .send_messages(&stream_id, &topic_id, &partitioning, &mut messages)

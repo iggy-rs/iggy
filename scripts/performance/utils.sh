@@ -126,19 +126,19 @@ function construct_bench_command() {
     hostname=$(hostname)
 
     echo "$bench_command \
-    $COMMON_ARGS \
-    --output-dir performance_results \
-    --identifier ${hostname} \
-    --remark ${remark} \
-    --extra-info \"\" \
-    --gitref \"${commit_hash}\" \
-    --gitref-date \"${commit_date}\" \
-    ${type} \
-    ${producer_arg} \
-    ${consumer_arg} \
-    --streams ${streams} \
-    --message-size ${message_size} \
-    --messages-per-batch ${messages_per_batch} \
-    --message-batches ${message_batches} \
-    ${protocol}"
+$COMMON_ARGS \
+--output-dir performance_results \
+--identifier ${hostname} \
+--remark ${remark} \
+--extra-info \"\" \
+--gitref \"${commit_hash}\" \
+--gitref-date \"${commit_date}\" \
+${type} \
+${producer_arg} \
+${consumer_arg} \
+--streams ${streams} \
+--message-size ${message_size} \
+--messages-per-batch ${messages_per_batch} \
+--message-batches ${message_batches} \
+${protocol}"
 }

@@ -2328,7 +2328,7 @@ dependencies = [
 
 [[package]]
 name = "iggy"
-version = "0.6.90"
+version = "0.6.91"
 dependencies = [
  "aes-gcm",
  "ahash 0.8.11",
@@ -2377,7 +2377,7 @@ dependencies = [
 
 [[package]]
 name = "iggy-benchmark-report"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "byte-unit",
  "charming",

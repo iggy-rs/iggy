@@ -22,9 +22,35 @@ source "$(dirname "$0")/utils.sh"
 trap on_exit_bench SIGINT
 trap on_exit_bench EXIT
 
+# Function to get environment variables based on benchmark type
+get_env_vars() {
+    local bench_type="$1"
+    local env_vars=()
+
+    # Specific env vars based on bench type
+    case "$bench_type" in
+        *"only_cache"*)
+            env_vars+=("IGGY_SYSTEM_CACHE_SIZE=9GB")
+            ;;
+        *"no_cache"*)
+            env_vars+=("IGGY_SYSTEM_CACHE_ENABLED=false")
+            ;;
+        *"no_wait"*)
+            env_vars+=("IGGY_SYSTEM_SEGMENT_SERVER_CONFIRMATION=no_wait")
+            ;;
+    esac
+
+    # Convert array to env var string
+    local env_string=""
+    for var in "${env_vars[@]}"; do
+        env_string+="$var "
+    done
+    echo "$env_string"
+}
+
 # Build the project
 echo "Building project..."
-cargo build --release
+RUSTFLAGS="-C target-cpu=native" cargo build --release
 
 # Create a directory for the performance results
 (mkdir -p performance_results || true) &> /dev/null
@@ -47,7 +73,6 @@ SMALL_BATCH_NO_CACHE_POLL=$(construct_bench_command "$IGGY_BENCH_CMD" "poll" 8 1
 
 LARGE_BATCH_NO_CACHE_SEND_AND_POLL=$(construct_bench_command "$IGGY_BENCH_CMD" "send-and-poll" 8 1000 1000 1000 tcp "no_cache")  # 8GB data, 1KB messages, 1000 msgs/batch with disabled cache
 LARGE_BATCH_NO_CACHE_CG_POLL=$(construct_bench_command "$IGGY_BENCH_CMD" "consumer-group-poll" 8 1000 1000 1000 tcp "no_cache")  # 8GB data, 1KB messages, 1000 msgs/batch with disabled cache
-
 
 # Make an array of the suites
 SUITES=(
@@ -74,20 +99,21 @@ for (( i=0; i<${#SUITES[@]} ; i+=2 )) ; do
     echo "Cleaning old local_data..."
     rm -rf local_data || true
 
+    # Get environment variables based on benchmark type
+    ENV_VARS=$(get_env_vars "$SEND_BENCH")
+
+    echo "Starting iggy-server with command:"
+
     # Start iggy-server with appropriate configuration
-    if [[ "$SEND_BENCH" == *"only_cache"* ]] || [[ "$POLL_BENCH" == *"only_cache"* ]]; then
-        echo "Starting iggy-server with command: IGGY_SYSTEM_CACHE_SIZE=\"9GB\" target/release/iggy-server"
-        IGGY_SYSTEM_CACHE_SIZE="9GB" target/release/iggy-server &> /dev/null &
-    elif [[ "$SEND_BENCH" == *"no_cache"* ]] || [[ "$POLL_BENCH" == *"no_cache"* ]]; then
-        echo "Starting iggy-server with command: IGGY_SYSTEM_CACHE_ENABLED=false target/release/iggy-server"
-        IGGY_SYSTEM_CACHE_ENABLED=false target/release/iggy-server &> /dev/null &
-    elif [[ "$SEND_BENCH" == *"no_wait"* ]] || [[ "$POLL_BENCH" == *"no_wait"* ]]; then
-        echo "Starting iggy-server with command: IGGY_SYSTEM_SEGMENT_SERVER_CONFIRMATION=no_wait target/release/iggy-server"
-        IGGY_SYSTEM_SEGMENT_SERVER_CONFIRMATION=no_wait target/release/iggy-server &> /dev/null &
+    if [[ -n "$ENV_VARS" ]]; then
+        echo "$ENV_VARS target/release/iggy-server"
+        eval "$ENV_VARS target/release/iggy-server" &> /dev/null &
     else
-        echo "Starting iggy-server with command: target/release/iggy-server"
+
+        echo "target/release/iggy-server"
         target/release/iggy-server &> /dev/null &
     fi
+    echo
     IGGY_SERVER_PID=$!
     sleep 2
 
@@ -95,8 +121,9 @@ for (( i=0; i<${#SUITES[@]} ; i+=2 )) ; do
     exit_if_process_is_not_running "$IGGY_SERVER_PID"
 
     # Start send bench
-    echo "Running ${SEND_BENCH}"
-    send_results=$(eval "${SEND_BENCH}" | grep -e "Results:")
+    echo "Running bench:"
+    echo "$ENV_VARS ${SEND_BENCH}"
+    send_results=$(eval "$ENV_VARS ${SEND_BENCH}" | grep -e "Results:")
     echo
     echo "Send results:"
     echo "${send_results}"
@@ -104,8 +131,9 @@ for (( i=0; i<${#SUITES[@]} ; i+=2 )) ; do
     sleep 1
 
     # Start poll bench
-    echo "Running ${POLL_BENCH}"
-    poll_results=$(eval "${POLL_BENCH}" | grep -e "Results:")
+    echo "Running bench:"
+    echo "$ENV_VARS ${POLL_BENCH}"
+    poll_results=$(eval "$ENV_VARS ${POLL_BENCH}" | grep -e "Results:")
     echo
     echo "Poll results:"
     echo "${poll_results}"

@@ -38,12 +38,18 @@ rkyv = { workspace = true }
 futures = "0.3.31"
 futures-util = "0.3.31"
 humantime = "2.1.0"
-keyring = { version = "3.6.1", optional = true, features = ["sync-secret-service", "vendored"] }
+keyring = { version = "3.6.1", optional = true, features = [
+    "sync-secret-service",
+    "vendored",
+] }
 lazy_static = "1.5.0"
 passterm = { version = "2.0.1", optional = true }
 quinn = { version = "0.11.6" }
 regex = "1.11.1"
-reqwest = { version = "0.12.12", default-features = false, features = ["json", "rustls-tls"] }
+reqwest = { version = "0.12.12", default-features = false, features = [
+    "json",
+    "rustls-tls",
+] }
 reqwest-middleware = { version = "0.4.0", features = ["json"] }
 reqwest-retry = "0.7.0"
 rustls = { version = "0.23.21", features = ["ring"] }

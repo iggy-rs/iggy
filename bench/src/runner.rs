@@ -28,6 +28,7 @@ impl BenchmarkRunner {
 
     pub async fn run(&mut self) -> Result<(), IggyError> {
         let mut args = self.args.take().unwrap();
+        let should_open_charts = args.open_charts;
         self.test_server = start_server_if_needed(&mut args).await;
 
         let transport = args.transport();
@@ -81,11 +82,23 @@ impl BenchmarkRunner {
             report.dump_to_json(&full_output_path);
 
             // Generate the plots
-            plot_chart(&report, &full_output_path, ChartType::Throughput).map_err(|e| {
+            plot_chart(
+                &report,
+                &full_output_path,
+                ChartType::Throughput,
+                should_open_charts,
+            )
+            .map_err(|e| {
                 error!("Failed to generate plots: {e}");
                 IggyError::CannotWriteToFile
             })?;
-            plot_chart(&report, &full_output_path, ChartType::Latency).map_err(|e| {
+            plot_chart(
+                &report,
+                &full_output_path,
+                ChartType::Latency,
+                should_open_charts,
+            )
+            .map_err(|e| {
                 error!("Failed to generate plots: {e}");
                 IggyError::CannotWriteToFile
             })?;

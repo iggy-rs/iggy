@@ -2,6 +2,7 @@ use crate::{
     actors::consumer::Consumer,
     args::common::IggyBenchArgs,
     benchmarks::{CONSUMER_GROUP_BASE_ID, CONSUMER_GROUP_NAME_PREFIX},
+    rate_limiter::RateLimiter,
 };
 use async_trait::async_trait;
 use iggy::{client::ConsumerGroupClient, clients::client::IggyClient, error::IggyError};
@@ -96,6 +97,9 @@ impl Benchmarkable for ConsumerGroupBenchmark {
                 warmup_time,
                 self.args.sampling_time(),
                 self.args.moving_average_window(),
+                self.args
+                    .rate_limit()
+                    .map(|rl| RateLimiter::new(rl.as_bytes_u64())),
                 self.args.polling_kind(),
             );
             let future = Box::pin(async move { consumer.run().await });

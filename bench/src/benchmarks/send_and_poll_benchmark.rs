@@ -2,6 +2,7 @@ use super::benchmark::{BenchmarkFutures, Benchmarkable};
 use crate::actors::consumer::Consumer;
 use crate::actors::producer::Producer;
 use crate::args::common::IggyBenchArgs;
+use crate::rate_limiter::RateLimiter;
 use async_trait::async_trait;
 use iggy_benchmark_report::benchmark_kind::BenchmarkKind;
 use integration::test_server::ClientFactory;
@@ -55,6 +56,9 @@ impl Benchmarkable for SendAndPollMessagesBenchmark {
                 warmup_time,
                 self.args.sampling_time(),
                 self.args.moving_average_window(),
+                self.args
+                    .rate_limit()
+                    .map(|rl| RateLimiter::new(rl.as_bytes_u64())),
             );
             let future = Box::pin(async move { producer.run().await });
             futures.as_mut().unwrap().push(future);
@@ -76,6 +80,9 @@ impl Benchmarkable for SendAndPollMessagesBenchmark {
                 self.args.sampling_time(),
                 self.args.moving_average_window(),
                 self.args.polling_kind(),
+                self.args
+                    .rate_limit()
+                    .map(|rl| RateLimiter::new(rl.as_bytes_u64())),
             );
             let future = Box::pin(async move { consumer.run().await });
             futures.as_mut().unwrap().push(future);

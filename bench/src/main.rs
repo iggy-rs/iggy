@@ -3,6 +3,7 @@ mod analytics;
 mod args;
 mod benchmarks;
 mod plot;
+mod rate_limiter;
 mod runner;
 mod utils;
 

@@ -4,6 +4,7 @@ use super::{defaults::*, transport::BenchmarkTransportCommand};
 use clap::error::ErrorKind;
 use clap::{CommandFactory, Parser};
 use iggy::messages::poll_messages::PollingKind;
+use iggy::utils::byte_size::IggyByteSize;
 use iggy::utils::duration::IggyDuration;
 use iggy_benchmark_report::benchmark_kind::BenchmarkKind;
 use iggy_benchmark_report::params::BenchmarkParams;
@@ -49,6 +50,11 @@ pub struct IggyBenchArgs {
     #[arg(long, default_value_t = DEFAULT_MOVING_AVERAGE_WINDOW)]
     pub moving_average_window: u32,
 
+    /// Optional rate limit per individual producer/consumer in bytes per second (not aggregate).
+    /// Accepts human-readable formats like "50KB", "10MB", or "1GB"
+    #[arg(long)]
+    pub rate_limit: Option<IggyByteSize>,
+
     /// Skip server start
     #[arg(long, short = 'k', default_value_t = DEFAULT_SKIP_SERVER_START)]
     pub skip_server_start: bool,
@@ -76,6 +82,10 @@ pub struct IggyBenchArgs {
     /// Git reference date used for note in the benchmark results, preferably merge date of the commit
     #[arg(long)]
     pub gitref_date: Option<String>,
+
+    /// Open generated charts in browser after benchmark is finished
+    #[arg(long, default_value_t = false)]
+    pub open_charts: bool,
 }
 
 fn validate_server_executable_path(v: &str) -> Result<String, String> {
@@ -200,6 +210,10 @@ impl IggyBenchArgs {
 
     pub fn moving_average_window(&self) -> u32 {
         self.moving_average_window
+    }
+
+    pub fn rate_limit(&self) -> Option<IggyByteSize> {
+        self.rate_limit
     }
 
     pub fn output_dir(&self) -> Option<String> {
@@ -421,6 +435,10 @@ fn recreate_bench_command(args: &IggyBenchArgs) -> String {
         && consumer_groups != DEFAULT_NUMBER_OF_CONSUMER_GROUPS.get()
     {
         parts.push(format!("--consumer-groups {}", consumer_groups));
+    }
+
+    if let Some(rate_limit) = args.rate_limit() {
+        parts.push(format!("--rate-limit {}", rate_limit));
     }
 
     parts.join(" ")

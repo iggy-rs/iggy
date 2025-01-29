@@ -3,7 +3,6 @@ use crate::actors::consumer::Consumer;
 use crate::actors::producer::Producer;
 use crate::args::common::IggyBenchArgs;
 use async_trait::async_trait;
-use iggy::messages::poll_messages::PollingKind;
 use iggy_benchmark_report::benchmark_kind::BenchmarkKind;
 use integration::test_server::ClientFactory;
 use std::sync::Arc;
@@ -76,7 +75,7 @@ impl Benchmarkable for SendAndPollMessagesBenchmark {
                 warmup_time,
                 self.args.sampling_time(),
                 self.args.moving_average_window(),
-                PollingKind::Offset,
+                self.args.polling_kind(),
             );
             let future = Box::pin(async move { consumer.run().await });
             futures.as_mut().unwrap().push(future);

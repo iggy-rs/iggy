@@ -3,6 +3,7 @@ use super::props::{BenchmarkKindProps, BenchmarkTransportProps};
 use super::{defaults::*, transport::BenchmarkTransportCommand};
 use clap::error::ErrorKind;
 use clap::{CommandFactory, Parser};
+use iggy::messages::poll_messages::PollingKind;
 use iggy::utils::duration::IggyDuration;
 use iggy_benchmark_report::benchmark_kind::BenchmarkKind;
 use iggy_benchmark_report::params::BenchmarkParams;
@@ -36,7 +37,7 @@ pub struct IggyBenchArgs {
     #[arg(long, short='v', default_value_t = DEFAULT_SERVER_STDOUT_VISIBILITY)]
     pub verbose: bool,
 
-    /// Warmup time
+    /// Warmup time in human readable format, e.g. "1s", "2m", "3h"
     #[arg(long, short = 'w', default_value_t = IggyDuration::from_str(DEFAULT_WARMUP_TIME).unwrap())]
     pub warmup_time: IggyDuration,
 
@@ -53,11 +54,11 @@ pub struct IggyBenchArgs {
     pub skip_server_start: bool,
 
     /// Output directory path for storing benchmark results
-    #[arg(long)]
+    #[arg(long, short = 'o')]
     pub output_dir: Option<String>,
 
-    /// Identifier for the benchmark run (e.g., machine name)
-    #[arg(long)]
+    /// Identifier for the benchmark run (defaults to hostname if not provided)
+    #[arg(long, value_parser = get_identifier_or_hostname)]
     pub identifier: Option<String>,
 
     /// Additional remark for the benchmark (e.g., no-cache)
@@ -83,6 +84,10 @@ fn validate_server_executable_path(v: &str) -> Result<String, String> {
     } else {
         Err(format!("Provided server executable '{v}' does not exist."))
     }
+}
+
+fn get_identifier_or_hostname(v: &str) -> Result<String, String> {
+    Ok(v.to_owned())
 }
 
 impl IggyBenchArgs {
@@ -175,6 +180,10 @@ impl IggyBenchArgs {
         self.benchmark_kind
             .inner()
             .disable_parallel_consumer_streams()
+    }
+
+    pub fn polling_kind(&self) -> PollingKind {
+        self.benchmark_kind.inner().polling_kind()
     }
 
     pub fn number_of_consumer_groups(&self) -> u32 {

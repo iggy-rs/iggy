@@ -1,3 +1,4 @@
+use iggy::messages::poll_messages::PollingKind;
 use nonzero_lit::u32;
 use std::num::NonZeroU32;
 
@@ -28,11 +29,13 @@ pub const DEFAULT_NUMBER_OF_CONSUMERS: NonZeroU32 = u32!(10);
 pub const DEFAULT_NUMBER_OF_CONSUMER_GROUPS: NonZeroU32 = u32!(1);
 pub const DEFAULT_NUMBER_OF_PRODUCERS: NonZeroU32 = u32!(10);
 
+pub const DEFAULT_POLLING_KIND_CG_POLL: PollingKind = PollingKind::Next;
+
 pub const DEFAULT_PERFORM_CLEANUP: bool = false;
 pub const DEFAULT_SERVER_SYSTEM_PATH: &str = "local_data";
 pub const DEFAULT_SERVER_STDOUT_VISIBILITY: bool = false;
 
-pub const DEFAULT_WARMUP_TIME: &str = "1 s";
+pub const DEFAULT_WARMUP_TIME: &str = "0 s";
 pub const DEFAULT_SKIP_SERVER_START: bool = false;
 
 pub const DEFAULT_SAMPLING_TIME: &str = "10 ms";

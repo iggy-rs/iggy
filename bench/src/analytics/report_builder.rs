@@ -1,4 +1,5 @@
 use super::metrics::group::{from_individual_metrics, from_producers_and_consumers_statistics};
+use crate::utils::server_version::get_server_version;
 use chrono::{DateTime, Utc};
 use iggy::utils::timestamp::IggyTimestamp;
 use iggy_benchmark_report::{
@@ -10,10 +11,9 @@ use iggy_benchmark_report::{
 pub struct BenchmarkReportBuilder;
 
 impl BenchmarkReportBuilder {
-    pub fn build(
-        server_version: String,
+    pub async fn build(
         hardware: BenchmarkHardware,
-        params: BenchmarkParams,
+        mut params: BenchmarkParams,
         mut individual_metrics: Vec<BenchmarkIndividualMetrics>,
         moving_average_window: u32,
     ) -> BenchmarkReport {
@@ -23,6 +23,19 @@ impl BenchmarkReportBuilder {
             DateTime::<Utc>::from_timestamp_micros(IggyTimestamp::now().as_micros() as i64)
                 .map(|dt| dt.to_rfc3339())
                 .unwrap_or_else(|| String::from("unknown"));
+
+        let server_version = match get_server_version(&params).await {
+            Ok(v) => v,
+            Err(_) => "unknown".to_string(),
+        };
+
+        if params.gitref.is_none() {
+            params.gitref = Some(server_version.clone());
+        };
+
+        if params.gitref_date.is_none() {
+            params.gitref_date = Some(timestamp.clone());
+        }
 
         let mut group_metrics = Vec::new();
 

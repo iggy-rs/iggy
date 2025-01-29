@@ -3,7 +3,6 @@ use crate::args::common::IggyBenchArgs;
 use crate::benchmarks::benchmark::Benchmarkable;
 use crate::plot::{plot_chart, ChartType};
 use crate::utils::server_starter::start_server_if_needed;
-use crate::utils::server_version::get_server_version;
 use futures::future::select_all;
 use iggy::error::IggyError;
 use iggy_benchmark_report::hardware::BenchmarkHardware;
@@ -51,25 +50,19 @@ impl BenchmarkRunner {
             }
         }
 
-        info!("All actors finished");
+        info!("All actors joined!");
 
-        let params = BenchmarkParams::from(benchmark.args());
-
-        let server_version = match get_server_version(&params).await {
-            Ok(v) => v,
-            Err(_) => "unknown".to_string(),
-        };
         let hardware =
             BenchmarkHardware::get_system_info_with_identifier(benchmark.args().identifier());
+        let params = BenchmarkParams::from(benchmark.args());
+
         let report = BenchmarkReportBuilder::build(
-            server_version,
             hardware,
             params,
             individual_metrics,
             benchmark.args().moving_average_window(),
-        );
-
-        info!("Printing summary");
+        )
+        .await;
 
         // Sleep just to see result prints after all tasks are joined (they print per-actor results)
         sleep(Duration::from_millis(10)).await;

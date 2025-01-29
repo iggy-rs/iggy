@@ -97,6 +97,7 @@ function construct_bench_command() {
     local message_batches=$6
     local protocol=$7
     local remark=${8:-""}
+    local identifier=${9:-$(hostname)}
 
     # Validate the type
     if [[ "$type" != "send" && "$type" != "poll" && "$type" != "send-and-poll" && "$type" != "consumer-group-poll" ]]; then
@@ -122,13 +123,11 @@ function construct_bench_command() {
     commit_hash=$(get_git_iggy_server_tag_or_sha1 .) || { echo "Failed to get git commit or tag."; exit 1; }
     local commit_date
     commit_date=$(get_git_commit_date .) || { echo "Failed to get git commit date."; exit 1; }
-    local hostname
-    hostname=$(hostname)
 
     echo "$bench_command \
 $COMMON_ARGS \
 --output-dir performance_results \
---identifier ${hostname} \
+--identifier ${identifier} \
 --remark ${remark} \
 --extra-info \"\" \
 --gitref \"${commit_hash}\" \

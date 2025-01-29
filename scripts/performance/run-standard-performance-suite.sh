@@ -3,20 +3,41 @@
 # shellcheck disable=SC1091
 
 IGGY_BENCH_CMD=""
-if [ -z "$1" ]; then
+IDENTIFIER=""
+
+# Parse arguments
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        --identifier)
+            IDENTIFIER="$2"
+            shift 2
+            ;;
+        *)
+            if [ -z "$IGGY_BENCH_CMD" ]; then
+                IGGY_BENCH_CMD="$1"
+            fi
+            shift
+            ;;
+    esac
+done
+
+# Set default binary path if not provided
+if [ -z "$IGGY_BENCH_CMD" ]; then
     IGGY_BENCH_CMD="target/release/iggy-bench"
-else
-    IGGY_BENCH_CMD="$1"
 fi
 
 echo "Using iggy-bench binary: ${IGGY_BENCH_CMD}"
+if [ -n "$IDENTIFIER" ]; then
+    echo "Using identifier: ${IDENTIFIER}"
+else
+    echo "Using hostname: $(hostname) as identifier"
+fi
 
 set -euo pipefail
 
 # Load utility functions
 source "$(dirname "$0")/../utils.sh"
 source "$(dirname "$0")/utils.sh"
-
 
 # Trap SIGINT (Ctrl+C) and execute the on_exit function, do the same on script exit
 trap on_exit_bench SIGINT
@@ -56,23 +77,26 @@ RUSTFLAGS="-C target-cpu=native" cargo build --release
 (mkdir -p performance_results || true) &> /dev/null
 
 # Construct standard performance suites, each should process 8 GB of data
-LARGE_BATCH_ONLY_CACHE_SEND=$(construct_bench_command "$IGGY_BENCH_CMD" "send" 8 1000 1000 1000 tcp "only_cache")  # 8GB data, 1KB messages, 1000 msgs/batch with forced cache
-LARGE_BATCH_ONLY_CACHE_POLL=$(construct_bench_command "$IGGY_BENCH_CMD" "poll" 8 1000 1000 1000 tcp "only_cache")  # 8GB data, 1KB messages, 1000 msgs/batch with forced cache
+LARGE_BATCH_ONLY_CACHE_SEND=$(construct_bench_command "$IGGY_BENCH_CMD" "send" 8 1000 1000 1000 tcp "only_cache" "$IDENTIFIER")  # 8GB data, 1KB messages, 1000 msgs/batch with forced cache
+LARGE_BATCH_ONLY_CACHE_POLL=$(construct_bench_command "$IGGY_BENCH_CMD" "poll" 8 1000 1000 1000 tcp "only_cache" "$IDENTIFIER")  # 8GB data, 1KB messages, 1000 msgs/batch with forced cache
 
-LARGE_BATCH_NO_CACHE_SEND=$(construct_bench_command "$IGGY_BENCH_CMD" "send" 8 1000 1000 1000 tcp "no_cache")  # 8GB data, 1KB messages, 1000 msgs/batch with disabled cache
-LARGE_BATCH_NO_CACHE_POLL=$(construct_bench_command "$IGGY_BENCH_CMD" "poll" 8 1000 1000 1000 tcp "no_cache")  # 8GB data, 1KB messages, 1000 msgs/batch with disabled cache
+LARGE_BATCH_NO_CACHE_SEND=$(construct_bench_command "$IGGY_BENCH_CMD" "send" 8 1000 1000 1000 tcp "no_cache" "$IDENTIFIER")  # 8GB data, 1KB messages, 1000 msgs/batch with disabled cache
+LARGE_BATCH_NO_CACHE_POLL=$(construct_bench_command "$IGGY_BENCH_CMD" "poll" 8 1000 1000 1000 tcp "no_cache" "$IDENTIFIER")  # 8GB data, 1KB messages, 1000 msgs/batch with disabled cache
 
-LARGE_BATCH_NO_WAIT_SEND=$(construct_bench_command "$IGGY_BENCH_CMD" "send" 8 1000 1000 1000 tcp "no_wait")  # 8GB data, 1KB messages, 1000 msgs/batch with no_wait config
-LARGE_BATCH_NO_WAIT_POLL=$(construct_bench_command "$IGGY_BENCH_CMD" "poll" 8 1000 1000 1000 tcp "no_wait")  # 8GB data, 1KB messages, 1000 msgs/batch with no_wait config
+LARGE_BATCH_NO_WAIT_SEND=$(construct_bench_command "$IGGY_BENCH_CMD" "send" 8 1000 1000 1000 tcp "no_wait" "$IDENTIFIER")  # 8GB data, 1KB messages, 1000 msgs/batch with no_wait config
+LARGE_BATCH_NO_WAIT_POLL=$(construct_bench_command "$IGGY_BENCH_CMD" "poll" 8 1000 1000 1000 tcp "no_wait" "$IDENTIFIER")  # 8GB data, 1KB messages, 1000 msgs/batch with no_wait config
 
-SMALL_BATCH_ONLY_CACHE_SEND=$(construct_bench_command "$IGGY_BENCH_CMD" "send" 8 1000 100 10000 tcp "only_cache")    # 8GB data, 1KB messages, 100 msgs/batch with forced cache
-SMALL_BATCH_ONLY_CACHE_POLL=$(construct_bench_command "$IGGY_BENCH_CMD" "poll" 8 1000 100 10000 tcp "only_cache")     # 8GB data, 1KB messages, 100 msgs/batch with forced cache
+SMALL_BATCH_ONLY_CACHE_SEND=$(construct_bench_command "$IGGY_BENCH_CMD" "send" 8 1000 100 10000 tcp "only_cache" "$IDENTIFIER")    # 8GB data, 1KB messages, 100 msgs/batch with forced cache
+SMALL_BATCH_ONLY_CACHE_POLL=$(construct_bench_command "$IGGY_BENCH_CMD" "poll" 8 1000 100 10000 tcp "only_cache" "$IDENTIFIER")     # 8GB data, 1KB messages, 100 msgs/batch with forced cache
 
-SMALL_BATCH_NO_CACHE_SEND=$(construct_bench_command "$IGGY_BENCH_CMD" "send" 8 1000 100 10000 tcp "no_cache")    # 8GB data, 1KB messages, 100 msgs/batch, no cache
-SMALL_BATCH_NO_CACHE_POLL=$(construct_bench_command "$IGGY_BENCH_CMD" "poll" 8 1000 100 10000 tcp "no_cache")     # 8GB data, 1KB messages, 100 msgs/batch, no cache
+SMALL_BATCH_NO_CACHE_SEND=$(construct_bench_command "$IGGY_BENCH_CMD" "send" 8 1000 100 10000 tcp "no_cache" "$IDENTIFIER")    # 8GB data, 1KB messages, 100 msgs/batch, no cache
+SMALL_BATCH_NO_CACHE_POLL=$(construct_bench_command "$IGGY_BENCH_CMD" "poll" 8 1000 100 10000 tcp "no_cache" "$IDENTIFIER")     # 8GB data, 1KB messages, 100 msgs/batch, no cache
 
-LARGE_BATCH_NO_CACHE_SEND_AND_POLL=$(construct_bench_command "$IGGY_BENCH_CMD" "send-and-poll" 8 1000 1000 1000 tcp "no_cache")  # 8GB data, 1KB messages, 1000 msgs/batch with disabled cache
-LARGE_BATCH_NO_CACHE_CG_POLL=$(construct_bench_command "$IGGY_BENCH_CMD" "consumer-group-poll" 8 1000 1000 1000 tcp "no_cache")  # 8GB data, 1KB messages, 1000 msgs/batch with disabled cache
+# Disable parallel producers (change to multi-stream producer?) + set partitions > 1 + make it `send`
+# LARGE_BATCH_NO_CACHE_SEND_AND_POLL=$(construct_bench_command "$IGGY_BENCH_CMD" "send-and-poll" 8 1000 1000 1000 tcp "no_cache" "$IDENTIFIER")  # 8GB data, 1KB messages, 1000 msgs/batch with disabled cache
+
+# Polling kind = next
+# LARGE_BATCH_NO_CACHE_CG_POLL=$(construct_bench_command "$IGGY_BENCH_CMD" "consumer-group-poll" 8 1000 1000 1000 tcp "no_cache" "$IDENTIFIER")  # 8GB data, 1KB messages, 1000 msgs/batch with disabled cache
 
 # Make an array of the suites
 SUITES=(
@@ -86,8 +110,8 @@ SUITES=(
     "${SMALL_BATCH_ONLY_CACHE_POLL}"
     "${SMALL_BATCH_NO_CACHE_SEND}"
     "${SMALL_BATCH_NO_CACHE_POLL}"
-    "${LARGE_BATCH_NO_CACHE_SEND_AND_POLL}"
-    "${LARGE_BATCH_NO_CACHE_CG_POLL}"
+    # "${LARGE_BATCH_NO_CACHE_SEND_AND_POLL}"
+    # "${LARGE_BATCH_NO_CACHE_CG_POLL}"
 )
 
 # Run the suites, iterate over two elements at a time

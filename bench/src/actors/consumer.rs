@@ -97,7 +97,7 @@ impl Consumer {
         // let mut current_iteration: u64 = 0;
         // let mut received_messages = 0;
         // let mut topic_not_found_counter = 0;
-        let mut strategy = PollingStrategy::offset(0);
+        // let mut strategy = PollingStrategy::offset(0);
 
         // if self.warmup_time.get_duration() != Duration::from_millis(0) {
         //     if let Some(cg_id) = self.consumer_group_id {
@@ -114,14 +114,14 @@ impl Consumer {
         //     let warmup_end = Instant::now() + self.warmup_time.get_duration();
         //     while Instant::now() < warmup_end {
         //         let offset = current_iteration * messages_per_batch as u64;
-                strategy.set_value(offset);
-                    PollingKind::Offset => (PollingStrategy::offset(offset), false),
-                    PollingKind::Next => (PollingStrategy::next(), true),
-                    _ => panic!(
-                        "Unsupported polling kind for benchmark: {:?}",
-                        self.polling_kind
-                    ),
-                };
+        // strategy.set_value(offset);
+        //     PollingKind::Offset => (PollingStrategy::offset(offset), false),
+        //     PollingKind::Next => (PollingStrategy::next(), true),
+        //     _ => panic!(
+        //         "Unsupported polling kind for benchmark: {:?}",
+        //         self.polling_kind
+        //     ),
+        // };
         //         let polled_messages = client
         //             .poll_messages(
         //                 &stream_id,
@@ -130,7 +130,7 @@ impl Consumer {
         //                 &consumer,
         //                 &strategy,
         //                 messages_per_batch,
-                        false,
+        // false,
         //             )
         //             .await?;
 
@@ -165,14 +165,14 @@ impl Consumer {
         // while received_messages < total_messages {
         //     let offset = current_iteration * messages_per_batch as u64;
 
-            let (strategy, auto_commit) = match self.polling_kind {
-                PollingKind::Offset => (PollingStrategy::offset(offset), false),
-                PollingKind::Next => (PollingStrategy::next(), true),
-                _ => panic!(
-                    "Unsupported polling kind for benchmark: {:?}",
-                    self.polling_kind
-                ),
-            };
+        // let (strategy, auto_commit) = match self.polling_kind {
+        //     PollingKind::Offset => (PollingStrategy::offset(offset), false),
+        //     PollingKind::Next => (PollingStrategy::next(), true),
+        //     _ => panic!(
+        //         "Unsupported polling kind for benchmark: {:?}",
+        //         self.polling_kind
+        //     ),
+        // };
         //     let before_poll = Instant::now();
         //     let polled_messages = client
         //         .poll_messages(
@@ -180,10 +180,10 @@ impl Consumer {
         //             &topic_id,
         //             partition_id,
         //             &consumer,
-                    &PollingStrategy::offset(offset),
+        // &PollingStrategy::offset(offset),
         //             messages_per_batch,
-                    false,
-        //         )
+        // false,
+        // )
         //         .await;
         //     let latency = before_poll.elapsed();
 

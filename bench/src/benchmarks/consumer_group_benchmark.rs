@@ -4,7 +4,10 @@ use crate::{
     benchmarks::{CONSUMER_GROUP_BASE_ID, CONSUMER_GROUP_NAME_PREFIX},
 };
 use async_trait::async_trait;
-use iggy::{client::ConsumerGroupClient, clients::client::IggyClient, error::IggyError};
+use iggy::{
+    client::ConsumerGroupClient, clients::client::IggyClient, error::IggyError,
+    messages::poll_messages::PollingKind,
+};
 use iggy_benchmark_report::benchmark_kind::BenchmarkKind;
 use integration::test_server::{login_root, ClientFactory};
 use std::sync::Arc;
@@ -96,6 +99,7 @@ impl Benchmarkable for ConsumerGroupBenchmark {
                 warmup_time,
                 self.args.sampling_time(),
                 self.args.moving_average_window(),
+                PollingKind::Next,
             );
             let future = Box::pin(async move { consumer.run().await });
             futures.as_mut().unwrap().push(future);

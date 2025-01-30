@@ -9,6 +9,7 @@ mod utils;
 use crate::{args::common::IggyBenchArgs, runner::BenchmarkRunner};
 use clap::Parser;
 use figlet_rs::FIGfont;
+use hostname::get;
 use iggy::error::IggyError;
 use std::fs;
 use std::path::Path;
@@ -24,6 +25,16 @@ async fn main() -> Result<(), IggyError> {
 
     let args = IggyBenchArgs::parse();
     args.validate();
+
+    // Set default identifier as hostname if not provided
+    if args.identifier().is_none() {
+        info!(
+            "Using hostname: {} as identifier",
+            get().unwrap().to_string_lossy()
+        );
+    } else {
+        info!("Using identifier: {}", args.identifier().unwrap());
+    }
 
     // Store output_dir before moving args
     let output_dir = args.output_dir();

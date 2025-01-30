@@ -1,5 +1,6 @@
 use crate::analytics::metrics::individual::from_records;
 use crate::analytics::record::BenchmarkRecord;
+use crate::rate_limiter::RateLimiter;
 use iggy::client::{ConsumerGroupClient, MessageClient};
 use iggy::clients::client::IggyClient;
 use iggy::consumer::Consumer as IggyConsumer;
@@ -28,6 +29,7 @@ pub struct Consumer {
     sampling_time: IggyDuration,
     moving_average_window: u32,
     polling_kind: PollingKind,
+    rate_limiter: Option<RateLimiter>,
 }
 
 impl Consumer {
@@ -43,6 +45,7 @@ impl Consumer {
         sampling_time: IggyDuration,
         moving_average_window: u32,
         polling_kind: PollingKind,
+        rate_limiter: Option<RateLimiter>,
     ) -> Self {
         Self {
             client_factory,
@@ -55,6 +58,7 @@ impl Consumer {
             sampling_time,
             moving_average_window,
             polling_kind,
+            rate_limiter,
         }
     }
 
@@ -170,6 +174,11 @@ impl Consumer {
                     self.polling_kind
                 ),
             };
+            // Apply rate limiting if configured
+            if let Some(limiter) = &self.rate_limiter {
+                limiter.throttle(batch_size_total_bytes).await;
+            }
+
             let before_poll = Instant::now();
             let polled_messages = client
                 .poll_messages(

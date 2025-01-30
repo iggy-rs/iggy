@@ -3,6 +3,7 @@ use charming::{Chart, HtmlRenderer};
 use iggy::utils::byte_size::IggyByteSize;
 use iggy_benchmark_report::report::BenchmarkReport;
 use std::path::Path;
+use std::process::Command;
 use std::time::Instant;
 use tracing::info;
 
@@ -43,28 +44,56 @@ impl ChartType {
     }
 }
 
+fn open_in_browser(path: &str) -> std::io::Result<()> {
+    #[cfg(target_os = "linux")]
+    {
+        Command::new("xdg-open").arg(path).spawn().map(|_| ())
+    }
+
+    #[cfg(target_os = "macos")]
+    {
+        Command::new("open").arg(path).spawn().map(|_| ())
+    }
+
+    #[cfg(target_os = "windows")]
+    {
+        Command::new("cmd")
+            .args(["/C", "start", path])
+            .spawn()
+            .map(|_| ())
+    }
+}
+
 pub fn plot_chart(
     report: &BenchmarkReport,
     output_directory: &str,
     chart_type: ChartType,
+    should_open_in_browser: bool,
 ) -> std::io::Result<()> {
     let data_processing_start = Instant::now();
     let chart = (chart_type.create_chart())(report, true); // Use dark theme by default
     let data_processing_time = data_processing_start.elapsed();
 
     let chart_render_start = Instant::now();
-    let chart_path = format!("{}/{}.html", output_directory, chart_type.name());
-    save_chart(&chart, chart_type.name(), output_directory, 1600, 1200)?;
-    let chart_render_time = chart_render_start.elapsed();
+    let file_name = chart_type.name();
+    save_chart(&chart, file_name, output_directory, 1600, 1200)?;
+
+    if should_open_in_browser {
+        let chart_path = format!("{}/{}.html", output_directory, file_name);
+        open_in_browser(&chart_path)?;
+    }
 
     let total_samples = chart_type.get_samples(report);
     let report_path = format!("{}/report.json", output_directory);
     let report_size = IggyByteSize::from(std::fs::metadata(&report_path)?.len());
 
+    let chart_render_time = chart_render_start.elapsed();
+
     info!(
-        "Generated {} plot at: {} ({} samples, report.json size: {}, data processing: {:.2?}, chart render: {:.2?})",
-        chart_type.name(),
-        chart_path,
+        "Generated {} plot at: {}/{}.html ({} samples, report.json size: {}, data processing: {:.2?}, chart render: {:.2?})",
+        file_name,
+        output_directory,
+        file_name,
         total_samples,
         report_size,
         data_processing_time,

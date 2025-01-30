@@ -8,6 +8,7 @@ use tracing::warn;
 pub struct LatencyTimeSeriesCalculator;
 
 impl TimeSeriesCalculation for LatencyTimeSeriesCalculator {
+    // This implementation is using delta latency and average latencies per bucket
     fn calculate(&self, records: &[BenchmarkRecord], bucket_size: IggyDuration) -> TimeSeries {
         if records.len() < 2 {
             warn!("Not enough records to calculate latency");

@@ -7,6 +7,7 @@ use super::props::BenchmarkKindProps;
 use super::transport::BenchmarkTransportCommand;
 use clap::Subcommand;
 use iggy::messages::poll_messages::PollingKind;
+use iggy::utils::byte_size::IggyByteSize;
 use iggy_benchmark_report::benchmark_kind::BenchmarkKind;
 
 #[derive(Subcommand, Debug)]
@@ -82,6 +83,10 @@ impl BenchmarkKindProps for BenchmarkKindCommand {
 
     fn polling_kind(&self) -> PollingKind {
         self.inner().polling_kind()
+    }
+
+    fn max_topic_size(&self) -> Option<IggyByteSize> {
+        self.inner().max_topic_size()
     }
 
     fn inner(&self) -> &dyn BenchmarkKindProps {

@@ -240,6 +240,10 @@ impl IggyBenchArgs {
         self.gitref_date.clone()
     }
 
+    pub fn max_topic_size(&self) -> Option<IggyByteSize> {
+        self.benchmark_kind.inner().max_topic_size()
+    }
+
     /// Generates the output directory name based on benchmark parameters.
     pub fn generate_dir_name(&self) -> String {
         let benchmark_kind = match &self.benchmark_kind {
@@ -349,7 +353,9 @@ fn recreate_bench_command(args: &IggyBenchArgs) -> String {
         BenchmarkKind::Send => "send",
         BenchmarkKind::Poll => "poll",
         BenchmarkKind::SendAndPoll => "send-and-poll",
+        BenchmarkKind::ConsumerGroupSend => "consumer-group-send",
         BenchmarkKind::ConsumerGroupPoll => "consumer-group-poll",
+        BenchmarkKind::ConsumerGroupSendAndPoll => "consumer-group-send-and-poll",
     };
     parts.push(kind_str.to_string());
 
@@ -363,7 +369,7 @@ fn recreate_bench_command(args: &IggyBenchArgs) -> String {
                 parts.push(format!("--producers {}", producers));
             }
         }
-        BenchmarkKind::Poll | BenchmarkKind::ConsumerGroupPoll => {
+        BenchmarkKind::Poll => {
             if consumers != DEFAULT_NUMBER_OF_CONSUMERS.get() {
                 parts.push(format!("--consumers {}", consumers));
             }
@@ -374,6 +380,30 @@ fn recreate_bench_command(args: &IggyBenchArgs) -> String {
             }
             if consumers != DEFAULT_NUMBER_OF_CONSUMERS.get() {
                 parts.push(format!("--consumers {}", consumers));
+            }
+        }
+        BenchmarkKind::ConsumerGroupSend => {
+            if producers != DEFAULT_NUMBER_OF_PRODUCERS.get() {
+                parts.push(format!("--producers {}", producers));
+            }
+            if consumers != DEFAULT_NUMBER_OF_CONSUMER_GROUPS.get() {
+                parts.push(format!("--consumer-groups {}", consumers));
+            }
+        }
+        BenchmarkKind::ConsumerGroupPoll => {
+            if consumers != DEFAULT_NUMBER_OF_CONSUMER_GROUPS.get() {
+                parts.push(format!("--consumer-groups {}", consumers));
+            }
+        }
+        BenchmarkKind::ConsumerGroupSendAndPoll => {
+            if producers != DEFAULT_NUMBER_OF_PRODUCERS.get() {
+                parts.push(format!("--producers {}", producers));
+            }
+            if consumers != DEFAULT_NUMBER_OF_CONSUMERS.get() {
+                parts.push(format!("--consumers {}", consumers));
+            }
+            if consumers != DEFAULT_NUMBER_OF_CONSUMER_GROUPS.get() {
+                parts.push(format!("--consumer-groups {}", consumers));
             }
         }
     }
@@ -407,20 +437,6 @@ fn recreate_bench_command(args: &IggyBenchArgs) -> String {
         parts.push(format!("--partitions {}", partitions));
     }
 
-    // Add transport and server address, skipping if default
-    let transport = args.transport().to_string().to_lowercase();
-    parts.push(transport.clone());
-
-    let default_address = match transport.as_str() {
-        "tcp" => DEFAULT_TCP_SERVER_ADDRESS,
-        "quic" => DEFAULT_QUIC_SERVER_ADDRESS,
-        "http" => DEFAULT_HTTP_SERVER_ADDRESS,
-        _ => "",
-    };
-    if server_address != default_address {
-        parts.push(format!("--server-address {}", server_address));
-    }
-
     // Add optional flags, skipping defaults
     if args.disable_parallel_producer_streams() != DEFAULT_DISABLE_PARALLEL_PRODUCER_STREAMS {
         parts.push("--disable-parallel-producer-streams".to_string());
@@ -439,6 +455,24 @@ fn recreate_bench_command(args: &IggyBenchArgs) -> String {
 
     if let Some(rate_limit) = args.rate_limit() {
         parts.push(format!("--rate-limit {}", rate_limit));
+    }
+
+    if let Some(max_topic_size) = args.max_topic_size() {
+        parts.push(format!("--max-topic-size {}", max_topic_size));
+    }
+
+    // Add transport and server address, skipping if default
+    let transport = args.transport().to_string().to_lowercase();
+    parts.push(transport.clone());
+
+    let default_address = match transport.as_str() {
+        "tcp" => DEFAULT_TCP_SERVER_ADDRESS,
+        "quic" => DEFAULT_QUIC_SERVER_ADDRESS,
+        "http" => DEFAULT_HTTP_SERVER_ADDRESS,
+        _ => "",
+    };
+    if server_address != default_address {
+        parts.push(format!("--server-address {}", server_address));
     }
 
     parts.join(" ")

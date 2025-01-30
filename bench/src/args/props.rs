@@ -1,5 +1,5 @@
 use super::transport::BenchmarkTransportCommand;
-use iggy::messages::poll_messages::PollingKind;
+use iggy::{messages::poll_messages::PollingKind, utils::byte_size::IggyByteSize};
 use integration::test_server::Transport;
 
 pub trait BenchmarkKindProps {
@@ -15,6 +15,7 @@ pub trait BenchmarkKindProps {
     fn disable_parallel_consumer_streams(&self) -> bool;
     fn transport_command(&self) -> &BenchmarkTransportCommand;
     fn polling_kind(&self) -> PollingKind;
+    fn max_topic_size(&self) -> Option<IggyByteSize>;
     fn validate(&self);
     fn inner(&self) -> &dyn BenchmarkKindProps
     where

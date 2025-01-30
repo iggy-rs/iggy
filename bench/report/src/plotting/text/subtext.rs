@@ -116,8 +116,10 @@ impl BenchmarkParams {
             ));
         }
 
+        let partitions = format!("{} partitions", self.partitions);
+
         format!(
-            "{actors_info}  •  {messages_per_batch} msg/batch  •  {message_batches} batches  •  {message_size} bytes/msg  •  {user_data_print}",
+            "{actors_info}  •  {partitions}  •  {messages_per_batch} msg/batch  •  {message_batches} batches  •  {message_size} bytes/msg  •  {user_data_print}",
         )
     }
 }

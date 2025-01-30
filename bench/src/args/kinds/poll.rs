@@ -3,7 +3,7 @@ use crate::args::{
     transport::BenchmarkTransportCommand,
 };
 use clap::{error::ErrorKind, CommandFactory, Parser};
-use iggy::messages::poll_messages::PollingKind;
+use iggy::{messages::poll_messages::PollingKind, utils::byte_size::IggyByteSize};
 use std::num::NonZeroU32;
 
 /// Polling (reading) benchmark
@@ -102,5 +102,9 @@ impl BenchmarkKindProps for PollArgs {
 
     fn polling_kind(&self) -> PollingKind {
         PollingKind::Offset
+    }
+
+    fn max_topic_size(&self) -> Option<IggyByteSize> {
+        None
     }
 }

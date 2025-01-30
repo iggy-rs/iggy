@@ -33,6 +33,13 @@ impl BenchmarkParams {
             BenchmarkKind::SendAndPoll => {
                 format!("{} producers/{} consumers", self.producers, self.consumers)
             }
+            BenchmarkKind::ConsumerGroupSend => format!(
+                "{} producers/{} consumer groups",
+                self.producers, self.number_of_consumer_groups
+            ),
+            BenchmarkKind::ConsumerGroupSendAndPoll => {
+                format!("{} producers/{} consumers", self.producers, self.consumers)
+            }
             BenchmarkKind::ConsumerGroupPoll => {
                 format!(
                     "{} consumers/{} consumer groups",

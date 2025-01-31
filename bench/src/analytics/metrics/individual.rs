@@ -34,6 +34,7 @@ pub fn from_records(
                 p95_latency_ms: 0.0,
                 p99_latency_ms: 0.0,
                 p999_latency_ms: 0.0,
+                p9999_latency_ms: 0.0,
                 avg_latency_ms: 0.0,
                 median_latency_ms: 0.0,
             },
@@ -72,6 +73,7 @@ pub fn from_records(
     let p95_latency_ms = calculate_percentile(&latencies_ms, 95.0);
     let p99_latency_ms = calculate_percentile(&latencies_ms, 99.0);
     let p999_latency_ms = calculate_percentile(&latencies_ms, 99.9);
+    let p9999_latency_ms = calculate_percentile(&latencies_ms, 99.99);
 
     let avg_latency_ms = latencies_ms.iter().sum::<f64>() / latencies_ms.len() as f64;
     let len = latencies_ms.len() / 2;
@@ -109,6 +111,7 @@ pub fn from_records(
             p95_latency_ms,
             p99_latency_ms,
             p999_latency_ms,
+            p9999_latency_ms,
             avg_latency_ms,
             median_latency_ms,
         },

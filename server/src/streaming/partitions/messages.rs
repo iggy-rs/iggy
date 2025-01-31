@@ -107,7 +107,7 @@ impl Partition {
             .get_messages_by_offset(start_offset, adjusted_count)
             .await
             .with_error_context(|_| format!(
-                "{COMPONENT} - failed to get messages by offset, patititon: {}, timestamp: {}, start offset: {}",
+                "{COMPONENT} - failed to get messages by offset, partititon: {}, timestamp: {}, start offset: {}",
                 self, timestamp, start_offset,
             ))?
             .into_iter()
@@ -290,8 +290,10 @@ impl Partition {
         );
 
         if start_offset >= first_buffered_offset {
+            cache.record_hit();
             return Some(self.load_messages_from_cache(start_offset, end_offset));
         }
+        cache.record_miss();
         None
     }
 

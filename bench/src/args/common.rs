@@ -454,11 +454,11 @@ fn recreate_bench_command(args: &IggyBenchArgs) -> String {
     }
 
     if let Some(rate_limit) = args.rate_limit() {
-        parts.push(format!("--rate-limit {}", rate_limit));
+        parts.push(format!("--rate-limit \'{}\'", rate_limit));
     }
 
     if let Some(max_topic_size) = args.max_topic_size() {
-        parts.push(format!("--max-topic-size {}", max_topic_size));
+        parts.push(format!("--max-topic-size \'{}\'", max_topic_size));
     }
 
     // Add transport and server address, skipping if default

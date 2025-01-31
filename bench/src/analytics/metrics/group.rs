@@ -59,6 +59,11 @@ pub fn from_individual_metrics(
         stats.iter().map(|r| r.summary.p99_latency_ms).sum::<f64>() / count;
     let average_p999_latency_ms: f64 =
         stats.iter().map(|r| r.summary.p999_latency_ms).sum::<f64>() / count;
+    let average_p9999_latency_ms: f64 = stats
+        .iter()
+        .map(|r| r.summary.p9999_latency_ms)
+        .sum::<f64>()
+        / count;
     let average_avg_latency_ms =
         stats.iter().map(|r| r.summary.avg_latency_ms).sum::<f64>() / count;
     let average_median_latency_ms = stats
@@ -112,6 +117,7 @@ pub fn from_individual_metrics(
         average_p95_latency_ms,
         average_p99_latency_ms,
         average_p999_latency_ms,
+        average_p9999_latency_ms,
         average_latency_ms: average_avg_latency_ms,
         average_median_latency_ms,
     };

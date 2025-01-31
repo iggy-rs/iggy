@@ -1,4 +1,5 @@
 use colored::{Color, ColoredString, Colorize};
+use human_repr::HumanCount;
 use tracing::info;
 
 use crate::{
@@ -18,18 +19,20 @@ impl BenchmarkReport {
         let message_size = self.params.message_size;
         let producers = self.params.producers;
         let consumers = self.params.consumers;
+        let partitions = self.params.partitions;
         println!();
-        let params_print = format!("Benchmark: {}, total messages: {}, total size: {} bytes, {} streams, {} messages per batch, {} batches, {} bytes per message, {} producers, {} consumers\n",
+        let params_print = format!("Benchmark: {}, {} producers, {} consumers, {} streams, {} partitions, {} total messages, {} messages per batch, {} batches, {} per message, {} total size\n",
             kind,
-            total_messages,
-            total_size_bytes,
-            streams,
-            messages_per_batch,
-            message_batches,
-            message_size,
             producers,
             consumers,
-        ).blue();
+            streams,
+            partitions,
+            total_messages.human_count_bare(),
+            messages_per_batch.human_count_bare(),
+            message_batches.human_count_bare(),
+            message_size.human_count_bytes(),
+            total_size_bytes.human_count_bytes(),
+            ).blue();
 
         info!("{}", params_print);
 
@@ -61,15 +64,28 @@ impl BenchmarkGroupMetrics {
         let p95 = format!("{:.2}", self.summary.average_p95_latency_ms);
         let p99 = format!("{:.2}", self.summary.average_p99_latency_ms);
         let p999 = format!("{:.2}", self.summary.average_p999_latency_ms);
+        let p9999 = format!("{:.2}", self.summary.average_p9999_latency_ms);
         let avg = format!("{:.2}", self.summary.average_latency_ms);
         let median = format!("{:.2}", self.summary.average_median_latency_ms);
 
         format!(
             "{}: Total throughput: {} MB/s, {} messages/s, average throughput per {}: {} MB/s, \
             p50 latency: {} ms, p90 latency: {} ms, p95 latency: {} ms, \
-            p99 latency: {} ms, p999 latency: {} ms, average latency: {} ms, \
+            p99 latency: {} ms, p999 latency: {} ms, p9999 latency: {} ms, average latency: {} ms, \
             median latency: {} ms",
-            prefix, total_mb, total_msg, actor, avg_mb, p50, p90, p95, p99, p999, avg, median,
+            prefix,
+            total_mb,
+            total_msg,
+            actor,
+            avg_mb,
+            p50,
+            p90,
+            p95,
+            p99,
+            p999,
+            p9999,
+            avg,
+            median,
         )
         .color(color)
     }

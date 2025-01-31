@@ -3,8 +3,9 @@ use crate::versioning::SemanticVersion;
 use crate::VERSION;
 use iggy::error::IggyError;
 use iggy::locking::IggySharedMutFn;
-use iggy::models::stats::Stats;
+use iggy::models::stats::{CacheMetricsKey, Stats};
 use iggy::utils::duration::IggyDuration;
+use std::collections::HashMap;
 use std::sync::OnceLock;
 use sysinfo::{Pid, ProcessesToUpdate, System as SysinfoSystem};
 use tokio::sync::Mutex;
@@ -37,6 +38,21 @@ impl System {
         let kernel_version =
             sysinfo::System::kernel_version().unwrap_or("unknown_kernel_version".to_string());
 
+        let mut cache_metrics = HashMap::new();
+        for stream in self.streams.values() {
+            for topic in stream.topics.values() {
+                for partition in topic.partitions.values() {
+                    let key = CacheMetricsKey {
+                        stream_id: stream.stream_id,
+                        topic_id: topic.topic_id,
+                        partition_id: partition.read().await.partition_id,
+                    };
+                    let metrics = partition.read().await.get_cache_metrics();
+                    cache_metrics.insert(key, metrics);
+                }
+            }
+        }
+
         let mut stats = Stats {
             process_id,
             total_cpu_usage,
@@ -51,6 +67,7 @@ impl System {
             iggy_server_semver: SemanticVersion::current()
                 .ok()
                 .and_then(|v| v.get_numeric_version().ok()),
+            cache_metrics,
             ..Default::default()
         };
 

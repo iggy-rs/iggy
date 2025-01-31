@@ -3,6 +3,7 @@ use crate::{
     group_metrics_kind::GroupMetricsKind, params::BenchmarkParams, report::BenchmarkReport,
 };
 use byte_unit::{Byte, UnitType};
+use human_repr::HumanCount;
 
 impl BenchmarkReport {
     pub fn subtext(&self) -> String {
@@ -74,13 +75,14 @@ impl BenchmarkGroupMetrics {
 
     fn format_latency(&self) -> String {
         format!(
-            "{} Latency  •  Avg: {:.2} ms  •  Med: {:.2} ms  •  P95: {:.2} ms  •  P99: {:.2} ms  •  P999: {:.2} ms",
+            "{} Latency  •  Avg: {:.2} ms  •  Med: {:.2} ms  •  P95: {:.2} ms  •  P99: {:.2} ms  •  P999: {:.2} ms  •  P9999: {:.2} ms",
             self.summary.kind,
             self.summary.average_latency_ms,
             self.summary.average_median_latency_ms,
             self.summary.average_p95_latency_ms,
             self.summary.average_p99_latency_ms,
-            self.summary.average_p999_latency_ms
+            self.summary.average_p999_latency_ms,
+            self.summary.average_p9999_latency_ms
         )
     }
 }
@@ -92,9 +94,8 @@ impl BenchmarkParams {
         let messages_per_batch = self.messages_per_batch as u64;
         let message_size = self.message_size as u64;
 
-        let sent: u64 = message_batches * messages_per_batch * message_size * self.producers as u64;
-        let polled: u64 =
-            message_batches * messages_per_batch * message_size * self.consumers as u64;
+        let sent = message_batches * messages_per_batch * message_size * self.producers as u64;
+        let polled = message_batches * messages_per_batch * message_size * self.consumers as u64;
 
         let mut user_data_print = String::new();
 
@@ -115,6 +116,9 @@ impl BenchmarkParams {
                 Byte::from_u64(sent).get_appropriate_unit(UnitType::Decimal),
             ));
         }
+
+        let message_batches = message_batches.human_count_bare();
+        let messages_per_batch = messages_per_batch.human_count_bare();
 
         let partitions = format!("{} partitions", self.partitions);
 

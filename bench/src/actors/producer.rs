@@ -1,6 +1,7 @@
 use crate::analytics::metrics::individual::from_records;
 use crate::analytics::record::BenchmarkRecord;
 use crate::rate_limiter::RateLimiter;
+use human_repr::HumanCount;
 use iggy::client::MessageClient;
 use iggy::clients::client::IggyClient;
 use iggy::error::IggyError;
@@ -114,7 +115,10 @@ impl Producer {
 
         info!(
             "Producer #{} → sending {} messages in {} batches of {} messages...",
-            self.producer_id, total_messages, message_batches, messages_per_batch
+            self.producer_id,
+            total_messages.human_count_bare(),
+            message_batches.human_count_bare(),
+            messages_per_batch.human_count_bare()
         );
 
         let start_timestamp = Instant::now();
@@ -185,7 +189,7 @@ impl Producer {
     ) {
         info!(
             "Producer #{} → sent {} messages in {} batches of {} messages in {:.2} s, total size: {}, average throughput: {:.2} MB/s, \
-    p50 latency: {:.2} ms, p90 latency: {:.2} ms, p95 latency: {:.2} ms, p99 latency: {:.2} ms, p999 latency: {:.2} ms, \
+    p50 latency: {:.2} ms, p90 latency: {:.2} ms, p95 latency: {:.2} ms, p99 latency: {:.2} ms, p999 latency: {:.2} ms, p9999 latency: {:.2} ms, \
     average latency: {:.2} ms, median latency: {:.2} ms",
             producer_id,
             total_messages,
@@ -199,6 +203,7 @@ impl Producer {
             stats.summary.p95_latency_ms,
             stats.summary.p99_latency_ms,
             stats.summary.p999_latency_ms,
+            stats.summary.p9999_latency_ms,
             stats.summary.avg_latency_ms,
             stats.summary.median_latency_ms
         );

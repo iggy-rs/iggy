@@ -66,7 +66,7 @@ rust-s3 = { version = "0.35.1", features = ["default"] }
 rustls = { version = "0.23.21" }
 rustls-pemfile = "2.2.0"
 serde = { version = "1.0.217", features = ["derive", "rc"] }
-serde_json = "1.0.135"
+serde_json = "1.0.138"
 serde_with = { version = "3.12.0", features = ["base64", "macros"] }
 static-toml = "1.3.0"
 strip-ansi-escapes = "0.2.1"
@@ -85,9 +85,9 @@ tracing = { version = "0.1.41" }
 tracing-appender = "0.2.3"
 tracing-opentelemetry = { version = "0.28.0" }
 tracing-subscriber = { version = "0.3.19", features = ["fmt", "env-filter"] }
+twox-hash = { version = "2.1.0", features = ["xxhash32"] }
 ulid = "1.1.3"
 uuid = { version = "1.11.0", features = ["v7", "fast-rng", "zerocopy"] }
-xxhash-rust = { version = "0.8.15", features = ["xxh32"] }
 zip = "2.2.2"
 
 [dev-dependencies]
@@ -101,7 +101,7 @@ mimalloc = { version = "0.1", features = ["override"] }
 
 [build-dependencies]
 figment = { version = "0.10.19", features = ["json", "toml", "env"] }
-serde_json = "1.0.135"
+serde_json = "1.0.138"
 vergen-git2 = { version = "1.0.5", features = [
     "build",
     "cargo",

@@ -33,13 +33,19 @@ impl From<IggyBenchArgs> for Box<dyn Benchmarkable> {
             BenchmarkKind::Send => {
                 Box::new(SendMessagesBenchmark::new(Arc::new(args), client_factory))
             }
-            BenchmarkKind::ConsumerGroupPoll => {
-                Box::new(ConsumerGroupBenchmark::new(Arc::new(args), client_factory))
-            }
             BenchmarkKind::SendAndPoll => Box::new(SendAndPollMessagesBenchmark::new(
                 Arc::new(args),
                 client_factory,
             )),
+            BenchmarkKind::ConsumerGroupSend => {
+                unimplemented!("ConsumerGroupSend")
+            }
+            BenchmarkKind::ConsumerGroupPoll => {
+                Box::new(ConsumerGroupBenchmark::new(Arc::new(args), client_factory))
+            }
+            BenchmarkKind::ConsumerGroupSendAndPoll => {
+                unimplemented!("ConsumerGroupSendAndPoll")
+            }
         }
     }
 }
@@ -69,12 +75,17 @@ pub trait Benchmarkable {
                 info!("Creating the test stream {}", stream_id);
                 let name = format!("stream {}", stream_id);
                 client.create_stream(&name, Some(stream_id)).await?;
+                let name = format!("topic {}", topic_id);
+                let max_topic_size = match self.args().max_topic_size() {
+                    Some(size) => MaxTopicSize::Custom(size),
+                    None => MaxTopicSize::Unlimited,
+                };
 
                 info!(
-                    "Creating the test topic {} for stream {}",
-                    topic_id, stream_id
+                    "Creating the test topic {} for stream {} with max topic size: {:?}",
+                    topic_id, stream_id, max_topic_size
                 );
-                let name = format!("topic {}", topic_id);
+
                 client
                     .create_topic(
                         &stream_id.try_into()?,
@@ -84,7 +95,7 @@ pub trait Benchmarkable {
                         None,
                         None,
                         IggyExpiry::NeverExpire,
-                        MaxTopicSize::Unlimited,
+                        max_topic_size,
                     )
                     .await?;
             }

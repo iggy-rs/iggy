@@ -1,7 +1,7 @@
-use xxhash_rust::xxh32::xxh32;
+use twox_hash::XxHash32;
 
 pub fn calculate_32(data: &[u8]) -> u32 {
-    xxh32(data, 0)
+    XxHash32::oneshot(0, data)
 }
 
 pub fn calculate_256(data: &[u8]) -> String {

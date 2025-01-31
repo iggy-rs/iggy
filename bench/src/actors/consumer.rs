@@ -1,10 +1,11 @@
 use crate::analytics::metrics::individual::from_records;
 use crate::analytics::record::BenchmarkRecord;
+use crate::rate_limiter::RateLimiter;
 use iggy::client::{ConsumerGroupClient, MessageClient};
 use iggy::clients::client::IggyClient;
 use iggy::consumer::Consumer as IggyConsumer;
 use iggy::error::IggyError;
-use iggy::messages::poll_messages::PollingStrategy;
+use iggy::messages::poll_messages::{PollingKind, PollingStrategy};
 use iggy::utils::byte_size::IggyByteSize;
 use iggy::utils::duration::IggyDuration;
 use iggy::utils::sizeable::Sizeable;
@@ -27,6 +28,8 @@ pub struct Consumer {
     warmup_time: IggyDuration,
     sampling_time: IggyDuration,
     moving_average_window: u32,
+    polling_kind: PollingKind,
+    rate_limiter: Option<RateLimiter>,
 }
 
 impl Consumer {
@@ -41,6 +44,8 @@ impl Consumer {
         warmup_time: IggyDuration,
         sampling_time: IggyDuration,
         moving_average_window: u32,
+        polling_kind: PollingKind,
+        rate_limiter: Option<RateLimiter>,
     ) -> Self {
         Self {
             client_factory,
@@ -52,6 +57,8 @@ impl Consumer {
             warmup_time,
             sampling_time,
             moving_average_window,
+            polling_kind,
+            rate_limiter,
         }
     }
 
@@ -92,7 +99,6 @@ impl Consumer {
         let mut current_iteration: u64 = 0;
         let mut received_messages = 0;
         let mut topic_not_found_counter = 0;
-        let mut strategy = PollingStrategy::offset(0);
 
         if self.warmup_time.get_duration() != Duration::from_millis(0) {
             if let Some(cg_id) = self.consumer_group_id {
@@ -109,7 +115,14 @@ impl Consumer {
             let warmup_end = Instant::now() + self.warmup_time.get_duration();
             while Instant::now() < warmup_end {
                 let offset = current_iteration * messages_per_batch as u64;
-                strategy.set_value(offset);
+                let (strategy, auto_commit) = match self.polling_kind {
+                    PollingKind::Offset => (PollingStrategy::offset(offset), false),
+                    PollingKind::Next => (PollingStrategy::next(), true),
+                    _ => panic!(
+                        "Unsupported polling kind for benchmark: {:?}",
+                        self.polling_kind
+                    ),
+                };
                 let polled_messages = client
                     .poll_messages(
                         &stream_id,
@@ -118,7 +131,7 @@ impl Consumer {
                         &consumer,
                         &strategy,
                         messages_per_batch,
-                        false,
+                        auto_commit,
                     )
                     .await?;
 
@@ -135,9 +148,9 @@ impl Consumer {
 
         if let Some(cg_id) = self.consumer_group_id {
             info!(
-            "Consumer #{}, part of consumer group #{} → polling {} messages in {} batches of {} messages...",
-            self.consumer_id, cg_id, total_messages, message_batches, messages_per_batch
-        );
+                "Consumer #{}, part of consumer group #{} → polling {} messages in {} batches of {} messages...",
+                self.consumer_id, cg_id, total_messages, message_batches, messages_per_batch
+            );
         } else {
             info!(
                 "Consumer #{} → polling {} messages in {} batches of {} messages...",
@@ -153,6 +166,19 @@ impl Consumer {
         while received_messages < total_messages {
             let offset = current_iteration * messages_per_batch as u64;
 
+            let (strategy, auto_commit) = match self.polling_kind {
+                PollingKind::Offset => (PollingStrategy::offset(offset), false),
+                PollingKind::Next => (PollingStrategy::next(), true),
+                _ => panic!(
+                    "Unsupported polling kind for benchmark: {:?}",
+                    self.polling_kind
+                ),
+            };
+            // Apply rate limiting if configured
+            if let Some(limiter) = &self.rate_limiter {
+                limiter.throttle(batch_size_total_bytes).await;
+            }
+
             let before_poll = Instant::now();
             let polled_messages = client
                 .poll_messages(
@@ -160,9 +186,9 @@ impl Consumer {
                     &topic_id,
                     partition_id,
                     &consumer,
-                    &PollingStrategy::offset(offset),
+                    &strategy,
                     messages_per_batch,
-                    false,
+                    auto_commit,
                 )
                 .await;
             let latency = before_poll.elapsed();

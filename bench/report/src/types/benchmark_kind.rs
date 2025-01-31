@@ -26,7 +26,13 @@ pub enum BenchmarkKind {
     #[display("Send And Poll")]
     #[serde(rename = "send_and_poll")]
     SendAndPoll,
+    #[display("Consumer Group Send")]
+    #[serde(rename = "consumer_group_send")]
+    ConsumerGroupSend,
     #[display("Consumer Group Poll")]
     #[serde(rename = "consumer_group_poll")]
     ConsumerGroupPoll,
+    #[display("Consumer Group Send And Poll")]
+    #[serde(rename = "consumer_group_send_and_poll")]
+    ConsumerGroupSendAndPoll,
 }

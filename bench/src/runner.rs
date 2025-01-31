@@ -3,7 +3,6 @@ use crate::args::common::IggyBenchArgs;
 use crate::benchmarks::benchmark::Benchmarkable;
 use crate::plot::{plot_chart, ChartType};
 use crate::utils::server_starter::start_server_if_needed;
-use crate::utils::server_version::get_server_version;
 use futures::future::select_all;
 use iggy::error::IggyError;
 use iggy_benchmark_report::hardware::BenchmarkHardware;
@@ -29,6 +28,7 @@ impl BenchmarkRunner {
 
     pub async fn run(&mut self) -> Result<(), IggyError> {
         let mut args = self.args.take().unwrap();
+        let should_open_charts = args.open_charts;
         self.test_server = start_server_if_needed(&mut args).await;
 
         let transport = args.transport();
@@ -51,25 +51,19 @@ impl BenchmarkRunner {
             }
         }
 
-        info!("All actors finished");
+        info!("All actors joined!");
 
-        let params = BenchmarkParams::from(benchmark.args());
-
-        let server_version = match get_server_version(&params).await {
-            Ok(v) => v,
-            Err(_) => "unknown".to_string(),
-        };
         let hardware =
             BenchmarkHardware::get_system_info_with_identifier(benchmark.args().identifier());
+        let params = BenchmarkParams::from(benchmark.args());
+
         let report = BenchmarkReportBuilder::build(
-            server_version,
             hardware,
             params,
             individual_metrics,
             benchmark.args().moving_average_window(),
-        );
-
-        info!("Printing summary");
+        )
+        .await;
 
         // Sleep just to see result prints after all tasks are joined (they print per-actor results)
         sleep(Duration::from_millis(10)).await;
@@ -88,11 +82,23 @@ impl BenchmarkRunner {
             report.dump_to_json(&full_output_path);
 
             // Generate the plots
-            plot_chart(&report, &full_output_path, ChartType::Throughput).map_err(|e| {
+            plot_chart(
+                &report,
+                &full_output_path,
+                ChartType::Throughput,
+                should_open_charts,
+            )
+            .map_err(|e| {
                 error!("Failed to generate plots: {e}");
                 IggyError::CannotWriteToFile
             })?;
-            plot_chart(&report, &full_output_path, ChartType::Latency).map_err(|e| {
+            plot_chart(
+                &report,
+                &full_output_path,
+                ChartType::Latency,
+                should_open_charts,
+            )
+            .map_err(|e| {
                 error!("Failed to generate plots: {e}");
                 IggyError::CannotWriteToFile
             })?;

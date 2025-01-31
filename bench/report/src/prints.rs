@@ -9,8 +9,9 @@ use crate::{
 impl BenchmarkReport {
     pub fn print_summary(&self) {
         let kind = self.params.benchmark_kind;
-        let total_messages = self.params.messages_per_batch * self.params.message_batches;
-        let total_size_bytes = total_messages * self.params.message_size;
+        let total_messages: u64 =
+            self.params.messages_per_batch as u64 * self.params.message_batches as u64;
+        let total_size_bytes: u64 = total_messages * self.params.message_size as u64;
         let streams = self.params.streams;
         let messages_per_batch = self.params.messages_per_batch;
         let message_batches = self.params.message_batches;

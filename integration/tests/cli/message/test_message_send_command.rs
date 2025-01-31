@@ -14,7 +14,7 @@ use predicates::str::diff;
 use serial_test::parallel;
 use std::collections::HashMap;
 use std::str::from_utf8;
-use xxhash_rust::xxh32::xxh32;
+use twox_hash::XxHash32;
 
 #[derive(Debug)]
 enum PartitionSelection {
@@ -118,7 +118,7 @@ impl TestMessageSendCmd {
     }
 
     fn calculate_partition_id_from_messages_key(&self, messages_key: &[u8]) -> u32 {
-        let messages_key_hash = xxh32(messages_key, 0);
+        let messages_key_hash = XxHash32::oneshot(0, messages_key);
         let mut partition_id = messages_key_hash % self.partitions_count;
         if partition_id == 0 {
             partition_id = self.partitions_count;

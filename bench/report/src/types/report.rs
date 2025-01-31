@@ -1,3 +1,4 @@
+use super::server_stats::BenchmarkServerStats;
 use crate::group_metrics::BenchmarkGroupMetrics;
 use crate::individual_metrics::BenchmarkIndividualMetrics;
 use crate::types::hardware::BenchmarkHardware;
@@ -6,16 +7,16 @@ use serde::{Deserialize, Serialize};
 use std::path::Path;
 use uuid::Uuid;
 
-#[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Default)]
+#[derive(Clone, Debug, Default, Serialize, Deserialize, PartialEq)]
 pub struct BenchmarkReport {
     /// Benchmark unique identifier
     pub uuid: Uuid,
 
-    /// Iggy server version
-    pub server_version: String,
-
     /// Timestamp when the benchmark was finished
     pub timestamp: String,
+
+    /// Benchmark server statistics
+    pub server_stats: BenchmarkServerStats,
 
     /// Benchmark hardware
     pub hardware: BenchmarkHardware,
@@ -23,10 +24,10 @@ pub struct BenchmarkReport {
     /// Benchmark parameters
     pub params: BenchmarkParams,
 
-    /// Benchmark metrics for all actors of same type
+    /// Benchmark metrics for all actors of same type (all producers, all consumers or all actors)
     pub group_metrics: Vec<BenchmarkGroupMetrics>,
 
-    /// Benchmark summaries per actor (producer/consumer)
+    /// Benchmark metrics per actor (producer/consumer)
     pub individual_metrics: Vec<BenchmarkIndividualMetrics>,
 }
 

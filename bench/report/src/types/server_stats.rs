@@ -1,10 +1,14 @@
-use crate::utils::{byte_size::IggyByteSize, duration::IggyDuration, timestamp::IggyTimestamp};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
-/// `Stats` represents the statistics and details of the server and running process.
-#[derive(Debug, Serialize, Deserialize)]
-pub struct Stats {
+/// This file is a big workaround - struct `Stats` exists in `iggy` crate and this crate needs it.
+/// However, this crate is being compiled to wasm and `iggy` can't be compiled for this target.
+/// To workaround this, we need just maintain a copy of the `Stats` struct in this crate.
+///
+/// Hopefully, one day we will have a separate crate for iggy models and this file can be removed.
+
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
+pub struct BenchmarkServerStats {
     /// The unique identifier of the process.
     pub process_id: u32,
     /// The CPU usage of the process.
@@ -12,21 +16,21 @@ pub struct Stats {
     /// the total CPU usage of the system.
     pub total_cpu_usage: f32,
     /// The memory usage of the process.
-    pub memory_usage: IggyByteSize,
+    pub memory_usage: u64,
     /// The total memory of the system.
-    pub total_memory: IggyByteSize,
+    pub total_memory: u64,
     /// The available memory of the system.
-    pub available_memory: IggyByteSize,
+    pub available_memory: u64,
     /// The run time of the process.
-    pub run_time: IggyDuration,
+    pub run_time: u64,
     /// The start time of the process.
-    pub start_time: IggyTimestamp,
+    pub start_time: u64,
     /// The total number of bytes read.
-    pub read_bytes: IggyByteSize,
+    pub read_bytes: u64,
     /// The total number of bytes written.
-    pub written_bytes: IggyByteSize,
+    pub written_bytes: u64,
     /// The total size of the messages in bytes.
-    pub messages_size_bytes: IggyByteSize,
+    pub messages_size_bytes: u64,
     /// The total number of streams.
     pub streams_count: u32,
     /// The total number of topics.
@@ -55,12 +59,12 @@ pub struct Stats {
     pub iggy_server_semver: Option<u32>,
     /// Cache metrics per partition
     #[serde(with = "cache_metrics_serializer")]
-    pub cache_metrics: HashMap<CacheMetricsKey, CacheMetrics>,
+    pub cache_metrics: HashMap<BenchmarkCacheMetricsKey, BenchmarkCacheMetrics>,
 }
 
 /// Key for identifying a specific partition's cache metrics
-#[derive(Debug, Serialize, Deserialize, Hash, Eq, PartialEq)]
-pub struct CacheMetricsKey {
+#[derive(Debug, Serialize, Deserialize, Hash, Eq, PartialEq, Clone)]
+pub struct BenchmarkCacheMetricsKey {
     /// Stream ID
     pub stream_id: u32,
     /// Topic ID
@@ -69,15 +73,15 @@ pub struct CacheMetricsKey {
     pub partition_id: u32,
 }
 
-impl CacheMetricsKey {
+impl BenchmarkCacheMetricsKey {
     pub fn to_string_key(&self) -> String {
         format!("{}-{}-{}", self.stream_id, self.topic_id, self.partition_id)
     }
 }
 
 /// Cache metrics for a specific partition
-#[derive(Debug, Serialize, Deserialize, Default)]
-pub struct CacheMetrics {
+#[derive(Debug, Serialize, Deserialize, Default, Clone, PartialEq)]
+pub struct BenchmarkCacheMetrics {
     /// Number of cache hits
     pub hits: u64,
     /// Number of cache misses
@@ -92,13 +96,13 @@ mod cache_metrics_serializer {
     use std::collections::HashMap;
 
     pub fn serialize<S>(
-        metrics: &HashMap<CacheMetricsKey, CacheMetrics>,
+        metrics: &HashMap<BenchmarkCacheMetricsKey, BenchmarkCacheMetrics>,
         serializer: S,
     ) -> Result<S::Ok, S::Error>
     where
         S: Serializer,
     {
-        let string_map: HashMap<String, &CacheMetrics> = metrics
+        let string_map: HashMap<String, &BenchmarkCacheMetrics> = metrics
             .iter()
             .map(|(k, v)| (k.to_string_key(), v))
             .collect();
@@ -107,11 +111,12 @@ mod cache_metrics_serializer {
 
     pub fn deserialize<'de, D>(
         deserializer: D,
-    ) -> Result<HashMap<CacheMetricsKey, CacheMetrics>, D::Error>
+    ) -> Result<HashMap<BenchmarkCacheMetricsKey, BenchmarkCacheMetrics>, D::Error>
     where
         D: Deserializer<'de>,
     {
-        let string_map: HashMap<String, CacheMetrics> = HashMap::deserialize(deserializer)?;
+        let string_map: HashMap<String, BenchmarkCacheMetrics> =
+            HashMap::deserialize(deserializer)?;
         let mut result = HashMap::new();
         for (key_str, value) in string_map {
             let parts: Vec<&str> = key_str.split('-').collect();
@@ -123,7 +128,7 @@ mod cache_metrics_serializer {
                 parts[1].parse::<u32>(),
                 parts[2].parse::<u32>(),
             ) {
-                let key = CacheMetricsKey {
+                let key = BenchmarkCacheMetricsKey {
                     stream_id,
                     topic_id,
                     partition_id,
@@ -135,20 +140,20 @@ mod cache_metrics_serializer {
     }
 }
 
-impl Default for Stats {
+impl Default for BenchmarkServerStats {
     fn default() -> Self {
         Self {
             process_id: 0,
             cpu_usage: 0.0,
             total_cpu_usage: 0.0,
-            memory_usage: 0.into(),
-            total_memory: 0.into(),
-            available_memory: 0.into(),
-            run_time: 0.into(),
-            start_time: 0.into(),
-            read_bytes: 0.into(),
-            written_bytes: 0.into(),
-            messages_size_bytes: 0.into(),
+            memory_usage: 0,
+            total_memory: 0,
+            available_memory: 0,
+            run_time: 0,
+            start_time: 0,
+            read_bytes: 0,
+            written_bytes: 0,
+            messages_size_bytes: 0,
             streams_count: 0,
             topics_count: 0,
             partitions_count: 0,

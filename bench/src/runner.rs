@@ -2,6 +2,7 @@ use crate::analytics::report_builder::BenchmarkReportBuilder;
 use crate::args::common::IggyBenchArgs;
 use crate::benchmarks::benchmark::Benchmarkable;
 use crate::plot::{plot_chart, ChartType};
+use crate::utils::collect_server_logs_and_save_to_file;
 use crate::utils::server_starter::start_server_if_needed;
 use futures::future::select_all;
 use iggy::error::IggyError;
@@ -56,6 +57,8 @@ impl BenchmarkRunner {
         let hardware =
             BenchmarkHardware::get_system_info_with_identifier(benchmark.args().identifier());
         let params = BenchmarkParams::from(benchmark.args());
+        let transport = params.transport;
+        let server_addr = params.server_address.clone();
 
         let report = BenchmarkReportBuilder::build(
             hardware,
@@ -80,6 +83,16 @@ impl BenchmarkRunner {
 
             // Dump the report to JSON
             report.dump_to_json(&full_output_path);
+
+            if let Err(e) = collect_server_logs_and_save_to_file(
+                &transport,
+                &server_addr,
+                Path::new(&full_output_path),
+            )
+            .await
+            {
+                error!("Failed to collect server logs: {e}");
+            }
 
             // Generate the plots
             plot_chart(

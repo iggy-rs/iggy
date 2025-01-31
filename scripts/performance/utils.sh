@@ -3,8 +3,6 @@
 # Example bench command:
 # target/release/iggy-bench send --producers 8 --streams 8 --message-size 1000 --messages-per-batch 1000 --message-batches 1000 tcp
 
-COMMON_ARGS="--warmup-time 0"
-
 # Function to get the current git tag containing "server" or commit SHA1
 function get_git_iggy_server_tag_or_sha1() {
     local dir="$1"
@@ -125,7 +123,6 @@ function construct_bench_command() {
     commit_date=$(get_git_commit_date .) || { echo "Failed to get git commit date."; exit 1; }
 
     echo "$bench_command \
-$COMMON_ARGS \
 --output-dir performance_results \
 --identifier ${identifier} \
 --remark ${remark} \

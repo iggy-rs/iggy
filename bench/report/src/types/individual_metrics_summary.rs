@@ -28,6 +28,8 @@ pub struct BenchmarkIndividualMetricsSummary {
     #[serde(serialize_with = "round_float")]
     pub p999_latency_ms: f64,
     #[serde(serialize_with = "round_float")]
+    pub p9999_latency_ms: f64,
+    #[serde(serialize_with = "round_float")]
     pub avg_latency_ms: f64,
     #[serde(serialize_with = "round_float")]
     pub median_latency_ms: f64,

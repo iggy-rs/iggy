@@ -1,6 +1,7 @@
 use crate::analytics::metrics::individual::from_records;
 use crate::analytics::record::BenchmarkRecord;
 use crate::rate_limiter::RateLimiter;
+use human_repr::HumanCount;
 use iggy::client::{ConsumerGroupClient, MessageClient};
 use iggy::clients::client::IggyClient;
 use iggy::consumer::Consumer as IggyConsumer;
@@ -149,12 +150,19 @@ impl Consumer {
         if let Some(cg_id) = self.consumer_group_id {
             info!(
                 "Consumer #{}, part of consumer group #{} → polling {} messages in {} batches of {} messages...",
-                self.consumer_id, cg_id, total_messages, message_batches, messages_per_batch
+                self.consumer_id,
+                cg_id,
+                total_messages.human_count_bare(),
+                message_batches.human_count_bare(),
+                messages_per_batch.human_count_bare()
             );
         } else {
             info!(
                 "Consumer #{} → polling {} messages in {} batches of {} messages...",
-                self.consumer_id, total_messages, message_batches, messages_per_batch
+                self.consumer_id,
+                total_messages.human_count_bare(),
+                message_batches.human_count_bare(),
+                messages_per_batch.human_count_bare()
             );
         }
 
@@ -282,11 +290,11 @@ impl Consumer {
         info!(
             "Consumer #{} → polled {} messages, {} batches of {} messages in {:.2} s, total size: {}, average throughput: {:.2} MB/s, \
     p50 latency: {:.2} ms, p90 latency: {:.2} ms, p95 latency: {:.2} ms, p99 latency: {:.2} ms, p999 latency: {:.2} ms, \
-    average latency: {:.2} ms, median latency: {:.2} ms",
+    p9999 latency: {:.2} ms, average latency: {:.2} ms, median latency: {:.2} ms",
             consumer_id,
-            total_messages,
-            message_batches,
-            messages_per_batch,
+            total_messages.human_count_bare(),
+            message_batches.human_count_bare(),
+            messages_per_batch.human_count_bare(),
             stats.summary.total_time_secs,
             IggyByteSize::from(stats.summary.total_user_data_bytes),
             stats.summary.throughput_megabytes_per_second,
@@ -295,6 +303,7 @@ impl Consumer {
             stats.summary.p95_latency_ms,
             stats.summary.p99_latency_ms,
             stats.summary.p999_latency_ms,
+            stats.summary.p9999_latency_ms,
             stats.summary.avg_latency_ms,
             stats.summary.median_latency_ms
         );

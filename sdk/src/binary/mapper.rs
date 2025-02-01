@@ -9,7 +9,7 @@ use crate::models::messages::{MessageState, PolledMessage, PolledMessages};
 use crate::models::partition::Partition;
 use crate::models::permissions::Permissions;
 use crate::models::personal_access_token::{PersonalAccessTokenInfo, RawPersonalAccessToken};
-use crate::models::stats::Stats;
+use crate::models::stats::{CacheMetrics, CacheMetricsKey, Stats};
 use crate::models::stream::{Stream, StreamDetails};
 use crate::models::topic::{Topic, TopicDetails};
 use crate::models::user_info::{UserInfo, UserInfoDetails};
@@ -255,12 +255,83 @@ pub fn map_stats(payload: Bytes) -> Result<Stats, IggyError> {
                 .try_into()
                 .map_err(|_| IggyError::InvalidNumberEncoding)?,
         );
-        // current_position += 4; // uncomment this when adding new fields
+        current_position += 4; // Increment position after reading semver
         if semver != 0 {
             iggy_server_semver = Some(semver);
         }
     } else {
         // older server didn't send semver
+    }
+
+    // Read cache metrics (if they exist)
+    let mut cache_metrics = HashMap::new();
+    if current_position + 4 <= payload.len() {
+        let metrics_count = u32::from_le_bytes(
+            payload[current_position..current_position + 4]
+                .try_into()
+                .map_err(|_| IggyError::InvalidNumberEncoding)?,
+        ) as usize;
+        current_position += 4;
+
+        for _ in 0..metrics_count {
+            // Read CacheMetricsKey
+            let stream_id = u32::from_le_bytes(
+                payload[current_position..current_position + 4]
+                    .try_into()
+                    .map_err(|_| IggyError::InvalidNumberEncoding)?,
+            );
+            current_position += 4;
+
+            let topic_id = u32::from_le_bytes(
+                payload[current_position..current_position + 4]
+                    .try_into()
+                    .map_err(|_| IggyError::InvalidNumberEncoding)?,
+            );
+            current_position += 4;
+
+            let partition_id = u32::from_le_bytes(
+                payload[current_position..current_position + 4]
+                    .try_into()
+                    .map_err(|_| IggyError::InvalidNumberEncoding)?,
+            );
+            current_position += 4;
+
+            // Read CacheMetrics
+            let hits = u64::from_le_bytes(
+                payload[current_position..current_position + 8]
+                    .try_into()
+                    .map_err(|_| IggyError::InvalidNumberEncoding)?,
+            );
+            current_position += 8;
+
+            let misses = u64::from_le_bytes(
+                payload[current_position..current_position + 8]
+                    .try_into()
+                    .map_err(|_| IggyError::InvalidNumberEncoding)?,
+            );
+            current_position += 8;
+
+            let hit_ratio = f32::from_le_bytes(
+                payload[current_position..current_position + 4]
+                    .try_into()
+                    .map_err(|_| IggyError::InvalidNumberEncoding)?,
+            );
+            current_position += 4;
+
+            let key = CacheMetricsKey {
+                stream_id,
+                topic_id,
+                partition_id,
+            };
+
+            let metrics = CacheMetrics {
+                hits,
+                misses,
+                hit_ratio,
+            };
+
+            cache_metrics.insert(key, metrics);
+        }
     }
 
     Ok(Stats {
@@ -288,6 +359,7 @@ pub fn map_stats(payload: Bytes) -> Result<Stats, IggyError> {
         kernel_version,
         iggy_server_version,
         iggy_server_semver,
+        cache_metrics,
     })
 }
 

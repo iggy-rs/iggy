@@ -8,5 +8,6 @@ pub mod individual_metrics;
 pub mod individual_metrics_summary;
 pub mod params;
 pub mod report;
+pub mod server_stats;
 pub mod time_series;
 pub mod transport;

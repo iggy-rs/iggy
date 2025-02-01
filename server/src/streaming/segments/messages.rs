@@ -285,7 +285,6 @@ impl Segment {
             Some(val) => val,
             None => self.config.segment.server_confirmation,
         };
-        let mut batch_size = 0;
         let saved_bytes = storage
             .save_batches_raw(self, batch_accumulator, confirmation)
             .await?;
@@ -300,7 +299,8 @@ impl Segment {
             "STREAMING_SEGMENT - failed to save index, stream ID: {}, topic ID: {}, partition ID: {}, path: {}",
             self.stream_id, self.topic_id, self.partition_id, self.index_path,
         ))?;
-        self.last_index_position += batch_size as u32;
+        let saved_bytes = saved_bytes.as_bytes_u64();
+        self.last_index_position += saved_bytes as u32; 
         self.size_of_parent_stream
             .fetch_add(RETAINED_BATCH_OVERHEAD, Ordering::AcqRel);
         self.size_of_parent_topic

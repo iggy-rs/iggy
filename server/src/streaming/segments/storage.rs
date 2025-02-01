@@ -316,6 +316,7 @@ impl SegmentStorage for FileSegmentStorage {
         batch_accumulator: BatchAccumulator,
         confirmation: Confirmation,
     ) -> Result<IggyByteSize, IggyError> {
+        let size_bytes = IGGY_BATCH_OVERHEAD + batch_accumulator.current_size.as_bytes_u64();
         let save_result = match confirmation {
             Confirmation::Wait => FileSegmentStorage::persist_batches(&segment.log_path, batch_accumulator).await,
             Confirmation::NoWait => segment.persister_task.send(batch_accumulator).await,
@@ -330,7 +331,7 @@ impl SegmentStorage for FileSegmentStorage {
             })
             .map_err(|_| IggyError::CannotSaveMessagesToSegment)?;
 
-        Ok(0.into())
+        Ok(size_bytes.into())
     }
 
     async fn load_message_ids(&self, segment: &Segment) -> Result<Vec<u128>, IggyError> {

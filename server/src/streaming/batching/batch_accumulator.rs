@@ -16,7 +16,7 @@ use std::sync::Arc;
 #[derive(Debug)]
 pub struct BatchAccumulator {
     base_offset: u64,
-    current_size: IggyByteSize,
+    pub current_size: IggyByteSize,
     current_offset: u64,
     current_timestamp: u64,
     capacity: u64,
@@ -38,7 +38,7 @@ impl BatchAccumulator {
     pub fn append(&mut self, batch_size: IggyByteSize, batch: IggyBatch) {
         let batch_base_offset = batch.base_offset;
         let batch_base_timestamp = batch.base_timestamp;
-        self.current_size += batch_size;
+        self.current_size += (batch.messages.len() as u64).into();
         self.batches.push(batch);
     }
 

@@ -1,5 +1,5 @@
+use ahash::AHashMap;
 use iggy::error::IggyError;
-use std::collections::HashMap;
 use tokio::sync::RwLock;
 use tracing::trace;
 
@@ -9,15 +9,15 @@ pub struct ConsumerGroup {
     pub group_id: u32,
     pub name: String,
     pub partitions_count: u32,
-    members: HashMap<u32, RwLock<ConsumerGroupMember>>,
+    members: AHashMap<u32, RwLock<ConsumerGroupMember>>,
 }
 
 #[derive(Debug)]
 pub struct ConsumerGroupMember {
     pub id: u32,
-    partitions: HashMap<u32, u32>,
-    current_partition_index: u32,
-    current_partition_id: u32,
+    partitions: AHashMap<u32, u32>,
+    current_partition_index: Option<u32>,
+    current_partition_id: Option<u32>,
 }
 
 impl ConsumerGroup {
@@ -27,7 +27,7 @@ impl ConsumerGroup {
             group_id,
             name: name.to_string(),
             partitions_count,
-            members: HashMap::new(),
+            members: AHashMap::new(),
         }
     }
 
@@ -40,7 +40,7 @@ impl ConsumerGroup {
         self.assign_partitions().await;
     }
 
-    pub async fn calculate_partition_id(&self, member_id: u32) -> Result<u32, IggyError> {
+    pub async fn calculate_partition_id(&self, member_id: u32) -> Result<Option<u32>, IggyError> {
         let member = self.members.get(&member_id);
         if let Some(member) = member {
             return Ok(member.write().await.calculate_partition_id());
@@ -52,7 +52,7 @@ impl ConsumerGroup {
         ))
     }
 
-    pub async fn get_current_partition_id(&self, member_id: u32) -> Result<u32, IggyError> {
+    pub async fn get_current_partition_id(&self, member_id: u32) -> Result<Option<u32>, IggyError> {
         let member = self.members.get(&member_id);
         if let Some(member) = member {
             return Ok(member.read().await.current_partition_id);
@@ -69,9 +69,9 @@ impl ConsumerGroup {
             member_id,
             RwLock::new(ConsumerGroupMember {
                 id: member_id,
-                partitions: HashMap::new(),
-                current_partition_index: 0,
-                current_partition_id: 0,
+                partitions: AHashMap::new(),
+                current_partition_index: None,
+                current_partition_id: None,
             }),
         );
         trace!(
@@ -104,8 +104,8 @@ impl ConsumerGroup {
         let members_count = members.len() as u32;
         for member in members.iter_mut() {
             let mut member = member.write().await;
-            member.current_partition_index = 0;
-            member.current_partition_id = 0;
+            member.current_partition_index = None;
+            member.current_partition_id = None;
             member.partitions.clear();
         }
 
@@ -118,6 +118,10 @@ impl ConsumerGroup {
             member
                 .partitions
                 .insert(member_partition_index, partition_id);
+            if member.current_partition_id.is_none() {
+                member.current_partition_id = Some(partition_id);
+                member.current_partition_index = Some(member_partition_index);
+            }
             trace!("Assigned partition ID: {} to member with ID: {} for topic with ID: {} in consumer group: {}",
                 partition_id, member.id, self.topic_id, self.group_id)
         }
@@ -129,30 +133,30 @@ impl ConsumerGroupMember {
         self.partitions.values().copied().collect()
     }
 
-    pub fn calculate_partition_id(&mut self) -> u32 {
-        let partition_index = self.current_partition_index;
-        let partition_id = if let Some(partition_id) = self.partitions.get(&partition_index) {
-            *partition_id
-        } else {
+    pub fn calculate_partition_id(&mut self) -> Option<u32> {
+        let partition_index = self.current_partition_index?;
+        let Some(partition_id) = self.partitions.get(&partition_index) else {
             trace!(
                 "No partition ID found for index: {} for member with ID: {}.",
                 partition_index,
                 self.id
             );
-            return 1;
+            return None;
         };
-        self.current_partition_id = partition_id;
+
+        let partition_id = *partition_id;
+        self.current_partition_id = Some(partition_id);
         if self.partitions.len() <= (partition_index + 1) as usize {
-            self.current_partition_index = 0;
+            self.current_partition_index = Some(0);
         } else {
-            self.current_partition_index += 1;
+            self.current_partition_index = Some(partition_index + 1);
         }
         trace!(
             "Calculated partition ID: {} for member with ID: {}",
             partition_id,
             self.id
         );
-        partition_id
+        Some(partition_id)
     }
 }
 
@@ -168,7 +172,7 @@ mod tests {
             group_id: 1,
             name: "test".to_string(),
             partitions_count: 3,
-            members: HashMap::new(),
+            members: AHashMap::new(),
         };
 
         consumer_group.add_member(member_id).await;
@@ -176,7 +180,8 @@ mod tests {
             let partition_id = consumer_group
                 .calculate_partition_id(member_id)
                 .await
-                .unwrap();
+                .unwrap()
+                .expect("Partition ID not found");
             assert_eq!(partition_id, (i % consumer_group.partitions_count) + 1);
         }
     }
@@ -189,7 +194,7 @@ mod tests {
             group_id: 1,
             name: "test".to_string(),
             partitions_count: 3,
-            members: HashMap::new(),
+            members: AHashMap::new(),
         };
 
         consumer_group.add_member(member_id).await;
@@ -214,7 +219,7 @@ mod tests {
             group_id: 1,
             name: "test".to_string(),
             partitions_count: 3,
-            members: HashMap::new(),
+            members: AHashMap::new(),
         };
 
         consumer_group.add_member(member1_id).await;
@@ -251,7 +256,7 @@ mod tests {
             group_id: 1,
             name: "test".to_string(),
             partitions_count: 1,
-            members: HashMap::new(),
+            members: AHashMap::new(),
         };
 
         consumer_group.add_member(member1_id).await;

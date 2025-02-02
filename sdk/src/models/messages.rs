@@ -22,7 +22,7 @@ pub const POLLED_MESSAGE_METADATA: u32 = 8 + 1 + 8 + 4;
 /// - `messages`: the collection of messages.
 #[derive(Debug, Serialize, Deserialize)]
 pub struct PolledMessages {
-    /// The identifier of the partition.
+    /// The identifier of the partition. If it's '0', then there's no partition assigned to the consumer group member.
     pub partition_id: u32,
     /// The current offset of the partition.
     pub current_offset: u64,

@@ -44,10 +44,17 @@ impl System {
             return Err(IggyError::NoPartitions(topic.topic_id, topic.stream_id));
         }
 
-        let (polling_consumer, partition_id) = topic
+        // There might be no partition assigned, if it's the consumer group member without any partitions.
+        let Some((polling_consumer, partition_id)) = topic
             .resolve_consumer_with_partition_id(consumer, session.client_id, partition_id, true)
             .await
-            .with_error_context(|_| format!("{COMPONENT} - failed to resolve consumer with partition id, consumer: {consumer}, client ID: {}, partition ID: {:?}", session.client_id, partition_id))?;
+            .with_error_context(|_| format!("{COMPONENT} - failed to resolve consumer with partition id, consumer: {consumer}, client ID: {}, partition ID: {:?}", session.client_id, partition_id))? else {
+            return Ok(PolledMessages {
+                messages: vec![],
+                partition_id: 0,
+                current_offset: 0,
+            })
+        };
 
         let mut polled_messages = topic
             .get_messages(polling_consumer, partition_id, args.strategy, args.count)

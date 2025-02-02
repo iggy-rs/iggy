@@ -25,6 +25,7 @@ pub fn create_throughput_chart(report: &BenchmarkReport, dark: bool) -> Chart {
         let actor_type = match metrics.summary.actor_kind {
             ActorKind::Producer => "Producer",
             ActorKind::Consumer => "Consumer",
+            ActorKind::ProducingConsumer => "Producing Consumer",
         };
 
         chart = chart.add_dual_time_line_series(
@@ -85,6 +86,7 @@ pub fn create_latency_chart(report: &BenchmarkReport, dark: bool) -> Chart {
         let actor_type = match metrics.summary.actor_kind {
             ActorKind::Producer => "Producer",
             ActorKind::Consumer => "Consumer",
+            ActorKind::ProducingConsumer => "Producing Consumer",
         };
 
         chart = chart.add_time_series(

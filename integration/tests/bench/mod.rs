@@ -16,7 +16,7 @@ use uuid::Uuid;
 const BENCH_FILES_PREFIX: &str = "bench_";
 const MESSAGE_BATCHES: u64 = 100;
 const MESSAGES_PER_BATCH: u64 = 100;
-const DEFAULT_NUMBER_OF_STREAMS: u64 = 10;
+const DEFAULT_NUMBER_OF_STREAMS: u64 = 8;
 
 pub fn run_bench_and_wait_for_finish(
     server_addr: &str,
@@ -39,17 +39,17 @@ pub fn run_bench_and_wait_for_finish(
     // Calculate message size based on input
     let total_bytes_to_process_per_stream =
         amount_of_data_to_process.as_bytes_u64() / DEFAULT_NUMBER_OF_STREAMS;
-    let messages_total = MESSAGES_PER_BATCH * MESSAGE_BATCHES;
+    let messages_total: u64 = MESSAGES_PER_BATCH * MESSAGE_BATCHES;
     let message_size = total_bytes_to_process_per_stream / messages_total;
 
     command.args([
-        bench,
         "--messages-per-batch",
         &MESSAGES_PER_BATCH.to_string(),
         "--message-batches",
         &MESSAGE_BATCHES.to_string(),
         "--message-size",
         &message_size.to_string(),
+        bench,
         &format!("{}", transport),
         "--server-address",
         server_addr,

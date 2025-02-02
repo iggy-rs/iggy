@@ -10,29 +10,45 @@ use crate::{
 impl BenchmarkReport {
     pub fn print_summary(&self) {
         let kind = self.params.benchmark_kind;
-        let total_messages: u64 =
-            self.params.messages_per_batch as u64 * self.params.message_batches as u64;
+        let actors = self.params.producers + self.params.consumers;
+        let total_messages: u64 = self.params.messages_per_batch as u64
+            * self.params.message_batches as u64
+            * actors as u64;
         let total_size_bytes: u64 = total_messages * self.params.message_size as u64;
-        let streams = self.params.streams;
-        let messages_per_batch = self.params.messages_per_batch;
-        let message_batches = self.params.message_batches;
-        let message_size = self.params.message_size;
-        let producers = self.params.producers;
-        let consumers = self.params.consumers;
-        let partitions = self.params.partitions;
+        let total_size = format!("{} total size", total_size_bytes.human_count_bytes());
+        let total_messages = format!("{} total messages, ", total_messages.human_count_bare());
+
+        let streams = format!("{} streams, ", self.params.streams);
+        // TODO: make this configurable
+        let topics = "1 topic per stream, ";
+        let messages_per_batch = format!("{} messages per batch, ", self.params.messages_per_batch);
+        let message_batches = format!("{} message batches, ", self.params.message_batches);
+        let message_size = format!(
+            "{} per message, ",
+            self.params.message_size.human_count_bytes()
+        );
+        let producers = if self.params.producers == 0 {
+            "".to_owned()
+        } else {
+            format!("{} producers, ", self.params.producers)
+        };
+        let consumers = if self.params.consumers == 0 {
+            "".to_owned()
+        } else {
+            format!("{} consumers, ", self.params.consumers)
+        };
+        let partitions = if self.params.partitions == 0 {
+            "".to_owned()
+        } else {
+            format!("{} partitions per topic, ", self.params.partitions)
+        };
+        let consumer_groups = if self.params.consumer_groups == 0 {
+            "".to_owned()
+        } else {
+            format!("{} consumer groups, ", self.params.consumer_groups)
+        };
         println!();
-        let params_print = format!("Benchmark: {}, {} producers, {} consumers, {} streams, {} partitions, {} total messages, {} messages per batch, {} batches, {} per message, {} total size\n",
-            kind,
-            producers,
-            consumers,
-            streams,
-            partitions,
-            total_messages.human_count_bare(),
-            messages_per_batch.human_count_bare(),
-            message_batches.human_count_bare(),
-            message_size.human_count_bytes(),
-            total_size_bytes.human_count_bytes(),
-            ).blue();
+        let params_print = format!("Benchmark: {kind}, {producers}{consumers}{streams}{topics}{partitions}{consumer_groups}{total_messages}{messages_per_batch}{message_batches}{message_size}{total_size}\n",).blue();
 
         info!("{}", params_print);
 
@@ -48,6 +64,7 @@ impl BenchmarkGroupMetrics {
             GroupMetricsKind::Producers => ("Producers Results", Color::Green),
             GroupMetricsKind::Consumers => ("Consumers Results", Color::Green),
             GroupMetricsKind::ProducersAndConsumers => ("Aggregate Results", Color::Red),
+            GroupMetricsKind::ProducingConsumers => ("Producing Consumer Results", Color::Red),
         };
 
         let actor = self.summary.kind.actor();

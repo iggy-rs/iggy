@@ -1,20 +1,22 @@
-use super::benchmark::{BenchmarkFutures, Benchmarkable};
 use crate::actors::consumer::Consumer;
 use crate::actors::producer::Producer;
 use crate::args::common::IggyBenchArgs;
+use crate::benchmarks::benchmark::{BenchmarkFutures, Benchmarkable};
 use crate::rate_limiter::RateLimiter;
 use async_trait::async_trait;
-use iggy_benchmark_report::benchmark_kind::BenchmarkKind;
+use iggy::messages::poll_messages::PollingKind;
+use iggy_bench_report::benchmark_kind::BenchmarkKind;
 use integration::test_server::ClientFactory;
+use std::sync::atomic::AtomicI64;
 use std::sync::Arc;
 use tracing::info;
 
-pub struct SendAndPollMessagesBenchmark {
+pub struct ProducerAndConsumerBenchmark {
     args: Arc<IggyBenchArgs>,
     client_factory: Arc<dyn ClientFactory>,
 }
 
-impl SendAndPollMessagesBenchmark {
+impl ProducerAndConsumerBenchmark {
     pub fn new(args: Arc<IggyBenchArgs>, client_factory: Arc<dyn ClientFactory>) -> Self {
         Self {
             args,
@@ -24,14 +26,12 @@ impl SendAndPollMessagesBenchmark {
 }
 
 #[async_trait]
-impl Benchmarkable for SendAndPollMessagesBenchmark {
+impl Benchmarkable for ProducerAndConsumerBenchmark {
     async fn run(&mut self) -> BenchmarkFutures {
         self.init_streams().await.expect("Failed to init streams!");
         let start_stream_id = self.args.start_stream_id();
         let producers = self.args.producers();
         let consumers = self.args.consumers();
-        let parallel_producer_streams = !self.args.disable_parallel_producer_streams();
-        let parallel_consumer_streams = !self.args.disable_parallel_consumer_streams();
         let messages_per_batch = self.args.messages_per_batch();
         let message_batches = self.args.message_batches();
         let message_size = self.args.message_size();
@@ -41,12 +41,10 @@ impl Benchmarkable for SendAndPollMessagesBenchmark {
         let mut futures: BenchmarkFutures =
             Ok(Vec::with_capacity((producers + consumers) as usize));
         for producer_id in 1..=producers {
-            let stream_id = match parallel_producer_streams {
-                true => start_stream_id + producer_id,
-                false => start_stream_id + 1,
-            };
+            let stream_id = start_stream_id + producer_id;
             let producer = Producer::new(
                 self.client_factory.clone(),
+                self.args.kind(),
                 producer_id,
                 stream_id,
                 partitions_count,
@@ -59,30 +57,30 @@ impl Benchmarkable for SendAndPollMessagesBenchmark {
                 self.args
                     .rate_limit()
                     .map(|rl| RateLimiter::new(rl.as_bytes_u64())),
+                false, // TODO: put timestamp into first message, it should be an argument to iggy-bench
             );
             let future = Box::pin(async move { producer.run().await });
             futures.as_mut().unwrap().push(future);
         }
 
+        let polling_kind = PollingKind::Offset;
+
         for consumer_id in 1..=consumers {
-            let stream_id = match parallel_consumer_streams {
-                true => start_stream_id + consumer_id,
-                false => start_stream_id + 1,
-            };
+            let stream_id = start_stream_id + consumer_id;
             let consumer = Consumer::new(
                 self.client_factory.clone(),
+                self.args.kind(),
                 consumer_id,
                 None,
                 stream_id,
                 messages_per_batch,
                 message_batches,
+                Arc::new(AtomicI64::new(message_batches as i64)), // in this test each consumer should receive constant number of messages
                 warmup_time,
                 self.args.sampling_time(),
                 self.args.moving_average_window(),
-                self.args.polling_kind(),
-                self.args
-                    .rate_limit()
-                    .map(|rl| RateLimiter::new(rl.as_bytes_u64())),
+                polling_kind,
+                false, // TODO: Calculate latency from timestamp in first message, it should be an argument to iggy-bench
             );
             let future = Box::pin(async move { consumer.run().await });
             futures.as_mut().unwrap().push(future);
@@ -95,7 +93,7 @@ impl Benchmarkable for SendAndPollMessagesBenchmark {
     }
 
     fn kind(&self) -> BenchmarkKind {
-        BenchmarkKind::SendAndPoll
+        self.args.kind()
     }
 
     fn args(&self) -> &IggyBenchArgs {

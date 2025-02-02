@@ -25,8 +25,8 @@ target/release/iggy-server &> /dev/null &
 sleep 1
 
 # Start tcp send bench
-echo "Running iggy-bench send tcp..."
-send_results=$(target/release/iggy-bench send tcp | grep -e "Results:")
+echo "Running iggy-bench pinned-producer tcp..."
+send_results=$(target/release/iggy-bench pinned-producer tcp | grep -e "Results:")
 sleep 1
 
 # Display results
@@ -36,8 +36,8 @@ echo "${send_results}"
 echo
 
 # Start tcp poll bench
-echo "Running iggy-bench poll tcp..."
-poll_results=$(target/release/iggy-bench poll tcp | grep -e "Results: total throughput")
+echo "Running iggy-bench pinned-consumer tcp..."
+poll_results=$(target/release/iggy-bench pinned-consumer tcp | grep -e "Results: total throughput")
 
 echo "Poll results:"
 echo "${poll_results}"

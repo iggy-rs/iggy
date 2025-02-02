@@ -1,19 +1,19 @@
-use super::benchmark::{BenchmarkFutures, Benchmarkable};
 use crate::actors::producer::Producer;
 use crate::args::common::IggyBenchArgs;
+use crate::benchmarks::benchmark::{BenchmarkFutures, Benchmarkable};
 use crate::rate_limiter::RateLimiter;
 use async_trait::async_trait;
-use iggy_benchmark_report::benchmark_kind::BenchmarkKind;
+use iggy_bench_report::benchmark_kind::BenchmarkKind;
 use integration::test_server::ClientFactory;
 use std::sync::Arc;
 use tracing::info;
 
-pub struct SendMessagesBenchmark {
+pub struct ProducerBenchmark {
     args: Arc<IggyBenchArgs>,
     client_factory: Arc<dyn ClientFactory>,
 }
 
-impl SendMessagesBenchmark {
+impl ProducerBenchmark {
     pub fn new(args: Arc<IggyBenchArgs>, client_factory: Arc<dyn ClientFactory>) -> Self {
         Self {
             args,
@@ -23,36 +23,29 @@ impl SendMessagesBenchmark {
 }
 
 #[async_trait]
-impl Benchmarkable for SendMessagesBenchmark {
+impl Benchmarkable for ProducerBenchmark {
     async fn run(&mut self) -> BenchmarkFutures {
         self.init_streams().await.expect("Failed to init streams!");
-        let clients_count = self.args.producers();
-        info!("Creating {} client(s)...", clients_count);
-        let streams_number = self.args.number_of_streams();
+        let producers_count = self.args.producers();
+        info!("Creating {} producer(s)...", producers_count);
+        let streams_number = self.args.streams();
         let messages_per_batch = self.args.messages_per_batch();
         let message_batches = self.args.message_batches();
         let message_size = self.args.message_size();
         let partitions_count = self.args.number_of_partitions();
         let warmup_time = self.args.warmup_time();
 
-        let mut futures: BenchmarkFutures = Ok(Vec::with_capacity(clients_count as usize));
-        for client_id in 1..=clients_count {
+        let mut futures: BenchmarkFutures = Ok(Vec::with_capacity(producers_count as usize));
+        for producer_id in 1..=producers_count {
             let args = self.args.clone();
             let client_factory = self.client_factory.clone();
-            info!("Executing the benchmark on client #{}...", client_id);
-            let args = args.clone();
-            let start_stream_id = args.start_stream_id();
-            let client_factory = client_factory.clone();
-
-            let parallel_producer_streams = !args.disable_parallel_producer_streams();
-            let stream_id = match parallel_producer_streams {
-                true => start_stream_id + client_id,
-                false => start_stream_id + 1 + (client_id % streams_number),
-            };
+            info!("Executing the benchmark on producer #{}...", producer_id);
+            let stream_id = args.start_stream_id() + 1 + (producer_id % streams_number);
 
             let producer = Producer::new(
                 client_factory,
-                client_id,
+                args.kind(),
+                producer_id,
                 stream_id,
                 partitions_count,
                 messages_per_batch,
@@ -63,22 +56,23 @@ impl Benchmarkable for SendMessagesBenchmark {
                 args.moving_average_window(),
                 args.rate_limit()
                     .map(|rl| RateLimiter::new(rl.as_bytes_u64())),
+                false, // TODO: Put timestamp in payload of first message, it should be an argument to iggy-bench
             );
             let future = Box::pin(async move { producer.run().await });
             futures.as_mut().unwrap().push(future);
         }
-        info!("Created {} client(s).", clients_count);
+        info!("Created {} producer(s).", producers_count);
         futures
     }
 
     fn kind(&self) -> BenchmarkKind {
-        BenchmarkKind::Send
+        self.args.kind()
     }
 
     fn total_messages(&self) -> u64 {
         let messages_per_batch = self.args.messages_per_batch();
         let message_batches = self.args.message_batches();
-        let streams = self.args.number_of_streams();
+        let streams = self.args.streams();
         (messages_per_batch * message_batches * streams) as u64
     }
 

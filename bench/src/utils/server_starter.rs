@@ -83,10 +83,7 @@ pub async fn start_server_if_needed(args: &mut IggyBenchArgs) -> Option<TestServ
     };
 
     if should_start {
-        envs.insert(
-            SYSTEM_PATH_ENV_VAR.to_owned(),
-            args.server_system_path.clone(),
-        );
+        envs.insert(SYSTEM_PATH_ENV_VAR.to_owned(), "local_data".to_owned());
 
         if args.verbose {
             envs.insert("IGGY_TEST_VERBOSE".to_owned(), "true".to_owned());
@@ -96,9 +93,8 @@ pub async fn start_server_if_needed(args: &mut IggyBenchArgs) -> Option<TestServ
         }
 
         info!(
-            "Starting test server, transport: {}, data path: {}, cleanup: {}, verbosity: {}",
+            "Starting test server, transport: {}, cleanup: {}, verbosity: {}",
             args.transport(),
-            args.server_system_path,
             args.cleanup,
             args.verbose
         );

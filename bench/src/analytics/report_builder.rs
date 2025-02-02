@@ -7,7 +7,7 @@ use iggy::{
     models::stats::{CacheMetrics, CacheMetricsKey, Stats},
     utils::timestamp::IggyTimestamp,
 };
-use iggy_benchmark_report::{
+use iggy_bench_report::{
     actor_kind::ActorKind,
     benchmark_kind::BenchmarkKind,
     hardware::BenchmarkHardware,
@@ -64,6 +64,11 @@ impl BenchmarkReportBuilder {
             .filter(|m| m.summary.actor_kind == ActorKind::Consumer)
             .cloned()
             .collect();
+        let producing_consumers_metrics: Vec<BenchmarkIndividualMetrics> = individual_metrics
+            .iter()
+            .filter(|m| m.summary.actor_kind == ActorKind::ProducingConsumer)
+            .cloned()
+            .collect();
 
         if !producer_metrics.is_empty() {
             if let Some(metrics) = from_individual_metrics(&producer_metrics, moving_average_window)
@@ -79,9 +84,19 @@ impl BenchmarkReportBuilder {
             }
         }
 
-        // Only add aggregate metrics for send and poll benchmark
-        if params.benchmark_kind == BenchmarkKind::SendAndPoll
-            && !producer_metrics.is_empty()
+        if !producing_consumers_metrics.is_empty() {
+            if let Some(metrics) =
+                from_individual_metrics(&producing_consumers_metrics, moving_average_window)
+            {
+                group_metrics.push(metrics);
+            }
+        }
+
+        if matches!(
+            params.benchmark_kind,
+            BenchmarkKind::PinnedProducerAndConsumer
+                | BenchmarkKind::BalancedProducerAndConsumerGroup
+        ) && !producer_metrics.is_empty()
             && !consumer_metrics.is_empty()
         {
             if let Some(metrics) = from_producers_and_consumers_statistics(
@@ -106,7 +121,7 @@ impl BenchmarkReportBuilder {
 }
 
 /// This function is a workaround.
-/// See server_stats.rs in `iggy_benchmark_report` crate for more details.
+/// See server_stats.rs in `iggy_bench_report` crate for more details.
 fn stats_to_benchmark_server_stats(stats: Stats) -> BenchmarkServerStats {
     BenchmarkServerStats {
         process_id: stats.process_id,
@@ -138,7 +153,7 @@ fn stats_to_benchmark_server_stats(stats: Stats) -> BenchmarkServerStats {
 }
 
 /// This function is a workaround.
-/// See server_stats.rs in `iggy_benchmark_report` crate for more details.
+/// See server_stats.rs in `iggy_bench_report` crate for more details.
 fn cache_metrics_to_benchmark_cache_metrics(
     cache_metrics: HashMap<CacheMetricsKey, CacheMetrics>,
 ) -> HashMap<BenchmarkCacheMetricsKey, BenchmarkCacheMetrics> {

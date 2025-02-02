@@ -1,16 +1,17 @@
 use super::kind::BenchmarkKindCommand;
+use super::output::BenchmarkOutputCommand;
 use super::props::{BenchmarkKindProps, BenchmarkTransportProps};
 use super::{defaults::*, transport::BenchmarkTransportCommand};
 use clap::error::ErrorKind;
 use clap::{CommandFactory, Parser};
-use iggy::messages::poll_messages::PollingKind;
 use iggy::utils::byte_size::IggyByteSize;
 use iggy::utils::duration::IggyDuration;
-use iggy_benchmark_report::benchmark_kind::BenchmarkKind;
-use iggy_benchmark_report::params::BenchmarkParams;
-use iggy_benchmark_report::transport::BenchmarkTransport;
+use iggy_bench_report::benchmark_kind::BenchmarkKind;
+use iggy_bench_report::params::BenchmarkParams;
+use iggy_bench_report::transport::BenchmarkTransport;
 use integration::test_server::Transport;
 use std::net::SocketAddr;
+use std::num::NonZeroU32;
 use std::path::Path;
 use std::str::FromStr;
 use tracing::info;
@@ -22,70 +23,53 @@ pub struct IggyBenchArgs {
     #[command(subcommand)]
     pub benchmark_kind: BenchmarkKindCommand,
 
-    /// iggy-server executable path
-    #[arg(long, short='e', default_value = None, value_parser = validate_server_executable_path)]
-    pub server_executable_path: Option<String>,
+    /// Number of messages per batch
+    #[arg(long, short = 'p', default_value_t = DEFAULT_MESSAGES_PER_BATCH)]
+    pub messages_per_batch: NonZeroU32,
 
-    /// Shutdown iggy-server and remove server local_data directory after the benchmark is finished
-    #[arg(long, short='c', default_value_t = DEFAULT_PERFORM_CLEANUP)]
-    pub cleanup: bool,
+    /// Number of message batches
+    #[arg(long, short = 'b', default_value_t = DEFAULT_MESSAGE_BATCHES)]
+    pub message_batches: NonZeroU32,
 
-    /// Server local data directory path, if not provided a temporary directory will be created
-    #[arg(long, short='s', default_value_t = DEFAULT_SERVER_SYSTEM_PATH.to_owned())]
-    pub server_system_path: String,
+    /// Message size in bytes
+    #[arg(long, short = 'm', default_value_t = DEFAULT_MESSAGE_SIZE)]
+    pub message_size: NonZeroU32,
 
-    /// Server stdout visibility
-    #[arg(long, short='v', default_value_t = DEFAULT_SERVER_STDOUT_VISIBILITY)]
-    pub verbose: bool,
+    /// Optional rate limit per individual producer in bytes per second (not aggregate).
+    /// Accepts human-readable formats like "50KB", "10MB", or "1GB"
+    #[arg(long, short = 'r', verbatim_doc_comment)]
+    pub rate_limit: Option<IggyByteSize>,
 
     /// Warmup time in human readable format, e.g. "1s", "2m", "3h"
     #[arg(long, short = 'w', default_value_t = IggyDuration::from_str(DEFAULT_WARMUP_TIME).unwrap())]
     pub warmup_time: IggyDuration,
 
+    /// Server stdout visibility
+    #[arg(long, short = 'v', default_value_t = DEFAULT_SERVER_STDOUT_VISIBILITY)]
+    pub verbose: bool,
+
     /// Sampling time for metrics collection. It is also used as bucket size for time series calculations.
-    #[arg(long, default_value_t = IggyDuration::from_str(DEFAULT_SAMPLING_TIME).unwrap(), value_parser = IggyDuration::from_str)]
+    #[arg(long, short = 't', default_value_t = IggyDuration::from_str(DEFAULT_SAMPLING_TIME).unwrap(), value_parser = IggyDuration::from_str)]
     pub sampling_time: IggyDuration,
 
     /// Window size for moving average calculations in time series data
-    #[arg(long, default_value_t = DEFAULT_MOVING_AVERAGE_WINDOW)]
+    #[arg(long, short = 'W', default_value_t = DEFAULT_MOVING_AVERAGE_WINDOW)]
     pub moving_average_window: u32,
 
-    /// Optional rate limit per individual producer/consumer in bytes per second (not aggregate).
-    /// Accepts human-readable formats like "50KB", "10MB", or "1GB"
-    #[arg(long)]
-    pub rate_limit: Option<IggyByteSize>,
+    /// Shutdown iggy-server and remove server local_data directory after the benchmark is finished.
+    /// Only applicable to local benchmarks.
+    #[arg(long, default_value_t = DEFAULT_PERFORM_CLEANUP, verbatim_doc_comment)]
+    pub cleanup: bool,
 
-    /// Skip server start
-    #[arg(long, short = 'k', default_value_t = DEFAULT_SKIP_SERVER_START)]
+    /// iggy-server executable path.
+    /// Only applicable to local benchmarks.
+    #[arg(long, short='e', default_value = None, value_parser = validate_server_executable_path)]
+    pub server_executable_path: Option<String>,
+
+    /// Skip server start.
+    /// Only applicable to local benchmarks.
+    #[arg(long, short = 'k', default_value_t = DEFAULT_SKIP_SERVER_START, verbatim_doc_comment)]
     pub skip_server_start: bool,
-
-    /// Output directory path for storing benchmark results
-    #[arg(long, short = 'o')]
-    pub output_dir: Option<String>,
-
-    /// Identifier for the benchmark run (defaults to hostname if not provided)
-    #[arg(long, value_parser = get_identifier_or_hostname)]
-    pub identifier: Option<String>,
-
-    /// Additional remark for the benchmark (e.g., no-cache)
-    #[arg(long)]
-    pub remark: Option<String>,
-
-    /// Extra information for future use
-    #[arg(long)]
-    pub extra_info: Option<String>,
-
-    /// Git reference (commit hash, branch or tag) used for note in the benchmark results
-    #[arg(long)]
-    pub gitref: Option<String>,
-
-    /// Git reference date used for note in the benchmark results, preferably merge date of the commit
-    #[arg(long)]
-    pub gitref_date: Option<String>,
-
-    /// Open generated charts in browser after benchmark is finished
-    #[arg(long, default_value_t = false)]
-    pub open_charts: bool,
 }
 
 fn validate_server_executable_path(v: &str) -> Result<String, String> {
@@ -94,10 +78,6 @@ fn validate_server_executable_path(v: &str) -> Result<String, String> {
     } else {
         Err(format!("Provided server executable '{v}' does not exist."))
     }
-}
-
-fn get_identifier_or_hostname(v: &str) -> Result<String, String> {
-    Ok(v.to_owned())
 }
 
 impl IggyBenchArgs {
@@ -134,12 +114,12 @@ impl IggyBenchArgs {
                 .exit();
         }
 
-        if self.output_dir.is_none()
-            && (self.gitref.is_some()
-                || self.identifier.is_some()
-                || self.remark.is_some()
-                || self.extra_info.is_some()
-                || self.gitref_date.is_some())
+        if self.output_dir().is_none()
+            && (self.gitref().is_some()
+                || self.identifier().is_some()
+                || self.remark().is_some()
+                || self.extra_info().is_some()
+                || self.gitref_date().is_some())
         {
             IggyBenchArgs::command()
                 .error(
@@ -153,23 +133,23 @@ impl IggyBenchArgs {
     }
 
     pub fn messages_per_batch(&self) -> u32 {
-        self.benchmark_kind.inner().messages_per_batch()
+        self.messages_per_batch.get()
     }
 
     pub fn message_batches(&self) -> u32 {
-        self.benchmark_kind.inner().message_batches()
+        self.message_batches.get()
     }
 
     pub fn message_size(&self) -> u32 {
-        self.benchmark_kind.inner().message_size()
+        self.message_size.get()
     }
 
-    pub fn number_of_streams(&self) -> u32 {
-        self.benchmark_kind.inner().number_of_streams()
+    pub fn streams(&self) -> u32 {
+        self.benchmark_kind.inner().streams()
     }
 
     pub fn number_of_partitions(&self) -> u32 {
-        self.benchmark_kind.inner().number_of_partitions()
+        self.benchmark_kind.inner().partitions()
     }
 
     pub fn consumers(&self) -> u32 {
@@ -180,20 +160,8 @@ impl IggyBenchArgs {
         self.benchmark_kind.inner().producers()
     }
 
-    pub fn disable_parallel_producer_streams(&self) -> bool {
-        self.benchmark_kind
-            .inner()
-            .disable_parallel_producer_streams()
-    }
-
-    pub fn disable_parallel_consumer_streams(&self) -> bool {
-        self.benchmark_kind
-            .inner()
-            .disable_parallel_consumer_streams()
-    }
-
-    pub fn polling_kind(&self) -> PollingKind {
-        self.benchmark_kind.inner().polling_kind()
+    pub fn kind(&self) -> BenchmarkKind {
+        self.benchmark_kind.as_simple_kind()
     }
 
     pub fn number_of_consumer_groups(&self) -> u32 {
@@ -217,27 +185,80 @@ impl IggyBenchArgs {
     }
 
     pub fn output_dir(&self) -> Option<String> {
-        self.output_dir.clone()
+        self.benchmark_kind
+            .inner()
+            .transport_command()
+            .output_command()
+            .as_ref()
+            .and_then(|cmd| match cmd {
+                BenchmarkOutputCommand::Output(args) => args.output_dir.clone(),
+            })
     }
 
     pub fn identifier(&self) -> Option<String> {
-        self.identifier.clone()
+        self.benchmark_kind
+            .inner()
+            .transport_command()
+            .output_command()
+            .as_ref()
+            .map(|cmd| match cmd {
+                BenchmarkOutputCommand::Output(args) => args.identifier.clone(),
+            })
     }
 
     pub fn remark(&self) -> Option<String> {
-        self.remark.clone()
+        self.benchmark_kind
+            .inner()
+            .transport_command()
+            .output_command()
+            .as_ref()
+            .and_then(|cmd| match cmd {
+                BenchmarkOutputCommand::Output(args) => args.remark.clone(),
+            })
     }
 
     pub fn extra_info(&self) -> Option<String> {
-        self.extra_info.clone()
+        self.benchmark_kind
+            .inner()
+            .transport_command()
+            .output_command()
+            .as_ref()
+            .and_then(|cmd| match cmd {
+                BenchmarkOutputCommand::Output(args) => args.extra_info.clone(),
+            })
     }
 
     pub fn gitref(&self) -> Option<String> {
-        self.gitref.clone()
+        self.benchmark_kind
+            .inner()
+            .transport_command()
+            .output_command()
+            .as_ref()
+            .and_then(|cmd| match cmd {
+                BenchmarkOutputCommand::Output(args) => args.gitref.clone(),
+            })
     }
 
     pub fn gitref_date(&self) -> Option<String> {
-        self.gitref_date.clone()
+        self.benchmark_kind
+            .inner()
+            .transport_command()
+            .output_command()
+            .as_ref()
+            .and_then(|cmd| match cmd {
+                BenchmarkOutputCommand::Output(args) => args.gitref_date.clone(),
+            })
+    }
+
+    pub fn open_charts(&self) -> bool {
+        self.benchmark_kind
+            .inner()
+            .transport_command()
+            .output_command()
+            .as_ref()
+            .is_some_and(|cmd| match cmd {
+                BenchmarkOutputCommand::Output(args) => args.open_charts,
+            })
     }
 
     pub fn max_topic_size(&self) -> Option<IggyByteSize> {
@@ -247,10 +268,19 @@ impl IggyBenchArgs {
     /// Generates the output directory name based on benchmark parameters.
     pub fn generate_dir_name(&self) -> String {
         let benchmark_kind = match &self.benchmark_kind {
-            BenchmarkKindCommand::Send(_) => "send",
-            BenchmarkKindCommand::Poll(_) => "poll",
-            BenchmarkKindCommand::SendAndPoll(_) => "send_and_poll",
-            BenchmarkKindCommand::ConsumerGroupPoll(_) => "consumer_group_poll",
+            BenchmarkKindCommand::PinnedProducer(_) => "pinned_producer",
+            BenchmarkKindCommand::PinnedConsumer(_) => "pinned_consumer",
+            BenchmarkKindCommand::PinnedProducerAndConsumer(_) => "pinned_producer_and_consumer",
+            BenchmarkKindCommand::BalancedProducer(_) => "balanced_producer",
+            BenchmarkKindCommand::BalancedConsumerGroup(_) => "balanced_consumer_group",
+            BenchmarkKindCommand::BalancedProducerAndConsumerGroup(_) => {
+                "balanced_producer_and_consumer"
+            }
+            BenchmarkKindCommand::EndToEndProducingConsumer(_) => "end_to_end_producing_consumer",
+            // BenchmarkKindCommand::EndToEndProducerAndConsumerGroup(_) => {
+            //     "end_to_end_producer_and_consumer_group"
+            // }
+            // BenchmarkKindCommand::EndToEnd(_) => "end_to_end",
             BenchmarkKindCommand::Examples => unreachable!(),
         };
 
@@ -272,15 +302,15 @@ impl IggyBenchArgs {
             transport.to_string(),
         ];
 
-        if let Some(remark) = &self.remark {
+        if let Some(remark) = &self.remark() {
             parts.push(remark.to_string());
         }
 
-        if let Some(gitref) = &self.gitref {
+        if let Some(gitref) = &self.gitref() {
             parts.push(gitref.to_string());
         }
 
-        if let Some(identifier) = &self.identifier {
+        if let Some(identifier) = &self.identifier() {
             parts.push(identifier.to_string());
         }
 
@@ -290,8 +320,23 @@ impl IggyBenchArgs {
     /// Generates a human-readable pretty name for the benchmark
     pub fn generate_pretty_name(&self) -> String {
         let consumer_or_producer = match &self.benchmark_kind {
-            BenchmarkKindCommand::Send(_) => format!("{} producers", self.producers()),
-            _ => format!("{} consumers", self.consumers()),
+            BenchmarkKindCommand::PinnedProducer(_) | BenchmarkKindCommand::BalancedProducer(_) => {
+                format!("{} producers", self.producers())
+            }
+            BenchmarkKindCommand::PinnedConsumer(_)
+            | BenchmarkKindCommand::BalancedConsumerGroup(_) => {
+                format!("{} consumers", self.consumers())
+            }
+            BenchmarkKindCommand::PinnedProducerAndConsumer(_)
+            | BenchmarkKindCommand::BalancedProducerAndConsumerGroup(_) => format!(
+                "{} producers/{} consumers",
+                self.producers(),
+                self.consumers()
+            ),
+            BenchmarkKindCommand::EndToEndProducingConsumer(_) => {
+                format!("{} producing consumers", self.producers(),)
+            }
+            BenchmarkKindCommand::Examples => unreachable!(),
         };
 
         let mut name = format!(
@@ -301,7 +346,7 @@ impl IggyBenchArgs {
             self.messages_per_batch(),
         );
 
-        if let Some(remark) = &self.remark {
+        if let Some(remark) = &self.remark() {
             name.push_str(&format!(" ({})", remark));
         }
 
@@ -334,80 +379,6 @@ fn recreate_bench_command(args: &IggyBenchArgs) -> String {
 
     parts.push("iggy-bench".to_string());
 
-    // Add optional global args
-    if let Some(ref remark) = args.remark() {
-        parts.push(format!("--remark \'{}\'", remark));
-    }
-
-    if let Some(ref output_dir) = args.output_dir() {
-        parts.push(format!("--output-dir \'{}\'", output_dir));
-    }
-
-    // Add warmup time if not default
-    if args.warmup_time().to_string() != DEFAULT_WARMUP_TIME {
-        parts.push(format!("--warmup-time {}", args.warmup_time()));
-    }
-
-    // Add benchmark kind
-    let kind_str = match args.benchmark_kind.as_simple_kind() {
-        BenchmarkKind::Send => "send",
-        BenchmarkKind::Poll => "poll",
-        BenchmarkKind::SendAndPoll => "send-and-poll",
-        BenchmarkKind::ConsumerGroupSend => "consumer-group-send",
-        BenchmarkKind::ConsumerGroupPoll => "consumer-group-poll",
-        BenchmarkKind::ConsumerGroupSendAndPoll => "consumer-group-send-and-poll",
-    };
-    parts.push(kind_str.to_string());
-
-    // Add benchmark params, skipping defaults
-    let producers = args.producers();
-    let consumers = args.consumers();
-
-    match args.benchmark_kind.as_simple_kind() {
-        BenchmarkKind::Send => {
-            if producers != DEFAULT_NUMBER_OF_PRODUCERS.get() {
-                parts.push(format!("--producers {}", producers));
-            }
-        }
-        BenchmarkKind::Poll => {
-            if consumers != DEFAULT_NUMBER_OF_CONSUMERS.get() {
-                parts.push(format!("--consumers {}", consumers));
-            }
-        }
-        BenchmarkKind::SendAndPoll => {
-            if producers != DEFAULT_NUMBER_OF_PRODUCERS.get() {
-                parts.push(format!("--producers {}", producers));
-            }
-            if consumers != DEFAULT_NUMBER_OF_CONSUMERS.get() {
-                parts.push(format!("--consumers {}", consumers));
-            }
-        }
-        BenchmarkKind::ConsumerGroupSend => {
-            if producers != DEFAULT_NUMBER_OF_PRODUCERS.get() {
-                parts.push(format!("--producers {}", producers));
-            }
-            if consumers != DEFAULT_NUMBER_OF_CONSUMER_GROUPS.get() {
-                parts.push(format!("--consumer-groups {}", consumers));
-            }
-        }
-        BenchmarkKind::ConsumerGroupPoll => {
-            if consumers != DEFAULT_NUMBER_OF_CONSUMER_GROUPS.get() {
-                parts.push(format!("--consumer-groups {}", consumers));
-            }
-        }
-        BenchmarkKind::ConsumerGroupSendAndPoll => {
-            if producers != DEFAULT_NUMBER_OF_PRODUCERS.get() {
-                parts.push(format!("--producers {}", producers));
-            }
-            if consumers != DEFAULT_NUMBER_OF_CONSUMERS.get() {
-                parts.push(format!("--consumers {}", consumers));
-            }
-            if consumers != DEFAULT_NUMBER_OF_CONSUMER_GROUPS.get() {
-                parts.push(format!("--consumer-groups {}", consumers));
-            }
-        }
-    }
-
     let messages_per_batch = args.messages_per_batch();
     if messages_per_batch != DEFAULT_MESSAGES_PER_BATCH.get() {
         parts.push(format!("--messages-per-batch {}", messages_per_batch));
@@ -423,38 +394,92 @@ fn recreate_bench_command(args: &IggyBenchArgs) -> String {
         parts.push(format!("--message-size {}", message_size));
     }
 
-    let streams = args.number_of_streams();
+    if let Some(rate_limit) = args.rate_limit() {
+        parts.push(format!("--rate-limit \'{}\'", rate_limit));
+    }
+
+    if args.warmup_time().to_string() != DEFAULT_WARMUP_TIME {
+        parts.push(format!("--warmup-time \'{}\'", args.warmup_time()));
+    }
+
+    let kind_str = match args.benchmark_kind.as_simple_kind() {
+        BenchmarkKind::PinnedProducer => "pinned-producer",
+        BenchmarkKind::PinnedConsumer => "pinned-consumer",
+        BenchmarkKind::PinnedProducerAndConsumer => "pinned-producer-and-consumer",
+        BenchmarkKind::BalancedProducer => "balanced-producer",
+        BenchmarkKind::BalancedConsumerGroup => "balanced-consumer-group",
+        BenchmarkKind::BalancedProducerAndConsumerGroup => "balanced-producer-and-consumer-group",
+        BenchmarkKind::EndToEndProducingConsumer => "end-to-end-producing-consumer",
+        // BenchmarkKind::EndToEndProducerAndConsumerGroup => "end-to-end-producer-and-consumer-group",
+    };
+    parts.push(kind_str.to_string());
+
+    // Add benchmark params, skipping defaults
+    let producers = args.producers();
+    let consumers = args.consumers();
+
+    match args.benchmark_kind.as_simple_kind() {
+        BenchmarkKind::PinnedProducer
+        | BenchmarkKind::BalancedProducer
+        | BenchmarkKind::EndToEndProducingConsumer => {
+            if producers != DEFAULT_NUMBER_OF_PRODUCERS.get() {
+                parts.push(format!("--producers {}", producers));
+            }
+        }
+        BenchmarkKind::PinnedConsumer | BenchmarkKind::BalancedConsumerGroup => {
+            if consumers != DEFAULT_NUMBER_OF_CONSUMERS.get() {
+                parts.push(format!("--consumers {}", consumers));
+            }
+        }
+        BenchmarkKind::PinnedProducerAndConsumer
+        | BenchmarkKind::BalancedProducerAndConsumerGroup => {
+            if producers != DEFAULT_NUMBER_OF_PRODUCERS.get() {
+                parts.push(format!("--producers {}", producers));
+            }
+            if consumers != DEFAULT_NUMBER_OF_CONSUMERS.get() {
+                parts.push(format!("--consumers {}", consumers));
+            }
+        } // BenchmarkKind::EndToEndProducingConsumerGroup => {
+          //     if producers != DEFAULT_NUMBER_OF_PRODUCERS.get() {
+          //         parts.push(format!("--producers {}", producers));
+          //     }
+          //     if consumers != DEFAULT_NUMBER_OF_CONSUMERS.get() {
+          //         parts.push(format!("--consumers {}", consumers));
+          //     }
+          //     if number_of_consumer_groups != DEFAULT_NUMBER_OF_CONSUMER_GROUPS.get() {
+          //         parts.push(format!("--consumer-groups {}", number_of_consumer_groups));
+          //     }
+          // }
+    }
+
+    let streams = args.streams();
     let default_streams = match args.benchmark_kind.as_simple_kind() {
-        BenchmarkKind::ConsumerGroupPoll => DEFAULT_NUMBER_OF_STREAMS_CONSUMER_GROUP.get(),
-        _ => DEFAULT_NUMBER_OF_STREAMS.get(),
+        BenchmarkKind::BalancedProducerAndConsumerGroup
+        | BenchmarkKind::BalancedConsumerGroup
+        | BenchmarkKind::BalancedProducer => DEFAULT_BALANCED_NUMBER_OF_STREAMS.get(),
+        _ => DEFAULT_PINNED_NUMBER_OF_STREAMS.get(),
     };
     if streams != default_streams {
         parts.push(format!("--streams {}", streams));
     }
 
     let partitions = args.number_of_partitions();
-    if partitions != DEFAULT_NUMBER_OF_PARTITIONS.get() {
+    let default_partitions = match args.benchmark_kind.as_simple_kind() {
+        BenchmarkKind::BalancedProducerAndConsumerGroup
+        | BenchmarkKind::BalancedConsumerGroup
+        | BenchmarkKind::BalancedProducer => DEFAULT_BALANCED_NUMBER_OF_PARTITIONS.get(),
+        _ => DEFAULT_PINNED_NUMBER_OF_PARTITIONS.get(),
+    };
+    if partitions != default_partitions {
         parts.push(format!("--partitions {}", partitions));
     }
 
-    // Add optional flags, skipping defaults
-    if args.disable_parallel_producer_streams() != DEFAULT_DISABLE_PARALLEL_PRODUCER_STREAMS {
-        parts.push("--disable-parallel-producer-streams".to_string());
-    }
-    if args.disable_parallel_consumer_streams() != DEFAULT_DISABLE_PARALLEL_CONSUMER_STREAMS {
-        parts.push("--disable-parallel-consumer-streams".to_string());
-    }
-
-    // Only add consumer groups for consumer group poll
     let consumer_groups = args.number_of_consumer_groups();
-    if args.benchmark_kind.as_simple_kind() == BenchmarkKind::ConsumerGroupPoll
-        && consumer_groups != DEFAULT_NUMBER_OF_CONSUMER_GROUPS.get()
+    if args.benchmark_kind.as_simple_kind() == BenchmarkKind::BalancedConsumerGroup
+        || args.benchmark_kind.as_simple_kind() == BenchmarkKind::BalancedProducerAndConsumerGroup
+            && consumer_groups != DEFAULT_NUMBER_OF_CONSUMER_GROUPS.get()
     {
         parts.push(format!("--consumer-groups {}", consumer_groups));
-    }
-
-    if let Some(rate_limit) = args.rate_limit() {
-        parts.push(format!("--rate-limit \'{}\'", rate_limit));
     }
 
     if let Some(max_topic_size) = args.max_topic_size() {
@@ -471,10 +496,19 @@ fn recreate_bench_command(args: &IggyBenchArgs) -> String {
         "http" => DEFAULT_HTTP_SERVER_ADDRESS,
         _ => "",
     };
+
     if server_address != default_address {
         parts.push(format!("--server-address {}", server_address));
     }
 
+    parts.push("output".to_string());
+
+    parts.push("-o performance_results".to_string());
+
+    let remark = args.remark();
+    if let Some(remark) = remark {
+        parts.push(format!("--remark \'{}\'", remark));
+    }
     parts.join(" ")
 }
 
@@ -482,7 +516,7 @@ impl From<&IggyBenchArgs> for BenchmarkParams {
     fn from(args: &IggyBenchArgs) -> Self {
         let benchmark_kind = args.benchmark_kind.as_simple_kind();
 
-        // Ugly conversion but let it stay here to not have dependencies on other modules
+        // Ugly conversion but let it stay here to have `iggy-bench-report` not depend on `iggy` or `integration`
         let transport = match args.transport() {
             Transport::Tcp => BenchmarkTransport::Tcp,
             Transport::Quic => BenchmarkTransport::Quic,
@@ -498,11 +532,10 @@ impl From<&IggyBenchArgs> for BenchmarkParams {
         let message_size = args.message_size();
         let producers = args.producers();
         let consumers = args.consumers();
-        let streams = args.number_of_streams();
+        let streams = args.streams();
         let partitions = args.number_of_partitions();
-        let number_of_consumer_groups = args.number_of_consumer_groups();
-        let disable_parallel_consumers = args.disable_parallel_consumer_streams();
-        let disable_parallel_producers = args.disable_parallel_producer_streams();
+        let consumer_groups = args.number_of_consumer_groups();
+        let rate_limit = args.rate_limit().map(|limit| limit.to_string());
         let pretty_name = args.generate_pretty_name();
         let bench_command = recreate_bench_command(args);
 
@@ -522,7 +555,7 @@ impl From<&IggyBenchArgs> for BenchmarkParams {
             consumers.to_string(),
             streams.to_string(),
             partitions.to_string(),
-            number_of_consumer_groups.to_string(),
+            consumer_groups.to_string(),
         ];
 
         let params_identifier = params_identifier.join("_");
@@ -542,9 +575,8 @@ impl From<&IggyBenchArgs> for BenchmarkParams {
             consumers,
             streams,
             partitions,
-            number_of_consumer_groups,
-            disable_parallel_consumers,
-            disable_parallel_producers,
+            consumer_groups,
+            rate_limit,
             pretty_name,
             bench_command,
             params_identifier,

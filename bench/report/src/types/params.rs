@@ -17,9 +17,8 @@ pub struct BenchmarkParams {
     pub consumers: u32,
     pub streams: u32,
     pub partitions: u32,
-    pub number_of_consumer_groups: u32,
-    pub disable_parallel_consumers: bool,
-    pub disable_parallel_producers: bool,
+    pub consumer_groups: u32,
+    pub rate_limit: Option<String>,
     pub pretty_name: String,
     pub bench_command: String,
     pub params_identifier: String,
@@ -28,24 +27,27 @@ pub struct BenchmarkParams {
 impl BenchmarkParams {
     pub fn format_actors_info(&self) -> String {
         match self.benchmark_kind {
-            BenchmarkKind::Send => format!("{} producers", self.producers),
-            BenchmarkKind::Poll => format!("{} consumers", self.consumers),
-            BenchmarkKind::SendAndPoll => {
+            BenchmarkKind::PinnedProducer => format!("{} producers", self.producers),
+            BenchmarkKind::PinnedConsumer => format!("{} consumers", self.consumers),
+            BenchmarkKind::PinnedProducerAndConsumer => {
                 format!("{} producers/{} consumers", self.producers, self.consumers)
             }
-            BenchmarkKind::ConsumerGroupSend => format!(
-                "{} producers/{} consumer groups",
-                self.producers, self.number_of_consumer_groups
+            BenchmarkKind::BalancedProducer => format!("{} producers", self.producers),
+            BenchmarkKind::BalancedConsumerGroup => format!(
+                "{} consumers/{} consumer groups",
+                self.consumers, self.consumer_groups
             ),
-            BenchmarkKind::ConsumerGroupSendAndPoll => {
+            BenchmarkKind::BalancedProducerAndConsumerGroup => {
                 format!("{} producers/{} consumers", self.producers, self.consumers)
             }
-            BenchmarkKind::ConsumerGroupPoll => {
-                format!(
-                    "{} consumers/{} consumer groups",
-                    self.consumers, self.number_of_consumer_groups
-                )
-            }
+            BenchmarkKind::EndToEndProducingConsumer => {
+                format!("{} producing consumers", self.producers)
+            } // BenchmarkKind::EndToEndProducerAndConsumerGroup => {
+              //     format!(
+              //         "{} producers/{} consumers/{} consumer groups",
+              //         self.producers, self.consumers, self.consumer_groups
+              //     )
+              // }
         }
     }
 }

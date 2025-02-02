@@ -575,10 +575,11 @@ dependencies = [
 
 [[package]]
 name = "bench"
-version = "0.1.5"
+version = "0.2.0"
 dependencies = [
  "async-trait",
  "atomic-time",
+ "bytes",
  "charming",
  "chrono",
  "clap",
@@ -587,7 +588,7 @@ dependencies = [
  "hostname",
  "human-repr",
  "iggy",
- "iggy-benchmark-report",
+ "iggy-bench-report",
  "integration",
  "nonzero_lit",
  "serde",
@@ -2416,8 +2417,8 @@ dependencies = [
 ]
 
 [[package]]
-name = "iggy-benchmark-report"
-version = "0.1.5"
+name = "iggy-bench-report"
+version = "0.2.0"
 dependencies = [
  "byte-unit",
  "charming",

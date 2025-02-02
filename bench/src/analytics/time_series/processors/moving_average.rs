@@ -1,5 +1,5 @@
 use super::TimeSeriesProcessor;
-use iggy_benchmark_report::time_series::{TimePoint, TimeSeries};
+use iggy_bench_report::time_series::{TimePoint, TimeSeries};
 use std::collections::VecDeque;
 use tracing::warn;
 

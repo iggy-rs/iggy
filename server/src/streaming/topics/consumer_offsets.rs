@@ -15,10 +15,13 @@ impl Topic {
         partition_id: Option<u32>,
         client_id: u32,
     ) -> Result<(), IggyError> {
-        let (polling_consumer, partition_id) = self
+        let Some((polling_consumer, partition_id)) = self
             .resolve_consumer_with_partition_id(&consumer, client_id, partition_id, false)
             .await
-            .with_error_context(|_| format!("{COMPONENT} - failed to resolve consumer with partition id, consumer ID: {}, client ID: {}, partition ID: {:?}", consumer.id, client_id, partition_id))?;
+            .with_error_context(|_| format!("{COMPONENT} - failed to resolve consumer with partition id, consumer ID: {}, client ID: {}, partition ID: {:?}", consumer.id, client_id, partition_id))? else {
+            return Err(IggyError::ConsumerOffsetNotFound(client_id));
+        };
+
         let partition = self.get_partition(partition_id).with_error_context(|_| {
             format!("{COMPONENT} - failed to get partition with id: {partition_id}")
         })?;
@@ -48,10 +51,13 @@ impl Topic {
         partition_id: Option<u32>,
         client_id: u32,
     ) -> Result<Option<ConsumerOffsetInfo>, IggyError> {
-        let (polling_consumer, partition_id) = self
+        let Some((polling_consumer, partition_id)) = self
             .resolve_consumer_with_partition_id(consumer, client_id, partition_id, false)
             .await
-            .with_error_context(|_| format!("{COMPONENT} - failed to resolve consumer with partition id, consumer: {consumer}, client ID: {client_id}, partition ID: {:?}", partition_id))?;
+            .with_error_context(|_| format!("{COMPONENT} - failed to resolve consumer with partition id, consumer: {consumer}, client ID: {client_id}, partition ID: {:?}", partition_id))? else {
+            return Ok(None);
+        };
+
         let partition = self.get_partition(partition_id).with_error_context(|_| {
             format!("{COMPONENT} - failed to get partition with id: {partition_id}")
         })?;
@@ -79,10 +85,13 @@ impl Topic {
         partition_id: Option<u32>,
         client_id: u32,
     ) -> Result<(), IggyError> {
-        let (polling_consumer, partition_id) = self
+        let Some((polling_consumer, partition_id)) = self
             .resolve_consumer_with_partition_id(&consumer, client_id, partition_id, false)
             .await
-            .with_error_context(|_| format!("{COMPONENT} - failed to resolve consumer with partition id, consumer ID: {}, client ID: {}, partition ID: {:?}", consumer.id, client_id, partition_id))?;
+            .with_error_context(|_| format!("{COMPONENT} - failed to resolve consumer with partition id, consumer ID: {}, client ID: {}, partition ID: {:?}", consumer.id, client_id, partition_id))? else {
+            return Err(IggyError::ConsumerOffsetNotFound(client_id));
+        };
+
         let partition = self.get_partition(partition_id).with_error_context(|_| {
             format!("{COMPONENT} - failed to get partition with id: {partition_id}")
         })?;

@@ -176,22 +176,22 @@ impl Topic {
         client_id: u32,
         partition_id: Option<u32>,
         calculate_partition_id: bool,
-    ) -> Result<(PollingConsumer, u32), IggyError> {
+    ) -> Result<Option<(PollingConsumer, u32)>, IggyError> {
         match consumer.kind {
             ConsumerKind::Consumer => {
                 let partition_id = partition_id.unwrap_or(1);
-                Ok((
+                Ok(Some((
                     PollingConsumer::consumer(&consumer.id, partition_id),
                     partition_id,
-                ))
+                )))
             }
             ConsumerKind::ConsumerGroup => {
                 let consumer_group = self.get_consumer_group(&consumer.id)?.read().await;
                 if let Some(partition_id) = partition_id {
-                    return Ok((
+                    return Ok(Some((
                         PollingConsumer::consumer_group(consumer_group.group_id, client_id),
                         partition_id,
-                    ));
+                    )));
                 }
 
                 let partition_id = if calculate_partition_id {
@@ -199,10 +199,14 @@ impl Topic {
                 } else {
                     consumer_group.get_current_partition_id(client_id).await?
                 };
-                Ok((
+                let Some(partition_id) = partition_id else {
+                    return Ok(None);
+                };
+
+                Ok(Some((
                     PollingConsumer::consumer_group(consumer_group.group_id, client_id),
                     partition_id,
-                ))
+                )))
             }
         }
     }

@@ -4,7 +4,7 @@ use super::calculators::{
 };
 use crate::analytics::record::BenchmarkRecord;
 use iggy::utils::duration::IggyDuration;
-use iggy_benchmark_report::time_series::{TimePoint, TimeSeries, TimeSeriesKind};
+use iggy_bench_report::time_series::{TimePoint, TimeSeries, TimeSeriesKind};
 use tracing::warn;
 
 /// Calculate time series data from benchmark records

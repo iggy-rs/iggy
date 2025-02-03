@@ -6,7 +6,7 @@ use iggy::{
     snapshot::{SnapshotCompression, SystemSnapshotType},
     users::defaults::{DEFAULT_ROOT_PASSWORD, DEFAULT_ROOT_USERNAME},
 };
-use iggy_benchmark_report::transport::BenchmarkTransport;
+use iggy_bench_report::transport::BenchmarkTransport;
 use std::{fs, path::Path};
 use tracing::error;
 

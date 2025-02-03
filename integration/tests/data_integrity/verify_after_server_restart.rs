@@ -27,7 +27,7 @@ async fn should_fill_data_and_verify_after_restart() {
     run_bench_and_wait_for_finish(
         &server_addr,
         Transport::Tcp,
-        "send",
+        "pinned-producer",
         amount_of_data_to_process,
     );
 
@@ -35,11 +35,11 @@ async fn should_fill_data_and_verify_after_restart() {
     run_bench_and_wait_for_finish(
         &server_addr,
         Transport::Tcp,
-        "poll",
+        "pinned-consumer",
         amount_of_data_to_process,
     );
 
-    let default_bench_stream_identifiers: [Identifier; 10] = [
+    let default_bench_stream_identifiers: [Identifier; 8] = [
         Identifier::numeric(3000001).unwrap(),
         Identifier::numeric(3000002).unwrap(),
         Identifier::numeric(3000003).unwrap(),
@@ -48,8 +48,6 @@ async fn should_fill_data_and_verify_after_restart() {
         Identifier::numeric(3000006).unwrap(),
         Identifier::numeric(3000007).unwrap(),
         Identifier::numeric(3000008).unwrap(),
-        Identifier::numeric(3000009).unwrap(),
-        Identifier::numeric(3000010).unwrap(),
     ];
 
     // 4. Connect and login to newly started server
@@ -144,7 +142,7 @@ async fn should_fill_data_and_verify_after_restart() {
     run_bench_and_wait_for_finish(
         &server_addr,
         Transport::Tcp,
-        "poll",
+        "pinned-consumer",
         amount_of_data_to_process,
     );
 

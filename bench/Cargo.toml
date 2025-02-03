@@ -1,12 +1,13 @@
 [package]
 name = "bench"
-version = "0.1.5"
+version = "0.2.0"
 edition = "2021"
 license = "Apache-2.0"
 
 [dependencies]
 async-trait = "0.1.85"
 atomic-time = "0.1.5"
+bytes = "1.9.0"
 charming = "0.4.0"
 chrono = "0.4.31"
 clap = { version = "4.5.26", features = ["derive"] }
@@ -15,7 +16,7 @@ futures = "0.3.31"
 hostname = "0.4.0"
 human-repr = "1.1.0"
 iggy = { path = "../sdk" }
-iggy-benchmark-report = { path = "report" }
+iggy-bench-report = { path = "report" }
 integration = { path = "../integration" }
 nonzero_lit = "0.1.2"
 serde = { version = "1.0.217", features = ["derive"] }

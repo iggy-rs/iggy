@@ -106,11 +106,11 @@ jobs:
 
       - name: Run send bench (origin/master)
         timeout-minutes: 1
-        run: target/debug/iggy-bench --warmup-time 0 --verbose send --message-batches 50 --messages-per-batch 100 tcp
+        run: target/debug/iggy-bench --verbose --message-batches 50 --messages-per-batch 100 pinned-producer tcp
 
       - name: Run poll bench (origin/master)
         timeout-minutes: 1
-        run: target/debug/iggy-bench --warmup-time 0 --verbose poll --message-batches 50 --messages-per-batch 100 tcp
+        run: target/debug/iggy-bench --verbose --message-batches 50 --messages-per-batch 100 pinned-consumer tcp
 
       - name: Stop iggy-server (origin/master)
         timeout-minutes: 1
@@ -134,7 +134,7 @@ jobs:
           clean: false
 
       - name: Build iggy-server (PR)
-        run: IGGY_CI_BUILD=true cargo build
+        run: IGGY_CI_BUILD=true cargo build --bin iggy-server
 
       - name: Restore local_data directory (PR)
         run: cp -r ../local_data .
@@ -152,7 +152,7 @@ jobs:
 
       - name: Run poll bench (PR)
         timeout-minutes: 1
-        run: target/debug/iggy-bench --warmup-time 0 --verbose poll --message-batches 50 --messages-per-batch 100 tcp
+        run: target/debug/iggy-bench --verbose --message-batches 50 --messages-per-batch 100 pinned-consumer tcp
 
       - name: Stop iggy-server (PR)
         timeout-minutes: 1

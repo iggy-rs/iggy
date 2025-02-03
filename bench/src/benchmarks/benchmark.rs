@@ -1,7 +1,4 @@
-use super::{
-    consumer_group_benchmark::ConsumerGroupBenchmark, poll_benchmark::PollMessagesBenchmark,
-    send_and_poll_benchmark::SendAndPollMessagesBenchmark, send_benchmark::SendMessagesBenchmark,
-};
+use crate::args::kind::BenchmarkKindCommand;
 use crate::{args::common::IggyBenchArgs, utils::client_factory::create_client_factory};
 use async_trait::async_trait;
 use futures::Future;
@@ -11,11 +8,18 @@ use iggy::compression::compression_algorithm::CompressionAlgorithm;
 use iggy::error::IggyError;
 use iggy::utils::expiry::IggyExpiry;
 use iggy::utils::topic_size::MaxTopicSize;
-use iggy_benchmark_report::benchmark_kind::BenchmarkKind;
-use iggy_benchmark_report::individual_metrics::BenchmarkIndividualMetrics;
+use iggy_bench_report::benchmark_kind::BenchmarkKind;
+use iggy_bench_report::individual_metrics::BenchmarkIndividualMetrics;
 use integration::test_server::{login_root, ClientFactory};
 use std::{pin::Pin, sync::Arc};
 use tracing::info;
+
+use super::consumer_benchmark::ConsumerBenchmark;
+use super::consumer_group_benchmark::ConsumerGroupBenchmark;
+use super::producer_and_consumer_benchmark::ProducerAndConsumerBenchmark;
+use super::producer_and_consumer_group_benchmark::ProducerAndConsumerGroupBenchmark;
+use super::producer_benchmark::ProducerBenchmark;
+use super::producing_consumer_benchmark::EndToEndProducingConsumerBenchmark;
 
 pub type BenchmarkFutures = Result<
     Vec<Pin<Box<dyn Future<Output = Result<BenchmarkIndividualMetrics, IggyError>> + Send>>>,
@@ -25,27 +29,37 @@ pub type BenchmarkFutures = Result<
 impl From<IggyBenchArgs> for Box<dyn Benchmarkable> {
     fn from(args: IggyBenchArgs) -> Self {
         let client_factory = create_client_factory(&args);
-        let benchmark_kind = args.benchmark_kind.as_simple_kind();
-        match benchmark_kind {
-            BenchmarkKind::Poll => {
-                Box::new(PollMessagesBenchmark::new(Arc::new(args), client_factory))
+
+        match args.benchmark_kind {
+            BenchmarkKindCommand::PinnedProducer(_) => {
+                Box::new(ProducerBenchmark::new(Arc::new(args), client_factory))
             }
-            BenchmarkKind::Send => {
-                Box::new(SendMessagesBenchmark::new(Arc::new(args), client_factory))
+            BenchmarkKindCommand::PinnedConsumer(_) => {
+                Box::new(ConsumerBenchmark::new(Arc::new(args), client_factory))
             }
-            BenchmarkKind::SendAndPoll => Box::new(SendAndPollMessagesBenchmark::new(
-                Arc::new(args),
-                client_factory,
-            )),
-            BenchmarkKind::ConsumerGroupSend => {
-                unimplemented!("ConsumerGroupSend")
+            BenchmarkKindCommand::PinnedProducerAndConsumer(_) => Box::new(
+                ProducerAndConsumerBenchmark::new(Arc::new(args), client_factory),
+            ),
+            BenchmarkKindCommand::BalancedProducer(_) => {
+                Box::new(ProducerBenchmark::new(Arc::new(args), client_factory))
             }
-            BenchmarkKind::ConsumerGroupPoll => {
+            BenchmarkKindCommand::BalancedConsumerGroup(_) => {
                 Box::new(ConsumerGroupBenchmark::new(Arc::new(args), client_factory))
             }
-            BenchmarkKind::ConsumerGroupSendAndPoll => {
-                unimplemented!("ConsumerGroupSendAndPoll")
-            }
+            BenchmarkKindCommand::BalancedProducerAndConsumerGroup(_) => Box::new(
+                ProducerAndConsumerGroupBenchmark::new(Arc::new(args), client_factory),
+            ),
+            BenchmarkKindCommand::EndToEndProducingConsumer(_) => Box::new(
+                EndToEndProducingConsumerBenchmark::new(Arc::new(args), client_factory),
+            ),
+            // not yet implemented
+            // BenchmarkKindCommand::EndToEndProducerAndConsumerGroup(_) => {
+            //     Box::new(EndToEndProducerAndConsumerGroupBenchmark::new(
+            //         Arc::new(args),
+            //         client_factory,
+            //     ))
+            // }
+            _ => todo!(),
         }
     }
 }
@@ -62,7 +76,7 @@ pub trait Benchmarkable {
     /// This method is called before the benchmark is executed.
     async fn init_streams(&self) -> Result<(), IggyError> {
         let start_stream_id = self.args().start_stream_id();
-        let number_of_streams = self.args().number_of_streams();
+        let number_of_streams = self.args().streams();
         let topic_id: u32 = 1;
         let partitions_count: u32 = self.args().number_of_partitions();
         let client = self.client_factory().create_client().await;
@@ -105,7 +119,7 @@ pub trait Benchmarkable {
 
     async fn check_streams(&self) -> Result<(), IggyError> {
         let start_stream_id = self.args().start_stream_id();
-        let number_of_streams = self.args().number_of_streams();
+        let number_of_streams = self.args().streams();
         let client = self.client_factory().create_client().await;
         let client = IggyClient::create(client, None, None);
         login_root(&client).await;
@@ -126,7 +140,7 @@ pub trait Benchmarkable {
     fn total_messages(&self) -> u64 {
         let messages_per_batch = self.args().messages_per_batch();
         let message_batches = self.args().message_batches();
-        let streams = self.args().number_of_streams();
+        let streams = self.args().streams();
         (messages_per_batch * message_batches * streams) as u64
     }
 }

@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Example bench command:
-# target/release/iggy-bench send --producers 8 --streams 8 --message-size 1000 --messages-per-batch 1000 --message-batches 1000 tcp
+# target/release/iggy-bench --message-size 1000 --messages-per-batch 1000 --message-batches 1000 pinned-producer --streams 8 --producers 8 tcp output --remark "test"
 
 # Function to get the current git tag containing "server" or commit SHA1
 function get_git_iggy_server_tag_or_sha1() {
@@ -85,37 +85,48 @@ function get_git_commit_date() {
     fi
 }
 
-# Function to construct a bench command (send or poll)
+# Function to construct a bench command
 function construct_bench_command() {
     local bench_command=$1
-    local type=$2
-    local count=$3
-    local message_size=$4
-    local messages_per_batch=$5
-    local message_batches=$6
-    local protocol=$7
-    local remark=${8:-""}
-    local identifier=${9:-$(hostname)}
+    local benchmark_mode=$2
+    local streams=$3
+    local actors=$4
+    local message_size=$5
+    local messages_per_batch=$6
+    local message_batches=$7
+    local protocol=$8
+    local remark=${9:-""}
+    local identifier=${10:-$(hostname)}
 
-    # Validate the type
-    if [[ "$type" != "send" && "$type" != "poll" && "$type" != "send-and-poll" && "$type" != "consumer-group-poll" ]]; then
-        echo "Error: Invalid type '$type'. Must be 'send', 'poll', 'send-and-poll', or 'consumer-group-poll'." >&2
-        return 1
-    fi
-
-    # Set variables based on type
-    local producer_arg=""
-    local consumer_arg=""
-    if [[ "$type" == "send" ]]; then
-        producer_arg="--producers ${count}"
-    elif [[ "$type" == "poll" || "$type" == "consumer-group-poll" ]]; then
-        consumer_arg="--consumers ${count}"
-    elif [[ "$type" == "send-and-poll" ]]; then
-        producer_arg="--producers ${count}"
-        consumer_arg="--consumers ${count}"
-    fi
-
-    local streams=${count}
+    # Set variables based on benchmark mode
+    local actor_args=""
+    case "$benchmark_mode" in
+        "pinned-producer")
+            actor_args="--producers ${actors}"
+            ;;
+        "pinned-consumer")
+            actor_args="--consumers ${actors}"
+            ;;
+        "pinned-producer-and-consumer")
+            actor_args="--producers ${actors} --consumers ${actors}"
+            ;;
+        "balanced-producer")
+            actor_args="--producers ${actors}"
+            ;;
+        "balanced-consumer-group")
+            actor_args="--consumers ${actors}"
+            ;;
+        "balanced-producer-and-consumer-group")
+            actor_args="--producers ${actors} --consumers ${actors}"
+            ;;
+        "end-to-end-producing-consumer")
+            actor_args="--producers ${actors}"
+            ;;
+        *)
+            echo "Error: Invalid benchmark mode '$benchmark_mode'." >&2
+            return 1
+            ;;
+    esac
 
     local commit_hash
     commit_hash=$(get_git_iggy_server_tag_or_sha1 .) || { echo "Failed to get git commit or tag."; exit 1; }
@@ -123,18 +134,18 @@ function construct_bench_command() {
     commit_date=$(get_git_commit_date .) || { echo "Failed to get git commit date."; exit 1; }
 
     echo "$bench_command \
+--message-size ${message_size} \
+--messages-per-batch ${messages_per_batch} \
+--message-batches ${message_batches} \
+${benchmark_mode} \
+--streams ${streams} \
+${actor_args} \
+${protocol} \
+output \
 --output-dir performance_results \
 --identifier ${identifier} \
 --remark ${remark} \
 --extra-info \"\" \
 --gitref \"${commit_hash}\" \
---gitref-date \"${commit_date}\" \
-${type} \
-${producer_arg} \
-${consumer_arg} \
---streams ${streams} \
---message-size ${message_size} \
---messages-per-batch ${messages_per_batch} \
---message-batches ${message_batches} \
-${protocol}"
+--gitref-date \"${commit_date}\""
 }

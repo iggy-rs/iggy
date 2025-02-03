@@ -1,8 +1,9 @@
 use super::benchmark::{BenchmarkFutures, Benchmarkable};
 use crate::{
-    actors::consumer::Consumer,
+    actors::{consumer::Consumer, producer::Producer},
     args::common::IggyBenchArgs,
     benchmarks::{CONSUMER_GROUP_BASE_ID, CONSUMER_GROUP_NAME_PREFIX},
+    rate_limiter::RateLimiter,
 };
 use async_trait::async_trait;
 use iggy::{
@@ -14,12 +15,12 @@ use integration::test_server::{login_root, ClientFactory};
 use std::sync::{atomic::AtomicI64, Arc};
 use tracing::{error, info};
 
-pub struct ConsumerGroupBenchmark {
+pub struct ProducerAndConsumerGroupBenchmark {
     args: Arc<IggyBenchArgs>,
     client_factory: Arc<dyn ClientFactory>,
 }
 
-impl ConsumerGroupBenchmark {
+impl ProducerAndConsumerGroupBenchmark {
     pub fn new(args: Arc<IggyBenchArgs>, client_factory: Arc<dyn ClientFactory>) -> Self {
         Self {
             args,
@@ -67,27 +68,64 @@ impl ConsumerGroupBenchmark {
 }
 
 #[async_trait]
-impl Benchmarkable for ConsumerGroupBenchmark {
+impl Benchmarkable for ProducerAndConsumerGroupBenchmark {
     async fn run(&mut self) -> BenchmarkFutures {
-        self.check_streams().await?;
+        self.init_streams().await.expect("Failed to init streams!");
         let consumer_groups_count = self.args.number_of_consumer_groups();
         self.init_consumer_groups(consumer_groups_count)
             .await
-            .expect("Failed to init consumer group");
+            .expect("Failed to init consumer groups");
 
         let start_stream_id = self.args.start_stream_id();
-        let start_consumer_group_id = CONSUMER_GROUP_BASE_ID;
-        let consumers = self.args.consumers();
+        let streams_number = self.args.streams();
         let messages_per_batch = self.args.messages_per_batch();
-        let warmup_time = self.args.warmup_time();
-        let mut futures: BenchmarkFutures = Ok(Vec::with_capacity((consumers) as usize));
-        let polling_kind = match self.args.kind() {
-            BenchmarkKind::BalancedConsumerGroup
-            | BenchmarkKind::BalancedProducerAndConsumerGroup => PollingKind::Next,
-            _ => PollingKind::Offset,
-        };
         let message_batches = self.args.message_batches();
-        let total_message_batches = Arc::new(AtomicI64::new((message_batches * consumers) as i64));
+        let message_size = self.args.message_size();
+        let partitions_count = self.args.number_of_partitions();
+        let warmup_time = self.args.warmup_time();
+
+        let producers = self.args.producers();
+        let consumers = self.args.consumers();
+        let start_consumer_group_id = CONSUMER_GROUP_BASE_ID;
+        // Using Next for balanced consumer groups
+        // All consumers share the same counter and keep polling until all messages are consumed
+        let polling_kind = PollingKind::Next;
+        let total_message_batches = Arc::new(AtomicI64::new((message_batches * producers) as i64));
+
+        info!(
+            "Creating {} consumer(s) that will collectively process {} message batches...",
+            consumers,
+            message_batches * producers,
+        );
+
+        let mut futures: BenchmarkFutures =
+            Ok(Vec::with_capacity((producers + consumers) as usize));
+
+        for producer_id in 1..=producers {
+            info!("Executing the benchmark on producer #{}...", producer_id);
+            let stream_id = self.args.start_stream_id() + 1 + (producer_id % streams_number);
+
+            let producer = Producer::new(
+                self.client_factory.clone(),
+                self.args.kind(),
+                producer_id,
+                stream_id,
+                partitions_count,
+                messages_per_batch,
+                message_batches,
+                message_size,
+                warmup_time,
+                self.args.sampling_time(),
+                self.args.moving_average_window(),
+                self.args
+                    .rate_limit()
+                    .map(|rl| RateLimiter::new(rl.as_bytes_u64())),
+                false, // TODO: Put latency into payload of first message, it should be an argument to iggy-bench
+            );
+            let future = Box::pin(async move { producer.run().await });
+            futures.as_mut().unwrap().push(future);
+        }
+        info!("Created {} producer(s).", producers);
 
         for consumer_id in 1..=consumers {
             let consumer_group_id =
@@ -102,8 +140,7 @@ impl Benchmarkable for ConsumerGroupBenchmark {
                 stream_id,
                 messages_per_batch,
                 message_batches,
-                // In this test all consumers are polling 8000 messages in total, doesn't matter which one is fastest
-                total_message_batches.clone(),
+                total_message_batches.clone(), // in this test each consumer should receive as much messages as possible
                 warmup_time,
                 self.args.sampling_time(),
                 self.args.moving_average_window(),
@@ -113,8 +150,9 @@ impl Benchmarkable for ConsumerGroupBenchmark {
             let future = Box::pin(async move { consumer.run().await });
             futures.as_mut().unwrap().push(future);
         }
+
         info!(
-            "Starting consumer group benchmark with {} messages",
+            "Starting to send and poll {} messages",
             self.total_messages()
         );
         futures
@@ -122,6 +160,13 @@ impl Benchmarkable for ConsumerGroupBenchmark {
 
     fn kind(&self) -> BenchmarkKind {
         self.args.kind()
+    }
+
+    fn total_messages(&self) -> u64 {
+        let messages_per_batch = self.args.messages_per_batch();
+        let message_batches = self.args.message_batches();
+        let streams = self.args.streams();
+        (messages_per_batch * message_batches * streams) as u64
     }
 
     fn args(&self) -> &IggyBenchArgs {

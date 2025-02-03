@@ -1,7 +1,7 @@
 use charming::theme::Theme;
 use charming::{Chart, HtmlRenderer};
 use iggy::utils::byte_size::IggyByteSize;
-use iggy_benchmark_report::report::BenchmarkReport;
+use iggy_bench_report::report::BenchmarkReport;
 use std::path::Path;
 use std::process::Command;
 use std::time::Instant;
@@ -22,8 +22,8 @@ impl ChartType {
 
     fn create_chart(&self) -> fn(&BenchmarkReport, bool) -> Chart {
         match self {
-            ChartType::Throughput => iggy_benchmark_report::create_throughput_chart,
-            ChartType::Latency => iggy_benchmark_report::create_latency_chart,
+            ChartType::Throughput => iggy_bench_report::create_throughput_chart,
+            ChartType::Latency => iggy_bench_report::create_latency_chart,
         }
     }
 

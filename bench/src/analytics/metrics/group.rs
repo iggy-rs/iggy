@@ -2,7 +2,7 @@ use crate::analytics::time_series::{
     calculator::TimeSeriesCalculator,
     processors::{moving_average::MovingAverageProcessor, TimeSeriesProcessor},
 };
-use iggy_benchmark_report::{
+use iggy_bench_report::{
     actor_kind::ActorKind, group_metrics::BenchmarkGroupMetrics,
     group_metrics_kind::GroupMetricsKind, group_metrics_summary::BenchmarkGroupMetricsSummary,
     individual_metrics::BenchmarkIndividualMetrics,
@@ -75,6 +75,7 @@ pub fn from_individual_metrics(
     let kind = match stats.iter().next().unwrap().summary.actor_kind {
         ActorKind::Producer => GroupMetricsKind::Producers,
         ActorKind::Consumer => GroupMetricsKind::Consumers,
+        ActorKind::ProducingConsumer => GroupMetricsKind::ProducingConsumers,
     };
 
     let calculator = TimeSeriesCalculator::new();

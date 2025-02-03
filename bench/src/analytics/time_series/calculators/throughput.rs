@@ -1,7 +1,7 @@
 use super::TimeSeriesCalculation;
 use crate::analytics::record::BenchmarkRecord;
 use iggy::utils::duration::IggyDuration;
-use iggy_benchmark_report::time_series::{TimePoint, TimeSeries, TimeSeriesKind};
+use iggy_bench_report::time_series::{TimePoint, TimeSeries, TimeSeriesKind};
 
 /// Common functionality for throughput calculations
 pub trait ThroughputCalculation {

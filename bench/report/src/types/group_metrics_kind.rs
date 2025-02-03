@@ -13,6 +13,9 @@ pub enum GroupMetricsKind {
     #[display("Producers and Consumers")]
     #[serde(rename = "producers_and_consumers")]
     ProducersAndConsumers,
+    #[display("Producing Consumers")]
+    #[serde(rename = "producing_consumers")]
+    ProducingConsumers,
 }
 
 impl GroupMetricsKind {
@@ -21,6 +24,7 @@ impl GroupMetricsKind {
             GroupMetricsKind::Producers => "Producer",
             GroupMetricsKind::Consumers => "Consumer",
             GroupMetricsKind::ProducersAndConsumers => "Actor",
+            GroupMetricsKind::ProducingConsumers => "Producing Consumer",
         }
     }
 }

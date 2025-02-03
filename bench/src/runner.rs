@@ -6,8 +6,8 @@ use crate::utils::collect_server_logs_and_save_to_file;
 use crate::utils::server_starter::start_server_if_needed;
 use futures::future::select_all;
 use iggy::error::IggyError;
-use iggy_benchmark_report::hardware::BenchmarkHardware;
-use iggy_benchmark_report::params::BenchmarkParams;
+use iggy_bench_report::hardware::BenchmarkHardware;
+use iggy_bench_report::params::BenchmarkParams;
 use integration::test_server::TestServer;
 use std::path::Path;
 use std::time::Duration;
@@ -29,7 +29,7 @@ impl BenchmarkRunner {
 
     pub async fn run(&mut self) -> Result<(), IggyError> {
         let mut args = self.args.take().unwrap();
-        let should_open_charts = args.open_charts;
+        let should_open_charts = args.open_charts();
         self.test_server = start_server_if_needed(&mut args).await;
 
         let transport = args.transport();

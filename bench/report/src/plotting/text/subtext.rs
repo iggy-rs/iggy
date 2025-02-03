@@ -23,12 +23,15 @@ impl BenchmarkReport {
         }
 
         // For SendAndPoll tests, add total throughput as last line
-        if self.params.benchmark_kind == BenchmarkKind::SendAndPoll {
-            if let Some(total) = self
-                .group_metrics
-                .iter()
-                .find(|s| s.summary.kind == GroupMetricsKind::ProducersAndConsumers)
-            {
+        if matches!(
+            self.params.benchmark_kind,
+            BenchmarkKind::PinnedProducerAndConsumer
+                | BenchmarkKind::BalancedProducerAndConsumerGroup
+        ) {
+            if let Some(total) = self.group_metrics.iter().find(|s| {
+                s.summary.kind == GroupMetricsKind::ProducersAndConsumers
+                    || s.summary.kind == GroupMetricsKind::ProducingConsumers
+            }) {
                 stats.push(format!(
                     "Total System Throughput: {:.2} MB/s, {:.0} msg/s",
                     total.summary.total_throughput_megabytes_per_second,
@@ -120,12 +123,16 @@ impl BenchmarkParams {
         let message_batches = message_batches.human_count_bare();
         let messages_per_batch = messages_per_batch.human_count_bare();
 
-        let partitions = format!("{} partitions", self.partitions);
+        let topics = "1 topic per stream".to_owned();
+        let partitions = if self.partitions == 0 {
+            "".to_owned()
+        } else {
+            format!("  •  {} partitions per topic", self.partitions)
+        };
+        let streams = format!("{} streams", self.streams);
 
         format!(
-            "{actors_info}  •  {partitions}  •  {messages_per_batch} msg/batch  •  {message_batches} batches  •  {message_size} bytes/msg  •  {user_data_print}",
+            "{actors_info}  •  {streams}  •  {topics}{partitions}  •  {messages_per_batch} msg/batch  •  {message_batches} batches  •  {message_size} bytes/msg  •  {user_data_print}",
         )
     }
 }
-
-// Byte::from_u64( user_bytes.get_appropriate_unit(UnitType::Decimal)

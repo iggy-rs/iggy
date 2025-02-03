@@ -1,4 +1,8 @@
-use crate::streaming::{batching::batch_accumulator::{self, BatchAccumulator}, persistence::COMPONENT, segments::storage::FileSegmentStorage};
+use crate::streaming::{
+    batching::batch_accumulator::{self, BatchAccumulator},
+    persistence::COMPONENT,
+    segments::storage::FileSegmentStorage,
+};
 use bytes::Bytes;
 use error_set::ErrContext;
 use flume::{unbounded, Receiver, Sender};
@@ -23,7 +27,8 @@ impl LogPersisterTask {
         max_retries: u32,
         retry_sleep: Duration,
     ) -> Self {
-        let (sender, receiver): (Sender<BatchAccumulator>, Receiver<BatchAccumulator>) = unbounded();
+        let (sender, receiver): (Sender<BatchAccumulator>, Receiver<BatchAccumulator>) =
+            unbounded();
 
         let task_handle = task::spawn(async move {
             loop {
@@ -62,17 +67,13 @@ impl LogPersisterTask {
         max_retries: u32,
         retry_sleep: Duration,
     ) -> Result<(), String> {
-
-            match FileSegmentStorage::persist_batches(path, batch_accumulator).await {
-                Ok(_) => return Ok(()),
-                Err(e) => {
-                    error!(
-                        "Could not append to persister: {}",
-                        e
-                    );
-                    tokio::time::sleep(retry_sleep).await;
-                }
+        match FileSegmentStorage::persist_batches(path, batch_accumulator).await {
+            Ok(_) => return Ok(()),
+            Err(e) => {
+                error!("Could not append to persister: {}", e);
+                tokio::time::sleep(retry_sleep).await;
             }
+        }
         Err(format!(
             "{COMPONENT} - failed to persist data after {} retries",
             max_retries

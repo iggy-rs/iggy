@@ -1,3 +1,5 @@
+use std::io::IoSlice;
+
 use crate::binary::sender::Sender;
 use crate::tcp::sender;
 use async_trait::async_trait;
@@ -28,5 +30,9 @@ impl Sender for TcpSender {
 
     async fn send_error_response(&mut self, error: IggyError) -> Result<(), IggyError> {
         sender::send_error_response(&mut self.stream, error).await
+    }
+
+    async fn send_vectored_ok_response(&mut self, slices: &[IoSlice]) -> Result<(), IggyError> {
+        sender::send_vectored_response(&mut self.stream, slices).await
     }
 }

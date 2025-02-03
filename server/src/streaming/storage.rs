@@ -1,5 +1,6 @@
 use super::batching::batch_accumulator::{self, BatchAccumulator};
 use super::batching::message_batch::RetainedMessageBatch;
+use super::batching::transport::IggyBatchFetchResult;
 use super::persistence::persister::PersisterKind;
 use crate::configs::system::SystemConfig;
 use crate::state::system::{PartitionState, StreamState, TopicState};
@@ -68,7 +69,9 @@ pub trait SegmentStorage: Send + Sync {
         &self,
         segment: &Segment,
         index_range: &IndexRange,
-    ) -> Result<Vec<RetainedMessageBatch>, IggyError>;
+        start_offset: u64,
+        end_offset: u64,
+    ) -> Result<IggyBatchFetchResult, IggyError>;
     async fn load_newest_batches_by_size(
         &self,
         segment: &Segment,
@@ -272,8 +275,10 @@ pub(crate) mod tests {
             &self,
             _segment: &Segment,
             _index_range: &IndexRange,
-        ) -> Result<Vec<RetainedMessageBatch>, IggyError> {
-            Ok(vec![])
+            _start_offset: u64,
+            _end_offset: u64,
+        ) -> Result<IggyBatchFetchResult, IggyError> {
+            todo!();
         }
 
         async fn load_newest_batches_by_size(

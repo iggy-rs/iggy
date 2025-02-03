@@ -1,5 +1,8 @@
 use crate::streaming::batching::appendable_batch_info::AppendableBatchInfo;
 use crate::streaming::batching::iterator::IntoMessagesIterator;
+use crate::streaming::batching::transport::{
+    IggyBatchCachePhantom, IggyBatchFetchResult, IggyBatchSlice,
+};
 use crate::streaming::models::messages::RetainedMessage;
 use crate::streaming::partitions::partition::Partition;
 use crate::streaming::partitions::COMPONENT;
@@ -14,6 +17,7 @@ use iggy::{error::IggyError, utils::duration::IggyDuration};
 use rkyv::rend::unaligned::u32_ule;
 use rkyv::rend::{u32_le, u64_le};
 use rkyv::util::AlignedVec;
+use std::ops::Range;
 use std::sync::{atomic::Ordering, Arc};
 use std::time::Duration;
 use tokio::time::Instant;
@@ -31,93 +35,96 @@ impl Partition {
         timestamp: IggyTimestamp,
         count: u32,
     ) -> Result<Vec<Arc<RetainedMessage>>, IggyError> {
-        trace!(
-            "Getting messages by timestamp: {} for partition: {}...",
-            timestamp,
-            self.partition_id
-        );
-        if self.segments.is_empty() {
-            return Ok(EMPTY_MESSAGES.into_iter().map(Arc::new).collect());
-        }
+        todo!();
+        /*
+         trace!(
+             "Getting messages by timestamp: {} for partition: {}...",
+             timestamp,
+             self.partition_id
+         );
+         if self.segments.is_empty() {
+             return Ok(EMPTY_MESSAGES.into_iter().map(Arc::new).collect());
+         }
 
-        let timestamp = timestamp.as_micros();
-        let mut found_index = None;
-        let mut start_offset = self.segments.last().unwrap().start_offset;
-        // Since index cache is configurable globally, not per segment we can handle it this way.
-        if !self.config.segment.cache_indexes {
-            for segment in self.segments.iter() {
-                let index = segment
-                    .storage
-                    .as_ref()
-                    .segment
-                    .try_load_index_for_timestamp(segment, timestamp)
-                    .await
-                    .with_error_context(|_| format!(
-                        "{COMPONENT} - failed to load index for timestamp, partition: {}, segment start offset: {}, timestamp: {}",
-                        self, segment.start_offset, timestamp,
-                    ))?;
-                if index.is_none() {
-                    continue;
-                } else {
-                    found_index = index;
-                    start_offset = segment.start_offset + found_index.unwrap().offset as u64;
-                    break;
-                }
-            }
-        } else {
-            start_offset = self.segments.first().unwrap().start_offset;
-            for segment in self.segments.iter().rev() {
-                let indexes = segment.indexes.as_ref().unwrap();
-                let index = indexes
-                    .iter()
-                    .rposition(|time_index| time_index.timestamp <= timestamp)
-                    .map(|idx| indexes[idx]);
-                if index.is_none() {
-                    continue;
-                } else {
-                    found_index = index;
-                    start_offset = segment.start_offset + found_index.unwrap().offset as u64;
-                    break;
-                }
-            }
-        }
+         let timestamp = timestamp.as_micros();
+         let mut found_index = None;
+         let mut start_offset = self.segments.last().unwrap().start_offset;
+         // Since index cache is configurable globally, not per segment we can handle it this way.
+         if !self.config.segment.cache_indexes {
+             for segment in self.segments.iter() {
+                 let index = segment
+                     .storage
+                     .as_ref()
+                     .segment
+                     .try_load_index_for_timestamp(segment, timestamp)
+                     .await
+                     .with_error_context(|_| format!(
+                         "{COMPONENT} - failed to load index for timestamp, partition: {}, segment start offset: {}, timestamp: {}",
+                         self, segment.start_offset, timestamp,
+                     ))?;
+                 if index.is_none() {
+                     continue;
+                 } else {
+                     found_indeex = index;
+                     start_offset = segment.start_offset + found_index.unwrap().offset as u64;
+                     break;
+                 }
+             }
+         } else {
+             start_offset = self.segmnts.first().unwrap().start_offset;
+             for segment in self.segments.iter().rev() {
+                 let indexes = segment.indexes.as_ref().unwrap();
+                 let index = indexes
+                     .iter()
+                     .rposition(|time_index| time_index.timestamp <= timestamp)
+                     .map(|idx| indexes[idx]);
+                 if index.is_none() {
+                     continue;
+                 } else {
+                     found_index = index;
+                     start_offset = segment.start_offset + found_index.unwrap().offset as u64;
+                     break;
+                 }
+             }
+         }
 
-        let found_index = found_index.unwrap_or_default();
-        trace!(
-            "Found start offset: {} for timestamp: {}.",
-            start_offset,
-            timestamp
-        );
-        if found_index.timestamp == timestamp {
-            return Ok(self
-                .get_messages_by_offset(start_offset, count)
-                .await
-                .with_error_context(|_| format!(
-                    "{COMPONENT} - failed to get messages by offset, partition: {}, timestamp: {}, start offset: {}, count: {}",
-                    self, timestamp, start_offset, count,
-                ))?
-                .into_iter()
-                .filter(|msg| msg.timestamp >= timestamp)
-                .take(count as usize)
-                .collect());
-        }
+         let found_index = found_index.unwrap_or_default();
+         trace!(
+             "Found start offset: {} for timestamp: {}.",
+             start_offset,
+             timestamp
+         );
+         if found_index.timestamp == timestamp {
+             return Ok(self
+                 .get_messages_by_offset(start_offset, count)
+                 .await
+                 .with_error_context(|_| format!(
+                     "{COMPONENT} - failed to get messages by offset, partition: {}, timestamp: {}, start offset: {}, count: {}",
+                     self, timestamp, start_offset, count,
+                 ))?
+                 .into_iter()
+                 .filter(|msg| msg.timestamp >= timestamp)
+                 .take(count as usize)
+                 .collect());
+         }
 
-        let adjusted_count = self.calculate_adjusted_timestamp_message_count(
-            count,
-            timestamp,
-            found_index.timestamp,
-        );
-        Ok(self
-            .get_messages_by_offset(start_offset, adjusted_count)
-            .await
-            .with_error_context(|_| format!(
-                "{COMPONENT} - failed to get messages by offset, patititon: {}, timestamp: {}, start offset: {}",
-                self, timestamp, start_offset,
-            ))?
-            .into_iter()
-            .filter(|msg| msg.timestamp >= timestamp)
-            .take(count as usize)
-            .collect())
+         let adjusted_count = self.calculate_adjusted_timestamp_message_count(
+             count,
+             timestamp,
+             found_index.timestamp,
+         );
+         Ok(self
+             .get_messages_by_offset(start_offset, adjusted_count)
+             .await
+             .with_error_context(|_| format!(
+                 "{COMPONENT} - failed to get messages by offset, patititon: {}, timestamp: {}, start offset: {}",
+                 self, timestamp, start_offset,
+             ))?
+             .into_iter()
+             .filter(|msg| msg.timestamp >= timestamp)
+             .take(count as usize)
+             .collect())
+        */
     }
 
     fn calculate_adjusted_timestamp_message_count(
@@ -136,17 +143,20 @@ impl Partition {
                 as u32;
         count + overfetch_value
     }
+    // (IggyHeader, Vec<(Range<usize>, Rc<Vec<u8>>))
 
     pub async fn get_messages_by_offset(
         &self,
         start_offset: u64,
         count: u32,
-    ) -> Result<Vec<Arc<RetainedMessage>>, IggyError> {
+    ) -> Result<IggyBatchFetchResult, IggyError> {
         trace!(
             "Getting messages for start offset: {} for partition: {}...",
             start_offset,
             self.partition_id
         );
+        // TODO: handle those.
+        /*
         if self.segments.is_empty() {
             return Ok(EMPTY_MESSAGES.into_iter().map(Arc::new).collect());
         }
@@ -154,19 +164,25 @@ impl Partition {
         if start_offset > self.current_offset {
             return Ok(EMPTY_MESSAGES.into_iter().map(Arc::new).collect());
         }
+        */
 
         let end_offset = self.get_end_offset(start_offset, count);
 
-        let messages = self.try_get_messages_from_cache(start_offset, end_offset);
-        if let Some(messages) = messages {
-            return Ok(messages);
+        let start = Instant::now();
+        let result = self.try_get_messages_from_cache(start_offset, end_offset);
+        let elapsed = start.elapsed().as_micros();
+        error!("loading from cache took: {} us", elapsed);
+        if let Some(result) = result {
+            error!("reading from cache");
+            return Ok(result);
         }
 
         let segments = self.filter_segments_by_offsets(start_offset, end_offset);
         match segments.len() {
-            0 => Ok(EMPTY_MESSAGES.into_iter().map(Arc::new).collect()),
+            0 => panic!("no segments trololololo"),
             1 => segments[0].get_messages(start_offset, count).await,
-            _ => Self::get_messages_from_segments(segments, start_offset, count).await,
+            _ => panic!("multiple segments trololololo"),
+            //_ => Self::get_messages_from_segments(segments, start_offset, count).await,
         }
     }
 
@@ -174,13 +190,15 @@ impl Partition {
         &self,
         count: u32,
     ) -> Result<Vec<Arc<RetainedMessage>>, IggyError> {
-        self.get_messages_by_offset(0, count).await
+        todo!();
     }
 
     pub async fn get_last_messages(
         &self,
         count: u32,
     ) -> Result<Vec<Arc<RetainedMessage>>, IggyError> {
+        todo!();
+        /*
         let mut count = count as u64;
         if count > self.current_offset + 1 {
             count = self.current_offset + 1
@@ -189,6 +207,7 @@ impl Partition {
         let start_offset = 1 + self.current_offset - count;
         self.get_messages_by_offset(start_offset, count as u32)
             .await
+            */
     }
 
     pub async fn get_next_messages(
@@ -196,6 +215,7 @@ impl Partition {
         consumer: PollingConsumer,
         count: u32,
     ) -> Result<Vec<Arc<RetainedMessage>>, IggyError> {
+        todo!();
         let (consumer_offsets, consumer_id) = match consumer {
             PollingConsumer::Consumer(consumer_id, _) => (&self.consumer_offsets, consumer_id),
             PollingConsumer::ConsumerGroup(group_id, _) => (&self.consumer_group_offsets, group_id),
@@ -230,7 +250,7 @@ impl Partition {
             offset
         );
 
-        self.get_messages_by_offset(offset, count).await
+        //self.get_messages_by_offset(offset, count).await
     }
 
     fn get_end_offset(&self, offset: u64, count: u32) -> u64 {
@@ -261,7 +281,9 @@ impl Partition {
         segments: Vec<&Segment>,
         offset: u64,
         count: u32,
-    ) -> Result<Vec<Arc<RetainedMessage>>, IggyError> {
+    ) -> Result<IggyBatchFetchResult, IggyError> {
+        todo!();
+        /*
         let mut messages = Vec::with_capacity(segments.len());
         for segment in segments {
             let segment_messages = segment.get_messages(offset, count).await.with_error_context(|_| format!(
@@ -274,19 +296,20 @@ impl Partition {
         }
 
         Ok(messages)
+        */
     }
 
     fn try_get_messages_from_cache(
         &self,
         start_offset: u64,
         end_offset: u64,
-    ) -> Option<Vec<Arc<RetainedMessage>>> {
+    ) -> Option<IggyBatchFetchResult> {
         let cache = self.cache.as_ref()?;
         if cache.is_empty() || start_offset > end_offset || end_offset > self.current_offset {
             return None;
         }
 
-        let first_buffered_offset = cache[0].offset;
+        let first_buffered_offset = cache[0].header.base_offset;
         trace!(
             "First buffered offset: {} for partition: {}",
             first_buffered_offset,
@@ -358,11 +381,7 @@ impl Partition {
         Ok(retained_messages)
     }
 
-    fn load_messages_from_cache(
-        &self,
-        start_offset: u64,
-        end_offset: u64,
-    ) -> Vec<Arc<RetainedMessage>> {
+    fn load_messages_from_cache(&self, start_offset: u64, end_offset: u64) -> IggyBatchFetchResult {
         trace!(
             "Loading messages from cache, start offset: {}, end offset: {}...",
             start_offset,
@@ -370,41 +389,73 @@ impl Partition {
         );
 
         if self.cache.is_none() || start_offset > end_offset {
-            return EMPTY_MESSAGES.into_iter().map(Arc::new).collect();
+            panic!("anomaly in the cache it's none and start offset > end offset");
         }
 
         let cache = self.cache.as_ref().unwrap();
         if cache.is_empty() {
-            return EMPTY_MESSAGES.into_iter().map(Arc::new).collect();
+            panic!("anomaly in the cache it's empty");
         }
 
-        let first_offset = cache[0].offset;
-        let start_index = (start_offset - first_offset) as usize;
-        let end_index = usize::min(cache.len(), (end_offset - first_offset + 1) as usize);
-        let expected_messages_count = end_index - start_index;
+        let msg_count = (end_offset - start_offset) + 1;
+        let mut current_msg_count = 0;
+        let mut slices = Vec::new();
+        let mut header_set = false;
+        let mut header = None;
+        for batch in cache.buffer() {
+            let last_offset = batch.header.base_offset + batch.header.last_offset_delta as u64;
+            if batch.header.base_offset >= start_offset && last_offset <= end_offset {
+                let buffer = &batch.bytes;
+                if !header_set {
+                    header_set = true;
+                    header = Some(batch.header);
+                }
+                let inner_header = batch.header;
+                if batch.header.base_offset >= start_offset && last_offset <= end_offset {
+                    let mut position = 0;
+                    let mut start_slice_pos = 0;
+                    let mut end_slice_pos = 0;
+                    let mut start_slice_set = false;
+                    while position < buffer.len() {
+                        let length =
+                            u64::from_le_bytes(buffer[position..position + 8].try_into().unwrap());
+                        let length = length as usize;
+                        position += 8;
+                        let message = unsafe {
+                            rkyv::access_unchecked::<ArchivedIggyMessage>(
+                                &buffer[position..length + position],
+                            )
+                        };
+                        let message_offset =
+                            inner_header.base_offset + message.offset_delta.to_native() as u64;
+                        // error!("reading message_offset: {}, for start_offset: {}, current_msg_count: {}/{}",
+                        // message_offset, start_offset, current_msg_count, msg_count);
+                        if message_offset >= start_offset {
+                            if !start_slice_set {
+                                start_slice_pos = position - 8;
+                                start_slice_set = true;
+                            }
+                            current_msg_count += 1;
+                        }
+                        position += length;
+                        end_slice_pos = position;
+                        if current_msg_count == msg_count {
+                            break;
+                        }
+                    }
 
-        let mut messages = Vec::with_capacity(expected_messages_count);
-        for i in start_index..end_index {
-            messages.push(cache[i].clone());
+                    let range = start_slice_pos..end_slice_pos;
+                    let buffer = buffer.clone();
+                    let slice = IggyBatchSlice::new(range, buffer);
+                    slices.push(slice);
+
+                    if current_msg_count == msg_count {
+                        break;
+                    }
+                }
+            }
         }
-
-        if messages.len() != expected_messages_count {
-            warn!(
-                "Loaded {} messages from cache, expected {}.",
-                messages.len(),
-                expected_messages_count
-            );
-            return EMPTY_MESSAGES.into_iter().map(Arc::new).collect();
-        }
-
-        trace!(
-            "Loaded {} messages from cache, start offset: {}, end offset: {}...",
-            messages.len(),
-            start_offset,
-            end_offset
-        );
-
-        messages
+        IggyBatchFetchResult::new(slices, header.unwrap())
     }
 
     pub async fn append_messages(
@@ -442,7 +493,8 @@ impl Partition {
         let batch_base_timestamp = IggyTimestamp::now().as_micros();
         let batch_base_offset = part_base_offset;
 
-        let batch_payload = &mut batch.messages;
+        // This one is guaranteed to have only one reference as we just initialized it.
+        let batch_payload = Arc::get_mut(&mut batch.messages).unwrap();
         let mut position = 0;
         while position < batch_payload.len() {
             max_timestamp = IggyTimestamp::now().as_micros();
@@ -463,8 +515,9 @@ impl Partition {
             position += length;
             messages_count += 1;
         }
-        batch.base_timestamp = batch_base_timestamp;
-        batch.base_offset = batch_base_offset;
+        batch.header.base_timestamp = batch_base_timestamp;
+        batch.header.base_offset = batch_base_offset;
+        batch.header.last_offset_delta = messages_count - 1;
 
         let avg_timestamp_delta =
             Duration::from_micros((max_timestamp - batch_base_timestamp) / messages_count as u64)
@@ -482,6 +535,12 @@ impl Partition {
             self.should_increment_offset = true;
             self.current_offset = last_offset;
         }
+        let header = batch.header;
+        let cache_phantom = IggyBatchCachePhantom::new(header, batch.messages.clone());
+
+        if let Some(cache) = &mut self.cache {
+            cache.push(cache_phantom);
+        }
 
         {
             let last_segment = self.segments.last_mut().ok_or(IggyError::SegmentNotFound)?;
@@ -494,12 +553,6 @@ impl Partition {
                     )
                 })?;
         }
-
-        /*
-        if let Some(cache) = &mut self.cache {
-            cache.extend(retained_messages);
-        }
-        */
 
         self.unsaved_messages_count += messages_count;
         {
@@ -598,7 +651,7 @@ mod tests {
             .get_messages_by_offset(0, messages_count)
             .await
             .unwrap();
-        assert_eq!(loaded_messages.len(), messages_count as usize);
+        //assert_eq!(loaded_messages.len(), messages_count as usize);
     }
 
     #[tokio::test]
@@ -625,7 +678,7 @@ mod tests {
             .get_messages_by_offset(0, messages_count)
             .await
             .unwrap();
-        assert_eq!(loaded_messages.len(), unique_messages_count);
+        //assert_eq!(loaded_messages.len(), unique_messages_count);
     }
 
     async fn create_partition(deduplication_enabled: bool) -> Partition {

@@ -16,7 +16,7 @@ pub struct SmartCache<T: LocalSizeable + Debug> {
 
 impl<T> SmartCache<T>
 where
-    T: LocalSizeable + Clone + Debug,
+    T: LocalSizeable + Debug,
 {
     pub fn new() -> Self {
         let current_size = IggyByteSize::default();
@@ -30,13 +30,20 @@ where
         }
     }
 
+    pub fn buffer(&self) -> &Vc<T> {
+        &self.buffer
+    }
+
     // Used only for cache validation tests
+    // Not anymore XD
+    /*
     #[cfg(test)]
     pub fn to_vec(&self) -> Vec<T> {
         let mut vec = Vec::with_capacity(self.buffer.len());
         vec.extend(self.buffer.iter().cloned());
         vec
     }
+    */
 
     /// Pushes an element to the buffer, and if adding the element would exceed the memory limit,
     /// removes the oldest elements until there's enough space for the new element.
@@ -102,6 +109,10 @@ where
         self.buffer.extend(elements);
     }
 
+    pub fn push(&mut self, element: T) {
+        self.buffer.push(element);
+    }
+
     /// Always appends the element into the buffer, even if it exceeds the memory limit.
     pub fn append(&mut self, element: T) {
         let element_size = element.get_size_bytes();
@@ -122,7 +133,7 @@ where
 
 impl<T> Index<usize> for SmartCache<T>
 where
-    T: LocalSizeable + Clone + Debug,
+    T: LocalSizeable + Debug,
 {
     type Output = T;
 
@@ -131,7 +142,7 @@ where
     }
 }
 
-impl<T: LocalSizeable + Clone + Debug> Default for SmartCache<T> {
+impl<T: LocalSizeable + Debug> Default for SmartCache<T> {
     fn default() -> Self {
         Self::new()
     }

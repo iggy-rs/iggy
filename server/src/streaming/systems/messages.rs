@@ -1,3 +1,4 @@
+use crate::streaming::batching::transport::IggyBatchFetchResult;
 use crate::streaming::cache::memory_tracker::CacheMemoryTracker;
 use crate::streaming::models::messages::PolledMessages;
 use crate::streaming::session::Session;
@@ -26,7 +27,7 @@ impl System {
         topic_id: &Identifier,
         partition_id: Option<u32>,
         args: PollingArgs,
-    ) -> Result<PolledMessages, IggyError> {
+    ) -> Result<IggyBatchFetchResult, IggyError> {
         self.ensure_authenticated(session)?;
         if args.count == 0 {
             return Err(IggyError::InvalidMessagesCount);
@@ -51,13 +52,9 @@ impl System {
             .await
             .with_error_context(|_| format!("{COMPONENT} - failed to resolve consumer with partition id, consumer: {consumer}, client ID: {}, partition ID: {:?}", session.client_id, partition_id))?;
 
-        let mut polled_messages = topic
+        let result = topic
             .get_messages(polling_consumer, partition_id, args.strategy, args.count)
-            .await?;
-
-        if polled_messages.messages.is_empty() {
-            return Ok(polled_messages);
-        }
+            .await;
 
         //let offset = polled_messages.messages.last().unwrap().offset;
         let offset = 0;
@@ -70,10 +67,10 @@ impl System {
         }
 
         if self.encryptor.is_none() {
-            return Ok(polled_messages);
+            return result;
         }
 
-        let encryptor = self.encryptor.as_ref().unwrap();
+        let _encryptor = self.encryptor.as_ref().unwrap();
         /*
         let mut decrypted_messages = Vec::with_capacity(polled_messages.messages.len());
         for message in polled_messages.messages.iter() {
@@ -99,7 +96,7 @@ impl System {
         }
         polled_messages.messages = decrypted_messages;
         */
-        Ok(polled_messages)
+        result
     }
 
     pub async fn append_messages(

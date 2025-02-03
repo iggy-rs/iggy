@@ -1,3 +1,5 @@
+use std::io::IoSlice;
+
 use crate::binary::sender::Sender;
 use crate::quic::COMPONENT;
 use async_trait::async_trait;
@@ -39,6 +41,10 @@ impl Sender for QuicSender {
     async fn send_error_response(&mut self, error: IggyError) -> Result<(), IggyError> {
         self.send_response(&error.as_code().to_le_bytes(), &[])
             .await
+    }
+
+    async fn send_vectored_ok_response(&mut self, slices: &[IoSlice]) -> Result<(), IggyError> {
+        todo!();
     }
 }
 

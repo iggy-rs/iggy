@@ -7,6 +7,7 @@ use crate::identifier::Identifier;
 use crate::messages::flush_unsaved_buffer::FlushUnsavedBuffer;
 use crate::messages::poll_messages::PollingStrategy;
 use crate::messages::send_messages::{Message, Partitioning, SendMessages};
+use crate::models::messages::IggyMessage;
 use async_trait::async_trait;
 
 #[async_trait]
@@ -20,7 +21,8 @@ impl MessageClient for HttpClient {
         strategy: &PollingStrategy,
         count: u32,
         auto_commit: bool,
-    ) -> Result<(), IggyError> {
+    ) -> Result<Vec<IggyMessage>, IggyError> {
+        todo!();
         /*
         let response = self
             .get_with_query(
@@ -42,7 +44,6 @@ impl MessageClient for HttpClient {
             .map_err(|_| IggyError::InvalidJsonResponse)?;
         Ok(messages)
         */
-        Ok(())
     }
 
     async fn send_messages(

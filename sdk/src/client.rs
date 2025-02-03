@@ -10,6 +10,7 @@ use crate::models::client_info::{ClientInfo, ClientInfoDetails};
 use crate::models::consumer_group::{ConsumerGroup, ConsumerGroupDetails};
 use crate::models::consumer_offset_info::ConsumerOffsetInfo;
 use crate::models::identity_info::IdentityInfo;
+use crate::models::messages::IggyMessage;
 use crate::models::permissions::Permissions;
 use crate::models::personal_access_token::{PersonalAccessTokenInfo, RawPersonalAccessToken};
 use crate::models::snapshot::Snapshot;
@@ -329,7 +330,7 @@ pub trait MessageClient {
         strategy: &PollingStrategy,
         count: u32,
         auto_commit: bool,
-    ) -> Result<(), IggyError>;
+    ) -> Result<Vec<IggyMessage>, IggyError>;
     /// Send messages using specified partitioning strategy to the given stream and topic by unique IDs or names.
     ///
     /// Authentication is required, and the permission to send the messages.

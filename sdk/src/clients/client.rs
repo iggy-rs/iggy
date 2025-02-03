@@ -18,6 +18,7 @@ use crate::models::client_info::{ClientInfo, ClientInfoDetails};
 use crate::models::consumer_group::{ConsumerGroup, ConsumerGroupDetails};
 use crate::models::consumer_offset_info::ConsumerOffsetInfo;
 use crate::models::identity_info::IdentityInfo;
+use crate::models::messages::IggyMessage;
 use crate::models::permissions::Permissions;
 use crate::models::personal_access_token::{PersonalAccessTokenInfo, RawPersonalAccessToken};
 use crate::models::snapshot::Snapshot;
@@ -542,13 +543,12 @@ impl MessageClient for IggyClient {
         strategy: &PollingStrategy,
         count: u32,
         auto_commit: bool,
-    ) -> Result<(), IggyError> {
-        todo!();
+    ) -> Result<Vec<IggyMessage>, IggyError> {
         if count == 0 {
             return Err(IggyError::InvalidMessagesCount);
         }
 
-        let mut polled_messages = self
+        let messages = self
             .client
             .read()
             .await
@@ -573,7 +573,7 @@ impl MessageClient for IggyClient {
         }
         */
 
-        Ok(polled_messages)
+        Ok(messages)
     }
 
     async fn send_messages(

@@ -1,4 +1,5 @@
 use crate::configs::system::SystemConfig;
+use crate::streaming::batching::transport::IggyBatchCachePhantom;
 use crate::streaming::cache::buffer::SmartCache;
 use crate::streaming::cache::memory_tracker::CacheMemoryTracker;
 use crate::streaming::deduplication::message_deduplicator::MessageDeduplicator;
@@ -26,7 +27,7 @@ pub struct Partition {
     pub consumer_offsets_path: String,
     pub consumer_group_offsets_path: String,
     pub current_offset: u64,
-    pub cache: Option<SmartCache<Arc<RetainedMessage>>>,
+    pub cache: Option<SmartCache<IggyBatchCachePhantom>>,
     pub cached_memory_tracker: Option<Arc<CacheMemoryTracker>>,
     pub message_deduplicator: Option<MessageDeduplicator>,
     pub unsaved_messages_count: u32,

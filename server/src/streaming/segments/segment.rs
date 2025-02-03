@@ -115,6 +115,7 @@ impl Segment {
             return false;
         }
 
+        /*
         match self.message_expiry {
             IggyExpiry::NeverExpire => false,
             IggyExpiry::ServerDefault => false,
@@ -134,6 +135,8 @@ impl Segment {
                 last_message_timestamp + expiry.as_micros() <= now.as_micros()
             }
         }
+        */
+        false
     }
 
     fn get_log_path(path: &str) -> String {

@@ -36,6 +36,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
 fn handle_message(message: &PolledMessage) -> Result<(), Box<dyn Error>> {
     // The payload can be of any type as it is a raw byte array. In this case it's a JSON string.
+    Vec<u8> , ArchivedVec<u8> -> &[u8]
     let json = std::str::from_utf8(&message.payload)?;
     // The message envelope can be used to send the different types of messages to the same topic.
     let envelope = serde_json::from_str::<Envelope>(json)?;

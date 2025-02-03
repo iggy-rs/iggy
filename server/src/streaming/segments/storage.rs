@@ -1,6 +1,7 @@
 use crate::streaming::batching::batch_accumulator::BatchAccumulator;
 use crate::streaming::batching::iterator::IntoMessagesIterator;
 use crate::streaming::batching::message_batch::RetainedMessageBatch;
+use crate::streaming::batching::transport::{IggyBatchFetchResult, IggyBatchSlice};
 use crate::streaming::models::messages::RetainedMessage;
 use crate::streaming::persistence::persister::PersisterKind;
 use crate::streaming::segments::index::{Index, IndexRange};
@@ -14,15 +15,16 @@ use bytes::{BufMut, BytesMut};
 use error_set::ErrContext;
 use iggy::confirmation::Confirmation;
 use iggy::error::IggyError;
-use iggy::models::batch::IGGY_BATCH_OVERHEAD;
+use iggy::models::batch::{HeaderWriter, IggyBatch, IGGY_BATCH_OVERHEAD};
 use iggy::models::messages::ArchivedIggyMessage;
 use iggy::utils::byte_size::IggyByteSize;
 use iggy::utils::checksum;
 use iggy::utils::sizeable::Sizeable;
 use rkyv::rend::unaligned::u32_ule;
 use rkyv::util::AlignedVec;
-use std::io::SeekFrom;
+use std::io::{SeekFrom, Write};
 use std::path::Path;
+use std::rc::Rc;
 use std::sync::atomic::Ordering;
 use std::sync::Arc;
 use tokio::io::{AsyncReadExt, AsyncSeekExt, AsyncWriteExt, BufReader};
@@ -37,29 +39,37 @@ pub struct FileSegmentStorage {
     persister: Arc<PersisterKind>,
 }
 impl FileSegmentStorage {
-    pub async fn persist_batches(path: &str, batch_accumulator: BatchAccumulator) -> Result<(), IggyError> {
-        let mut file = file::append(path)
-            .await.unwrap();
-        let mut header = [0u8; IGGY_BATCH_OVERHEAD as usize];
+    pub async fn persist_batches(
+        path: &str,
+        mut batch_accumulator: BatchAccumulator,
+    ) -> Result<(), IggyError> {
+        let mut file = file::append(path).await.unwrap();
+        let header = [0u8; IGGY_BATCH_OVERHEAD as usize];
 
         //TODO: create our own header writer, once we drop dependency on bytes crate.
-        let mut header_writer = header.writer();
-        let first_batch = batch_accumulator.batches.first().unwrap();
-        let base_offset = first_batch.base_offset;
-        let base_timestamp = first_batch.base_timestamp;
+        let mut header_writer = header.into();
+        let first_batch = batch_accumulator.batches.first_mut().unwrap();
+        let base_offset = first_batch.header.base_offset;
+        let batch_size = batch_accumulator.current_size.as_bytes_u64();
+        first_batch.header.batch_length = batch_size;
+        let base_timestamp = first_batch.header.base_timestamp;
         first_batch.write_header(&mut header_writer);
+        let header = header_writer.header();
         file.write_all(&header).await.unwrap();
 
         //TODO: Use write_vectored, instead of looping like this.
-        for (iter, mut batch) in batch_accumulator.batches.into_iter().enumerate() {
+        for (iter, batch) in batch_accumulator.batches.into_iter().enumerate() {
+            /*
             if iter > 0 {
-                let base_offset_diff = batch.base_offset - base_offset;
-                let base_timestamp_diff = batch.base_timestamp - base_timestamp;
+                let base_offset_diff = batch.header.base_offset - base_offset;
+                let base_timestamp_diff = batch.header.base_timestamp - base_timestamp;
                 let base_offset_diff = base_offset_diff as u32;
                 let base_timestamp_diff = base_timestamp_diff as u32;
 
                 let mut position = 0;
-                let batch_payload = &mut batch.messages;
+                // Take a look at this amazing C++26 feature!
+                //let batch_payload = unsafe { &mut *(batch.messages.as_ptr() as *mut AlignedVec) };
+                let batch_payload = &batch.messages;
                 while position < batch_payload.len() {
                     let length = u64::from_le_bytes(
                         batch_payload[position..position + 8].try_into().unwrap(),
@@ -67,19 +77,20 @@ impl FileSegmentStorage {
                     let length = length as usize;
                     position += 8;
                     let message = unsafe {
-                        rkyv::access_unchecked_mut::<ArchivedIggyMessage>(
-                            &mut batch_payload[position..length + position],
+                        rkyv::access_unchecked::<ArchivedIggyMessage>(
+                            &batch_payload[position..length + position],
                         )
                     };
                     position += length;
-                    let message = unsafe { message.unseal_unchecked() };
+                    //let message = unsafe { message.unseal_unchecked() };
                     let offset_delta = message.offset_delta;
                     let timestamp_delta = message.timestamp_delta;
 
-                    message.offset_delta = (offset_delta + base_offset_diff).into();
-                    message.timestamp_delta = (timestamp_delta + base_timestamp_diff).into();
+                    //message.offset_delta = (offset_delta + base_offset_diff).into();
+                    //message.timestamp_delta = (timestamp_delta + base_timestamp_diff).into();
                 }
             }
+            */
             batch.write_messages(&mut file).await;
         }
 
@@ -265,21 +276,114 @@ impl SegmentStorage for FileSegmentStorage {
         &self,
         segment: &Segment,
         index_range: &IndexRange,
-    ) -> Result<Vec<RetainedMessageBatch>, IggyError> {
-        let mut batches = Vec::new();
-        load_batches_by_range(segment, index_range, |batch| {
-            batches.push(batch);
-            Ok(())
-        })
-        .await
-        .with_error_context(|_| {
-            format!(
-                "{COMPONENT} - failed to load batches by range, segment: {}, index range: {:?}",
-                segment, index_range
-            )
+        start_offset: u64,
+        end_offset: u64,
+    ) -> Result<IggyBatchFetchResult, IggyError> {
+        let file = file::open(&segment.log_path).await.map_err(|error| {
+            error!(
+                "Cannot open segment's log file: {}, error: {}",
+                segment.log_path, error
+            );
+            IggyError::CannotReadFile
         })?;
-        trace!("Loaded {} message batches from disk.", batches.len());
-        Ok(batches)
+        let file_size = file
+            .metadata()
+            .await
+            .map_err(|error| {
+                error!(
+                    "Cannot read segment's log file metadata: {}, error: {}",
+                    segment.log_path, error
+                );
+                IggyError::CannotReadFileMetadata
+            })?
+            .len();
+        if file_size == 0 {
+            panic!("Empty file torlololo");
+        }
+
+        trace!(
+            "Loading message batches by index range: {} [{}] - {} [{}], file size: {file_size}",
+            index_range.start.position,
+            index_range.start.offset,
+            index_range.end.position,
+            index_range.end.offset
+        );
+
+        let mut reader = BufReader::with_capacity(BUF_READER_CAPACITY_BYTES, file);
+        reader
+            .seek(SeekFrom::Start(index_range.start.position as u64))
+            .await
+            .with_error_context(|_| {
+                format!(
+                    "{COMPONENT} - failed to seek to position {}",
+                    index_range.start.position
+                )
+            })
+            .map_err(|_| IggyError::CannotSeekFile)?;
+
+        let mut header = None;
+        let mut read = 0;
+        let mut slices = Vec::new();
+        let msg_count = end_offset - start_offset;
+        let msg_count = msg_count + 1;
+        let mut current_msg_count = 0;
+        while read < file_size {
+            // Read the header
+            let header = if header.is_none() {
+                header = Some(IggyBatch::read_header(&mut reader).await);
+                header.unwrap()
+            } else {
+                IggyBatch::read_header(&mut reader).await
+            };
+            read += IGGY_BATCH_OVERHEAD as u64;
+
+            let mut buffer = AlignedVec::with_capacity(header.batch_length as usize);
+            unsafe { buffer.set_len(header.batch_length as usize) };
+            reader.read_exact(&mut buffer).await.unwrap();
+            // read the messages
+            read += header.batch_length;
+
+            let mut position = 0;
+            let mut start_slice_pos = 0;
+            let mut end_slice_pos = 0;
+            let mut start_slice_set = false;
+            while position < buffer.len() {
+                let length = u64::from_le_bytes(buffer[position..position + 8].try_into().unwrap());
+                let length = length as usize;
+                position += 8;
+                let message = unsafe {
+                    rkyv::access_unchecked::<ArchivedIggyMessage>(
+                        &buffer[position..length + position],
+                    )
+                };
+                //let message_offset = header.base_offset + message.offset_delta.to_native() as u64;
+                // error!("reading message_offset: {}, for start_offset: {}, current_msg_count: {}/{}",
+                // message_offset, start_offset, current_msg_count, msg_count);
+                //if message_offset >= start_offset {
+                    if !start_slice_set {
+                        start_slice_pos = position - 8;
+                        start_slice_set = true;
+                    }
+                    current_msg_count += 1;
+                //}
+                position += length;
+                end_slice_pos = position;
+                if current_msg_count == msg_count {
+                    // error!("breaking");
+                    break;
+                }
+            }
+
+            let range = start_slice_pos..end_slice_pos;
+            let buffer = Arc::new(buffer);
+            let slice = IggyBatchSlice::new(range, buffer);
+            slices.push(slice);
+            if current_msg_count == msg_count {
+                // error!("breaking outside");
+                break;
+            }
+        }
+        Ok(IggyBatchFetchResult::new(slices, header.unwrap()))
     }
 
     async fn load_newest_batches_by_size(
@@ -318,7 +422,9 @@ impl SegmentStorage for FileSegmentStorage {
     ) -> Result<IggyByteSize, IggyError> {
         let size_bytes = IGGY_BATCH_OVERHEAD + batch_accumulator.current_size.as_bytes_u64();
         let save_result = match confirmation {
-            Confirmation::Wait => FileSegmentStorage::persist_batches(&segment.log_path, batch_accumulator).await,
+            Confirmation::Wait => {
+                FileSegmentStorage::persist_batches(&segment.log_path, batch_accumulator).await
+            }
             Confirmation::NoWait => segment.persister_task.send(batch_accumulator).await,
         };
 

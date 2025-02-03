@@ -12,6 +12,7 @@ use rkyv::util::{Align, AlignedVec};
 use rkyv::vec::ArchivedVec;
 use rkyv::{access, Deserialize};
 use std::sync::Arc;
+use tracing::error;
 
 #[derive(Debug)]
 pub struct BatchAccumulator {
@@ -36,9 +37,10 @@ impl BatchAccumulator {
     }
 
     pub fn append(&mut self, batch_size: IggyByteSize, batch: IggyBatch) {
-        let batch_base_offset = batch.base_offset;
-        let batch_base_timestamp = batch.base_timestamp;
+        let batch_base_offset = batch.header.base_offset;
+        let batch_base_timestamp = batch.header.base_timestamp;
         self.current_size += (batch.messages.len() as u64).into();
+        self.current_offset = batch.header.base_offset + batch.header.last_offset_delta as u64;
         self.batches.push(batch);
     }
 

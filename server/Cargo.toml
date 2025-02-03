@@ -36,7 +36,7 @@ human-repr = "1.1.0"
 iggy = { path = "../sdk" }
 jsonwebtoken = "9.3.0"
 moka = { version = "0.12.9", features = ["future"] }
-openssl = { version = "0.10.68", features = ["vendored"] }
+openssl = { version = "0.10.70", features = ["vendored"] }
 opentelemetry = { version = "0.27.1", features = ["trace", "logs"] }
 opentelemetry-appender-tracing = { version = "0.27.0", features = ["log"] }
 opentelemetry-otlp = { version = "0.27.0", features = [

@@ -2,7 +2,6 @@ use crate::bytes_serializable::BytesSerializable;
 use crate::command::{Command, CREATE_STREAM_CODE};
 use crate::error::IggyError;
 use crate::streams::MAX_NAME_LENGTH;
-use crate::utils::text;
 use crate::validatable::Validatable;
 use bytes::{BufMut, Bytes, BytesMut};
 use serde::{Deserialize, Serialize};
@@ -12,7 +11,7 @@ use std::str::from_utf8;
 /// `CreateStream` command is used to create a new stream.
 /// It has additional payload:
 /// - `stream_id` - unique stream ID (numeric)
-/// - `name` - unique stream name (string), max length is 255 characters. The name will be always converted to lowercase and all whitespaces will be replaced with dots.
+/// - `name` - unique stream name (string), max length is 255 characters.
 #[derive(Debug, Serialize, Deserialize, PartialEq)]
 pub struct CreateStream {
     /// Unique stream ID (numeric), if None is provided then the server will automatically assign it.
@@ -45,10 +44,6 @@ impl Validatable<IggyError> for CreateStream {
         }
 
         if self.name.is_empty() || self.name.len() > MAX_NAME_LENGTH {
-            return Err(IggyError::InvalidStreamName);
-        }
-
-        if !text::is_resource_name_valid(&self.name) {
             return Err(IggyError::InvalidStreamName);
         }
 

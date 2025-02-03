@@ -4,7 +4,6 @@ use crate::error::IggyError;
 use crate::models::permissions::Permissions;
 use crate::models::user_status::UserStatus;
 use crate::users::defaults::*;
-use crate::utils::text;
 use crate::validatable::Validatable;
 use bytes::{BufMut, Bytes, BytesMut};
 use serde::{Deserialize, Serialize};
@@ -13,7 +12,7 @@ use std::str::from_utf8;
 
 /// `CreateUser` command is used to create a new user.
 /// It has additional payload:
-/// - `username` - unique name of the user, must be between 3 and 50 characters long. The name will be always converted to lowercase and all whitespaces will be replaced with dots.
+/// - `username` - unique name of the user, must be between 3 and 50 characters long.
 /// - `password` - password of the user, must be between 3 and 100 characters long.
 /// - `status` - status of the user, can be either `active` or `inactive`.
 /// - `permissions` - optional permissions of the user. If not provided, user will have no permissions.
@@ -52,10 +51,6 @@ impl Validatable<IggyError> for CreateUser {
             || self.username.len() > MAX_USERNAME_LENGTH
             || self.username.len() < MIN_USERNAME_LENGTH
         {
-            return Err(IggyError::InvalidUsername);
-        }
-
-        if !text::is_resource_name_valid(&self.username) {
             return Err(IggyError::InvalidUsername);
         }
 

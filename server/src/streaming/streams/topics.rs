@@ -7,7 +7,6 @@ use iggy::error::IggyError;
 use iggy::identifier::{IdKind, Identifier};
 use iggy::locking::IggySharedMutFn;
 use iggy::utils::expiry::IggyExpiry;
-use iggy::utils::text;
 use iggy::utils::topic_size::MaxTopicSize;
 use std::sync::atomic::Ordering;
 use tracing::info;
@@ -29,9 +28,11 @@ impl Stream {
         replication_factor: u8,
     ) -> Result<u32, IggyError> {
         let max_topic_size = Topic::get_max_topic_size(max_topic_size, &self.config)?;
-        let name = text::to_lowercase_non_whitespace(name);
-        if self.topics_ids.contains_key(&name) {
-            return Err(IggyError::TopicNameAlreadyExists(name, self.stream_id));
+        if self.topics_ids.contains_key(name) {
+            return Err(IggyError::TopicNameAlreadyExists(
+                name.to_owned(),
+                self.stream_id,
+            ));
         }
 
         let mut id;
@@ -58,7 +59,7 @@ impl Stream {
         let topic = Topic::create(
             self.stream_id,
             id,
-            &name,
+            name,
             partitions_count,
             self.config.clone(),
             self.storage.clone(),
@@ -76,7 +77,7 @@ impl Stream {
             .await
             .with_error_context(|_| format!("{COMPONENT} - failed to persist topic: {topic}"))?;
         info!("Created topic {}", topic);
-        self.topics_ids.insert(name, id);
+        self.topics_ids.insert(name.to_owned(), id);
         self.topics.insert(id, topic);
         Ok(id)
     }
@@ -100,13 +101,11 @@ impl Stream {
             topic_id = topic.topic_id;
         }
 
-        let updated_name = text::to_lowercase_non_whitespace(name);
-
         {
-            if let Some(topic_id_by_name) = self.topics_ids.get(&updated_name) {
+            if let Some(topic_id_by_name) = self.topics_ids.get(name) {
                 if *topic_id_by_name != topic_id {
                     return Err(IggyError::TopicNameAlreadyExists(
-                        updated_name.to_string(),
+                        name.to_owned(),
                         self.stream_id,
                     ));
                 }
@@ -122,12 +121,12 @@ impl Stream {
 
         {
             self.topics_ids.remove(&old_topic_name.clone());
-            self.topics_ids.insert(updated_name.clone(), topic_id);
+            self.topics_ids.insert(name.to_owned(), topic_id);
             let topic = self.get_topic_mut(id).with_error_context(|_| {
                 format!("{COMPONENT} - failed to get mutable reference to topic with id {id}")
             })?;
 
-            topic.name = updated_name;
+            topic.name = name.to_owned();
             topic.message_expiry = message_expiry;
             topic.compression_algorithm = compression_algorithm;
             for partition in topic.partitions.values_mut() {

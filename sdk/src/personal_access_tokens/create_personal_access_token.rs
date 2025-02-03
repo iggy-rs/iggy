@@ -3,7 +3,6 @@ use crate::command::{Command, CREATE_PERSONAL_ACCESS_TOKEN_CODE};
 use crate::error::IggyError;
 use crate::users::defaults::*;
 use crate::utils::expiry::IggyExpiry;
-use crate::utils::text;
 use crate::validatable::Validatable;
 use bytes::{BufMut, Bytes, BytesMut};
 use serde::{Deserialize, Serialize};
@@ -12,13 +11,13 @@ use std::str::from_utf8;
 
 /// `CreatePersonalAccessToken` command is used to create a new personal access token for the authenticated user.
 /// It has additional payload:
-/// - `name` - unique name of the token, must be between 3 and 30 characters long. The name will be always converted to lowercase and all whitespaces will be replaced with dots.
-/// - `expiry` - expiry in seconds (optional), if provided, must be between 1 and 4294967295. Otherwise, the token will never expire.
+/// - `name` - unique name of the token, must be between 3 and 30 characters long.
+/// - `expiry` - expiry of the token.
 #[derive(Debug, Serialize, Deserialize, PartialEq)]
 pub struct CreatePersonalAccessToken {
     /// Unique name of the token, must be between 3 and 30 characters long.
     pub name: String,
-    /// Expiry in seconds (optional), if provided, must be between 1 and 4294967295. Otherwise, the token will never expire.
+    /// Expiry of the token.
     pub expiry: IggyExpiry,
 }
 
@@ -43,10 +42,6 @@ impl Validatable<IggyError> for CreatePersonalAccessToken {
             || self.name.len() > MAX_PERSONAL_ACCESS_TOKEN_NAME_LENGTH
             || self.name.len() < MIN_PERSONAL_ACCESS_TOKEN_NAME_LENGTH
         {
-            return Err(IggyError::InvalidPersonalAccessTokenName);
-        }
-
-        if !text::is_resource_name_valid(&self.name) {
             return Err(IggyError::InvalidPersonalAccessTokenName);
         }
 

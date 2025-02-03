@@ -4,7 +4,6 @@ use crate::consumer_groups::MAX_NAME_LENGTH;
 use crate::error::IggyError;
 use crate::identifier::Identifier;
 use crate::utils::sizeable::Sizeable;
-use crate::utils::text;
 use crate::validatable::Validatable;
 use bytes::{BufMut, Bytes, BytesMut};
 use serde::{Deserialize, Serialize};
@@ -16,7 +15,7 @@ use std::str::from_utf8;
 /// - `stream_id` - unique stream ID (numeric or name).
 /// - `topic_id` - unique topic ID (numeric or name).
 /// - `group_id` - unique consumer group ID.
-/// - `name` - unique consumer group name, max length is 255 characters. The name will be always converted to lowercase and all whitespaces will be replaced with dots.
+/// - `name` - unique consumer group name, max length is 255 characters.
 #[derive(Debug, Serialize, Deserialize, PartialEq)]
 pub struct CreateConsumerGroup {
     /// Unique stream ID (numeric or name).
@@ -57,10 +56,6 @@ impl Validatable<IggyError> for CreateConsumerGroup {
         }
 
         if self.name.is_empty() || self.name.len() > MAX_NAME_LENGTH {
-            return Err(IggyError::InvalidConsumerGroupName);
-        }
-
-        if !text::is_resource_name_valid(&self.name) {
             return Err(IggyError::InvalidConsumerGroupName);
         }
 

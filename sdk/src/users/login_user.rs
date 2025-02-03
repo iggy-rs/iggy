@@ -2,7 +2,6 @@ use crate::bytes_serializable::BytesSerializable;
 use crate::command::{Command, LOGIN_USER_CODE};
 use crate::error::IggyError;
 use crate::users::defaults::*;
-use crate::utils::text;
 use crate::validatable::Validatable;
 use bytes::{BufMut, Bytes, BytesMut};
 use serde::{Deserialize, Serialize};
@@ -48,10 +47,6 @@ impl Validatable<IggyError> for LoginUser {
             || self.username.len() > MAX_USERNAME_LENGTH
             || self.username.len() < MIN_USERNAME_LENGTH
         {
-            return Err(IggyError::InvalidUsername);
-        }
-
-        if !text::is_resource_name_valid(&self.username) {
             return Err(IggyError::InvalidUsername);
         }
 

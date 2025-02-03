@@ -6,7 +6,6 @@ use crate::streaming::users::user::User;
 use error_set::ErrContext;
 use iggy::error::IggyError;
 use iggy::utils::expiry::IggyExpiry;
-use iggy::utils::text;
 use iggy::utils::timestamp::IggyTimestamp;
 use tracing::{error, info};
 
@@ -59,19 +58,22 @@ impl System {
         let user = self.get_user_mut(&identifier).with_error_context(|_| {
             format!("{COMPONENT} - failed to get mutable reference to the user with id: {user_id}")
         })?;
-        let name = text::to_lowercase_non_whitespace(name);
+
         if user
             .personal_access_tokens
             .values()
             .any(|pat| pat.name == name)
         {
             error!("Personal access token: {name} for user with ID: {user_id} already exists.");
-            return Err(IggyError::PersonalAccessTokenAlreadyExists(name, user_id));
+            return Err(IggyError::PersonalAccessTokenAlreadyExists(
+                name.to_owned(),
+                user_id,
+            ));
         }
 
         info!("Creating personal access token: {name} for user with ID: {user_id}...");
         let (personal_access_token, token) =
-            PersonalAccessToken::new(user_id, &name, IggyTimestamp::now(), expiry);
+            PersonalAccessToken::new(user_id, name, IggyTimestamp::now(), expiry);
         user.personal_access_tokens
             .insert(personal_access_token.token.clone(), personal_access_token);
         info!("Created personal access token: {name} for user with ID: {user_id}.");
@@ -92,7 +94,7 @@ impl System {
                     "{COMPONENT} - failed to get mutable reference to the user with id: {user_id}"
                 )
             })?;
-        let name = text::to_lowercase_non_whitespace(name);
+
         let token;
 
         {
@@ -102,7 +104,7 @@ impl System {
                 .find(|(_, pat)| pat.name == name);
             if pat.is_none() {
                 error!("Personal access token: {name} for user with ID: {user_id} does not exist.",);
-                return Err(IggyError::ResourceNotFound(name));
+                return Err(IggyError::ResourceNotFound(name.to_owned()));
             }
 
             token = pat.unwrap().1.token.clone();

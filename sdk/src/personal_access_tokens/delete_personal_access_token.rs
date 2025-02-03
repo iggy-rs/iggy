@@ -2,7 +2,6 @@ use crate::bytes_serializable::BytesSerializable;
 use crate::command::{Command, DELETE_PERSONAL_ACCESS_TOKEN_CODE};
 use crate::error::IggyError;
 use crate::users::defaults::*;
-use crate::utils::text;
 use crate::validatable::Validatable;
 use bytes::{BufMut, Bytes, BytesMut};
 use serde::{Deserialize, Serialize};
@@ -11,7 +10,7 @@ use std::str::from_utf8;
 
 /// `DeletePersonalAccessToken` command is used to delete a personal access token for the authenticated user.
 /// It has additional payload:
-/// - `name` - unique name of the token, must be between 3 and 30 characters long. The name will be always converted to lowercase and all whitespaces will be replaced with dots.
+/// - `name` - unique name of the token, must be between 3 and 30 characters long.
 #[derive(Debug, Serialize, Deserialize, PartialEq)]
 pub struct DeletePersonalAccessToken {
     /// Unique name of the token, must be between 3 and 30 characters long.
@@ -38,10 +37,6 @@ impl Validatable<IggyError> for DeletePersonalAccessToken {
             || self.name.len() > MAX_PERSONAL_ACCESS_TOKEN_NAME_LENGTH
             || self.name.len() < MIN_PERSONAL_ACCESS_TOKEN_NAME_LENGTH
         {
-            return Err(IggyError::InvalidPersonalAccessTokenName);
-        }
-
-        if !text::is_resource_name_valid(&self.name) {
             return Err(IggyError::InvalidPersonalAccessTokenName);
         }
 

@@ -5,7 +5,6 @@ use error_set::ErrContext;
 use iggy::error::IggyError;
 use iggy::identifier::{IdKind, Identifier};
 use iggy::locking::IggySharedMutFn;
-use iggy::utils::text;
 use std::sync::atomic::Ordering;
 use tokio::sync::RwLock;
 use tracing::info;
@@ -70,10 +69,9 @@ impl Topic {
         group_id: Option<u32>,
         name: &str,
     ) -> Result<&RwLock<ConsumerGroup>, IggyError> {
-        let name = text::to_lowercase_non_whitespace(name);
-        if self.consumer_groups_ids.contains_key(&name) {
+        if self.consumer_groups_ids.contains_key(name) {
             return Err(IggyError::ConsumerGroupNameAlreadyExists(
-                name,
+                name.to_owned(),
                 self.topic_id,
             ));
         }
@@ -104,9 +102,9 @@ impl Topic {
         }
 
         let consumer_group =
-            ConsumerGroup::new(self.topic_id, id, &name, self.partitions.len() as u32);
+            ConsumerGroup::new(self.topic_id, id, name, self.partitions.len() as u32);
         self.consumer_groups.insert(id, RwLock::new(consumer_group));
-        self.consumer_groups_ids.insert(name, id);
+        self.consumer_groups_ids.insert(name.to_owned(), id);
         info!(
             "Created consumer group with ID: {} for topic with ID: {} and stream with ID: {}.",
             id, self.topic_id, self.stream_id

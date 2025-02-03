@@ -2,7 +2,6 @@ use crate::bytes_serializable::BytesSerializable;
 use crate::error::IggyError;
 use crate::utils::byte_size::IggyByteSize;
 use crate::utils::sizeable::Sizeable;
-use crate::utils::text::to_lowercase_non_whitespace;
 use crate::validatable::Validatable;
 use bytes::{BufMut, Bytes, BytesMut};
 use serde::{Deserialize, Serialize};
@@ -151,14 +150,13 @@ impl Identifier {
         })
     }
 
-    /// Creates a new identifier from the given string value. The name will always be converted to lowercase and all whitespaces will be replaced with dots.
+    /// Creates a new identifier from the given string value.
     pub fn named(value: &str) -> Result<Self, IggyError> {
         let length = value.len();
         if length == 0 || length > 255 {
             return Err(IggyError::InvalidIdentifier);
         }
 
-        let value = to_lowercase_non_whitespace(value);
         Ok(Self {
             kind: IdKind::String,
             #[allow(clippy::cast_possible_truncation)]

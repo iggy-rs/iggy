@@ -8,7 +8,6 @@ use futures::future::try_join_all;
 use iggy::error::IggyError;
 use iggy::identifier::{IdKind, Identifier};
 use iggy::locking::IggySharedMutFn;
-use iggy::utils::text;
 use std::cell::RefCell;
 use std::collections::{HashMap, HashSet};
 use std::sync::atomic::{AtomicU32, Ordering};
@@ -244,9 +243,8 @@ impl System {
     ) -> Result<&Stream, IggyError> {
         self.ensure_authenticated(session)?;
         self.permissioner.create_stream(session.get_user_id())?;
-        let name = text::to_lowercase_non_whitespace(name);
-        if self.streams_ids.contains_key(&name) {
-            return Err(IggyError::StreamNameAlreadyExists(name.to_string()));
+        if self.streams_ids.contains_key(name) {
+            return Err(IggyError::StreamNameAlreadyExists(name.to_owned()));
         }
 
         let mut id;
@@ -270,10 +268,10 @@ impl System {
             return Err(IggyError::StreamIdAlreadyExists(id));
         }
 
-        let stream = Stream::create(id, &name, self.config.clone(), self.storage.clone());
+        let stream = Stream::create(id, name, self.config.clone(), self.storage.clone());
         stream.persist().await?;
         info!("Created stream with ID: {id}, name: '{name}'.");
-        self.streams_ids.insert(name, stream.stream_id);
+        self.streams_ids.insert(name.to_owned(), stream.stream_id);
         self.streams.insert(stream.stream_id, stream);
         self.metrics.increment_streams(1);
         self.get_stream_by_id(id)
@@ -303,12 +301,11 @@ impl System {
                     stream_id
                 )
             })?;
-        let updated_name = text::to_lowercase_non_whitespace(name);
 
         {
-            if let Some(stream_id_by_name) = self.streams_ids.get(&updated_name) {
+            if let Some(stream_id_by_name) = self.streams_ids.get(name) {
                 if *stream_id_by_name != stream_id {
-                    return Err(IggyError::StreamNameAlreadyExists(updated_name.clone()));
+                    return Err(IggyError::StreamNameAlreadyExists(name.to_owned()));
                 }
             }
         }
@@ -319,19 +316,16 @@ impl System {
                 format!("{COMPONENT} - failed to get mutable reference to stream with id: {id}")
             })?;
             old_name = stream.name.clone();
-            stream.name.clone_from(&updated_name);
+            stream.name = name.to_owned();
             stream.persist().await?;
         }
 
         {
             self.streams_ids.remove(&old_name);
-            self.streams_ids.insert(updated_name.clone(), stream_id);
+            self.streams_ids.insert(name.to_owned(), stream_id);
         }
 
-        info!(
-            "Stream with ID '{}' updated. Old name: '{}' changed to: '{}'.",
-            id, old_name, updated_name
-        );
+        info!("Stream with ID '{id}' updated. Old name: '{old_name}' changed to: '{name}'.");
         Ok(())
     }
 

@@ -6,7 +6,6 @@ use crate::identifier::Identifier;
 use crate::topics::MAX_NAME_LENGTH;
 use crate::utils::expiry::IggyExpiry;
 use crate::utils::sizeable::Sizeable;
-use crate::utils::text;
 use crate::utils::topic_size::MaxTopicSize;
 use crate::validatable::Validatable;
 use bytes::{BufMut, Bytes, BytesMut};
@@ -18,8 +17,8 @@ use std::str::from_utf8;
 /// It has additional payload:
 /// - `stream_id` - unique stream ID (numeric or name).
 /// - `topic_id` - unique topic ID (numeric or name).
-/// - `message_expiry` - optional message expiry in seconds, if `None` then messages will never expire.
-/// - `max_topic_size` - optional maximum size of the topic in bytes, if `None` then topic size is unlimited.
+/// - `message_expiry` - message expiry, if `NeverExpire` then messages will never expire.
+/// - `max_topic_size` - maximum size of the topic in bytes, if `Unlimited` then topic size is unlimited.
 ///                      Can't be lower than segment size in the config.
 /// - `replication_factor` - replication factor for the topic.
 /// - `name` - unique topic name, max length is 255 characters.
@@ -33,9 +32,9 @@ pub struct UpdateTopic {
     pub topic_id: Identifier,
     /// Compression algorithm for the topic.
     pub compression_algorithm: CompressionAlgorithm,
-    /// Optional message expiry in seconds, if `None` then messages will never expire.
+    /// Message expiry, if `NeverExpire` then messages will never expire.
     pub message_expiry: IggyExpiry,
-    /// Optional max topic size, if `None` then topic size is unlimited.
+    /// Max topic size, if `Unlimited` then topic size is unlimited.
     /// Can't be lower than segment size in the config.
     pub max_topic_size: MaxTopicSize,
     /// Replication factor for the topic.
@@ -67,10 +66,6 @@ impl Default for UpdateTopic {
 impl Validatable<IggyError> for UpdateTopic {
     fn validate(&self) -> Result<(), IggyError> {
         if self.name.is_empty() || self.name.len() > MAX_NAME_LENGTH {
-            return Err(IggyError::InvalidTopicName);
-        }
-
-        if !text::is_resource_name_valid(&self.name) {
             return Err(IggyError::InvalidTopicName);
         }
 

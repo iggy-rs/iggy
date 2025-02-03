@@ -1,6 +1,6 @@
 [package]
 name = "server"
-version = "0.4.140"
+version = "0.4.150"
 edition = "2021"
 build = "src/build.rs"
 license = "Apache-2.0"

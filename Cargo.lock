@@ -2370,7 +2370,7 @@ dependencies = [
 
 [[package]]
 name = "iggy"
-version = "0.6.93"
+version = "0.6.100"
 dependencies = [
  "aes-gcm",
  "ahash 0.8.11",
@@ -2395,10 +2395,8 @@ dependencies = [
  "futures-util",
  "humantime",
  "keyring",
- "lazy_static",
  "passterm",
  "quinn",
- "regex",
  "reqwest",
  "reqwest-middleware",
  "reqwest-retry",
@@ -4482,7 +4480,7 @@ dependencies = [
 
 [[package]]
 name = "server"
-version = "0.4.140"
+version = "0.4.150"
 dependencies = [
  "ahash 0.8.11",
  "anyhow",

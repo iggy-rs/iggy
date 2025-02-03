@@ -88,7 +88,7 @@ pub struct IggyConsumer {
     store_after_every_nth_message: u64,
     last_polled_at: Arc<AtomicU64>,
     current_partition_id: Arc<AtomicU32>,
-    retry_interval: IggyDuration,
+    reconnection_retry_interval: IggyDuration,
     allow_replay: bool,
 }
 
@@ -160,7 +160,7 @@ impl IggyConsumer {
             },
             last_polled_at: Arc::new(AtomicU64::new(0)),
             current_partition_id: Arc::new(AtomicU32::new(0)),
-            retry_interval,
+            reconnection_retry_interval: retry_interval,
             allow_replay,
         }
     }
@@ -498,7 +498,7 @@ impl IggyConsumer {
         let interval = self.poll_interval_micros;
         let last_polled_at = self.last_polled_at.clone();
         let can_poll = self.can_poll.clone();
-        let retry_interval = self.retry_interval;
+        let retry_interval = self.reconnection_retry_interval;
         let last_stored_offset = self.last_stored_offsets.clone();
         let last_consumed_offset = self.last_consumed_offsets.clone();
         let allow_replay = self.allow_replay;
@@ -867,7 +867,7 @@ pub struct IggyConsumerBuilder {
     auto_join_consumer_group: bool,
     create_consumer_group_if_not_exists: bool,
     encryptor: Option<Arc<EncryptorKind>>,
-    retry_interval: IggyDuration,
+    reconnection_retry_interval: IggyDuration,
     allow_replay: bool,
 }
 
@@ -900,7 +900,7 @@ impl IggyConsumerBuilder {
             create_consumer_group_if_not_exists: true,
             encryptor,
             polling_interval,
-            retry_interval: IggyDuration::ONE_SECOND,
+            reconnection_retry_interval: IggyDuration::ONE_SECOND,
             allow_replay: false,
         }
     }
@@ -1005,10 +1005,10 @@ impl IggyConsumerBuilder {
         }
     }
 
-    /// Sets the retry interval in case of server disconnection.
-    pub fn retry_interval(self, interval: IggyDuration) -> Self {
+    /// Sets the reconnection retry interval in case of server disconnection.
+    pub fn reconnection_retry_interval(self, interval: IggyDuration) -> Self {
         Self {
-            retry_interval: interval,
+            reconnection_retry_interval: interval,
             ..self
         }
     }
@@ -1039,7 +1039,7 @@ impl IggyConsumerBuilder {
             self.auto_join_consumer_group,
             self.create_consumer_group_if_not_exists,
             self.encryptor,
-            self.retry_interval,
+            self.reconnection_retry_interval,
             self.allow_replay,
         )
     }

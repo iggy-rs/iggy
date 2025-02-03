@@ -104,11 +104,11 @@ jobs:
           log-output-if: timeout
           tail: true
 
-      - name: Run send bench (origin/master)
+      - name: Run producer bench (origin/master)
         timeout-minutes: 1
         run: target/debug/iggy-bench --verbose --message-batches 50 --messages-per-batch 100 pinned-producer tcp
 
-      - name: Run poll bench (origin/master)
+      - name: Run consumer bench (origin/master)
         timeout-minutes: 1
         run: target/debug/iggy-bench --verbose --message-batches 50 --messages-per-batch 100 pinned-consumer tcp
 
@@ -150,7 +150,7 @@ jobs:
           log-output-if: timeout
           tail: true
 
-      - name: Run poll bench (PR)
+      - name: Run consumer bench (PR)
         timeout-minutes: 1
         run: target/debug/iggy-bench --verbose --message-batches 50 --messages-per-batch 100 pinned-consumer tcp
 

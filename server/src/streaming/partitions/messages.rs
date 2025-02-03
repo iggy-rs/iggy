@@ -168,10 +168,7 @@ impl Partition {
 
         let end_offset = self.get_end_offset(start_offset, count);
 
-        let start = Instant::now();
         let result = self.try_get_messages_from_cache(start_offset, end_offset);
-        let elapsed = start.elapsed().as_micros();
-        error!("loading from cache took: {} us", elapsed);
         if let Some(result) = result {
             error!("reading from cache");
             return Ok(result);
@@ -535,10 +532,10 @@ impl Partition {
             self.should_increment_offset = true;
             self.current_offset = last_offset;
         }
-        let header = batch.header;
-        let cache_phantom = IggyBatchCachePhantom::new(header, batch.messages.clone());
 
         if let Some(cache) = &mut self.cache {
+            let header = batch.header;
+            let cache_phantom = IggyBatchCachePhantom::new(header, batch.messages.clone());
             cache.push(cache_phantom);
         }
 

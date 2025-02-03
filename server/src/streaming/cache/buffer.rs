@@ -110,6 +110,10 @@ where
     }
 
     pub fn push(&mut self, element: T) {
+        let element_size = element.get_size_bytes();
+        self.memory_tracker
+            .increment_used_memory(element_size.as_bytes_u64());
+        self.current_size += element_size;
         self.buffer.push(element);
     }
 
@@ -117,7 +121,7 @@ where
     pub fn append(&mut self, element: T) {
         let element_size = element.get_size_bytes();
         self.memory_tracker
-            .increment_used_memory(element_size.as_bytes_u64());
+             .increment_used_memory(element_size.as_bytes_u64());
         self.current_size += element_size;
         self.buffer.push(element);
     }

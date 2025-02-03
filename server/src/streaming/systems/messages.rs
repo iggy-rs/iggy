@@ -12,6 +12,7 @@ use iggy::messages::poll_messages::PollingStrategy;
 use iggy::messages::send_messages::Message;
 use iggy::messages::send_messages::Partitioning;
 use iggy::models::batch::IggyBatch;
+use iggy::models::batch::IGGY_BATCH_OVERHEAD;
 use iggy::utils::byte_size::IggyByteSize;
 use iggy::utils::sizeable::Sizeable;
 use iggy::{error::IggyError, identifier::Identifier};
@@ -145,13 +146,14 @@ impl System {
                 .sum::<IggyByteSize>();
         }
 
+        */
+
+        let batch_size_bytes = (bytes.len() as u64 + IGGY_BATCH_OVERHEAD).into();
         if let Some(memory_tracker) = CacheMemoryTracker::get_instance() {
             if !memory_tracker.will_fit_into_cache(batch_size_bytes) {
                 self.clean_cache(batch_size_bytes).await;
             }
         }
-        let messages_count = messages.len() as u64;
-        */
         let batch = IggyBatch::new(bytes);
         let batch_size_bytes = batch.get_size_bytes();
         topic

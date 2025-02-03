@@ -17,7 +17,6 @@ pub const IGGY_MESSAGE_METADATA: u32 = 8 + 1 + 8 + 4;
 /// - `payload`: the binary payload of the message.
 #[serde_as]
 #[derive(
-    Clone,
     Default,
     Debug,
     serde::Serialize,
@@ -28,6 +27,9 @@ pub const IGGY_MESSAGE_METADATA: u32 = 8 + 1 + 8 + 4;
 )]
 #[rkyv(derive(Debug))]
 pub struct IggyMessage {
+    /// The binary payload of the message.
+    #[serde_as(as = "Base64")]
+    pub payload: Vec<u8>,
     /// The identifier of the message.
     pub id: u128,
     /// The offset of the message.
@@ -37,9 +39,6 @@ pub struct IggyMessage {
     /// The length of the payload.
     #[serde(skip)]
     pub length: u64,
-    /// The binary payload of the message.
-    #[serde_as(as = "Base64")]
-    pub payload: Vec<u8>,
     /// The optional headers of the message.
     pub headers: Option<HashMap<HeaderKey, HeaderValue>>,
 }

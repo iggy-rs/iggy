@@ -64,6 +64,7 @@ toml = "0.8.19"
 tracing = { version = "0.1.41" }
 uuid = { version = "1.11.0", features = ["v7", "fast-rng", "zerocopy"] }
 webpki-roots = { version = "0.26.7" }
+mimalloc = { version = "0.1.43" }
 
 [build-dependencies]
 convert_case = "0.7.1"
@@ -75,4 +76,3 @@ default = ["tokio_lock"]
 iggy-cli = ["dep:comfy-table", "dep:keyring", "dep:passterm"]
 tokio_lock = []
 fast_async_lock = ["dep:fast-async-mutex"]
-

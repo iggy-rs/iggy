@@ -42,6 +42,7 @@ impl<B: BinaryClient> MessageClient for B {
                 ),
             )
             .await?;
+        warn!("Response len: {}", response.len());
         let start = Instant::now();
         let header = IggyHeader::from_bytes(&response[..IGGY_BATCH_OVERHEAD as usize]);
         let msg_count = header.last_offset_delta as usize + 1;
@@ -65,7 +66,10 @@ impl<B: BinaryClient> MessageClient for B {
             count += 1;
         }
         let elapsed = start.elapsed().as_micros();
-        error!("deserializing batch of {} messages took: {} us", count, elapsed);
+        error!(
+            "deserializing batch of {} messages took: {} us",
+            count, elapsed
+        );
         Ok(messages)
     }
 

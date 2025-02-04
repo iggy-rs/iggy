@@ -3,6 +3,7 @@ use crate::{
     group_metrics_kind::GroupMetricsKind, params::BenchmarkParams, report::BenchmarkReport,
 };
 use byte_unit::{Byte, UnitType};
+use human_repr::HumanCount;
 
 impl BenchmarkReport {
     pub fn subtext(&self) -> String {
@@ -22,12 +23,15 @@ impl BenchmarkReport {
         }
 
         // For SendAndPoll tests, add total throughput as last line
-        if self.params.benchmark_kind == BenchmarkKind::SendAndPoll {
-            if let Some(total) = self
-                .group_metrics
-                .iter()
-                .find(|s| s.summary.kind == GroupMetricsKind::ProducersAndConsumers)
-            {
+        if matches!(
+            self.params.benchmark_kind,
+            BenchmarkKind::PinnedProducerAndConsumer
+                | BenchmarkKind::BalancedProducerAndConsumerGroup
+        ) {
+            if let Some(total) = self.group_metrics.iter().find(|s| {
+                s.summary.kind == GroupMetricsKind::ProducersAndConsumers
+                    || s.summary.kind == GroupMetricsKind::ProducingConsumers
+            }) {
                 stats.push(format!(
                     "Total System Throughput: {:.2} MB/s, {:.0} msg/s",
                     total.summary.total_throughput_megabytes_per_second,
@@ -74,13 +78,14 @@ impl BenchmarkGroupMetrics {
 
     fn format_latency(&self) -> String {
         format!(
-            "{} Latency  •  Avg: {:.2} ms  •  Med: {:.2} ms  •  P95: {:.2} ms  •  P99: {:.2} ms  •  P999: {:.2} ms",
+            "{} Latency  •  Avg: {:.2} ms  •  Med: {:.2} ms  •  P95: {:.2} ms  •  P99: {:.2} ms  •  P999: {:.2} ms  •  P9999: {:.2} ms",
             self.summary.kind,
             self.summary.average_latency_ms,
             self.summary.average_median_latency_ms,
             self.summary.average_p95_latency_ms,
             self.summary.average_p99_latency_ms,
-            self.summary.average_p999_latency_ms
+            self.summary.average_p999_latency_ms,
+            self.summary.average_p9999_latency_ms
         )
     }
 }
@@ -92,9 +97,8 @@ impl BenchmarkParams {
         let messages_per_batch = self.messages_per_batch as u64;
         let message_size = self.message_size as u64;
 
-        let sent: u64 = message_batches * messages_per_batch * message_size * self.producers as u64;
-        let polled: u64 =
-            message_batches * messages_per_batch * message_size * self.consumers as u64;
+        let sent = message_batches * messages_per_batch * message_size * self.producers as u64;
+        let polled = message_batches * messages_per_batch * message_size * self.consumers as u64;
 
         let mut user_data_print = String::new();
 
@@ -116,10 +120,19 @@ impl BenchmarkParams {
             ));
         }
 
+        let message_batches = message_batches.human_count_bare();
+        let messages_per_batch = messages_per_batch.human_count_bare();
+
+        let topics = "1 topic per stream".to_owned();
+        let partitions = if self.partitions == 0 {
+            "".to_owned()
+        } else {
+            format!("  •  {} partitions per topic", self.partitions)
+        };
+        let streams = format!("{} streams", self.streams);
+
         format!(
-            "{actors_info}  •  {messages_per_batch} msg/batch  •  {message_batches} batches  •  {message_size} bytes/msg  •  {user_data_print}",
+            "{actors_info}  •  {streams}  •  {topics}{partitions}  •  {messages_per_batch} msg/batch  •  {message_batches} batches  •  {message_size} bytes/msg  •  {user_data_print}",
         )
     }
 }
-
-// Byte::from_u64( user_bytes.get_appropriate_unit(UnitType::Decimal)

@@ -1,21 +1,72 @@
 use super::examples::print_examples;
-use super::kinds::consumer_group_poll::ConsumerGroupArgs;
-use super::kinds::poll::PollArgs;
-use super::kinds::send::SendArgs;
-use super::kinds::send_and_poll::SendAndPollArgs;
+use super::kinds::balanced::producer::BalancedProducerArgs;
+use super::kinds::balanced::producer_and_consumer_group::BalancedProducerAndConsumerGroupArgs;
+use super::kinds::end_to_end::producer_and_consumer::EndToEndProducingConsumerArgs;
 use super::props::BenchmarkKindProps;
 use super::transport::BenchmarkTransportCommand;
+use crate::args::kinds::balanced::consumer_group::BalancedConsumerGroupArgs;
+use crate::args::kinds::pinned::consumer::PinnedConsumerArgs;
+use crate::args::kinds::pinned::producer::PinnedProducerArgs;
+use crate::args::kinds::pinned::producer_and_consumer::PinnedProducerAndConsumerArgs;
 use clap::Subcommand;
-use iggy::messages::poll_messages::PollingKind;
-use iggy_benchmark_report::benchmark_kind::BenchmarkKind;
+use iggy::utils::byte_size::IggyByteSize;
+use iggy_bench_report::benchmark_kind::BenchmarkKind;
 
 #[derive(Subcommand, Debug)]
 pub enum BenchmarkKindCommand {
-    Send(SendArgs),
-    Poll(PollArgs),
-    SendAndPoll(SendAndPollArgs),
-    ConsumerGroupPoll(ConsumerGroupArgs),
+    #[command(
+        about = "Pinned producer benchmark",
+        long_about = "N producers sending to N separated stream-topic with single partition (one stream per one producer)",
+        visible_alias = "pp",
+        verbatim_doc_comment
+    )]
+    PinnedProducer(PinnedProducerArgs),
 
+    #[command(
+        about = "Pinned consumer benchmark",
+        visible_alias = "pc",
+        verbatim_doc_comment
+    )]
+    PinnedConsumer(PinnedConsumerArgs),
+
+    #[command(
+        about = "Pinned producer and consumer benchmark",
+        long_about = "N consumers polling from N separated stream-topic with single partition (one stream per one consumer)",
+        visible_alias = "ppc",
+        verbatim_doc_comment
+    )]
+    PinnedProducerAndConsumer(PinnedProducerAndConsumerArgs),
+
+    #[command(
+        about = "Balanced producer benchmark",
+        long_about = "N producers sending to M partitions in K streams with balanced partitioning kind",
+        visible_alias = "bp",
+        verbatim_doc_comment
+    )]
+    BalancedProducer(BalancedProducerArgs),
+
+    #[command(
+        about = "Balanced consumer group benchmark",
+        long_about = "N consumers assigned to M consumer groups polling from K partitions in L streams",
+        visible_alias = "bcg",
+        verbatim_doc_comment
+    )]
+    BalancedConsumerGroup(BalancedConsumerGroupArgs),
+
+    #[command(
+        about = "N producers sending to M partitions in K streams, L consumers polling from P consumer groups",
+        visible_alias = "bpc",
+        verbatim_doc_comment
+    )]
+    BalancedProducerAndConsumerGroup(BalancedProducerAndConsumerGroupArgs),
+
+    #[command(
+        about = "N producing consumers sending and polling to/from M streams",
+        visible_alias = "e2e",
+        verbatim_doc_comment
+    )]
+    EndToEndProducingConsumer(EndToEndProducingConsumerArgs),
+    // EndToEndProducerAndConsumerGroup(EndToEndProducerAndConsumerGroupArgs),
     /// Prints examples
     Examples,
 }
@@ -23,10 +74,22 @@ pub enum BenchmarkKindCommand {
 impl BenchmarkKindCommand {
     pub fn as_simple_kind(&self) -> BenchmarkKind {
         match self {
-            BenchmarkKindCommand::Send(_) => BenchmarkKind::Send,
-            BenchmarkKindCommand::Poll(_) => BenchmarkKind::Poll,
-            BenchmarkKindCommand::SendAndPoll(_) => BenchmarkKind::SendAndPoll,
-            BenchmarkKindCommand::ConsumerGroupPoll(_) => BenchmarkKind::ConsumerGroupPoll,
+            BenchmarkKindCommand::PinnedProducer(_) => BenchmarkKind::PinnedProducer,
+            BenchmarkKindCommand::PinnedConsumer(_) => BenchmarkKind::PinnedConsumer,
+            BenchmarkKindCommand::PinnedProducerAndConsumer(_) => {
+                BenchmarkKind::PinnedProducerAndConsumer
+            }
+            BenchmarkKindCommand::BalancedProducer(_) => BenchmarkKind::BalancedProducer,
+            BenchmarkKindCommand::BalancedConsumerGroup(_) => BenchmarkKind::BalancedConsumerGroup,
+            BenchmarkKindCommand::BalancedProducerAndConsumerGroup(_) => {
+                BenchmarkKind::BalancedProducerAndConsumerGroup
+            }
+            BenchmarkKindCommand::EndToEndProducingConsumer(_) => {
+                BenchmarkKind::EndToEndProducingConsumer
+            }
+            // BenchmarkKindCommand::EndToEndProducerAndConsumerGroup(_) => {
+            //     BenchmarkKind::EndToEndProducerAndConsumerGroup
+            // }
             BenchmarkKindCommand::Examples => {
                 print_examples();
                 std::process::exit(0);
@@ -36,24 +99,12 @@ impl BenchmarkKindCommand {
 }
 
 impl BenchmarkKindProps for BenchmarkKindCommand {
-    fn message_size(&self) -> u32 {
-        self.inner().message_size()
+    fn streams(&self) -> u32 {
+        self.inner().streams()
     }
 
-    fn messages_per_batch(&self) -> u32 {
-        self.inner().messages_per_batch()
-    }
-
-    fn message_batches(&self) -> u32 {
-        self.inner().message_batches()
-    }
-
-    fn number_of_streams(&self) -> u32 {
-        self.inner().number_of_streams()
-    }
-
-    fn number_of_partitions(&self) -> u32 {
-        self.inner().number_of_partitions()
+    fn partitions(&self) -> u32 {
+        self.inner().partitions()
     }
 
     fn consumers(&self) -> u32 {
@@ -64,14 +115,6 @@ impl BenchmarkKindProps for BenchmarkKindCommand {
         self.inner().producers()
     }
 
-    fn disable_parallel_producer_streams(&self) -> bool {
-        self.inner().disable_parallel_producer_streams()
-    }
-
-    fn disable_parallel_consumer_streams(&self) -> bool {
-        self.inner().disable_parallel_consumer_streams()
-    }
-
     fn transport_command(&self) -> &BenchmarkTransportCommand {
         self.inner().transport_command()
     }
@@ -80,16 +123,20 @@ impl BenchmarkKindProps for BenchmarkKindCommand {
         self.inner().number_of_consumer_groups()
     }
 
-    fn polling_kind(&self) -> PollingKind {
-        self.inner().polling_kind()
+    fn max_topic_size(&self) -> Option<IggyByteSize> {
+        self.inner().max_topic_size()
     }
 
     fn inner(&self) -> &dyn BenchmarkKindProps {
         match self {
-            BenchmarkKindCommand::Send(args) => args,
-            BenchmarkKindCommand::Poll(args) => args,
-            BenchmarkKindCommand::SendAndPoll(args) => args,
-            BenchmarkKindCommand::ConsumerGroupPoll(args) => args,
+            BenchmarkKindCommand::PinnedProducer(args) => args,
+            BenchmarkKindCommand::PinnedConsumer(args) => args,
+            BenchmarkKindCommand::PinnedProducerAndConsumer(args) => args,
+            BenchmarkKindCommand::BalancedProducer(args) => args,
+            BenchmarkKindCommand::BalancedConsumerGroup(args) => args,
+            BenchmarkKindCommand::BalancedProducerAndConsumerGroup(args) => args,
+            BenchmarkKindCommand::EndToEndProducingConsumer(args) => args,
+            // BenchmarkKindCommand::EndToEndProducerAndConsumerGroup(args) => args,
             BenchmarkKindCommand::Examples => {
                 print_examples();
                 std::process::exit(0);

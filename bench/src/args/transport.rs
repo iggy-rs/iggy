@@ -1,5 +1,5 @@
 use super::defaults::*;
-use super::props::BenchmarkTransportProps;
+use super::{output::BenchmarkOutputCommand, props::BenchmarkTransportProps};
 use clap::{Parser, Subcommand};
 use integration::test_server::Transport;
 use serde::{Serialize, Serializer};
@@ -54,6 +54,10 @@ impl BenchmarkTransportProps for BenchmarkTransportCommand {
             BenchmarkTransportCommand::Quic(args) => args,
         }
     }
+
+    fn output_command(&self) -> &Option<BenchmarkOutputCommand> {
+        self.inner().output_command()
+    }
 }
 
 #[derive(Parser, Debug, Clone)]
@@ -65,6 +69,10 @@ pub struct HttpArgs {
     /// Start stream id
     #[arg(long, default_value_t = DEFAULT_HTTP_START_STREAM_ID)]
     pub start_stream_id: NonZeroU32,
+
+    /// Optional output command, used to output results (charts, raw json data) to a directory
+    #[command(subcommand)]
+    pub output: Option<BenchmarkOutputCommand>,
 }
 
 impl BenchmarkTransportProps for HttpArgs {
@@ -87,6 +95,10 @@ impl BenchmarkTransportProps for HttpArgs {
     fn client_address(&self) -> &str {
         panic!("Setting client address for HTTP transport is not supported!")
     }
+
+    fn output_command(&self) -> &Option<BenchmarkOutputCommand> {
+        &self.output
+    }
 }
 
 #[derive(Parser, Debug, Clone)]
@@ -98,6 +110,10 @@ pub struct TcpArgs {
     /// Start stream id
     #[arg(long, default_value_t = DEFAULT_TCP_START_STREAM_ID)]
     pub start_stream_id: NonZeroU32,
+
+    /// Optional output command, used to output results (charts, raw json data) to a directory
+    #[command(subcommand)]
+    output: Option<BenchmarkOutputCommand>,
 }
 
 impl BenchmarkTransportProps for TcpArgs {
@@ -119,6 +135,10 @@ impl BenchmarkTransportProps for TcpArgs {
 
     fn client_address(&self) -> &str {
         panic!("Setting client address for TCP transport is not supported!")
+    }
+
+    fn output_command(&self) -> &Option<BenchmarkOutputCommand> {
+        &self.output
     }
 }
 
@@ -143,6 +163,10 @@ pub struct QuicArgs {
     /// Start stream id
     #[arg(long, default_value_t = DEFAULT_QUIC_START_STREAM_ID)]
     pub start_stream_id: NonZeroU32,
+
+    /// Optional output command, used to output results (charts, raw json data) to a directory
+    #[command(subcommand)]
+    pub output: Option<BenchmarkOutputCommand>,
 }
 
 impl BenchmarkTransportProps for QuicArgs {
@@ -164,5 +188,9 @@ impl BenchmarkTransportProps for QuicArgs {
 
     fn client_address(&self) -> &str {
         &self.client_address
+    }
+
+    fn output_command(&self) -> &Option<BenchmarkOutputCommand> {
+        &self.output
     }
 }

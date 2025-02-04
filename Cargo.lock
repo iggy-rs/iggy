@@ -316,6 +316,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "atomic-time"
+version = "0.1.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9622f5c6fb50377516c70f65159e70b25465409760c6bd6d4e581318bf704e83"
+dependencies = [
+ "once_cell",
+ "portable-atomic",
+]
+
+[[package]]
 name = "atomic-waker"
 version = "1.1.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -565,19 +575,21 @@ dependencies = [
 
 [[package]]
 name = "bench"
-version = "0.1.2"
+version = "0.2.0"
 dependencies = [
  "async-trait",
+ "atomic-time",
+ "bytes",
  "charming",
  "chrono",
  "clap",
  "figlet-rs",
  "futures",
  "hostname",
+ "human-repr",
  "iggy",
- "iggy-benchmark-report",
+ "iggy-bench-report",
  "integration",
- "mimalloc",
  "nonzero_lit",
  "serde",
  "tokio",
@@ -2057,6 +2069,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "df3b46402a9d5adb4c86a0cf463f42e19994e3ee891101b1841f30a545cb49a9"
 
 [[package]]
+name = "human-repr"
+version = "1.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f58b778a5761513caf593693f8951c97a5b610841e754788400f32102eefdff1"
+
+[[package]]
 name = "humantime"
 version = "2.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2405,14 +2423,15 @@ dependencies = [
 ]
 
 [[package]]
-name = "iggy-benchmark-report"
-version = "0.1.1"
+name = "iggy-bench-report"
+version = "0.2.0"
 dependencies = [
  "byte-unit",
  "charming",
  "colored",
  "derive-new",
  "derive_more",
+ "human-repr",
  "serde",
  "serde_json",
  "sysinfo",

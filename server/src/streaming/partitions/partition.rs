@@ -8,6 +8,7 @@ use crate::streaming::segments::segment::Segment;
 use crate::streaming::storage::SystemStorage;
 use dashmap::DashMap;
 use iggy::consumer::ConsumerKind;
+use iggy::models::stats::CacheMetrics;
 use iggy::utils::byte_size::IggyByteSize;
 use iggy::utils::duration::IggyDuration;
 use iggy::utils::expiry::IggyExpiry;
@@ -170,6 +171,22 @@ impl Partition {
         }
 
         partition
+    }
+    pub fn get_cache_metrics(&self) -> CacheMetrics {
+        if let Some(cache) = self.cache.as_ref() {
+            let cache_metrics = cache.get_metrics();
+            CacheMetrics {
+                hits: cache_metrics.hits,
+                misses: cache_metrics.misses,
+                hit_ratio: cache_metrics.hit_ratio,
+            }
+        } else {
+            CacheMetrics {
+                hits: 0,
+                misses: 0,
+                hit_ratio: 0.0,
+            }
+        }
     }
 }
 

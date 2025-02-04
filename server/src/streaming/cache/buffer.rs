@@ -2,9 +2,11 @@ use crate::streaming::local_sizeable::LocalSizeable;
 
 use super::memory_tracker::CacheMemoryTracker;
 use atone::Vc;
+use iggy::models::stats::CacheMetrics;
 use iggy::utils::byte_size::IggyByteSize;
 use std::fmt::Debug;
 use std::ops::Index;
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
 
 #[derive(Debug)]
@@ -12,6 +14,8 @@ pub struct SmartCache<T: LocalSizeable + Debug> {
     current_size: IggyByteSize,
     buffer: Vc<T>,
     memory_tracker: Arc<CacheMemoryTracker>,
+    hits: AtomicU64,
+    misses: AtomicU64,
 }
 
 impl<T> SmartCache<T>
@@ -27,6 +31,8 @@ where
             current_size,
             buffer,
             memory_tracker,
+            hits: AtomicU64::new(0),
+            misses: AtomicU64::new(0),
         }
     }
 
@@ -109,6 +115,31 @@ where
         self.buffer.extend(elements);
     }
 
+    pub fn get_metrics(&self) -> CacheMetrics {
+        let hits = self.hits.load(Ordering::Relaxed);
+        let misses = self.misses.load(Ordering::Relaxed);
+        let total = hits + misses;
+        let hit_ratio = if total > 0 {
+            hits as f32 / total as f32
+        } else {
+            0.0
+        };
+
+        CacheMetrics {
+            hits,
+            misses,
+            hit_ratio,
+        }
+    }
+
+    pub fn record_hit(&self) {
+        self.hits.fetch_add(1, Ordering::Relaxed);
+    }
+
+    pub fn record_miss(&self) {
+        self.misses.fetch_add(1, Ordering::Relaxed);
+    }
+
     pub fn push(&mut self, element: T) {
         let element_size = element.get_size_bytes();
         self.memory_tracker
@@ -121,7 +152,7 @@ where
     pub fn append(&mut self, element: T) {
         let element_size = element.get_size_bytes();
         self.memory_tracker
-             .increment_used_memory(element_size.as_bytes_u64());
+            .increment_used_memory(element_size.as_bytes_u64());
         self.current_size += element_size;
         self.buffer.push(element);
     }

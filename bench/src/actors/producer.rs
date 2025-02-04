@@ -1,6 +1,8 @@
+use crate::actors::utils::put_timestamp_in_first_message;
 use crate::analytics::metrics::individual::from_records;
 use crate::analytics::record::BenchmarkRecord;
 use crate::rate_limiter::RateLimiter;
+use human_repr::HumanCount;
 use iggy::client::MessageClient;
 use iggy::clients::client::IggyClient;
 use iggy::error::IggyError;
@@ -8,18 +10,19 @@ use iggy::messages::send_messages::{Message, Partitioning};
 use iggy::utils::byte_size::IggyByteSize;
 use iggy::utils::duration::IggyDuration;
 use iggy::utils::sizeable::Sizeable;
-use iggy_benchmark_report::actor_kind::ActorKind;
-use iggy_benchmark_report::benchmark_kind::BenchmarkKind;
-use iggy_benchmark_report::individual_metrics::BenchmarkIndividualMetrics;
+use iggy_bench_report::actor_kind::ActorKind;
+use iggy_bench_report::benchmark_kind::BenchmarkKind;
+use iggy_bench_report::individual_metrics::BenchmarkIndividualMetrics;
 use integration::test_server::{login_root, ClientFactory};
 use std::str::FromStr;
 use std::sync::Arc;
 use std::time::Duration;
 use tokio::time::Instant;
-use tracing::{error, info};
+use tracing::info;
 
 pub struct Producer {
     client_factory: Arc<dyn ClientFactory>,
+    benchmark_kind: BenchmarkKind,
     producer_id: u32,
     stream_id: u32,
     partitions_count: u32,
@@ -30,12 +33,14 @@ pub struct Producer {
     sampling_time: IggyDuration,
     moving_average_window: u32,
     rate_limiter: Option<RateLimiter>,
+    put_timestamp_in_first_message: bool,
 }
 
 impl Producer {
     #[allow(clippy::too_many_arguments)]
     pub fn new(
         client_factory: Arc<dyn ClientFactory>,
+        benchmark_kind: BenchmarkKind,
         producer_id: u32,
         stream_id: u32,
         partitions_count: u32,
@@ -46,9 +51,11 @@ impl Producer {
         sampling_time: IggyDuration,
         moving_average_window: u32,
         rate_limiter: Option<RateLimiter>,
+        put_timestamp_in_first_message: bool,
     ) -> Self {
         Producer {
             client_factory,
+            benchmark_kind,
             producer_id,
             stream_id,
             partitions_count,
@@ -59,21 +66,8 @@ impl Producer {
             sampling_time,
             moving_average_window,
             rate_limiter,
+            put_timestamp_in_first_message,
         }
-    }
-
-    fn generate_messages(messages_per_batch: u32, message_size: u32) -> (u64, u64, Vec<Message>) {
-        let payload = Self::create_payload(message_size);
-        let mut messages = Vec::with_capacity(messages_per_batch as usize);
-        let mut batch_user_data_bytes = 0;
-        let mut batch_total_bytes = 0;
-        for _ in 0..messages_per_batch {
-            let message = Message::from_str(&payload).unwrap();
-            batch_user_data_bytes += message.length as u64;
-            batch_total_bytes += message.get_size_bytes().as_bytes_u64();
-            messages.push(message);
-        }
-        (batch_user_data_bytes, batch_total_bytes, messages)
     }
 
     pub async fn run(&self) -> Result<BenchmarkIndividualMetrics, IggyError> {
@@ -92,6 +86,8 @@ impl Producer {
             "Producer #{} → preparing the test messages...",
             self.producer_id
         );
+        let payload = Self::create_payload(message_size);
+
         let stream_id = self.stream_id.try_into()?;
         let topic_id = topic_id.try_into()?;
         let partitioning = match partitions_count {
@@ -108,29 +104,47 @@ impl Producer {
             );
             let warmup_end = Instant::now() + self.warmup_time.get_duration();
             while Instant::now() < warmup_end {
-                let (_, _, messages) = Self::generate_messages(messages_per_batch, message_size);
+                if self.put_timestamp_in_first_message {
+                    put_timestamp_in_first_message(&mut messages[0]);
+                }
                 client
-                    .send_messages(&stream_id, &topic_id, &partitioning, messages)
+                    .send_messages(&stream_id, &topic_id, &partitioning, &mut messages)
                     .await?;
             }
         }
         */
 
         info!(
-            "Producer #{} → sending {} messages in {} batches of {} messages...",
-            self.producer_id, total_messages, message_batches, messages_per_batch
+            "Producer #{} → sending {} messages in {} batches of {} messages to stream {} with {} partitions...",
+            self.producer_id,
+            total_messages.human_count_bare(),
+            message_batches.human_count_bare(),
+            messages_per_batch.human_count_bare(),
+            stream_id,
+            partitions_count
         );
 
         let start_timestamp = Instant::now();
         let mut latencies: Vec<Duration> = Vec::with_capacity(message_batches as usize);
         let mut records = Vec::with_capacity(message_batches as usize);
         for i in 1..=message_batches {
+            let mut batch_user_data_bytes = 0;
+            let mut batch_total_bytes = 1;
+            let mut messages = Vec::with_capacity(messages_per_batch as usize);
+            for _ in 0..messages_per_batch {
+                let message = Message::from_str(&payload).unwrap();
+                batch_user_data_bytes += message.length as u64;
+                batch_total_bytes += message.get_size_bytes().as_bytes_u64();
+                messages.push(message);
+            }
+            let batch_user_data_bytes = batch_user_data_bytes;
+            let batch_total_bytes = batch_total_bytes;
             // Apply rate limiting if configured
-
-            let (batch_user_data_bytes, batch_total_bytes, messages) =
-                Self::generate_messages(messages_per_batch, message_size);
             if let Some(limiter) = &self.rate_limiter {
-                limiter.wait_and_consume(batch_total_bytes).await;
+                limiter.throttle(batch_total_bytes).await;
+            }
+            if self.put_timestamp_in_first_message {
+                put_timestamp_in_first_message(&mut messages[0]);
             }
             let before_send = Instant::now();
             client
@@ -155,14 +169,14 @@ impl Producer {
         }
         let metrics = from_records(
             records,
-            BenchmarkKind::Send,
+            self.benchmark_kind,
             ActorKind::Producer,
             self.producer_id,
             self.sampling_time,
             self.moving_average_window,
         );
 
-        Self::log_producer_statistics(
+        Self::log_statistics(
             self.producer_id,
             total_messages,
             message_batches,
@@ -183,31 +197,32 @@ impl Producer {
         payload
     }
 
-    fn log_producer_statistics(
+    fn log_statistics(
         producer_id: u32,
         total_messages: u64,
         message_batches: u32,
         messages_per_batch: u32,
-        stats: &BenchmarkIndividualMetrics,
+        metrics: &BenchmarkIndividualMetrics,
     ) {
         info!(
             "Producer #{} → sent {} messages in {} batches of {} messages in {:.2} s, total size: {}, average throughput: {:.2} MB/s, \
-    p50 latency: {:.2} ms, p90 latency: {:.2} ms, p95 latency: {:.2} ms, p99 latency: {:.2} ms, p999 latency: {:.2} ms, \
+    p50 latency: {:.2} ms, p90 latency: {:.2} ms, p95 latency: {:.2} ms, p99 latency: {:.2} ms, p999 latency: {:.2} ms, p9999 latency: {:.2} ms, \
     average latency: {:.2} ms, median latency: {:.2} ms",
             producer_id,
             total_messages,
             message_batches,
             messages_per_batch,
-            stats.summary.total_time_secs,
-            IggyByteSize::from(stats.summary.total_user_data_bytes),
-            stats.summary.throughput_megabytes_per_second,
-            stats.summary.p50_latency_ms,
-            stats.summary.p90_latency_ms,
-            stats.summary.p95_latency_ms,
-            stats.summary.p99_latency_ms,
-            stats.summary.p999_latency_ms,
-            stats.summary.avg_latency_ms,
-            stats.summary.median_latency_ms
+            metrics.summary.total_time_secs,
+            IggyByteSize::from(metrics.summary.total_user_data_bytes),
+            metrics.summary.throughput_megabytes_per_second,
+            metrics.summary.p50_latency_ms,
+            metrics.summary.p90_latency_ms,
+            metrics.summary.p95_latency_ms,
+            metrics.summary.p99_latency_ms,
+            metrics.summary.p999_latency_ms,
+            metrics.summary.p9999_latency_ms,
+            metrics.summary.avg_latency_ms,
+            metrics.summary.median_latency_ms
         );
     }
 }

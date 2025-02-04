@@ -2,7 +2,7 @@ use crate::analytics::time_series::{
     calculator::TimeSeriesCalculator,
     processors::{moving_average::MovingAverageProcessor, TimeSeriesProcessor},
 };
-use iggy_benchmark_report::{
+use iggy_bench_report::{
     actor_kind::ActorKind, group_metrics::BenchmarkGroupMetrics,
     group_metrics_kind::GroupMetricsKind, group_metrics_summary::BenchmarkGroupMetricsSummary,
     individual_metrics::BenchmarkIndividualMetrics,
@@ -59,6 +59,11 @@ pub fn from_individual_metrics(
         stats.iter().map(|r| r.summary.p99_latency_ms).sum::<f64>() / count;
     let average_p999_latency_ms: f64 =
         stats.iter().map(|r| r.summary.p999_latency_ms).sum::<f64>() / count;
+    let average_p9999_latency_ms: f64 = stats
+        .iter()
+        .map(|r| r.summary.p9999_latency_ms)
+        .sum::<f64>()
+        / count;
     let average_avg_latency_ms =
         stats.iter().map(|r| r.summary.avg_latency_ms).sum::<f64>() / count;
     let average_median_latency_ms = stats
@@ -70,6 +75,7 @@ pub fn from_individual_metrics(
     let kind = match stats.iter().next().unwrap().summary.actor_kind {
         ActorKind::Producer => GroupMetricsKind::Producers,
         ActorKind::Consumer => GroupMetricsKind::Consumers,
+        ActorKind::ProducingConsumer => GroupMetricsKind::ProducingConsumers,
     };
 
     let calculator = TimeSeriesCalculator::new();
@@ -112,6 +118,7 @@ pub fn from_individual_metrics(
         average_p95_latency_ms,
         average_p99_latency_ms,
         average_p999_latency_ms,
+        average_p9999_latency_ms,
         average_latency_ms: average_avg_latency_ms,
         average_median_latency_ms,
     };

@@ -2,11 +2,12 @@ use crate::analytics::report_builder::BenchmarkReportBuilder;
 use crate::args::common::IggyBenchArgs;
 use crate::benchmarks::benchmark::Benchmarkable;
 use crate::plot::{plot_chart, ChartType};
+use crate::utils::collect_server_logs_and_save_to_file;
 use crate::utils::server_starter::start_server_if_needed;
 use futures::future::select_all;
 use iggy::error::IggyError;
-use iggy_benchmark_report::hardware::BenchmarkHardware;
-use iggy_benchmark_report::params::BenchmarkParams;
+use iggy_bench_report::hardware::BenchmarkHardware;
+use iggy_bench_report::params::BenchmarkParams;
 use integration::test_server::TestServer;
 use std::path::Path;
 use std::time::Duration;
@@ -28,7 +29,7 @@ impl BenchmarkRunner {
 
     pub async fn run(&mut self) -> Result<(), IggyError> {
         let mut args = self.args.take().unwrap();
-        let should_open_charts = args.open_charts;
+        let should_open_charts = args.open_charts();
         self.test_server = start_server_if_needed(&mut args).await;
 
         let transport = args.transport();
@@ -56,6 +57,8 @@ impl BenchmarkRunner {
         let hardware =
             BenchmarkHardware::get_system_info_with_identifier(benchmark.args().identifier());
         let params = BenchmarkParams::from(benchmark.args());
+        let transport = params.transport;
+        let server_addr = params.server_address.clone();
 
         let report = BenchmarkReportBuilder::build(
             hardware,
@@ -80,6 +83,16 @@ impl BenchmarkRunner {
 
             // Dump the report to JSON
             report.dump_to_json(&full_output_path);
+
+            if let Err(e) = collect_server_logs_and_save_to_file(
+                &transport,
+                &server_addr,
+                Path::new(&full_output_path),
+            )
+            .await
+            {
+                error!("Failed to collect server logs: {e}");
+            }
 
             // Generate the plots
             plot_chart(

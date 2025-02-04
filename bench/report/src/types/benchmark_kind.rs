@@ -17,16 +17,28 @@ use serde::{Deserialize, Serialize};
 )]
 pub enum BenchmarkKind {
     #[default]
-    #[display("Send")]
-    #[serde(rename = "send")]
-    Send,
-    #[display("Poll")]
-    #[serde(rename = "poll")]
-    Poll,
-    #[display("Send And Poll")]
-    #[serde(rename = "send_and_poll")]
-    SendAndPoll,
-    #[display("Consumer Group Poll")]
-    #[serde(rename = "consumer_group_poll")]
-    ConsumerGroupPoll,
+    #[display("Pinned Producer")]
+    #[serde(rename = "pinned_producer")]
+    PinnedProducer,
+    #[display("Pinned Consumer")]
+    #[serde(rename = "pinned_consumer")]
+    PinnedConsumer,
+    #[display("Pinned Producer And Consumer")]
+    #[serde(rename = "pinned_producer_and_consumer")]
+    PinnedProducerAndConsumer,
+    #[display("Balanced Producer")]
+    #[serde(rename = "balanced_producer")]
+    BalancedProducer,
+    #[display("Balanced Consumer Group")]
+    #[serde(rename = "balanced_consumer_group")]
+    BalancedConsumerGroup,
+    #[display("Balanced Producer And Consumer Group")]
+    #[serde(rename = "balanced_producer_and_consumer_group")]
+    BalancedProducerAndConsumerGroup,
+    #[display("End To End Producing Consumer")]
+    #[serde(rename = "end_to_end_producing_consumer")]
+    EndToEndProducingConsumer,
+    // #[display("End To End Producer And Consumer Group")]
+    // #[serde(rename = "end_to_end_producer_and_consumer_group")]
+    // EndToEndProducerAndConsumerGroup,
 }

@@ -1,4 +1,3 @@
-use iggy::messages::poll_messages::PollingKind;
 use nonzero_lit::u32;
 use std::num::NonZeroU32;
 
@@ -14,29 +13,25 @@ pub const DEFAULT_QUIC_SERVER_NAME: &str = "localhost";
 pub const DEFAULT_QUIC_VALIDATE_CERTIFICATE: bool = false;
 pub const DEFAULT_QUIC_START_STREAM_ID: NonZeroU32 = u32!(2000000);
 
-pub const DEFAULT_DISABLE_PARALLEL_PRODUCER_STREAMS: bool = false;
-pub const DEFAULT_DISABLE_PARALLEL_CONSUMER_STREAMS: bool = false;
-
 pub const DEFAULT_MESSAGES_PER_BATCH: NonZeroU32 = u32!(1000);
 pub const DEFAULT_MESSAGE_BATCHES: NonZeroU32 = u32!(1000);
 pub const DEFAULT_MESSAGE_SIZE: NonZeroU32 = u32!(1000);
 
-pub const DEFAULT_NUMBER_OF_STREAMS: NonZeroU32 = u32!(10);
-pub const DEFAULT_NUMBER_OF_STREAMS_CONSUMER_GROUP: NonZeroU32 = u32!(1);
-pub const DEFAULT_NUMBER_OF_PARTITIONS: NonZeroU32 = u32!(1);
+pub const DEFAULT_PINNED_NUMBER_OF_STREAMS: NonZeroU32 = u32!(8);
+pub const DEFAULT_BALANCED_NUMBER_OF_STREAMS: NonZeroU32 = u32!(1);
 
-pub const DEFAULT_NUMBER_OF_CONSUMERS: NonZeroU32 = u32!(10);
+pub const DEFAULT_PINNED_NUMBER_OF_PARTITIONS: NonZeroU32 = u32!(1);
+pub const DEFAULT_BALANCED_NUMBER_OF_PARTITIONS: NonZeroU32 = u32!(24);
+
+pub const DEFAULT_NUMBER_OF_CONSUMERS: NonZeroU32 = u32!(8);
 pub const DEFAULT_NUMBER_OF_CONSUMER_GROUPS: NonZeroU32 = u32!(1);
-pub const DEFAULT_NUMBER_OF_PRODUCERS: NonZeroU32 = u32!(10);
-
-pub const DEFAULT_POLLING_KIND_CG_POLL: PollingKind = PollingKind::Next;
+pub const DEFAULT_NUMBER_OF_PRODUCERS: NonZeroU32 = u32!(8);
 
 pub const DEFAULT_PERFORM_CLEANUP: bool = false;
-pub const DEFAULT_SERVER_SYSTEM_PATH: &str = "local_data";
 pub const DEFAULT_SERVER_STDOUT_VISIBILITY: bool = false;
 
-pub const DEFAULT_WARMUP_TIME: &str = "0 s";
+pub const DEFAULT_WARMUP_TIME: &str = "0s";
 pub const DEFAULT_SKIP_SERVER_START: bool = false;
 
-pub const DEFAULT_SAMPLING_TIME: &str = "10 ms";
+pub const DEFAULT_SAMPLING_TIME: &str = "10ms";
 pub const DEFAULT_MOVING_AVERAGE_WINDOW: u32 = 20;

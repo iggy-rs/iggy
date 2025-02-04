@@ -360,11 +360,11 @@ impl SegmentStorage for FileSegmentStorage {
                 // error!("reading message_offset: {}, for start_offset: {}, current_msg_count: {}/{}",
                 // message_offset, start_offset, current_msg_count, msg_count);
                 //if message_offset >= start_offset {
-                    if !start_slice_set {
-                        start_slice_pos = position - 8;
-                        start_slice_set = true;
-                    }
-                    current_msg_count += 1;
+                if !start_slice_set {
+                    start_slice_pos = position - 8;
+                    start_slice_set = true;
+                }
+                current_msg_count += 1;
                 //}
                 position += length;
                 end_slice_pos = position;

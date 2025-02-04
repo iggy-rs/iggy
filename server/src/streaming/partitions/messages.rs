@@ -314,8 +314,10 @@ impl Partition {
         );
 
         if start_offset >= first_buffered_offset {
+            cache.record_hit();
             return Some(self.load_messages_from_cache(start_offset, end_offset));
         }
+        cache.record_miss();
         None
     }
 

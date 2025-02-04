@@ -1,4 +1,3 @@
-pub mod consumer_group_poll;
-pub mod poll;
-pub mod send;
-pub mod send_and_poll;
+pub mod balanced;
+pub mod end_to_end;
+pub mod pinned;

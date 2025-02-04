@@ -9,6 +9,9 @@ pub enum ActorKind {
     #[display("Consumer")]
     #[serde(rename = "consumer")]
     Consumer,
+    #[display("Producing Consumer")]
+    #[serde(rename = "producing_consumer")]
+    ProducingConsumer,
 }
 
 impl ActorKind {
@@ -16,6 +19,7 @@ impl ActorKind {
         match self {
             ActorKind::Producer => "Producers",
             ActorKind::Consumer => "Consumers",
+            ActorKind::ProducingConsumer => "Producing Consumers",
         }
     }
 }

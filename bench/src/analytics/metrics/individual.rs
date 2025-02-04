@@ -3,11 +3,11 @@ use crate::analytics::time_series::calculator::TimeSeriesCalculator;
 use crate::analytics::time_series::processors::moving_average::MovingAverageProcessor;
 use crate::analytics::time_series::processors::TimeSeriesProcessor;
 use iggy::utils::duration::IggyDuration;
-use iggy_benchmark_report::actor_kind::ActorKind;
-use iggy_benchmark_report::benchmark_kind::BenchmarkKind;
-use iggy_benchmark_report::individual_metrics::BenchmarkIndividualMetrics;
-use iggy_benchmark_report::individual_metrics_summary::BenchmarkIndividualMetricsSummary;
-use iggy_benchmark_report::time_series::TimeSeries;
+use iggy_bench_report::actor_kind::ActorKind;
+use iggy_bench_report::benchmark_kind::BenchmarkKind;
+use iggy_bench_report::individual_metrics::BenchmarkIndividualMetrics;
+use iggy_bench_report::individual_metrics_summary::BenchmarkIndividualMetricsSummary;
+use iggy_bench_report::time_series::TimeSeries;
 
 pub fn from_records(
     records: Vec<BenchmarkRecord>,
@@ -34,6 +34,7 @@ pub fn from_records(
                 p95_latency_ms: 0.0,
                 p99_latency_ms: 0.0,
                 p999_latency_ms: 0.0,
+                p9999_latency_ms: 0.0,
                 avg_latency_ms: 0.0,
                 median_latency_ms: 0.0,
             },
@@ -72,6 +73,7 @@ pub fn from_records(
     let p95_latency_ms = calculate_percentile(&latencies_ms, 95.0);
     let p99_latency_ms = calculate_percentile(&latencies_ms, 99.0);
     let p999_latency_ms = calculate_percentile(&latencies_ms, 99.9);
+    let p9999_latency_ms = calculate_percentile(&latencies_ms, 99.99);
 
     let avg_latency_ms = latencies_ms.iter().sum::<f64>() / latencies_ms.len() as f64;
     let len = latencies_ms.len() / 2;
@@ -109,6 +111,7 @@ pub fn from_records(
             p95_latency_ms,
             p99_latency_ms,
             p999_latency_ms,
+            p9999_latency_ms,
             avg_latency_ms,
             median_latency_ms,
         },

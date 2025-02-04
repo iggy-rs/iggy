@@ -38,6 +38,7 @@ impl Segment {
         }
 
         let end_offset = offset + (count - 1) as u64;
+
         // In case that the partition messages buffer is disabled, we need to check the unsaved messages buffer
         if self.unsaved_messages.is_none() {
             return self.load_messages_from_disk(offset, end_offset).await;
@@ -48,23 +49,37 @@ impl Segment {
             return self.load_messages_from_disk(offset, end_offset).await;
         }
 
-        let first_offset = batch_accumulator.batch_base_offset();
-        if end_offset < first_offset {
-            return self.load_messages_from_disk(offset, end_offset).await;
-        }
+        let first_buffer_offset = batch_accumulator.batch_base_offset();
+        let last_buffer_offset = batch_accumulator.batch_max_offset();
 
-        let last_offset = batch_accumulator.batch_max_offset();
-        if offset >= first_offset && end_offset <= last_offset {
+        // Case 1: All messages are in messages_require_to_save buffer
+        if offset >= first_buffer_offset && end_offset <= last_buffer_offset {
             return Ok(self.load_messages_from_unsaved_buffer(offset, end_offset));
         }
 
-        // Can this be somehow improved? maybe with chain iterators
-        let mut messages = self.load_messages_from_disk(offset, end_offset).await.with_error_context(|_| format!(
-            "STREAMING_SEGMENT - failed to load messages from disk, stream ID: {}, topic ID: {}, partition ID: {}, start offset: {}, end offset :{}",
-            self.stream_id, self.topic_id, self.partition_id, offset, end_offset,
+        // Case 2: All messages are on disk
+        if end_offset < first_buffer_offset {
+            return self.load_messages_from_disk(offset, end_offset).await;
+        }
+
+        // Case 3: Messages span disk and messages_require_to_save buffer boundary
+        let mut messages = Vec::new();
+
+        // Load messages from disk up to the messages_require_to_save buffer boundary
+        if offset < first_buffer_offset {
+            let disk_messages = self
+                .load_messages_from_disk(offset, first_buffer_offset - 1)
+                .await.with_error_context(|e| format!(
+            "STREAMING_SEGMENT - failed to load messages from disk, stream ID: {}, topic ID: {}, partition ID: {}, start offset: {}, end offset :{}, error: {}",
+            self.stream_id, self.topic_id, self.partition_id, offset, first_buffer_offset - 1, e
         ))?;
-        let mut buffered_messages = self.load_messages_from_unsaved_buffer(offset, last_offset);
-        messages.append(&mut buffered_messages);
+            messages.extend(disk_messages);
+        }
+
+        // Load remaining messages from messages_require_to_save buffer
+        let buffer_start = std::cmp::max(offset, first_buffer_offset);
+        let buffer_messages = self.load_messages_from_unsaved_buffer(buffer_start, end_offset);
+        messages.extend(buffer_messages);
 
         Ok(messages)
     }
@@ -212,7 +227,10 @@ impl Segment {
                 self.partition_id,
             ));
         }
-        let messages_cap = self.config.partition.messages_required_to_save as usize;
+        let messages_cap = std::cmp::max(
+            self.config.partition.messages_required_to_save as usize,
+            batch.len(),
+        );
         let batch_base_offset = batch.first().unwrap().offset;
         let batch_accumulator = self
             .unsaved_messages

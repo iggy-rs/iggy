@@ -232,7 +232,7 @@ impl Consumer {
                 if should_warn {
                     warn!(
                     "Consumer #{} → Messages are empty for offset: {}, received {} of {} batches, retrying... ({} warnings skipped)",
-                    self.consumer_id, offset, self.batches_left_to_receive.load(Ordering::Acquire), total_batches_to_receive,
+                    self.consumer_id, offset, total_batches_to_receive - self.batches_left_to_receive.load(Ordering::Acquire), total_batches_to_receive,
                         skipped_warnings_count
                     );
                     last_warning_time = Some(Instant::now());
@@ -244,7 +244,12 @@ impl Consumer {
             }
 
             if polled_messages.messages.len() != messages_per_batch as usize {
-                warn!(
+                let should_warn = last_warning_time
+                    .map(|t| t.elapsed() >= Duration::from_secs(1))
+                    .unwrap_or(true);
+
+                if should_warn {
+                    warn!(
                         "Consumer #{} → expected {} messages, but got {} messages ({} batches remaining), retrying... ({} warnings skipped)",
                         self.consumer_id,
                         messages_per_batch,
@@ -252,6 +257,11 @@ impl Consumer {
                         self.batches_left_to_receive.load(Ordering::Acquire),
                         skipped_warnings_count
                     );
+                    last_warning_time = Some(Instant::now());
+                    skipped_warnings_count = 0;
+                } else {
+                    skipped_warnings_count += 1;
+                }
 
                 continue;
             }

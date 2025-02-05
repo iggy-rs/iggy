@@ -42,12 +42,13 @@ impl BenchmarkParams {
             }
             BenchmarkKind::EndToEndProducingConsumer => {
                 format!("{} producing consumers", self.producers)
-            } // BenchmarkKind::EndToEndProducerAndConsumerGroup => {
-              //     format!(
-              //         "{} producers/{} consumers/{} consumer groups",
-              //         self.producers, self.consumers, self.consumer_groups
-              //     )
-              // }
+            }
+            BenchmarkKind::EndToEndProducingConsumerGroup => {
+                format!(
+                    "{} producing consumers/{} consumer groups",
+                    self.producers, self.consumer_groups
+                )
+            }
         }
     }
 }

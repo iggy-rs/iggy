@@ -16,10 +16,6 @@ pub struct BalancedConsumerGroupArgs {
     #[arg(long, default_value_t = DEFAULT_BALANCED_NUMBER_OF_STREAMS)]
     pub streams: NonZeroU32,
 
-    /// Number of partitions
-    #[arg(long, default_value_t = DEFAULT_BALANCED_NUMBER_OF_PARTITIONS)]
-    pub partitions: NonZeroU32,
-
     /// Number of consumers
     #[arg(long, default_value_t = DEFAULT_NUMBER_OF_CONSUMERS)]
     pub consumers: NonZeroU32,

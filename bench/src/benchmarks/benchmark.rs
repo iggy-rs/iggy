@@ -20,6 +20,7 @@ use super::producer_and_consumer_benchmark::ProducerAndConsumerBenchmark;
 use super::producer_and_consumer_group_benchmark::ProducerAndConsumerGroupBenchmark;
 use super::producer_benchmark::ProducerBenchmark;
 use super::producing_consumer_benchmark::EndToEndProducingConsumerBenchmark;
+use super::producing_consumer_group_benchmark::EndToEndProducingConsumerGroupBenchmark;
 
 pub type BenchmarkFutures = Result<
     Vec<Pin<Box<dyn Future<Output = Result<BenchmarkIndividualMetrics, IggyError>> + Send>>>,
@@ -52,13 +53,9 @@ impl From<IggyBenchArgs> for Box<dyn Benchmarkable> {
             BenchmarkKindCommand::EndToEndProducingConsumer(_) => Box::new(
                 EndToEndProducingConsumerBenchmark::new(Arc::new(args), client_factory),
             ),
-            // not yet implemented
-            // BenchmarkKindCommand::EndToEndProducerAndConsumerGroup(_) => {
-            //     Box::new(EndToEndProducerAndConsumerGroupBenchmark::new(
-            //         Arc::new(args),
-            //         client_factory,
-            //     ))
-            // }
+            BenchmarkKindCommand::EndToEndProducingConsumerGroup(_) => Box::new(
+                EndToEndProducingConsumerGroupBenchmark::new(Arc::new(args), client_factory),
+            ),
             _ => todo!(),
         }
     }

@@ -3,26 +3,27 @@ const EXAMPLES: &str = r#"EXAMPLES:
 1) Pinned Mode Benchmarking:
 
     Run benchmarks with pinned producers and consumers. This mode pins specific producers
-    and consumers to specific streams and partitions:
+    and consumers to specific streams and partitions (one to one):
 
-    $ cargo r --bin iggy-bench pinned-producer --streams 10 --producers 10 tcp
-    $ cargo r --bin iggy-bench pinned-consumer --streams 10 --consumers 10 tcp
-    $ cargo r --bin iggy-bench pinned-producer-and-consumer --streams 10 --producers 10 --consumers 10 tcp
+    $ cargo r -r --bin iggy-bench -- pinned-producer --streams 10 --producers 10 tcp
+    $ cargo r -r --bin iggy-bench -- pinned-consumer --streams 10 --consumers 10 tcp
+    $ cargo r -r --bin iggy-bench -- pinned-producer-and-consumer --streams 10 --producers 10 --consumers 10 tcp
 
 2) Balanced Mode Benchmarking:
 
     Run benchmarks with balanced distribution of producers and consumers. This mode
     automatically balances the load across streams and consumer groups:
 
-    $ cargo r --bin iggy-bench balanced-producer --partitions 10 --producers 5 tcp
-    $ cargo r --bin iggy-bench balanced-consumer-group --consumers 5 tcp
-    $ cargo r --bin iggy-bench balanced-producer-and-consumer-group --partitions 2 --producers 5 --consumers 5 tcp
+    $ cargo r -r --bin iggy-bench -- balanced-producer --partitions 24 --producers 6 tcp
+    $ cargo r -r --bin iggy-bench -- balanced-consumer-group --consumers 6 tcp
+    $ cargo r -r --bin iggy-bench -- balanced-producer-and-consumer-group --partitions 24 --producers 6 --consumers 6 tcp
 
 3) End-to-End Benchmarking:
 
     Run end-to-end benchmarks that measure performance for a producer that is also a consumer:
 
-    $ cargo r --bin iggy-bench end-to-end-producing-consumer --producers 5 --consumers 5 tcp
+    $ cargo r -r --bin iggy-bench -- end-to-end-producing-consumer --producers 12 --streams 12 tcp
+    $ cargo r -r --bin iggy-bench -- end-to-end-producing-consumer-group --partitions 24 --producers 6 tcp
 
 4) Advanced Configuration:
 
@@ -32,12 +33,13 @@ const EXAMPLES: &str = r#"EXAMPLES:
     --messages-per-batch (-p): Number of messages per batch [default: 1000]
     --message-batches (-b): Total number of batches [default: 1000]
     --message-size (-m): Message size in bytes [default: 1000]
+    --start-stream-id (-S): Start stream ID [default: 1]
     --rate-limit (-r): Optional throughput limit per producer (e.g., "50KB/s", "10MB/s")
     --warmup-time (-w): Warmup duration [default: 0s]
     --sampling-time (-t): Metrics sampling interval [default: 10ms]
     --moving-average-window (-W): Window size for moving average [default: 20]
     --cleanup: Remove server data after benchmark
-    --verbose (-v): Show server output
+    --verbose (-v): Show server output (only applicable for local server)
 
     Benchmark-specific options (after the benchmark command):
     --streams (-s): Number of streams
@@ -65,26 +67,58 @@ const EXAMPLES: &str = r#"EXAMPLES:
 
     To benchmark a remote server, specify the server address in the transport subcommand:
 
-    $ cargo r --bin iggy-bench pinned-producer \
+    $ cargo r -r --bin iggy-bench -- pinned-producer \
         --streams 5 --producers 5 \
         tcp --server-address 192.168.1.100:8090
 
-6) Help and Documentation:
+6) Output Data and Results:
+
+    The benchmark tool can store detailed results for analysis and comparison:
+
+    # Basic result storage:
+    $ cargo r -r --bin iggy-bench -- pinned-producer --streams 10 --producers 10 tcp \
+        output --output-dir ./results
+
+    # Organized benchmarking with metadata:
+    $ cargo r -r --bin iggy-bench -- balanced-producer --partitions 24 --producers 6 tcp \
+        output \
+        --output-dir performance_results \
+        --identifier "prod-test-$(date +%Y%m%d)" \
+        --remark "production-config" \
+        --gitref "$(git rev-parse --short HEAD)" \
+        --gitref-date "$(git show -s --format=%cI HEAD)"
+
+    # Quick result visualization:
+    $ cargo r -r --bin iggy-bench -- end-to-end-producing-consumer --producers 12 --streams 12 tcp \
+        output \
+        --output-dir performance_results \
+        --open-charts
+
+    Output configuration options:
+    --output-dir (-o)  : Directory for storing results (required for output)
+    --identifier       : Benchmark run ID (defaults to hostname)
+    --remark           : Additional context (e.g., "production-config")
+    --extra-info       : Custom metadata for future analysis
+    --gitref           : Git reference for version tracking
+    --gitref-date      : Git reference date (merge/commit date)
+    --open-charts      : Auto-open result charts in browser
+
+7) Help and Documentation:
 
     For more details on available options:
 
     # General help
-    $ cargo r --bin iggy-bench --help
+    $ cargo r -r --bin iggy-bench -- --help
 
     # Help for specific benchmark mode
-    $ cargo r --bin iggy-bench pinned-producer --help
-    $ cargo r --bin iggy-bench balanced-consumer-group --help
-    $ cargo r --bin iggy-bench end-to-end-producing-consumer --help
+    $ cargo r -r --bin iggy-bench -- pinned-producer --help
+    $ cargo r -r --bin iggy-bench -- balanced-consumer-group --help
+    $ cargo r -r --bin iggy-bench -- end-to-end-producing-consumer --help
 
     # Help for transport options
-    $ cargo r --bin iggy-bench pinned-producer tcp --help
-    $ cargo r --bin iggy-bench balanced-producer http --help
-    $ cargo r --bin iggy-bench end-to-end-producing-consumer quic --help
+    $ cargo r -r --bin iggy-bench -- pinned-producer tcp --help
+    $ cargo r -r --bin iggy-bench -- balanced-producer http --help
+    $ cargo r -r --bin iggy-bench -- end-to-end-producing-consumer quic --help
 
 "#;
 

@@ -23,7 +23,6 @@ pub trait BenchmarkTransportProps {
     fn transport(&self) -> &Transport;
     fn server_address(&self) -> &str;
     fn client_address(&self) -> &str;
-    fn start_stream_id(&self) -> u32;
     fn validate_certificate(&self) -> bool;
     fn output_command(&self) -> &Option<BenchmarkOutputCommand>;
     fn inner(&self) -> &dyn BenchmarkTransportProps

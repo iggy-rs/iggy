@@ -38,7 +38,6 @@ impl BenchmarkRunner {
 
         let mut benchmark: Box<dyn Benchmarkable> = args.into();
         let mut join_handles = benchmark.run().await?;
-        info!("Benchmarking finished");
 
         let mut individual_metrics = Vec::new();
 

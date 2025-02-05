@@ -1,7 +1,8 @@
 use super::examples::print_examples;
 use super::kinds::balanced::producer::BalancedProducerArgs;
 use super::kinds::balanced::producer_and_consumer_group::BalancedProducerAndConsumerGroupArgs;
-use super::kinds::end_to_end::producer_and_consumer::EndToEndProducingConsumerArgs;
+use super::kinds::end_to_end::producing_consumer::EndToEndProducingConsumerArgs;
+use super::kinds::end_to_end::producing_consumer_group::EndToEndProducingConsumerGroupArgs;
 use super::props::BenchmarkKindProps;
 use super::transport::BenchmarkTransportCommand;
 use crate::args::kinds::balanced::consumer_group::BalancedConsumerGroupArgs;
@@ -66,8 +67,15 @@ pub enum BenchmarkKindCommand {
         verbatim_doc_comment
     )]
     EndToEndProducingConsumer(EndToEndProducingConsumerArgs),
-    // EndToEndProducerAndConsumerGroup(EndToEndProducerAndConsumerGroupArgs),
-    /// Prints examples
+
+    #[command(
+        about = "N producing consumers assigned to M consumer groups sending and polling to/from K streams",
+        visible_alias = "e2ecg",
+        verbatim_doc_comment
+    )]
+    EndToEndProducingConsumerGroup(EndToEndProducingConsumerGroupArgs),
+
+    #[command(about = "Print examples", visible_alias = "e", verbatim_doc_comment)]
     Examples,
 }
 
@@ -87,9 +95,9 @@ impl BenchmarkKindCommand {
             BenchmarkKindCommand::EndToEndProducingConsumer(_) => {
                 BenchmarkKind::EndToEndProducingConsumer
             }
-            // BenchmarkKindCommand::EndToEndProducerAndConsumerGroup(_) => {
-            //     BenchmarkKind::EndToEndProducerAndConsumerGroup
-            // }
+            BenchmarkKindCommand::EndToEndProducingConsumerGroup(_) => {
+                BenchmarkKind::EndToEndProducingConsumerGroup
+            }
             BenchmarkKindCommand::Examples => {
                 print_examples();
                 std::process::exit(0);
@@ -136,7 +144,7 @@ impl BenchmarkKindProps for BenchmarkKindCommand {
             BenchmarkKindCommand::BalancedConsumerGroup(args) => args,
             BenchmarkKindCommand::BalancedProducerAndConsumerGroup(args) => args,
             BenchmarkKindCommand::EndToEndProducingConsumer(args) => args,
-            // BenchmarkKindCommand::EndToEndProducerAndConsumerGroup(args) => args,
+            BenchmarkKindCommand::EndToEndProducingConsumerGroup(args) => args,
             BenchmarkKindCommand::Examples => {
                 print_examples();
                 std::process::exit(0);

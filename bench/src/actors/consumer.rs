@@ -313,7 +313,7 @@ impl Consumer {
         Self::log_statistics(
             self.consumer_id,
             total_messages,
-            message_batches as u32,
+            current_iteration as u32,
             messages_per_batch,
             &metrics,
         );

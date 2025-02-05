@@ -1,2 +1,2 @@
-pub mod producer_and_consumer;
-pub mod producer_and_consumer_group;
+pub mod producing_consumer;
+pub mod producing_consumer_group;

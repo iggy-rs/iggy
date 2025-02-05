@@ -3,8 +3,10 @@ use crate::args::common::IggyBenchArgs;
 use crate::benchmarks::benchmark::{BenchmarkFutures, Benchmarkable};
 use crate::rate_limiter::RateLimiter;
 use async_trait::async_trait;
+use iggy::messages::poll_messages::PollingKind;
 use iggy_bench_report::benchmark_kind::BenchmarkKind;
 use integration::test_server::ClientFactory;
+use std::sync::atomic::AtomicI64;
 use std::sync::Arc;
 use tracing::info;
 
@@ -32,9 +34,8 @@ impl Benchmarkable for EndToEndProducingConsumerBenchmark {
         let messages_per_batch = self.args.messages_per_batch();
         let message_batches = self.args.message_batches();
         let message_size = self.args.message_size();
-        let partitions_count = self.args.number_of_partitions();
         let warmup_time = self.args.warmup_time();
-
+        let polling_kind = PollingKind::Offset;
         let mut futures: BenchmarkFutures = Ok(Vec::with_capacity(actors_count as usize));
         for actor_id in 1..=actors_count {
             let args = self.args.clone();
@@ -49,16 +50,19 @@ impl Benchmarkable for EndToEndProducingConsumerBenchmark {
                 client_factory,
                 args.kind(),
                 actor_id,
+                None,
                 stream_id,
-                partitions_count,
+                1,
                 messages_per_batch,
                 message_batches,
                 message_size,
+                Arc::new(AtomicI64::new(message_batches as i64)),
                 warmup_time,
                 args.sampling_time(),
                 args.moving_average_window(),
                 args.rate_limit()
                     .map(|rl| RateLimiter::new(rl.as_bytes_u64())),
+                polling_kind,
                 false,
             );
             let future = Box::pin(async move { actor.run().await });

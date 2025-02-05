@@ -3,20 +3,23 @@ use human_repr::HumanCount;
 use tracing::info;
 
 use crate::{
-    group_metrics::BenchmarkGroupMetrics, group_metrics_kind::GroupMetricsKind,
-    report::BenchmarkReport,
+    benchmark_kind::BenchmarkKind, group_metrics::BenchmarkGroupMetrics,
+    group_metrics_kind::GroupMetricsKind, report::BenchmarkReport,
 };
 
 impl BenchmarkReport {
     pub fn print_summary(&self) {
         let kind = self.params.benchmark_kind;
-        let actors = self.params.producers + self.params.consumers;
-        let total_messages: u64 = self.params.messages_per_batch as u64
+        let total_messages_sent: u64 = self.params.messages_per_batch as u64
             * self.params.message_batches as u64
-            * actors as u64;
+            * self.params.producers as u64;
+        let total_messages_received: u64 = self.params.messages_per_batch as u64
+            * self.params.message_batches as u64
+            * self.params.consumers as u64;
+        let total_messages = total_messages_sent + total_messages_received;
         let total_size_bytes: u64 = total_messages * self.params.message_size as u64;
-        let total_size = format!("{} total size", total_size_bytes.human_count_bytes());
-        let total_messages = format!("{} total messages, ", total_messages.human_count_bare());
+        let total_size = format!("{} of data processed", total_size_bytes.human_count_bytes());
+        let total_messages = format!("{} messages processed, ", total_messages.human_count_bare());
 
         let streams = format!("{} streams, ", self.params.streams);
         // TODO: make this configurable
@@ -29,6 +32,10 @@ impl BenchmarkReport {
         );
         let producers = if self.params.producers == 0 {
             "".to_owned()
+        } else if self.params.benchmark_kind == BenchmarkKind::EndToEndProducingConsumerGroup
+            || self.params.benchmark_kind == BenchmarkKind::EndToEndProducingConsumer
+        {
+            format!("{} producing consumers, ", self.params.producers)
         } else {
             format!("{} producers, ", self.params.producers)
         };

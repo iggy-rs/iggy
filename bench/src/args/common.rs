@@ -35,6 +35,10 @@ pub struct IggyBenchArgs {
     #[arg(long, short = 'm', default_value_t = DEFAULT_MESSAGE_SIZE)]
     pub message_size: NonZeroU32,
 
+    /// Start stream id
+    #[arg(long, short = 'S', default_value_t = DEFAULT_START_STREAM_ID)]
+    pub start_stream_id: NonZeroU32,
+
     /// Optional rate limit per individual producer in bytes per second (not aggregate).
     /// Accepts human-readable formats like "50KB", "10MB", or "1GB"
     #[arg(long, short = 'r', verbatim_doc_comment)]
@@ -97,7 +101,7 @@ impl IggyBenchArgs {
     }
 
     pub fn start_stream_id(&self) -> u32 {
-        self.benchmark_kind.transport_command().start_stream_id()
+        self.start_stream_id.get()
     }
 
     pub fn validate(&self) {
@@ -277,10 +281,9 @@ impl IggyBenchArgs {
                 "balanced_producer_and_consumer"
             }
             BenchmarkKindCommand::EndToEndProducingConsumer(_) => "end_to_end_producing_consumer",
-            // BenchmarkKindCommand::EndToEndProducerAndConsumerGroup(_) => {
-            //     "end_to_end_producer_and_consumer_group"
-            // }
-            // BenchmarkKindCommand::EndToEnd(_) => "end_to_end",
+            BenchmarkKindCommand::EndToEndProducingConsumerGroup(_) => {
+                "end_to_end_producing_consumer_group"
+            }
             BenchmarkKindCommand::Examples => unreachable!(),
         };
 
@@ -335,6 +338,13 @@ impl IggyBenchArgs {
             ),
             BenchmarkKindCommand::EndToEndProducingConsumer(_) => {
                 format!("{} producing consumers", self.producers(),)
+            }
+            BenchmarkKindCommand::EndToEndProducingConsumerGroup(_) => {
+                format!(
+                    "{} producing consumers/{} consumer groups",
+                    self.producers(),
+                    self.consumers()
+                )
             }
             BenchmarkKindCommand::Examples => unreachable!(),
         };
@@ -410,13 +420,14 @@ fn recreate_bench_command(args: &IggyBenchArgs) -> String {
         BenchmarkKind::BalancedConsumerGroup => "balanced-consumer-group",
         BenchmarkKind::BalancedProducerAndConsumerGroup => "balanced-producer-and-consumer-group",
         BenchmarkKind::EndToEndProducingConsumer => "end-to-end-producing-consumer",
-        // BenchmarkKind::EndToEndProducerAndConsumerGroup => "end-to-end-producer-and-consumer-group",
+        BenchmarkKind::EndToEndProducingConsumerGroup => "end-to-end-producing-consumer-group",
     };
     parts.push(kind_str.to_string());
 
     // Add benchmark params, skipping defaults
     let producers = args.producers();
     let consumers = args.consumers();
+    let number_of_consumer_groups = args.number_of_consumer_groups();
 
     match args.benchmark_kind.as_simple_kind() {
         BenchmarkKind::PinnedProducer
@@ -439,17 +450,18 @@ fn recreate_bench_command(args: &IggyBenchArgs) -> String {
             if consumers != DEFAULT_NUMBER_OF_CONSUMERS.get() {
                 parts.push(format!("--consumers {}", consumers));
             }
-        } // BenchmarkKind::EndToEndProducingConsumerGroup => {
-          //     if producers != DEFAULT_NUMBER_OF_PRODUCERS.get() {
-          //         parts.push(format!("--producers {}", producers));
-          //     }
-          //     if consumers != DEFAULT_NUMBER_OF_CONSUMERS.get() {
-          //         parts.push(format!("--consumers {}", consumers));
-          //     }
-          //     if number_of_consumer_groups != DEFAULT_NUMBER_OF_CONSUMER_GROUPS.get() {
-          //         parts.push(format!("--consumer-groups {}", number_of_consumer_groups));
-          //     }
-          // }
+        }
+        BenchmarkKind::EndToEndProducingConsumerGroup => {
+            if producers != DEFAULT_NUMBER_OF_PRODUCERS.get() {
+                parts.push(format!("--producers {}", producers));
+            }
+            if consumers != DEFAULT_NUMBER_OF_CONSUMERS.get() {
+                parts.push(format!("--consumers {}", consumers));
+            }
+            if number_of_consumer_groups != DEFAULT_NUMBER_OF_CONSUMER_GROUPS.get() {
+                parts.push(format!("--consumer-groups {}", number_of_consumer_groups));
+            }
+        }
     }
 
     let streams = args.streams();

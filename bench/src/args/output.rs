@@ -20,7 +20,7 @@ pub struct BenchmarkOutputArgs {
     #[arg(long)]
     pub remark: Option<String>,
 
-    /// Extra information for future use
+    /// Extra information
     #[arg(long)]
     pub extra_info: Option<String>,
 

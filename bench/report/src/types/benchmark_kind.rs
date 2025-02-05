@@ -38,7 +38,7 @@ pub enum BenchmarkKind {
     #[display("End To End Producing Consumer")]
     #[serde(rename = "end_to_end_producing_consumer")]
     EndToEndProducingConsumer,
-    // #[display("End To End Producer And Consumer Group")]
-    // #[serde(rename = "end_to_end_producer_and_consumer_group")]
-    // EndToEndProducerAndConsumerGroup,
+    #[display("End To End Producing Consumer Group")]
+    #[serde(rename = "end_to_end_producing_consumer_group")]
+    EndToEndProducingConsumerGroup,
 }

@@ -25,7 +25,7 @@ chrono = "0.4.39"
 clap = { version = "4.5.26", features = ["derive"] }
 console-subscriber = { version = "0.4.1", optional = true }
 dashmap = "6.1.0"
-derive_more = "1.0.0"
+derive_more = "2.0.1"
 dotenvy = { version = "0.15.7" }
 error_set = { version = "0.8.5", features = ["tracing"] }
 figlet-rs = "0.1.5"

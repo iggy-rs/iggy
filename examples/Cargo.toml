@@ -56,7 +56,7 @@ path = "src/new-sdk/producer/main.rs"
 ahash = { version = "0.8.11", features = ["serde"] }
 anyhow = "1.0.95"
 bytes = "1.9.0"
-clap = { version = "4.5.23", features = ["derive"] }
+clap = { version = "4.5.28", features = ["derive"] }
 futures-util = "0.3.31"
 iggy = { path = "../sdk" }
 rand = "0.8.5"

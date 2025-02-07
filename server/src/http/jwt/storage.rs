@@ -3,11 +3,11 @@ use crate::streaming::utils::file;
 use crate::{
     http::jwt::json_web_token::RevokedAccessToken, streaming::persistence::persister::PersisterKind,
 };
+use ahash::AHashMap;
 use anyhow::Context;
 use bytes::{BufMut, BytesMut};
 use error_set::ErrContext;
 use iggy::error::IggyError;
-use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::io::AsyncReadExt;
 use tracing::{error, info};
@@ -63,7 +63,7 @@ impl TokenStorage {
             })
             .map_err(|_| IggyError::CannotReadFile)?;
 
-        let tokens: HashMap<String, u64> = bincode::deserialize(&buffer)
+        let tokens: AHashMap<String, u64> = bincode::deserialize(&buffer)
             .with_context(|| "Failed to deserialize revoked access tokens")
             .map_err(|_| IggyError::CannotDeserializeResource)?;
 
@@ -84,7 +84,7 @@ impl TokenStorage {
         let mut map = tokens
             .into_iter()
             .map(|token| (token.id, token.expiry))
-            .collect::<HashMap<_, _>>();
+            .collect::<AHashMap<_, _>>();
         map.insert(token.id.to_owned(), token.expiry);
         let bytes = bincode::serialize(&map)
             .with_context(|| "Failed to serialize revoked access tokens")
@@ -115,7 +115,7 @@ impl TokenStorage {
         let mut map = tokens
             .into_iter()
             .map(|token| (token.id, token.expiry))
-            .collect::<HashMap<_, _>>();
+            .collect::<AHashMap<_, _>>();
         for id in id {
             map.remove(id);
         }

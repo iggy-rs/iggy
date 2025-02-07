@@ -4,6 +4,7 @@ use crate::streaming::storage::TopicStorage;
 use crate::streaming::topics::consumer_group::ConsumerGroup;
 use crate::streaming::topics::topic::Topic;
 use crate::streaming::topics::COMPONENT;
+use ahash::AHashSet;
 use anyhow::Context;
 use error_set::ErrContext;
 use futures::future::join_all;
@@ -11,7 +12,6 @@ use iggy::error::IggyError;
 use iggy::locking::IggySharedMut;
 use iggy::locking::IggySharedMutFn;
 use serde::{Deserialize, Serialize};
-use std::collections::HashSet;
 use std::path::Path;
 use std::sync::Arc;
 use tokio::fs;
@@ -96,15 +96,15 @@ impl TopicStorage for FileTopicStorage {
             unloaded_partitions.push(partition);
         }
 
-        let state_partition_ids = state.partitions.keys().copied().collect::<HashSet<u32>>();
+        let state_partition_ids = state.partitions.keys().copied().collect::<AHashSet<u32>>();
         let unloaded_partition_ids = unloaded_partitions
             .iter()
             .map(|partition| partition.partition_id)
-            .collect::<HashSet<u32>>();
+            .collect::<AHashSet<u32>>();
         let missing_ids = state_partition_ids
             .difference(&unloaded_partition_ids)
             .copied()
-            .collect::<HashSet<u32>>();
+            .collect::<AHashSet<u32>>();
         if missing_ids.is_empty() {
             info!(
                 "All partitions for topic with ID: '{}' for stream with ID: '{}' found on disk were found in state.",

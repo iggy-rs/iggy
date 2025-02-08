@@ -1,13 +1,12 @@
 [package]
 name = "server"
-version = "0.4.152"
+version = "0.4.153"
 edition = "2021"
 build = "src/build.rs"
 license = "Apache-2.0"
 
 [features]
 default = []
-mimalloc = ["dep:mimalloc"]
 tokio-console = ["dep:console-subscriber", "tokio/tracing"]
 
 [dependencies]
@@ -35,6 +34,7 @@ futures = "0.3.31"
 human-repr = "1.1.0"
 iggy = { path = "../sdk" }
 jsonwebtoken = "9.3.1"
+mimalloc = "0.1"
 moka = { version = "0.12.10", features = ["future"] }
 openssl = { version = "0.10.70", features = ["vendored"] }
 opentelemetry = { version = "0.27.1", features = ["trace", "logs"] }
@@ -93,12 +93,6 @@ zip = "2.2.2"
 
 [dev-dependencies]
 mockall = "0.13.1"
-
-[target.'cfg(not(target_env = "msvc"))'.dependencies]
-mimalloc = { version = "0.1", optional = true }
-
-[target.'cfg(target_env = "musl")'.dependencies]
-mimalloc = { version = "0.1", features = ["override"] }
 
 [build-dependencies]
 figment = { version = "0.10.19", features = ["json", "toml", "env"] }

@@ -3,6 +3,8 @@ name = "bench"
 version = "0.2.0"
 edition = "2021"
 license = "Apache-2.0"
+# Due to dependency to integration, which has a dependency to server, setting
+# mimalloc on server is also setting it on bench.
 
 [dependencies]
 async-trait = "0.1.86"

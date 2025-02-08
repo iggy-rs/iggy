@@ -1,6 +1,5 @@
-use crate::binary::handlers::topics::COMPONENT;
 use crate::binary::mapper;
-use crate::binary::sender::Sender;
+use crate::binary::{handlers::topics::COMPONENT, sender::SenderKind};
 use crate::state::command::EntryCommand;
 use crate::streaming::session::Session;
 use crate::streaming::systems::system::SharedSystem;
@@ -13,7 +12,7 @@ use tracing::{debug, instrument};
 #[instrument(skip_all, name = "trace_create_topic", fields(iggy_user_id = session.get_user_id(), iggy_client_id = session.client_id, iggy_stream_id = command.stream_id.as_string()))]
 pub async fn handle(
     mut command: CreateTopic,
-    sender: &mut dyn Sender,
+    sender: &mut SenderKind,
     session: &Session,
     system: &SharedSystem,
 ) -> Result<(), IggyError> {

@@ -10,7 +10,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
-      - uses: clechasseur/rs-cargo@v2
+      - uses: clechasseur/rs-cargo@v3
         with:
           command: check
   fmt:
@@ -20,7 +20,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
       - run: rustup component add rustfmt
-      - uses: clechasseur/rs-cargo@v2
+      - uses: clechasseur/rs-cargo@v3
         with:
           command: fmt
           args: --all -- --check
@@ -30,7 +30,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
-      - uses: clechasseur/rs-cargo@v2
+      - uses: clechasseur/rs-cargo@v3
         with:
           command: clippy
           args: --all-targets --all-features -- -D warnings
@@ -68,33 +68,12 @@ jobs:
       - name: Check subject line length
         uses: gsactions/commit-message-checker@v2
         with:
-          excludeDescription: 'false'              # exclude description body of a pull request
-          excludeTitle: 'false'                    # exclude the title of a pull request
-          checkAllCommitMessages: 'false'          # checks all commits associated with the pull request
+          excludeDescription: "false" # exclude description body of a pull request
+          excludeTitle: "false" # exclude the title of a pull request
+          checkAllCommitMessages: "false" # checks all commits associated with the pull request
           accessToken: ${{ secrets.GITHUB_TOKEN }} # needed only when checkAllCommitMessages is true
           pattern: '^.{0,80}(\n.*)*$'
-          error: 'Subject of all commits in the PR and PR body/title has to be shorter than 80 characters.'
-
-      - name: Disallow specific prefixes in title
-        uses: gsactions/commit-message-checker@v2
-        with:
-          excludeDescription: 'true'
-          excludeTitle: 'true'
-          checkAllCommitMessages: 'true'
-          accessToken: ${{ secrets.GITHUB_TOKEN }}
-          pattern: '^(?!(.*(feat|fix|docs|style|refactor|perf|test|chore):.*(\n.*)*$)).*'
-          error: 'Do not use prefixes like "feat:", "fix:", etc., in the subject of any commit in the PR.'
-
-      - name: Disallow lowercase subject
-        uses: gsactions/commit-message-checker@v2
-        with:
-          excludeDescription: 'true'
-          excludeTitle: 'false'
-          checkAllCommitMessages: 'false'
-          accessToken: ${{ secrets.GITHUB_TOKEN }}
-          pattern: '^[A-Z].*(\n.*)*$'
-          error: 'Subject of title in the PR has to start with a capital letter.'
-
+          error: "Subject of all commits in the PR and PR body/title has to be shorter than 80 characters."
 # Uncomment this when we have a proper release - 1.0.0
 #   semver-checks:
 #     name: SemVer SDK

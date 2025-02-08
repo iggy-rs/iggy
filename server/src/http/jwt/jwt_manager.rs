@@ -2,7 +2,8 @@ use crate::configs::http::HttpJwtConfig;
 use crate::http::jwt::json_web_token::{GeneratedToken, JwtClaims, RevokedAccessToken};
 use crate::http::jwt::storage::TokenStorage;
 use crate::http::jwt::COMPONENT;
-use crate::streaming::persistence::persister::Persister;
+use crate::streaming::persistence::persister::PersisterKind;
+use ahash::AHashMap;
 use error_set::ErrContext;
 use iggy::error::IggyError;
 use iggy::locking::IggySharedMut;
@@ -12,7 +13,6 @@ use iggy::utils::duration::IggyDuration;
 use iggy::utils::expiry::IggyExpiry;
 use iggy::utils::timestamp::IggyTimestamp;
 use jsonwebtoken::{encode, Algorithm, DecodingKey, EncodingKey, Header, TokenData, Validation};
-use std::collections::HashMap;
 use std::sync::Arc;
 use tracing::{debug, error, info};
 
@@ -36,13 +36,13 @@ pub struct JwtManager {
     issuer: IssuerOptions,
     validator: ValidatorOptions,
     tokens_storage: TokenStorage,
-    revoked_tokens: IggySharedMut<HashMap<String, u64>>,
-    validations: HashMap<Algorithm, Validation>,
+    revoked_tokens: IggySharedMut<AHashMap<String, u64>>,
+    validations: AHashMap<Algorithm, Validation>,
 }
 
 impl JwtManager {
     pub fn new(
-        persister: Arc<dyn Persister>,
+        persister: Arc<PersisterKind>,
         path: &str,
         issuer: IssuerOptions,
         validator: ValidatorOptions,
@@ -59,12 +59,12 @@ impl JwtManager {
             issuer,
             validator,
             tokens_storage: TokenStorage::new(persister, path),
-            revoked_tokens: IggySharedMut::new(HashMap::new()),
+            revoked_tokens: IggySharedMut::new(AHashMap::new()),
         })
     }
 
     pub fn from_config(
-        persister: Arc<dyn Persister>,
+        persister: Arc<PersisterKind>,
         path: &str,
         config: &HttpJwtConfig,
     ) -> Result<Self, IggyError> {

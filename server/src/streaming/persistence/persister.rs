@@ -1,25 +1,65 @@
 use crate::streaming::persistence::COMPONENT;
 use crate::streaming::utils::file;
-use async_trait::async_trait;
 use error_set::ErrContext;
 use iggy::error::IggyError;
 use std::fmt::Debug;
+use std::future::Future;
 use tokio::fs;
 use tokio::io::AsyncWriteExt;
 
-#[async_trait]
-pub trait Persister: Sync + Send {
-    async fn append(&self, path: &str, bytes: &[u8]) -> Result<(), IggyError>;
-    async fn overwrite(&self, path: &str, bytes: &[u8]) -> Result<(), IggyError>;
-    async fn delete(&self, path: &str) -> Result<(), IggyError>;
+#[cfg(test)]
+use mockall::automock;
+
+#[derive(Debug)]
+pub enum PersisterKind {
+    File(FilePersister),
+    FileWithSync(FileWithSyncPersister),
+    #[cfg(test)]
+    Mock(MockPersister),
 }
 
-impl Debug for dyn Persister {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("Persister")
-            .field("type", &"Persister")
-            .finish()
+impl PersisterKind {
+    pub async fn append(&self, path: &str, bytes: &[u8]) -> Result<(), IggyError> {
+        match self {
+            PersisterKind::File(p) => p.append(path, bytes).await,
+            PersisterKind::FileWithSync(p) => p.append(path, bytes).await,
+            #[cfg(test)]
+            PersisterKind::Mock(p) => p.append(path, bytes).await,
+        }
     }
+
+    pub async fn overwrite(&self, path: &str, bytes: &[u8]) -> Result<(), IggyError> {
+        match self {
+            PersisterKind::File(p) => p.overwrite(path, bytes).await,
+            PersisterKind::FileWithSync(p) => p.overwrite(path, bytes).await,
+            #[cfg(test)]
+            PersisterKind::Mock(p) => p.overwrite(path, bytes).await,
+        }
+    }
+
+    pub async fn delete(&self, path: &str) -> Result<(), IggyError> {
+        match self {
+            PersisterKind::File(p) => p.delete(path).await,
+            PersisterKind::FileWithSync(p) => p.delete(path).await,
+            #[cfg(test)]
+            PersisterKind::Mock(p) => p.delete(path).await,
+        }
+    }
+}
+
+#[cfg_attr(test, automock)]
+pub trait Persister: Send {
+    fn append(
+        &self,
+        path: &str,
+        bytes: &[u8],
+    ) -> impl Future<Output = Result<(), IggyError>> + Send;
+    fn overwrite(
+        &self,
+        path: &str,
+        bytes: &[u8],
+    ) -> impl Future<Output = Result<(), IggyError>> + Send;
+    fn delete(&self, path: &str) -> impl Future<Output = Result<(), IggyError>> + Send;
 }
 
 #[derive(Debug)]
@@ -28,13 +68,6 @@ pub struct FilePersister;
 #[derive(Debug)]
 pub struct FileWithSyncPersister;
 
-unsafe impl Send for FilePersister {}
-unsafe impl Sync for FilePersister {}
-
-unsafe impl Send for FileWithSyncPersister {}
-unsafe impl Sync for FileWithSyncPersister {}
-
-#[async_trait]
 impl Persister for FilePersister {
     async fn append(&self, path: &str, bytes: &[u8]) -> Result<(), IggyError> {
         let mut file = file::append(path)
@@ -69,7 +102,6 @@ impl Persister for FilePersister {
     }
 }
 
-#[async_trait]
 impl Persister for FileWithSyncPersister {
     async fn append(&self, path: &str, bytes: &[u8]) -> Result<(), IggyError> {
         let mut file = file::append(path)

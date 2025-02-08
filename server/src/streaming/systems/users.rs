@@ -15,7 +15,6 @@ use iggy::models::permissions::Permissions;
 use iggy::models::user_status::UserStatus;
 use iggy::users::create_user::CreateUser;
 use iggy::users::defaults::*;
-use iggy::utils::text;
 use std::env;
 use std::sync::atomic::{AtomicU32, Ordering};
 use tracing::{error, info, warn};
@@ -202,7 +201,7 @@ impl System {
                     session.get_user_id()
                 )
             })?;
-        let username = text::to_lowercase_non_whitespace(username);
+
         if self.users.iter().any(|(_, user)| user.username == username) {
             error!("User: {username} already exists.");
             return Err(IggyError::UserAlreadyExists);
@@ -215,7 +214,7 @@ impl System {
 
         let user_id = USER_ID.fetch_add(1, Ordering::SeqCst);
         info!("Creating user: {username} with ID: {user_id}...");
-        let user = User::new(user_id, &username, password, status, permissions.clone());
+        let user = User::new(user_id, username, password, status, permissions.clone());
         self.permissioner
             .init_permissions_for_user(user_id, permissions);
         self.users.insert(user.id, user);
@@ -292,10 +291,9 @@ impl System {
                 )
             })?;
 
-        if let Some(username) = username.clone() {
-            let username = text::to_lowercase_non_whitespace(&username);
+        if let Some(username) = username.to_owned() {
             let user = self.get_user(user_id)?;
-            let existing_user = self.get_user(&username.clone().try_into()?);
+            let existing_user = self.get_user(&username.to_owned().try_into()?);
             if existing_user.is_ok() && existing_user.unwrap().id != user.id {
                 error!("User: {username} already exists.");
                 return Err(IggyError::UserAlreadyExists);

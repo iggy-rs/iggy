@@ -5,7 +5,6 @@ use crate::identifier::Identifier;
 use crate::models::user_status::UserStatus;
 use crate::users::defaults::*;
 use crate::utils::sizeable::Sizeable;
-use crate::utils::text;
 use crate::validatable::Validatable;
 use bytes::{BufMut, Bytes, BytesMut};
 use serde::{Deserialize, Serialize};
@@ -42,10 +41,6 @@ impl Validatable<IggyError> for UpdateUser {
             || username.len() > MAX_USERNAME_LENGTH
             || username.len() < MIN_USERNAME_LENGTH
         {
-            return Err(IggyError::InvalidUsername);
-        }
-
-        if !text::is_resource_name_valid(username) {
             return Err(IggyError::InvalidUsername);
         }
 

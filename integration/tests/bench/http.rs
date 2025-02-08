@@ -13,14 +13,14 @@ fn http_ipv4_bench() {
     run_bench_and_wait_for_finish(
         &server_addr,
         Transport::Http,
-        "send",
-        IggyByteSize::from_str("10MB").unwrap(),
+        "pinned-producer",
+        IggyByteSize::from_str("8MB").unwrap(),
     );
     run_bench_and_wait_for_finish(
         &server_addr,
         Transport::Http,
-        "poll",
-        IggyByteSize::from_str("10MB").unwrap(),
+        "pinned-consumer",
+        IggyByteSize::from_str("8MB").unwrap(),
     );
 }
 
@@ -34,13 +34,13 @@ fn http_ipv6_bench() {
     run_bench_and_wait_for_finish(
         &server_addr,
         Transport::Http,
-        "send",
-        IggyByteSize::from_str("10MB").unwrap(),
+        "pinned-producer",
+        IggyByteSize::from_str("8MB").unwrap(),
     );
     run_bench_and_wait_for_finish(
         &server_addr,
         Transport::Http,
-        "poll",
-        IggyByteSize::from_str("10MB").unwrap(),
+        "pinned-consumer",
+        IggyByteSize::from_str("8MB").unwrap(),
     );
 }

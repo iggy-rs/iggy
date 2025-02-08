@@ -1,8 +1,9 @@
 pub mod common;
+pub mod defaults;
 pub mod kind;
-pub mod simple;
+pub mod kinds;
 
-mod defaults;
 mod examples;
+mod output;
 mod props;
 mod transport;

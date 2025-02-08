@@ -292,7 +292,7 @@ pub async fn run(client_factory: &dyn ClientFactory) {
     assert_eq!(topic.name, TOPIC_NAME);
     assert_eq!(topic.partitions_count, PARTITIONS_COUNT);
     assert_eq!(topic.partitions.len(), PARTITIONS_COUNT as usize);
-    assert_eq!(topic.size, 55890);
+    assert_eq!(topic.size, 55914);
     assert_eq!(topic.messages_count, MESSAGES_COUNT as u64);
     let topic_partition = topic.partitions.get((PARTITION_ID - 1) as usize).unwrap();
     assert_eq!(topic_partition.id, PARTITION_ID);
@@ -316,7 +316,7 @@ pub async fn run(client_factory: &dyn ClientFactory) {
         .unwrap();
     assert!(polled_messages.messages.is_empty());
 
-    // 22. Get the existing customer offset and ensure it's 0
+    // 22. Get the customer offset and ensure it's none
     let offset = client
         .get_consumer_offset(
             &consumer,
@@ -325,11 +325,8 @@ pub async fn run(client_factory: &dyn ClientFactory) {
             Some(PARTITION_ID),
         )
         .await
-        .unwrap()
         .expect("Failed to get consumer offset");
-    assert_eq!(offset.partition_id, PARTITION_ID);
-    assert_eq!(offset.current_offset, (MESSAGES_COUNT - 1) as u64);
-    assert_eq!(offset.stored_offset, 0);
+    assert!(offset.is_none());
 
     // 23. Store the consumer offset
     let stored_offset = 10;
@@ -359,7 +356,42 @@ pub async fn run(client_factory: &dyn ClientFactory) {
     assert_eq!(offset.current_offset, (MESSAGES_COUNT - 1) as u64);
     assert_eq!(offset.stored_offset, stored_offset);
 
-    // 25. Poll messages from the specific partition in topic using next with auto commit
+    // 25. Delete the consumer offset
+    client
+        .delete_consumer_offset(
+            &consumer,
+            &Identifier::numeric(STREAM_ID).unwrap(),
+            &Identifier::numeric(TOPIC_ID).unwrap(),
+            Some(PARTITION_ID),
+        )
+        .await
+        .unwrap();
+
+    // 26. Get the customer offset and ensure it's none
+    let offset = client
+        .get_consumer_offset(
+            &consumer,
+            &Identifier::numeric(STREAM_ID).unwrap(),
+            &Identifier::numeric(TOPIC_ID).unwrap(),
+            Some(PARTITION_ID),
+        )
+        .await
+        .expect("Failed to get consumer offset");
+
+    assert!(offset.is_none());
+
+    client
+        .store_consumer_offset(
+            &consumer,
+            &Identifier::numeric(STREAM_ID).unwrap(),
+            &Identifier::numeric(TOPIC_ID).unwrap(),
+            Some(PARTITION_ID),
+            stored_offset,
+        )
+        .await
+        .unwrap();
+
+    // 27. Poll messages from the specific partition in topic using next with auto commit
     let messages_count = 10;
     let polled_messages = client
         .poll_messages(
@@ -380,7 +412,7 @@ pub async fn run(client_factory: &dyn ClientFactory) {
     assert_eq!(first_offset, stored_offset + 1);
     assert_eq!(last_offset, expected_last_offset);
 
-    // 26. Get the existing customer offset and ensure that auto commit during poll has worked
+    // 28. Get the existing customer offset and ensure that auto commit during poll has worked
     let offset = client
         .get_consumer_offset(
             &consumer,
@@ -395,7 +427,7 @@ pub async fn run(client_factory: &dyn ClientFactory) {
     assert_eq!(offset.current_offset, (MESSAGES_COUNT - 1) as u64);
     assert_eq!(offset.stored_offset, expected_last_offset);
 
-    // 27. Get the consumer groups and validate that there are no groups
+    // 29. Get the consumer groups and validate that there are no groups
     let consumer_groups = client
         .get_consumer_groups(
             &Identifier::numeric(STREAM_ID).unwrap(),
@@ -406,7 +438,7 @@ pub async fn run(client_factory: &dyn ClientFactory) {
 
     assert!(consumer_groups.is_empty());
 
-    // 28. Create the consumer group
+    // 30. Create the consumer group
     let consumer_group = client
         .create_consumer_group(
             &Identifier::numeric(STREAM_ID).unwrap(),
@@ -420,7 +452,7 @@ pub async fn run(client_factory: &dyn ClientFactory) {
     assert_eq!(consumer_group.id, CONSUMER_GROUP_ID);
     assert_eq!(consumer_group.name, CONSUMER_GROUP_NAME);
 
-    // 29. Get the consumer groups and validate that there is one group
+    // 31. Get the consumer groups and validate that there is one group
     let consumer_groups = client
         .get_consumer_groups(
             &Identifier::numeric(STREAM_ID).unwrap(),
@@ -435,7 +467,7 @@ pub async fn run(client_factory: &dyn ClientFactory) {
     assert_eq!(consumer_group.partitions_count, PARTITIONS_COUNT);
     assert_eq!(consumer_group.members_count, 0);
 
-    // 30. Get the consumer group details
+    // 32. Get the consumer group details
     let consumer_group = client
         .get_consumer_group(
             &Identifier::numeric(STREAM_ID).unwrap(),
@@ -451,7 +483,7 @@ pub async fn run(client_factory: &dyn ClientFactory) {
     assert_eq!(consumer_group.members_count, 0);
     assert!(consumer_group.members.is_empty());
 
-    // 31. Join the consumer group and then leave it if the feature is available
+    // 33. Join the consumer group and then leave it if the feature is available
     let result = client
         .join_consumer_group(
             &Identifier::numeric(STREAM_ID).unwrap(),
@@ -493,7 +525,7 @@ pub async fn run(client_factory: &dyn ClientFactory) {
         Err(e) => assert_eq!(e.as_code(), IggyError::FeatureUnavailable.as_code()),
     }
 
-    // 32. Get the stats and validate that there is one stream
+    // 34. Get the stats and validate that there is one stream
     let stats = client.get_stats().await.unwrap();
     assert!(!stats.hostname.is_empty());
     assert!(!stats.os_name.is_empty());
@@ -504,8 +536,12 @@ pub async fn run(client_factory: &dyn ClientFactory) {
     assert_eq!(stats.partitions_count, PARTITIONS_COUNT);
     assert_eq!(stats.segments_count, PARTITIONS_COUNT);
     assert_eq!(stats.messages_count, MESSAGES_COUNT as u64);
+    assert!(!stats.iggy_server_version.is_empty());
+    assert!(stats.iggy_server_semver.is_some());
+    let iggy_server_semver = stats.iggy_server_semver.unwrap();
+    assert!(iggy_server_semver > 0);
 
-    // 33. Delete the consumer group
+    // 35. Delete the consumer group
     client
         .delete_consumer_group(
             &Identifier::numeric(STREAM_ID).unwrap(),
@@ -515,7 +551,7 @@ pub async fn run(client_factory: &dyn ClientFactory) {
         .await
         .unwrap();
 
-    // 34. Create new partitions and validate that the number of partitions is increased
+    // 36. Create new partitions and validate that the number of partitions is increased
     client
         .create_partitions(
             &Identifier::numeric(STREAM_ID).unwrap(),
@@ -536,7 +572,7 @@ pub async fn run(client_factory: &dyn ClientFactory) {
 
     assert_eq!(topic.partitions_count, 2 * PARTITIONS_COUNT);
 
-    // 35. Delete the partitions and validate that the number of partitions is decreased
+    // 37. Delete the partitions and validate that the number of partitions is decreased
     client
         .delete_partitions(
             &Identifier::numeric(STREAM_ID).unwrap(),
@@ -557,7 +593,7 @@ pub async fn run(client_factory: &dyn ClientFactory) {
 
     assert_eq!(topic.partitions_count, PARTITIONS_COUNT);
 
-    // 36. Update the existing topic and ensure it's updated
+    // 38. Update the existing topic and ensure it's updated
     let updated_topic_name = format!("{}-updated", TOPIC_NAME);
     let updated_message_expiry = 1000;
     let message_expiry_duration = updated_message_expiry.into();
@@ -598,7 +634,7 @@ pub async fn run(client_factory: &dyn ClientFactory) {
     assert_eq!(updated_topic.max_topic_size, updated_max_topic_size);
     assert_eq!(updated_topic.replication_factor, updated_replication_factor);
 
-    // 37. Purge the existing topic and ensure it has no messages
+    // 39. Purge the existing topic and ensure it has no messages
     client
         .purge_topic(
             &Identifier::numeric(STREAM_ID).unwrap(),
@@ -622,7 +658,7 @@ pub async fn run(client_factory: &dyn ClientFactory) {
     assert_eq!(polled_messages.current_offset, 0);
     assert!(polled_messages.messages.is_empty());
 
-    // 38. Update the existing stream and ensure it's updated
+    // 40. Update the existing stream and ensure it's updated
     let updated_stream_name = format!("{}-updated", STREAM_NAME);
 
     client
@@ -641,7 +677,7 @@ pub async fn run(client_factory: &dyn ClientFactory) {
 
     assert_eq!(updated_stream.name, updated_stream_name);
 
-    // 39. Purge the existing stream and ensure it has no messages
+    // 41. Purge the existing stream and ensure it has no messages
     let mut messages = create_messages();
     client
         .send_messages(
@@ -673,7 +709,7 @@ pub async fn run(client_factory: &dyn ClientFactory) {
     assert_eq!(polled_messages.current_offset, 0);
     assert!(polled_messages.messages.is_empty());
 
-    // 40. Delete the existing topic and ensure it doesn't exist anymore
+    // 42. Delete the existing topic and ensure it doesn't exist anymore
     client
         .delete_topic(
             &Identifier::numeric(STREAM_ID).unwrap(),
@@ -687,7 +723,7 @@ pub async fn run(client_factory: &dyn ClientFactory) {
         .unwrap();
     assert!(topics.is_empty());
 
-    // 41. Create the stream with automatically generated ID on the server
+    // 43. Create the stream with automatically generated ID on the server
     let stream_name = format!("{}-auto", STREAM_NAME);
     let stream_id = STREAM_ID + 1;
     client.create_stream(&stream_name, None).await.unwrap();
@@ -701,7 +737,7 @@ pub async fn run(client_factory: &dyn ClientFactory) {
     assert_eq!(stream.id, stream_id);
     assert_eq!(stream.name, stream_name);
 
-    // 42. Create the topic with automatically generated ID on the server
+    // 44. Create the topic with automatically generated ID on the server
     let topic_name = format!("{}-auto", TOPIC_NAME);
     let topic_id = 1;
     client
@@ -730,7 +766,7 @@ pub async fn run(client_factory: &dyn ClientFactory) {
     assert_eq!(topic.id, topic_id);
     assert_eq!(topic.name, topic_name);
 
-    // 43. Delete the existing streams and ensure there's no streams left
+    // 45. Delete the existing streams and ensure there's no streams left
     let streams = client.get_streams().await.unwrap();
     assert_eq!(streams.len(), 2);
 
@@ -744,7 +780,7 @@ pub async fn run(client_factory: &dyn ClientFactory) {
     let streams = client.get_streams().await.unwrap();
     assert!(streams.is_empty());
 
-    // 44. Get clients and ensure that there's 0 (HTTP) or 1 (TCP, QUIC) client
+    // 46. Get clients and ensure that there's 0 (HTTP) or 1 (TCP, QUIC) client
     let clients = client.get_clients().await.unwrap();
 
     assert!(clients.len() <= 1);

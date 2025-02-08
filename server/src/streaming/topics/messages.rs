@@ -5,6 +5,7 @@ use crate::streaming::topics::topic::Topic;
 use crate::streaming::topics::COMPONENT;
 use crate::streaming::utils::file::folder_size;
 use crate::streaming::utils::hash;
+use ahash::AHashMap;
 use error_set::ErrContext;
 use iggy::confirmation::Confirmation;
 use iggy::error::IggyError;
@@ -16,7 +17,6 @@ use iggy::utils::byte_size::IggyByteSize;
 use iggy::utils::expiry::IggyExpiry;
 use iggy::utils::sizeable::Sizeable;
 use iggy::utils::timestamp::IggyTimestamp;
-use std::collections::HashMap;
 use std::sync::atomic::Ordering;
 use std::sync::Arc;
 use tracing::{info, trace, warn};
@@ -291,8 +291,8 @@ impl Topic {
     pub async fn get_expired_segments_start_offsets_per_partition(
         &self,
         now: IggyTimestamp,
-    ) -> HashMap<u32, Vec<u64>> {
-        let mut expired_segments = HashMap::new();
+    ) -> AHashMap<u32, Vec<u64>> {
+        let mut expired_segments = AHashMap::new();
         if let IggyExpiry::ExpireDuration(_) = self.message_expiry {
             for (_, partition) in self.partitions.iter() {
                 let partition = partition.read().await;

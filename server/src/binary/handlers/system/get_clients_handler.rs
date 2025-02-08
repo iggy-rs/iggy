@@ -1,6 +1,6 @@
 use crate::binary::handlers::system::COMPONENT;
 use crate::binary::mapper;
-use crate::binary::sender::Sender;
+use crate::binary::sender::SenderKind;
 use crate::streaming::session::Session;
 use crate::streaming::systems::system::SharedSystem;
 use error_set::ErrContext;
@@ -10,7 +10,7 @@ use tracing::debug;
 
 pub async fn handle(
     command: GetClients,
-    sender: &mut dyn Sender,
+    sender: &mut SenderKind,
     session: &Session,
     system: &SharedSystem,
 ) -> Result<(), IggyError> {

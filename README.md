@@ -281,32 +281,46 @@ cargo build --release
 
 Then, run the benchmarking app with the desired options:
 
-1. Polling (reading) benchmark
+1. Sending (writing) benchmark
 
    ```bash
-   cargo r --bin iggy-bench -r -- -c -v send tcp
+   cargo r --bin iggy-bench -r -- -v pinned-producer tcp
    ```
 
-2. Sending (writing) benchmark
+2. Polling (reading) benchmark
 
    ```bash
-   cargo r --bin iggy-bench -r -- -c -v poll tcp
+   cargo r --bin iggy-bench -r -- -v pinned-consumer tcp
    ```
 
 3. Parallel sending and polling benchmark
 
    ```bash
-   cargo r --bin iggy-bench -r -- -c -v send-and-poll tcp
+   cargo r --bin iggy-bench -r -- -v pinned-producer-and-consumer tcp
    ```
 
-4. Polling with consumer group
+4. Balanced sending to multiple partitions benchmark
 
    ```bash
-   cargo r --bin iggy-bench -r -- -c -v send --streams 1 --partitions 10 --disable-parallel-producers tcp
+   cargo r --bin iggy-bench -r -- -v balanced-producer tcp
    ```
 
+5. Consumer group polling benchmark:
+
    ```bash
-   cargo r --bin iggy-bench -r -- -c -v consumer-group-poll tcp
+   cargo r --bin iggy-bench -r -- -v balanced-consumer-group tcp
+   ```
+
+6. Parallel balanced sending and polling from consumer group benchmark:
+
+   ```bash
+   cargo r --bin iggy-bench -r -- -v balanced-producer-and-consumer-group tcp
+   ```
+
+7. End to end producing and consuming benchmark (single task produces and consumes messages in sequence):
+
+   ```bash
+   cargo r --bin iggy-bench -r -- -v end-to-end-producing-consumer tcp
    ```
 
 These benchmarks would start the server with the default configuration, create a stream, topic and partition, and then send or poll the messages. The default configuration is optimized for the best performance, so you might want to tweak it for your needs. If you need more options, please refer to `iggy-bench` subcommands `help` and `examples`.

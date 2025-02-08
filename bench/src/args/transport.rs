@@ -1,9 +1,8 @@
 use super::defaults::*;
-use super::props::BenchmarkTransportProps;
+use super::{output::BenchmarkOutputCommand, props::BenchmarkTransportProps};
 use clap::{Parser, Subcommand};
 use integration::test_server::Transport;
 use serde::{Serialize, Serializer};
-use std::num::NonZeroU32;
 
 #[derive(Subcommand, Debug, Clone)]
 pub enum BenchmarkTransportCommand {
@@ -35,10 +34,6 @@ impl BenchmarkTransportProps for BenchmarkTransportCommand {
         self.inner().server_address()
     }
 
-    fn start_stream_id(&self) -> u32 {
-        self.inner().start_stream_id()
-    }
-
     fn validate_certificate(&self) -> bool {
         self.inner().validate_certificate()
     }
@@ -54,6 +49,10 @@ impl BenchmarkTransportProps for BenchmarkTransportCommand {
             BenchmarkTransportCommand::Quic(args) => args,
         }
     }
+
+    fn output_command(&self) -> &Option<BenchmarkOutputCommand> {
+        self.inner().output_command()
+    }
 }
 
 #[derive(Parser, Debug, Clone)]
@@ -62,9 +61,9 @@ pub struct HttpArgs {
     #[arg(long, default_value_t = DEFAULT_HTTP_SERVER_ADDRESS.to_owned())]
     pub server_address: String,
 
-    /// Start stream id
-    #[arg(long, default_value_t = DEFAULT_HTTP_START_STREAM_ID)]
-    pub start_stream_id: NonZeroU32,
+    /// Optional output command, used to output results (charts, raw json data) to a directory
+    #[command(subcommand)]
+    pub output: Option<BenchmarkOutputCommand>,
 }
 
 impl BenchmarkTransportProps for HttpArgs {
@@ -76,16 +75,16 @@ impl BenchmarkTransportProps for HttpArgs {
         &self.server_address
     }
 
-    fn start_stream_id(&self) -> u32 {
-        self.start_stream_id.get()
-    }
-
     fn validate_certificate(&self) -> bool {
         panic!("Cannot validate certificate for HTTP transport!")
     }
 
     fn client_address(&self) -> &str {
         panic!("Setting client address for HTTP transport is not supported!")
+    }
+
+    fn output_command(&self) -> &Option<BenchmarkOutputCommand> {
+        &self.output
     }
 }
 
@@ -95,9 +94,9 @@ pub struct TcpArgs {
     #[arg(long, default_value_t = DEFAULT_TCP_SERVER_ADDRESS.to_owned())]
     pub server_address: String,
 
-    /// Start stream id
-    #[arg(long, default_value_t = DEFAULT_TCP_START_STREAM_ID)]
-    pub start_stream_id: NonZeroU32,
+    /// Optional output command, used to output results (charts, raw json data) to a directory
+    #[command(subcommand)]
+    output: Option<BenchmarkOutputCommand>,
 }
 
 impl BenchmarkTransportProps for TcpArgs {
@@ -109,16 +108,16 @@ impl BenchmarkTransportProps for TcpArgs {
         &self.server_address
     }
 
-    fn start_stream_id(&self) -> u32 {
-        self.start_stream_id.get()
-    }
-
     fn validate_certificate(&self) -> bool {
         panic!("Cannot validate certificate for TCP transport!")
     }
 
     fn client_address(&self) -> &str {
         panic!("Setting client address for TCP transport is not supported!")
+    }
+
+    fn output_command(&self) -> &Option<BenchmarkOutputCommand> {
+        &self.output
     }
 }
 
@@ -140,9 +139,9 @@ pub struct QuicArgs {
     #[arg(long, default_value_t = DEFAULT_QUIC_VALIDATE_CERTIFICATE)]
     pub validate_certificate: bool,
 
-    /// Start stream id
-    #[arg(long, default_value_t = DEFAULT_QUIC_START_STREAM_ID)]
-    pub start_stream_id: NonZeroU32,
+    /// Optional output command, used to output results (charts, raw json data) to a directory
+    #[command(subcommand)]
+    pub output: Option<BenchmarkOutputCommand>,
 }
 
 impl BenchmarkTransportProps for QuicArgs {
@@ -154,15 +153,15 @@ impl BenchmarkTransportProps for QuicArgs {
         &self.server_address
     }
 
-    fn start_stream_id(&self) -> u32 {
-        self.start_stream_id.get()
-    }
-
     fn validate_certificate(&self) -> bool {
         self.validate_certificate
     }
 
     fn client_address(&self) -> &str {
         &self.client_address
+    }
+
+    fn output_command(&self) -> &Option<BenchmarkOutputCommand> {
+        &self.output
     }
 }

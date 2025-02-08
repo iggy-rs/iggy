@@ -15,12 +15,12 @@ impl MessagesGenerator {
     pub fn new() -> MessagesGenerator {
         MessagesGenerator {
             order_id: 0,
-            rng: rand::thread_rng(),
+            rng: rand::rng(),
         }
     }
 
     pub fn generate(&mut self) -> Box<dyn SerializableMessage> {
-        match self.rng.gen_range(0..=2) {
+        match self.rng.random_range(0..=2) {
             0 => self.generate_order_created(),
             1 => self.generate_order_confirmed(),
             2 => self.generate_order_rejected(),
@@ -33,10 +33,11 @@ impl MessagesGenerator {
         Box::new(OrderCreated {
             order_id: self.order_id,
             timestamp: IggyTimestamp::now(),
-            currency_pair: CURRENCY_PAIRS[self.rng.gen_range(0..CURRENCY_PAIRS.len())].to_string(),
-            price: self.rng.gen_range(10.0..=1000.0),
-            quantity: self.rng.gen_range(0.1..=1.0),
-            side: match self.rng.gen_range(0..=1) {
+            currency_pair: CURRENCY_PAIRS[self.rng.random_range(0..CURRENCY_PAIRS.len())]
+                .to_string(),
+            price: self.rng.random_range(10.0..=1000.0),
+            quantity: self.rng.random_range(0.1..=1.0),
+            side: match self.rng.random_range(0..=1) {
                 0 => "buy",
                 _ => "sell",
             }
@@ -48,7 +49,7 @@ impl MessagesGenerator {
         Box::new(OrderConfirmed {
             order_id: self.order_id,
             timestamp: IggyTimestamp::now(),
-            price: self.rng.gen_range(10.0..=1000.0),
+            price: self.rng.random_range(10.0..=1000.0),
         })
     }
 
@@ -56,7 +57,7 @@ impl MessagesGenerator {
         Box::new(OrderRejected {
             order_id: self.order_id,
             timestamp: IggyTimestamp::now(),
-            reason: match self.rng.gen_range(0..=1) {
+            reason: match self.rng.random_range(0..=1) {
                 0 => "cancelled_by_user",
                 _ => "other",
             }

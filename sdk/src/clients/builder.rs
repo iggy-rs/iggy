@@ -1,4 +1,4 @@
-use crate::client::Client;
+use crate::client::{AutoLogin, Client};
 use crate::clients::client::IggyClient;
 use crate::error::IggyError;
 use crate::http::client::HttpClient;
@@ -8,7 +8,7 @@ use crate::quic::client::QuicClient;
 use crate::quic::config::QuicClientConfigBuilder;
 use crate::tcp::client::TcpClient;
 use crate::tcp::config::TcpClientConfigBuilder;
-use crate::utils::crypto::Encryptor;
+use crate::utils::crypto::EncryptorKind;
 use crate::utils::duration::IggyDuration;
 use std::sync::Arc;
 use tracing::error;
@@ -18,7 +18,7 @@ use tracing::error;
 pub struct IggyClientBuilder {
     client: Option<Box<dyn Client>>,
     partitioner: Option<Arc<dyn Partitioner>>,
-    encryptor: Option<Arc<dyn Encryptor>>,
+    encryptor: Option<Arc<EncryptorKind>>,
 }
 
 impl IggyClientBuilder {
@@ -49,7 +49,7 @@ impl IggyClientBuilder {
     }
 
     /// Use the custom encryptor implementation.
-    pub fn with_encryptor(mut self, encryptor: Arc<dyn Encryptor>) -> Self {
+    pub fn with_encryptor(mut self, encryptor: Arc<EncryptorKind>) -> Self {
         self.encryptor = Some(encryptor);
         self
     }
@@ -111,6 +111,12 @@ impl TcpClientBuilder {
         self
     }
 
+    /// Sets the auto sign in during connection.
+    pub fn with_auto_sign_in(mut self, auto_sign_in: AutoLogin) -> Self {
+        self.config = self.config.with_auto_sign_in(auto_sign_in);
+        self
+    }
+
     /// Sets the number of max retries when connecting to the server.
     pub fn with_reconnection_max_retries(mut self, reconnection_retries: Option<u32>) -> Self {
         self.config = self
@@ -162,6 +168,12 @@ impl QuicClientBuilder {
     /// Sets the server address for the QUIC client.
     pub fn with_server_address(mut self, server_address: String) -> Self {
         self.config = self.config.with_server_address(server_address);
+        self
+    }
+
+    /// Sets the auto sign in during connection.
+    pub fn with_auto_sign_in(mut self, auto_sign_in: AutoLogin) -> Self {
+        self.config = self.config.with_auto_sign_in(auto_sign_in);
         self
     }
 

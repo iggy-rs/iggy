@@ -31,7 +31,7 @@ use crate::partitioner::Partitioner;
 use crate::snapshot::{SnapshotCompression, SystemSnapshotType};
 use crate::tcp::client::TcpClient;
 use crate::utils::byte_size::IggyByteSize;
-use crate::utils::crypto::Encryptor;
+use crate::utils::crypto::EncryptorKind;
 use crate::utils::duration::IggyDuration;
 use crate::utils::expiry::IggyExpiry;
 use crate::utils::personal_access_token_expiry::PersonalAccessTokenExpiry;
@@ -55,7 +55,7 @@ use tracing::{debug, error, info};
 pub struct IggyClient {
     client: IggySharedMut<Box<dyn Client>>,
     partitioner: Option<Arc<dyn Partitioner>>,
-    encryptor: Option<Arc<dyn Encryptor>>,
+    encryptor: Option<Arc<EncryptorKind>>,
 }
 
 impl Default for IggyClient {
@@ -96,7 +96,7 @@ impl IggyClient {
     pub fn create(
         client: Box<dyn Client>,
         partitioner: Option<Arc<dyn Partitioner>>,
-        encryptor: Option<Arc<dyn Encryptor>>,
+        encryptor: Option<Arc<EncryptorKind>>,
     ) -> Self {
         if partitioner.is_some() {
             info!("Partitioner is enabled.");
@@ -642,6 +642,20 @@ impl ConsumerOffsetClient for IggyClient {
             .read()
             .await
             .get_consumer_offset(consumer, stream_id, topic_id, partition_id)
+            .await
+    }
+
+    async fn delete_consumer_offset(
+        &self,
+        consumer: &Consumer,
+        stream_id: &Identifier,
+        topic_id: &Identifier,
+        partition_id: Option<u32>,
+    ) -> Result<(), IggyError> {
+        self.client
+            .read()
+            .await
+            .delete_consumer_offset(consumer, stream_id, topic_id, partition_id)
             .await
     }
 }

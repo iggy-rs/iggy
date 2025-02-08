@@ -1,6 +1,6 @@
-use iggy::utils::crypto::{Aes256GcmEncryptor, Encryptor};
+use iggy::utils::crypto::{Aes256GcmEncryptor, EncryptorKind};
 use server::state::file::FileState;
-use server::streaming::persistence::persister::FilePersister;
+use server::streaming::persistence::persister::{FilePersister, PersisterKind};
 use server::versioning::SemanticVersion;
 use std::str::FromStr;
 use std::sync::Arc;
@@ -31,11 +31,12 @@ impl StateSetup {
         create_dir(&directory_path).await.unwrap();
 
         let version = SemanticVersion::from_str("1.2.3").unwrap();
-        let persister = FilePersister {};
-        let encryptor: Option<Arc<dyn Encryptor>> = match encryption_key {
-            Some(key) => Some(Arc::new(Aes256GcmEncryptor::new(key).unwrap())),
-            None => None,
-        };
+        let persister = PersisterKind::File(FilePersister {});
+        let encryptor = encryption_key.map(|key| {
+            Arc::new(EncryptorKind::Aes256Gcm(
+                Aes256GcmEncryptor::new(key).unwrap(),
+            ))
+        });
         let state = FileState::new(&log_path, &version, Arc::new(persister), encryptor);
 
         Self {

@@ -44,6 +44,23 @@ pub fn map_stats(stats: &Stats) -> Bytes {
     bytes.put_slice(stats.os_version.as_bytes());
     bytes.put_u32_le(stats.kernel_version.len() as u32);
     bytes.put_slice(stats.kernel_version.as_bytes());
+    bytes.put_u32_le(stats.iggy_server_version.len() as u32);
+    bytes.put_slice(stats.iggy_server_version.as_bytes());
+    if let Some(semver) = stats.iggy_server_semver {
+        bytes.put_u32_le(semver);
+    }
+
+    bytes.put_u32_le(stats.cache_metrics.len() as u32);
+    for (key, metrics) in &stats.cache_metrics {
+        bytes.put_u32_le(key.stream_id);
+        bytes.put_u32_le(key.topic_id);
+        bytes.put_u32_le(key.partition_id);
+
+        bytes.put_u64_le(metrics.hits);
+        bytes.put_u64_le(metrics.misses);
+        bytes.put_f32_le(metrics.hit_ratio);
+    }
+
     bytes.freeze()
 }
 

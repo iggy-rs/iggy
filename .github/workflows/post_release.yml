@@ -37,20 +37,20 @@ jobs:
           sleep 1
           ss -tuln | grep :8090
 
-      - name: Test Benchmark - Send
+      - name: Test Benchmark - Producer
         timeout-minutes: 1
         run: |
-          ./target/debug/iggy-bench --skip-server-start --warmup-time 0s send --message-batches 100 --messages-per-batch 100 tcp --server-address 127.0.0.1:8090
+          ./target/debug/iggy-bench --skip-server-start --message-batches 100 --messages-per-batch 100 pinned-producer tcp --server-address 127.0.0.1:8090
 
-      - name: Test Benchmark - Poll
+      - name: Test Benchmark - Consumer
         timeout-minutes: 1
         run: |
-          ./target/debug/iggy-bench --skip-server-start --warmup-time 0s poll --message-batches 100 --messages-per-batch 100 tcp --server-address 127.0.0.1:8090
+          ./target/debug/iggy-bench --skip-server-start --message-batches 100 --messages-per-batch 100 pinned-consumer tcp --server-address 127.0.0.1:8090
 
-      - name: Test Benchmark - Send and Poll
+      - name: Test Benchmark - Producer and Consumer
         timeout-minutes: 1
         run: |
-          ./target/debug/iggy-bench --skip-server-start --warmup-time 0s send-and-poll --message-batches 100 --messages-per-batch 100 tcp --server-address 127.0.0.1:8090
+          ./target/debug/iggy-bench --skip-server-start --message-batches 100 --messages-per-batch 100 pinned-producer-and-consumer tcp --server-address 127.0.0.1:8090
 
       - name: Check if number of messages is correct
         timeout-minutes: 1
@@ -58,7 +58,7 @@ jobs:
           STATS=$(./target/debug/iggy -u iggy -p iggy stats)
           echo "$STATS"
           MESSAGE_COUNT=$(./target/debug/iggy -u iggy -p iggy -q stats -o json | jq '.messages_count')
-          readonly EXPECTED_MESSAGE_COUNT=200000
+          readonly EXPECTED_MESSAGE_COUNT=160000
           if [ "$MESSAGE_COUNT" -ne "$EXPECTED_MESSAGE_COUNT" ]; then
             echo "Expected message count to be $EXPECTED_MESSAGE_COUNT, but got $MESSAGE_COUNT"
             exit 1

@@ -6,7 +6,7 @@ use crate::identifier::{IdKind, Identifier};
 use crate::locking::{IggySharedMut, IggySharedMutFn};
 use crate::messages::send_messages::{Message, Partitioning};
 use crate::partitioner::Partitioner;
-use crate::utils::crypto::Encryptor;
+use crate::utils::crypto::EncryptorKind;
 use crate::utils::duration::IggyDuration;
 use crate::utils::expiry::IggyExpiry;
 use crate::utils::timestamp::IggyTimestamp;
@@ -16,7 +16,7 @@ use futures_util::StreamExt;
 use std::sync::atomic::{AtomicBool, AtomicU64};
 use std::sync::Arc;
 use std::time::Duration;
-use tokio::time::sleep;
+use tokio::time::{sleep, Interval};
 use tracing::{error, info, trace, warn};
 
 const ORDERING: std::sync::atomic::Ordering = std::sync::atomic::Ordering::SeqCst;
@@ -35,7 +35,7 @@ pub struct IggyProducer {
     topic_name: String,
     batch_size: Option<usize>,
     partitioning: Option<Arc<Partitioning>>,
-    encryptor: Option<Arc<dyn Encryptor>>,
+    encryptor: Option<Arc<EncryptorKind>>,
     partitioner: Option<Arc<dyn Partitioner>>,
     send_interval_micros: u64,
     create_stream_if_not_exists: bool,
@@ -47,7 +47,8 @@ pub struct IggyProducer {
     default_partitioning: Arc<Partitioning>,
     can_send_immediately: bool,
     last_sent_at: Arc<AtomicU64>,
-    retry_interval: IggyDuration,
+    send_retries_count: Option<u32>,
+    send_retries_interval: Option<IggyDuration>,
 }
 
 impl IggyProducer {
@@ -60,7 +61,7 @@ impl IggyProducer {
         topic_name: String,
         batch_size: Option<usize>,
         partitioning: Option<Partitioning>,
-        encryptor: Option<Arc<dyn Encryptor>>,
+        encryptor: Option<Arc<EncryptorKind>>,
         partitioner: Option<Arc<dyn Partitioner>>,
         interval: Option<IggyDuration>,
         create_stream_if_not_exists: bool,
@@ -69,7 +70,8 @@ impl IggyProducer {
         topic_replication_factor: Option<u8>,
         topic_message_expiry: IggyExpiry,
         topic_max_size: MaxTopicSize,
-        retry_interval: IggyDuration,
+        send_retries_count: Option<u32>,
+        send_retries_interval: Option<IggyDuration>,
     ) -> Self {
         Self {
             initialized: false,
@@ -93,7 +95,8 @@ impl IggyProducer {
             default_partitioning: Arc::new(Partitioning::balanced()),
             can_send_immediately: interval.is_none(),
             last_sent_at: Arc::new(AtomicU64::new(0)),
-            retry_interval,
+            send_retries_count,
+            send_retries_interval,
         }
     }
 
@@ -215,11 +218,6 @@ impl IggyProducer {
             return Ok(());
         }
 
-        if !self.can_send.load(ORDERING) {
-            trace!("Trying to send messages in {}...", self.retry_interval);
-            sleep(self.retry_interval.get_duration()).await;
-        }
-
         if self.can_send_immediately {
             return self
                 .send_immediately(&self.stream_id, &self.topic_id, messages, None)
@@ -249,11 +247,6 @@ impl IggyProducer {
             return Ok(());
         }
 
-        if !self.can_send.load(ORDERING) {
-            trace!("Trying to send messages in {}...", self.retry_interval);
-            sleep(self.retry_interval.get_duration()).await;
-        }
-
         if self.can_send_immediately {
             return self
                 .send_immediately(&self.stream_id, &self.topic_id, messages, partitioning)
@@ -279,11 +272,6 @@ impl IggyProducer {
         if messages.is_empty() {
             trace!("No messages to send.");
             return Ok(());
-        }
-
-        if !self.can_send.load(ORDERING) {
-            trace!("Trying to send messages in {}...", self.retry_interval);
-            sleep(self.retry_interval.get_duration()).await;
         }
 
         if self.can_send_immediately {
@@ -324,9 +312,7 @@ impl IggyProducer {
             );
             self.last_sent_at
                 .store(IggyTimestamp::now().into(), ORDERING);
-            let client = self.client.read().await;
-            client
-                .send_messages(&self.stream_id, &self.topic_id, &partitioning, batch)
+            self.try_send_messages(&self.stream_id, &self.topic_id, &partitioning, batch)
                 .await?;
             trace!("Sent {messages_count} messages ({current_batch}/{batches_count} batch(es)).");
             current_batch += 1;
@@ -345,12 +331,10 @@ impl IggyProducer {
         self.encrypt_messages(&mut messages)?;
         let partitioning = self.get_partitioning(stream, topic, &messages, partitioning)?;
         let batch_size = self.batch_size.unwrap_or(MAX_BATCH_SIZE);
-        let client = self.client.read().await;
         if messages.len() <= batch_size {
             self.last_sent_at
                 .store(IggyTimestamp::now().into(), ORDERING);
-            client
-                .send_messages(stream, topic, &partitioning, &mut messages)
+            self.try_send_messages(stream, topic, &partitioning, &mut messages)
                 .await?;
             return Ok(());
         }
@@ -358,8 +342,7 @@ impl IggyProducer {
         for batch in messages.chunks_mut(batch_size) {
             self.last_sent_at
                 .store(IggyTimestamp::now().into(), ORDERING);
-            client
-                .send_messages(stream, topic, &partitioning, batch)
+            self.try_send_messages(stream, topic, &partitioning, batch)
                 .await?;
         }
         Ok(())
@@ -390,6 +373,125 @@ impl IggyProducer {
             }
         }
         Ok(())
+    }
+
+    async fn try_send_messages(
+        &self,
+        stream: &Identifier,
+        topic: &Identifier,
+        partitioning: &Arc<Partitioning>,
+        messages: &mut [Message],
+    ) -> Result<(), IggyError> {
+        let client = self.client.read().await;
+        let Some(max_retries) = self.send_retries_count else {
+            return client
+                .send_messages(stream, topic, partitioning, messages)
+                .await;
+        };
+
+        if max_retries == 0 {
+            return client
+                .send_messages(stream, topic, partitioning, messages)
+                .await;
+        }
+
+        let mut timer = if let Some(interval) = self.send_retries_interval {
+            let mut timer = tokio::time::interval(interval.get_duration());
+            timer.tick().await;
+            Some(timer)
+        } else {
+            None
+        };
+
+        self.wait_until_connected(max_retries, stream, topic, &mut timer)
+            .await?;
+        self.send_with_retries(
+            max_retries,
+            stream,
+            topic,
+            partitioning,
+            messages,
+            &mut timer,
+        )
+        .await
+    }
+
+    async fn wait_until_connected(
+        &self,
+        max_retries: u32,
+        stream: &Identifier,
+        topic: &Identifier,
+        timer: &mut Option<Interval>,
+    ) -> Result<(), IggyError> {
+        let mut retries = 0;
+        while !self.can_send.load(ORDERING) {
+            retries += 1;
+            if retries > max_retries {
+                error!(
+                    "Failed to send messages to topic: {topic}, stream: {stream} \
+                     after {max_retries} retries. Client is disconnected."
+                );
+                return Err(IggyError::CannotSendMessagesDueToClientDisconnection);
+            }
+
+            error!(
+                "Trying to send messages to topic: {topic}, stream: {stream} \
+                 but the client is disconnected. Retrying {retries}/{max_retries}..."
+            );
+
+            if let Some(timer) = timer.as_mut() {
+                trace!(
+                    "Waiting for the next retry to send messages to topic: {topic}, \
+                     stream: {stream} for disconnected client..."
+                );
+                timer.tick().await;
+            }
+        }
+        Ok(())
+    }
+
+    async fn send_with_retries(
+        &self,
+        max_retries: u32,
+        stream: &Identifier,
+        topic: &Identifier,
+        partitioning: &Arc<Partitioning>,
+        messages: &mut [Message],
+        timer: &mut Option<Interval>,
+    ) -> Result<(), IggyError> {
+        let client = self.client.read().await;
+        let mut retries = 0;
+        loop {
+            match client
+                .send_messages(stream, topic, partitioning, messages)
+                .await
+            {
+                Ok(_) => return Ok(()),
+                Err(error) => {
+                    retries += 1;
+                    if retries > max_retries {
+                        error!(
+                            "Failed to send messages to topic: {topic}, stream: {stream} \
+                             after {max_retries} retries. {error}."
+                        );
+                        return Err(error);
+                    }
+
+                    error!(
+                        "Failed to send messages to topic: {topic}, stream: {stream}. \
+                         {error} Retrying {retries}/{max_retries}..."
+                    );
+
+                    if let Some(t) = timer.as_mut() {
+                        trace!(
+                            "Waiting for the next retry to send messages to topic: {topic}, \
+                             stream: {stream}..."
+                        );
+                        t.tick().await;
+                    }
+                }
+            }
+        }
     }
 
     fn get_partitioning(
@@ -423,16 +525,17 @@ pub struct IggyProducerBuilder {
     topic_name: String,
     batch_size: Option<usize>,
     partitioning: Option<Partitioning>,
-    encryptor: Option<Arc<dyn Encryptor>>,
+    encryptor: Option<Arc<EncryptorKind>>,
     partitioner: Option<Arc<dyn Partitioner>>,
     send_interval: Option<IggyDuration>,
     create_stream_if_not_exists: bool,
     create_topic_if_not_exists: bool,
     topic_partitions_count: u32,
     topic_replication_factor: Option<u8>,
-    retry_interval: IggyDuration,
-    pub topic_message_expiry: IggyExpiry,
-    pub topic_max_size: MaxTopicSize,
+    send_retries_count: Option<u32>,
+    send_retries_interval: Option<IggyDuration>,
+    topic_message_expiry: IggyExpiry,
+    topic_max_size: MaxTopicSize,
 }
 
 impl IggyProducerBuilder {
@@ -443,7 +546,7 @@ impl IggyProducerBuilder {
         stream_name: String,
         topic: Identifier,
         topic_name: String,
-        encryptor: Option<Arc<dyn Encryptor>>,
+        encryptor: Option<Arc<EncryptorKind>>,
         partitioner: Option<Arc<dyn Partitioner>>,
     ) -> Self {
         Self {
@@ -461,9 +564,10 @@ impl IggyProducerBuilder {
             create_topic_if_not_exists: true,
             topic_partitions_count: 1,
             topic_replication_factor: None,
-            retry_interval: IggyDuration::ONE_SECOND,
             topic_message_expiry: IggyExpiry::ServerDefault,
             topic_max_size: MaxTopicSize::ServerDefault,
+            send_retries_count: Some(3),
+            send_retries_interval: Some(IggyDuration::ONE_SECOND),
         }
     }
 
@@ -514,7 +618,7 @@ impl IggyProducerBuilder {
     }
 
     /// Sets the encryptor for encrypting the messages' payloads.
-    pub fn encryptor(self, encryptor: Arc<dyn Encryptor>) -> Self {
+    pub fn encryptor(self, encryptor: Arc<EncryptorKind>) -> Self {
         Self {
             encryptor: Some(encryptor),
             ..self
@@ -603,10 +707,13 @@ impl IggyProducerBuilder {
         }
     }
 
-    /// Sets the retry interval in case of server disconnection.
-    pub fn retry_interval(self, interval: IggyDuration) -> Self {
+    /// Sets the retry policy (maximum number of retries and interval between them) in case of messages sending failure.
+    /// The error can be related either to disconnecting from the server or to the server rejecting the messages.
+    /// Default is 3 retries with 1 second interval between them.
+    pub fn send_retries(self, retries: Option<u32>, interval: Option<IggyDuration>) -> Self {
         Self {
-            retry_interval: interval,
+            send_retries_count: retries,
+            send_retries_interval: interval,
             ..self
         }
     }
@@ -632,7 +739,8 @@ impl IggyProducerBuilder {
             self.topic_replication_factor,
             self.topic_message_expiry,
             self.topic_max_size,
-            self.retry_interval,
+            self.send_retries_count,
+            self.send_retries_interval,
         )
     }
 }

@@ -266,6 +266,8 @@ pub enum IggyError {
     CannotCreateConsumerOffsetsDirectory(String) = 3012,
     #[error("Failed to read consumers offsets from path: {0}")]
     CannotReadConsumerOffsets(String) = 3020,
+    #[error("Consumer offset for consumer with ID: {0} was not found.")]
+    ConsumerOffsetNotFound(u32) = 3021,
     #[error("Segment not found")]
     SegmentNotFound = 4000,
     #[error("Segment with start offset: {0} and partition with ID: {1} is closed")]
@@ -326,6 +328,8 @@ pub enum IggyError {
     InvalidKeyValueLength = 4028,
     #[error("Command length error: {0}")]
     CommandLengthError(String) = 4029,
+    #[error("Cannot sed messages due to client disconnection")]
+    CannotSendMessagesDueToClientDisconnection = 4050,
     #[error("Invalid offset: {0}")]
     InvalidOffset(u64) = 4100,
     #[error("Consumer group with ID: {0} for topic with ID: {1} was not found.")]

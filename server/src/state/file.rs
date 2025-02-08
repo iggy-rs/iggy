@@ -1,15 +1,14 @@
 use crate::state::command::EntryCommand;
 use crate::state::{State, StateEntry, COMPONENT};
-use crate::streaming::persistence::persister::Persister;
+use crate::streaming::persistence::persister::PersisterKind;
 use crate::streaming::utils::file;
 use crate::versioning::SemanticVersion;
-use async_trait::async_trait;
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 use error_set::ErrContext;
 use iggy::bytes_serializable::BytesSerializable;
 use iggy::error::IggyError;
 use iggy::utils::byte_size::IggyByteSize;
-use iggy::utils::crypto::Encryptor;
+use iggy::utils::crypto::EncryptorKind;
 use iggy::utils::timestamp::IggyTimestamp;
 use std::fmt::Debug;
 use std::path::Path;
@@ -29,16 +28,16 @@ pub struct FileState {
     term: AtomicU64,
     version: u32,
     path: String,
-    persister: Arc<dyn Persister>,
-    encryptor: Option<Arc<dyn Encryptor>>,
+    persister: Arc<PersisterKind>,
+    encryptor: Option<Arc<EncryptorKind>>,
 }
 
 impl FileState {
     pub fn new(
         path: &str,
         version: &SemanticVersion,
-        persister: Arc<dyn Persister>,
-        encryptor: Option<Arc<dyn Encryptor>>,
+        persister: Arc<PersisterKind>,
+        encryptor: Option<Arc<EncryptorKind>>,
     ) -> Self {
         Self {
             current_index: AtomicU64::new(0),
@@ -65,7 +64,6 @@ impl FileState {
     }
 }
 
-#[async_trait]
 impl State for FileState {
     async fn init(&self) -> Result<Vec<StateEntry>, IggyError> {
         if !Path::new(&self.path).exists() {
@@ -94,7 +92,7 @@ impl State for FileState {
             self.current_index.store(last_index, Ordering::SeqCst);
         }
 
-        return Ok(entries);
+        Ok(entries)
     }
 
     async fn load_entries(&self) -> Result<Vec<StateEntry>, IggyError> {

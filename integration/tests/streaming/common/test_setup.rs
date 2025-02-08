@@ -1,5 +1,5 @@
 use server::configs::system::SystemConfig;
-use server::streaming::persistence::persister::FilePersister;
+use server::streaming::persistence::persister::{FilePersister, PersisterKind};
 use server::streaming::storage::SystemStorage;
 use std::sync::Arc;
 use tokio::fs;
@@ -20,7 +20,7 @@ impl TestSetup {
 
         let config = Arc::new(config);
         fs::create_dir(config.get_system_path()).await.unwrap();
-        let persister = FilePersister {};
+        let persister = PersisterKind::File(FilePersister {});
         let storage = Arc::new(SystemStorage::new(config.clone(), Arc::new(persister)));
         TestSetup { config, storage }
     }

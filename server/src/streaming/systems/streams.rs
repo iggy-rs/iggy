@@ -3,14 +3,13 @@ use crate::streaming::session::Session;
 use crate::streaming::streams::stream::Stream;
 use crate::streaming::systems::system::System;
 use crate::streaming::systems::COMPONENT;
+use ahash::{AHashMap, AHashSet};
 use error_set::ErrContext;
 use futures::future::try_join_all;
 use iggy::error::IggyError;
 use iggy::identifier::{IdKind, Identifier};
 use iggy::locking::IggySharedMutFn;
-use iggy::utils::text;
 use std::cell::RefCell;
-use std::collections::{HashMap, HashSet};
 use std::sync::atomic::{AtomicU32, Ordering};
 use tokio::fs;
 use tokio::fs::read_dir;
@@ -63,15 +62,15 @@ impl System {
         let state_stream_ids = streams
             .iter()
             .map(|stream| stream.id)
-            .collect::<HashSet<u32>>();
+            .collect::<AHashSet<u32>>();
         let unloaded_stream_ids = unloaded_streams
             .iter()
             .map(|stream| stream.stream_id)
-            .collect::<HashSet<u32>>();
+            .collect::<AHashSet<u32>>();
         let missing_ids = state_stream_ids
             .difference(&unloaded_stream_ids)
             .copied()
-            .collect::<HashSet<u32>>();
+            .collect::<AHashSet<u32>>();
         if missing_ids.is_empty() {
             info!("All streams found on disk were found in state.");
         } else {
@@ -102,7 +101,7 @@ impl System {
         let mut streams_states = streams
             .into_iter()
             .map(|s| (s.id, s))
-            .collect::<HashMap<_, _>>();
+            .collect::<AHashMap<_, _>>();
         let loaded_streams = RefCell::new(Vec::new());
         let load_stream_tasks = unloaded_streams.into_iter().map(|mut stream| {
             let state = streams_states.remove(&stream.stream_id).unwrap();
@@ -244,9 +243,8 @@ impl System {
     ) -> Result<&Stream, IggyError> {
         self.ensure_authenticated(session)?;
         self.permissioner.create_stream(session.get_user_id())?;
-        let name = text::to_lowercase_non_whitespace(name);
-        if self.streams_ids.contains_key(&name) {
-            return Err(IggyError::StreamNameAlreadyExists(name.to_string()));
+        if self.streams_ids.contains_key(name) {
+            return Err(IggyError::StreamNameAlreadyExists(name.to_owned()));
         }
 
         let mut id;
@@ -270,10 +268,10 @@ impl System {
             return Err(IggyError::StreamIdAlreadyExists(id));
         }
 
-        let stream = Stream::create(id, &name, self.config.clone(), self.storage.clone());
+        let stream = Stream::create(id, name, self.config.clone(), self.storage.clone());
         stream.persist().await?;
         info!("Created stream with ID: {id}, name: '{name}'.");
-        self.streams_ids.insert(name, stream.stream_id);
+        self.streams_ids.insert(name.to_owned(), stream.stream_id);
         self.streams.insert(stream.stream_id, stream);
         self.metrics.increment_streams(1);
         self.get_stream_by_id(id)
@@ -303,12 +301,11 @@ impl System {
                     stream_id
                 )
             })?;
-        let updated_name = text::to_lowercase_non_whitespace(name);
 
         {
-            if let Some(stream_id_by_name) = self.streams_ids.get(&updated_name) {
+            if let Some(stream_id_by_name) = self.streams_ids.get(name) {
                 if *stream_id_by_name != stream_id {
-                    return Err(IggyError::StreamNameAlreadyExists(updated_name.clone()));
+                    return Err(IggyError::StreamNameAlreadyExists(name.to_owned()));
                 }
             }
         }
@@ -319,19 +316,16 @@ impl System {
                 format!("{COMPONENT} - failed to get mutable reference to stream with id: {id}")
             })?;
             old_name = stream.name.clone();
-            stream.name.clone_from(&updated_name);
+            stream.name = name.to_owned();
             stream.persist().await?;
         }
 
         {
             self.streams_ids.remove(&old_name);
-            self.streams_ids.insert(updated_name.clone(), stream_id);
+            self.streams_ids.insert(name.to_owned(), stream_id);
         }
 
-        info!(
-            "Stream with ID '{}' updated. Old name: '{}' changed to: '{}'.",
-            id, old_name, updated_name
-        );
+        info!("Stream with ID '{id}' updated. Old name: '{old_name}' changed to: '{name}'.");
         Ok(())
     }
 
@@ -405,12 +399,9 @@ mod tests {
     use super::*;
     use crate::configs::server::{DataMaintenanceConfig, PersonalAccessTokenConfig};
     use crate::configs::system::SystemConfig;
-    use crate::state::command::EntryCommand;
-    use crate::state::entry::StateEntry;
-    use crate::state::State;
+    use crate::state::{MockState, StateKind};
     use crate::streaming::storage::tests::get_test_system_storage;
     use crate::streaming::users::user::User;
-    use async_trait::async_trait;
     use iggy::users::defaults::{DEFAULT_ROOT_PASSWORD, DEFAULT_ROOT_USERNAME};
     use std::{
         net::{Ipv4Addr, SocketAddr},
@@ -426,7 +417,7 @@ mod tests {
         let mut system = System::create(
             config,
             storage,
-            Arc::new(TestState::default()),
+            Arc::new(StateKind::Mock(MockState::new())),
             None,
             DataMaintenanceConfig::default(),
             PersonalAccessTokenConfig::default(),
@@ -457,23 +448,5 @@ mod tests {
         let stream = stream.unwrap();
         assert_eq!(stream.stream_id, stream_id);
         assert_eq!(stream.name, stream_name);
-    }
-
-    #[derive(Debug, Default)]
-    struct TestState {}
-
-    #[async_trait]
-    impl State for TestState {
-        async fn init(&self) -> Result<Vec<StateEntry>, IggyError> {
-            Ok(Vec::new())
-        }
-
-        async fn load_entries(&self) -> Result<Vec<StateEntry>, IggyError> {
-            Ok(Vec::new())
-        }
-
-        async fn apply(&self, _: u32, _: EntryCommand) -> Result<(), IggyError> {
-            Ok(())
-        }
     }
 }

@@ -50,16 +50,39 @@ impl ConsumerOffsetClient for HttpClient {
                     partition_id,
                 },
             )
-            .await?;
-        if response.status() == 404 {
-            return Ok(None);
+            .await;
+        if let Err(error) = response {
+            if matches!(error, IggyError::ResourceNotFound(_)) {
+                return Ok(None);
+            }
+
+            return Err(error);
         }
 
-        let offset = response
+        let offset = response?
             .json()
             .await
             .map_err(|_| IggyError::InvalidJsonResponse)?;
         Ok(Some(offset))
+    }
+
+    async fn delete_consumer_offset(
+        &self,
+        consumer: &Consumer,
+        stream_id: &Identifier,
+        topic_id: &Identifier,
+        partition_id: Option<u32>,
+    ) -> Result<(), IggyError> {
+        let partition_id = partition_id
+            .map(|id| format!("?partition_id={id}"))
+            .unwrap_or_default();
+        let path = format!(
+            "{}/{}{partition_id}",
+            get_path(&stream_id.as_cow_str(), &topic_id.as_cow_str()),
+            consumer.id
+        );
+        self.delete(&path).await?;
+        Ok(())
     }
 }
 

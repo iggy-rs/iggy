@@ -12,8 +12,8 @@ use serde::{Deserialize, Serialize};
 /// - `created_at`: the timestamp when the topic was created.
 /// - `name`: the unique name of the topic.
 /// - `size`: the total size of the topic in bytes.
-/// - `message_expiry`: the optional expiry of the messages in the topic in seconds.
-/// - `max_topic_size`: the optional maximum size of the topic in bytes.
+/// - `message_expiry`: the expiry of the messages in the topic.
+/// - `max_topic_size`: the maximum size of the topic.
 /// - `replication_factor`: replication factor for the topic.
 /// - `messages_count`: the total number of messages in the topic.
 /// - `partitions_count`: the total number of partitions in the topic.
@@ -48,8 +48,8 @@ pub struct Topic {
 /// - `created_at`: the timestamp when the topic was created.
 /// - `name`: the unique name of the topic.
 /// - `size`: the total size of the topic.
-/// - `message_expiry`: the optional expiry of the messages in the topic in seconds.
-/// - `max_topic_size`: the optional maximum size of the topic.
+/// - `message_expiry`: the expiry of the messages in the topic.
+/// - `max_topic_size`: the maximum size of the topic.
 /// - `replication_factor`: replication factor for the topic.
 /// - `messages_count`: the total number of messages in the topic.
 /// - `partitions_count`: the total number of partitions in the topic.

@@ -1,4 +1,4 @@
-use crate::binary::sender::Sender;
+use crate::binary::sender::SenderKind;
 use crate::streaming::session::Session;
 use crate::streaming::systems::system::SharedSystem;
 use bytes::Bytes;
@@ -8,7 +8,7 @@ use tracing::debug;
 
 pub async fn handle(
     command: GetSnapshot,
-    sender: &mut dyn Sender,
+    sender: &mut SenderKind,
     session: &Session,
     system: &SharedSystem,
 ) -> Result<(), IggyError> {

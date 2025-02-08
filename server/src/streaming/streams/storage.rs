@@ -3,13 +3,12 @@ use crate::streaming::storage::StreamStorage;
 use crate::streaming::streams::stream::Stream;
 use crate::streaming::streams::COMPONENT;
 use crate::streaming::topics::topic::Topic;
-use async_trait::async_trait;
+use ahash::AHashSet;
 use error_set::ErrContext;
 use futures::future::join_all;
 use iggy::error::IggyError;
 use iggy::utils::timestamp::IggyTimestamp;
 use serde::{Deserialize, Serialize};
-use std::collections::HashSet;
 use std::path::Path;
 use std::sync::Arc;
 use tokio::fs;
@@ -20,16 +19,12 @@ use tracing::{error, info, warn};
 #[derive(Debug)]
 pub struct FileStreamStorage;
 
-unsafe impl Send for FileStreamStorage {}
-unsafe impl Sync for FileStreamStorage {}
-
 #[derive(Debug, Serialize, Deserialize)]
 struct StreamData {
     name: String,
     created_at: IggyTimestamp,
 }
 
-#[async_trait]
 impl StreamStorage for FileStreamStorage {
     async fn load(&self, stream: &mut Stream, mut state: StreamState) -> Result<(), IggyError> {
         info!("Loading stream with ID: {} from disk...", stream.stream_id);
@@ -80,15 +75,15 @@ impl StreamStorage for FileStreamStorage {
             unloaded_topics.push(topic);
         }
 
-        let state_topic_ids = state.topics.keys().copied().collect::<HashSet<u32>>();
+        let state_topic_ids = state.topics.keys().copied().collect::<AHashSet<u32>>();
         let unloaded_topic_ids = unloaded_topics
             .iter()
             .map(|topic| topic.topic_id)
-            .collect::<HashSet<u32>>();
+            .collect::<AHashSet<u32>>();
         let missing_ids = state_topic_ids
             .difference(&unloaded_topic_ids)
             .copied()
-            .collect::<HashSet<u32>>();
+            .collect::<AHashSet<u32>>();
         if missing_ids.is_empty() {
             info!(
                 "All topics for stream with ID: '{}' found on disk were found in state.",

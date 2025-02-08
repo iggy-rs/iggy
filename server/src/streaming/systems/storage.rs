@@ -1,10 +1,9 @@
-use crate::streaming::persistence::persister::Persister;
+use crate::streaming::persistence::persister::PersisterKind;
 use crate::streaming::storage::SystemInfoStorage;
 use crate::streaming::systems::info::SystemInfo;
 use crate::streaming::systems::COMPONENT;
 use crate::streaming::utils::file;
 use anyhow::Context;
-use async_trait::async_trait;
 use bytes::{BufMut, BytesMut};
 use error_set::ErrContext;
 use iggy::error::IggyError;
@@ -14,19 +13,16 @@ use tracing::info;
 
 #[derive(Debug)]
 pub struct FileSystemInfoStorage {
-    persister: Arc<dyn Persister>,
+    persister: Arc<PersisterKind>,
     path: String,
 }
 
 impl FileSystemInfoStorage {
-    pub fn new(path: String, persister: Arc<dyn Persister>) -> Self {
+    pub fn new(path: String, persister: Arc<PersisterKind>) -> Self {
         Self { path, persister }
     }
 }
-unsafe impl Send for FileSystemInfoStorage {}
-unsafe impl Sync for FileSystemInfoStorage {}
 
-#[async_trait]
 impl SystemInfoStorage for FileSystemInfoStorage {
     async fn load(&self) -> Result<SystemInfo, IggyError> {
         let file = file::open(&self.path).await;

@@ -42,7 +42,15 @@ if [[ "$PROFILING_MODE" == "io" ]]; then
     fi
 fi
 
-# Check system settings for perf
+# Detect OS
+OS="$(uname -s)"
+if [ "$OS" = "Darwin" ]; then
+    echo "Error: Profiling with perf and flamegraph is currently only supported on Linux systems."
+    echo "For macOS profiling, consider using Instruments.app or DTrace."
+    exit 1
+fi
+
+# Linux-specific profiling setup
 paranoid=$(cat /proc/sys/kernel/perf_event_paranoid)
 restrict=$(cat /proc/sys/kernel/kptr_restrict)
 
@@ -94,8 +102,8 @@ echo "Running iggy-server, log will be in ${SERVER_LOG_FILE}..."
 target/release/iggy-server > "${SERVER_LOG_FILE}" 2>&1 &
 sleep 1
 
-# Run iggy-bench send tcp
-echo "Running iggy-bench send tcp..."
+# Run iggy-bench pinned-producer tcp
+echo "Running iggy-bench pinned-producer tcp..."
 if [[ "${PROFILED_APP_NAME}" == "iggy-server" ]]; then
     # Start flamegraph for iggy-server (send)
     echo "Starting flamegraph (send) on iggy-server..."
@@ -107,7 +115,7 @@ if [[ "${PROFILED_APP_NAME}" == "iggy-server" ]]; then
     fi
     sleep 1
 
-    target/release/iggy-bench send tcp > "${BENCH_SEND_LOG_FILE}"
+    target/release/iggy-bench pinned-producer tcp > "${BENCH_SEND_LOG_FILE}"
 
     # Trigger flamegraph (send) completion
     send_signal "perf" "TERM"
@@ -132,9 +140,9 @@ if [[ "${PROFILED_APP_NAME}" == "iggy-server" ]]; then
     fi
     sleep 1
 
-    # Run iggy-bench poll tcp
-    echo "Running iggy-bench poll tcp..."
-    target/release/iggy-bench poll tcp > "${BENCH_POLL_LOG_FILE}"
+    # Run iggy-bench pinned-consumer tcp
+    echo "Running iggy-bench pinned-consumer tcp..."
+    target/release/iggy-bench pinned-consumer tcp > "${BENCH_POLL_LOG_FILE}"
 
     # Trigger flamegraph (poll) completion
     send_signal "perf" "TERM"
@@ -152,9 +160,9 @@ if [[ "${PROFILED_APP_NAME}" == "iggy-server" ]]; then
 else
     echo "Starting flamegraph (send) on iggy-bench..."
     if [[ "${PROFILING_MODE}" == "cpu" ]]; then
-        cargo flamegraph --bin iggy-bench -o "${FLAMEGRAPH_SEND_SVG}" -- send tcp > "${BENCH_SEND_LOG_FILE}"
+        cargo flamegraph --bin iggy-bench -o "${FLAMEGRAPH_SEND_SVG}" -- pinned-producer tcp > "${BENCH_SEND_LOG_FILE}"
     else
-        perf record -a -g -o perf_bench_send.data -- target/release/iggy-bench send tcp > "${BENCH_SEND_LOG_FILE}"
+        perf record -a -g -o perf_bench_send.data -- target/release/iggy-bench pinned-producer tcp > "${BENCH_SEND_LOG_FILE}"
         perf script --header -i perf_bench_send.data > perf_bench_send.stacks
         /tmp/FlameGraph/stackcollapse-perf.pl < perf_bench_send.stacks | /tmp/FlameGraph/flamegraph.pl --color=io \
             --title="iggy client send I/O Flame Graph" --countname="I/O" > "${FLAMEGRAPH_SEND_SVG}"
@@ -164,9 +172,9 @@ else
 
     echo "Starting flamegraph (poll) on iggy-bench..."
     if [[ "${PROFILING_MODE}" == "cpu" ]]; then
-        cargo flamegraph --bin iggy-bench -o "${FLAMEGRAPH_POLL_SVG}" -- poll tcp > "${BENCH_POLL_LOG_FILE}"
+        cargo flamegraph --bin iggy-bench -o "${FLAMEGRAPH_POLL_SVG}" -- pinned-consumer tcp > "${BENCH_POLL_LOG_FILE}"
     else
-        perf record -a -g -o perf_bench_poll.data -- target/release/iggy-bench poll tcp > "${BENCH_POLL_LOG_FILE}"
+        perf record -a -g -o perf_bench_poll.data -- target/release/iggy-bench pinned-consumer tcp > "${BENCH_POLL_LOG_FILE}"
         perf script --header -i perf_bench_poll.data > perf_bench_poll.stacks
         /tmp/FlameGraph/stackcollapse-perf.pl < perf_bench_poll.stacks | /tmp/FlameGraph/flamegraph.pl --color=io \
             --title="iggy client poll I/O Flame Graph" --countname="I/O" > "${FLAMEGRAPH_POLL_SVG}"

@@ -33,7 +33,7 @@ const NAME: &str = "Iggy";
 /// It requires a valid server address.
 #[derive(Debug)]
 pub struct TcpClient {
-    pub(crate) stream: Mutex<Option<Box<dyn ConnectionStream>>>,
+    pub(crate) stream: Mutex<Option<ConnectionStreamKind>>,
     pub(crate) config: Arc<TcpClientConfig>,
     pub(crate) state: Mutex<ClientState>,
     client_address: Mutex<Option<SocketAddr>>,
@@ -41,11 +41,8 @@ pub struct TcpClient {
     connected_at: Mutex<Option<IggyTimestamp>>,
 }
 
-unsafe impl Send for TcpClient {}
-unsafe impl Sync for TcpClient {}
-
 #[async_trait]
-pub(crate) trait ConnectionStream: Debug + Sync + Send {
+pub(crate) trait ConnectionStream {
     async fn read(&mut self, buf: &mut [u8]) -> Result<usize, IggyError>;
     async fn write(&mut self, buf: &[u8]) -> Result<(), IggyError>;
     async fn flush(&mut self) -> Result<(), IggyError>;
@@ -53,7 +50,43 @@ pub(crate) trait ConnectionStream: Debug + Sync + Send {
 }
 
 #[derive(Debug)]
-struct TcpConnectionStream {
+pub(crate) enum ConnectionStreamKind {
+    Tcp(TcpConnectionStream),
+    TcpTls(TcpTlsConnectionStream),
+}
+
+impl ConnectionStreamKind {
+    pub async fn read(&mut self, buf: &mut [u8]) -> Result<usize, IggyError> {
+        match self {
+            Self::Tcp(c) => c.read(buf).await,
+            Self::TcpTls(c) => c.read(buf).await,
+        }
+    }
+
+    pub async fn write(&mut self, buf: &[u8]) -> Result<(), IggyError> {
+        match self {
+            Self::Tcp(c) => c.write(buf).await,
+            Self::TcpTls(c) => c.write(buf).await,
+        }
+    }
+
+    pub async fn flush(&mut self) -> Result<(), IggyError> {
+        match self {
+            Self::Tcp(c) => c.flush().await,
+            Self::TcpTls(c) => c.flush().await,
+        }
+    }
+
+    pub async fn shutdown(&mut self) -> Result<(), IggyError> {
+        match self {
+            Self::Tcp(c) => c.shutdown().await,
+            Self::TcpTls(c) => c.shutdown().await,
+        }
+    }
+}
+
+#[derive(Debug)]
+pub(crate) struct TcpConnectionStream {
     client_address: SocketAddr,
     reader: BufReader<OwnedReadHalf>,
     writer: BufWriter<OwnedWriteHalf>,
@@ -84,12 +117,6 @@ impl TcpTlsConnectionStream {
         }
     }
 }
-
-unsafe impl Send for TcpConnectionStream {}
-unsafe impl Sync for TcpConnectionStream {}
-
-unsafe impl Send for TcpTlsConnectionStream {}
-unsafe impl Sync for TcpTlsConnectionStream {}
 
 #[async_trait]
 impl ConnectionStream for TcpConnectionStream {
@@ -320,7 +347,7 @@ impl TcpClient {
         &self,
         status: u32,
         length: u32,
-        stream: &mut dyn ConnectionStream,
+        stream: &mut ConnectionStreamKind,
     ) -> Result<Bytes, IggyError> {
         if status != 0 {
             // TEMP: See https://github.com/iggy-rs/iggy/pull/604 for context.
@@ -396,7 +423,7 @@ impl TcpClient {
 
         let tls_enabled = self.config.tls_enabled;
         let mut retry_count = 0;
-        let connection_stream: Box<dyn ConnectionStream>;
+        let connection_stream: ConnectionStreamKind;
         let remote_address;
         let client_address;
         loop {
@@ -456,7 +483,8 @@ impl TcpClient {
             self.client_address.lock().await.replace(client_address);
 
             if !tls_enabled {
-                connection_stream = Box::new(TcpConnectionStream::new(client_address, stream));
+                connection_stream =
+                    ConnectionStreamKind::Tcp(TcpConnectionStream::new(client_address, stream));
                 break;
             }
 
@@ -500,7 +528,7 @@ impl TcpClient {
                 error!("Failed to establish a TLS connection to the server: {error}",);
                 IggyError::CannotEstablishConnection
             })?;
-            connection_stream = Box::new(TcpTlsConnectionStream::new(
+            connection_stream = ConnectionStreamKind::TcpTls(TcpTlsConnectionStream::new(
                 client_address,
                 TlsStream::Client(stream),
             ));
@@ -623,7 +651,7 @@ impl TcpClient {
                     .try_into()
                     .map_err(|_| IggyError::InvalidNumberEncoding)?,
             );
-            return self.handle_response(status, length, stream.as_mut()).await;
+            return self.handle_response(status, length, stream).await;
         }
 
         error!("Cannot send data. Client is not connected.");

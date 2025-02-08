@@ -150,7 +150,7 @@ impl Identifier {
         })
     }
 
-    /// Creates a new identifier from the given string value. The name will be always converted to lowercase and all whitespaces will be replaced with dots.
+    /// Creates a new identifier from the given string value.
     pub fn named(value: &str) -> Result<Self, IggyError> {
         let length = value.len();
         if length == 0 || length > 255 {

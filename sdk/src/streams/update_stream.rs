@@ -4,7 +4,6 @@ use crate::error::IggyError;
 use crate::identifier::Identifier;
 use crate::streams::MAX_NAME_LENGTH;
 use crate::utils::sizeable::Sizeable;
-use crate::utils::text;
 use crate::validatable::Validatable;
 use bytes::{BufMut, Bytes, BytesMut};
 use serde::{Deserialize, Serialize};
@@ -42,10 +41,6 @@ impl Default for UpdateStream {
 impl Validatable<IggyError> for UpdateStream {
     fn validate(&self) -> Result<(), IggyError> {
         if self.name.is_empty() || self.name.len() > MAX_NAME_LENGTH {
-            return Err(IggyError::InvalidStreamName);
-        }
-
-        if !text::is_resource_name_valid(&self.name) {
             return Err(IggyError::InvalidStreamName);
         }
 

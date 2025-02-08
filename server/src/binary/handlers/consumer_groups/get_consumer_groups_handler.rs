@@ -1,6 +1,6 @@
 use crate::binary::handlers::consumer_groups::COMPONENT;
 use crate::binary::mapper;
-use crate::binary::sender::Sender;
+use crate::binary::sender::SenderKind;
 use crate::streaming::session::Session;
 use crate::streaming::systems::system::SharedSystem;
 use anyhow::Result;
@@ -11,7 +11,7 @@ use tracing::debug;
 
 pub async fn handle(
     command: GetConsumerGroups,
-    sender: &mut dyn Sender,
+    sender: &mut SenderKind,
     session: &Session,
     system: &SharedSystem,
 ) -> Result<(), IggyError> {

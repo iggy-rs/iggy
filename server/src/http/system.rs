@@ -21,7 +21,7 @@ use iggy::system::get_snapshot::GetSnapshot;
 use iggy::validatable::Validatable;
 use std::sync::Arc;
 
-const NAME: &str = "Iggy {COMPONENT}";
+const NAME: &str = "Iggy API";
 const PONG: &str = "pong";
 
 pub fn router(state: Arc<AppState>, metrics_config: &HttpMetricsConfig) -> Router {

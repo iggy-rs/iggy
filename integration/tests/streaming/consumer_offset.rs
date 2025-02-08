@@ -2,7 +2,7 @@ use crate::streaming::common::test_setup::TestSetup;
 use iggy::consumer::ConsumerKind;
 use server::configs::system::SystemConfig;
 use server::streaming::partitions::partition::ConsumerOffset;
-use server::streaming::storage::PartitionStorage;
+use server::streaming::storage::PartitionStorageKind;
 use std::sync::Arc;
 use tokio::fs;
 
@@ -16,7 +16,7 @@ async fn should_persist_consumer_offsets_and_then_load_them_from_disk() {
 
 async fn assert_persisted_offsets(
     config: &Arc<SystemConfig>,
-    storage: &dyn PartitionStorage,
+    storage: &PartitionStorageKind,
     kind: ConsumerKind,
 ) {
     let consumer_ids_count = 3;
@@ -38,7 +38,7 @@ async fn assert_persisted_offsets(
 
 async fn assert_persisted_offset(
     path: &str,
-    storage: &dyn PartitionStorage,
+    storage: &PartitionStorageKind,
     consumer_offset: &ConsumerOffset,
     expected_offsets_count: u32,
 ) {

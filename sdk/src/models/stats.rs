@@ -1,5 +1,6 @@
 use crate::utils::{byte_size::IggyByteSize, duration::IggyDuration, timestamp::IggyTimestamp};
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 
 /// `Stats` represents the statistics and details of the server and running process.
 #[derive(Debug, Serialize, Deserialize)]
@@ -48,6 +49,90 @@ pub struct Stats {
     pub os_version: String,
     /// The version of the kernel.
     pub kernel_version: String,
+    /// The version of the Iggy server.
+    pub iggy_server_version: String,
+    /// The semantic version of the Iggy server in the numeric format e.g. 1.2.3 -> 100200300 (major * 1000000 + minor * 1000 + patch).
+    pub iggy_server_semver: Option<u32>,
+    /// Cache metrics per partition
+    #[serde(with = "cache_metrics_serializer")]
+    pub cache_metrics: HashMap<CacheMetricsKey, CacheMetrics>,
+}
+
+/// Key for identifying a specific partition's cache metrics
+#[derive(Debug, Serialize, Deserialize, Hash, Eq, PartialEq)]
+pub struct CacheMetricsKey {
+    /// Stream ID
+    pub stream_id: u32,
+    /// Topic ID
+    pub topic_id: u32,
+    /// Partition ID
+    pub partition_id: u32,
+}
+
+impl CacheMetricsKey {
+    pub fn to_string_key(&self) -> String {
+        format!("{}-{}-{}", self.stream_id, self.topic_id, self.partition_id)
+    }
+}
+
+/// Cache metrics for a specific partition
+#[derive(Debug, Serialize, Deserialize, Default)]
+pub struct CacheMetrics {
+    /// Number of cache hits
+    pub hits: u64,
+    /// Number of cache misses
+    pub misses: u64,
+    /// Hit ratio (hits / (hits + misses))
+    pub hit_ratio: f32,
+}
+
+mod cache_metrics_serializer {
+    use super::*;
+    use serde::{Deserialize, Deserializer, Serializer};
+    use std::collections::HashMap;
+
+    pub fn serialize<S>(
+        metrics: &HashMap<CacheMetricsKey, CacheMetrics>,
+        serializer: S,
+    ) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        let string_map: HashMap<String, &CacheMetrics> = metrics
+            .iter()
+            .map(|(k, v)| (k.to_string_key(), v))
+            .collect();
+        string_map.serialize(serializer)
+    }
+
+    pub fn deserialize<'de, D>(
+        deserializer: D,
+    ) -> Result<HashMap<CacheMetricsKey, CacheMetrics>, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let string_map: HashMap<String, CacheMetrics> = HashMap::deserialize(deserializer)?;
+        let mut result = HashMap::new();
+        for (key_str, value) in string_map {
+            let parts: Vec<&str> = key_str.split('-').collect();
+            if parts.len() != 3 {
+                continue;
+            }
+            if let (Ok(stream_id), Ok(topic_id), Ok(partition_id)) = (
+                parts[0].parse::<u32>(),
+                parts[1].parse::<u32>(),
+                parts[2].parse::<u32>(),
+            ) {
+                let key = CacheMetricsKey {
+                    stream_id,
+                    topic_id,
+                    partition_id,
+                };
+                result.insert(key, value);
+            }
+        }
+        Ok(result)
+    }
 }
 
 impl Default for Stats {
@@ -75,6 +160,9 @@ impl Default for Stats {
             os_name: "unknown_os_name".to_string(),
             os_version: "unknown_os_version".to_string(),
             kernel_version: "unknown_kernel_version".to_string(),
+            iggy_server_version: "unknown_iggy_version".to_string(),
+            iggy_server_semver: None,
+            cache_metrics: HashMap::new(),
         }
     }
 }

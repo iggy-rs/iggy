@@ -17,7 +17,7 @@ use crate::binary::handlers::users::{
     get_users_handler, login_user_handler, logout_user_handler, update_permissions_handler,
     update_user_handler,
 };
-use crate::binary::sender::Sender;
+use crate::binary::sender::SenderKind;
 use crate::binary::COMPONENT;
 use crate::command::ServerCommand;
 use crate::streaming::session::Session;
@@ -28,7 +28,7 @@ use tracing::{debug, error};
 
 pub async fn handle(
     command: ServerCommand,
-    sender: &mut dyn Sender,
+    sender: &mut SenderKind,
     session: &Session,
     system: SharedSystem,
 ) -> Result<(), IggyError> {
@@ -65,7 +65,7 @@ pub async fn handle(
 
 async fn try_handle(
     command: ServerCommand,
-    sender: &mut dyn Sender,
+    sender: &mut SenderKind,
     session: &Session,
     system: &SharedSystem,
 ) -> Result<(), IggyError> {
@@ -136,6 +136,9 @@ async fn try_handle(
         }
         ServerCommand::StoreConsumerOffset(command) => {
             store_consumer_offset_handler::handle(command, sender, session, system).await
+        }
+        ServerCommand::DeleteConsumerOffset(command) => {
+            delete_consumer_offset_handler::handle(command, sender, session, system).await
         }
         ServerCommand::GetStream(command) => {
             get_stream_handler::handle(command, sender, session, system).await

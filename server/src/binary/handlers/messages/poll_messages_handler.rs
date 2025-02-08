@@ -1,6 +1,6 @@
 use crate::binary::handlers::messages::COMPONENT;
 use crate::binary::mapper;
-use crate::binary::sender::Sender;
+use crate::binary::sender::SenderKind;
 use crate::streaming::session::Session;
 use crate::streaming::systems::messages::PollingArgs;
 use crate::streaming::systems::system::SharedSystem;
@@ -12,7 +12,7 @@ use tracing::debug;
 
 pub async fn handle(
     command: PollMessages,
-    sender: &mut dyn Sender,
+    sender: &mut SenderKind,
     session: &Session,
     system: &SharedSystem,
 ) -> Result<(), IggyError> {

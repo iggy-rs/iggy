@@ -1,5 +1,5 @@
 use crate::binary::mapper;
-use crate::binary::sender::Sender;
+use crate::binary::sender::SenderKind;
 use crate::streaming::session::Session;
 use crate::streaming::systems::system::SharedSystem;
 use iggy::error::IggyError;
@@ -8,7 +8,7 @@ use tracing::debug;
 
 pub async fn handle(
     command: GetUser,
-    sender: &mut dyn Sender,
+    sender: &mut SenderKind,
     session: &Session,
     system: &SharedSystem,
 ) -> Result<(), IggyError> {

@@ -1,33 +1,62 @@
+mod actors;
+mod analytics;
 mod args;
-mod benchmark_params;
-mod benchmark_result;
-mod benchmark_runner;
 mod benchmarks;
-mod client_factory;
-mod consumer;
-mod producer;
-mod server_starter;
-mod statistics;
+mod plot;
+mod rate_limiter;
+mod runner;
+mod utils;
 
-use crate::{args::common::IggyBenchArgs, benchmark_runner::BenchmarkRunner};
+use crate::{args::common::IggyBenchArgs, runner::BenchmarkRunner};
 use clap::Parser;
 use figlet_rs::FIGfont;
 use iggy::error::IggyError;
+use std::fs;
+use std::path::Path;
 use tracing::{error, info};
-use tracing_subscriber::EnvFilter;
+use tracing_subscriber::{fmt, layer::SubscriberExt, util::SubscriberInitExt, EnvFilter};
 
 #[tokio::main]
 async fn main() -> Result<(), IggyError> {
     let standard_font = FIGfont::standard().unwrap();
     let figure = standard_font.convert("Iggy Bench");
     println!("{}", figure.unwrap());
-    tracing_subscriber::fmt::Subscriber::builder()
-        .with_env_filter(EnvFilter::try_from_default_env().unwrap_or(EnvFilter::new("INFO")))
-        .with_ansi(true)
-        .init();
 
     let args = IggyBenchArgs::parse();
     args.validate();
+
+    // Store output_dir before moving args
+    let output_dir = args.output_dir();
+    let benchmark_dir = output_dir.as_ref().map(|dir| {
+        let dir_path = Path::new(dir);
+        if !dir_path.exists() {
+            fs::create_dir_all(dir_path).unwrap();
+        }
+        dir_path.join(args.generate_dir_name())
+    });
+
+    // Configure logging
+    let env_filter = EnvFilter::try_from_default_env().unwrap_or(EnvFilter::new("INFO"));
+    let stdout_layer = fmt::layer().with_ansi(true);
+
+    // If output directory is specified, also log to file
+    if let Some(ref benchmark_dir) = benchmark_dir {
+        // Create output directory if it doesn't exist
+        fs::create_dir_all(benchmark_dir).unwrap();
+        let file_appender = tracing_appender::rolling::never(benchmark_dir, "bench.log");
+        let file_layer = fmt::layer().with_ansi(false).with_writer(file_appender);
+
+        tracing_subscriber::registry()
+            .with(env_filter)
+            .with(stdout_layer)
+            .with(file_layer)
+            .init();
+    } else {
+        tracing_subscriber::registry()
+            .with(env_filter)
+            .with(stdout_layer)
+            .init();
+    }
 
     let mut benchmark_runner = BenchmarkRunner::new(args);
 
@@ -38,13 +67,19 @@ async fn main() -> Result<(), IggyError> {
     tokio::select! {
         _ = ctrl_c => {
             info!("Received Ctrl-C, exiting...");
+            // Clean up unfinished benchmark directory on manual interruption
+            if let Some(ref benchmark_dir) = benchmark_dir {
+                info!("Cleaning up unfinished benchmark directory...");
+                if let Err(e) = std::fs::remove_dir_all(benchmark_dir) {
+                    error!("Failed to clean up benchmark directory: {}", e);
+                }
+            }
         }
         result = benchmark_future => {
             if let Err(e) = result {
                 error!("Benchmark failed with error: {:?}", e);
                 return Err(e);
             }
-            info!("Finished the benchmarks");
         }
     }
 

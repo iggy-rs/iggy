@@ -31,12 +31,16 @@ impl SystemClient for HttpClient {
     }
 
     async fn get_client(&self, client_id: u32) -> Result<Option<ClientInfoDetails>, IggyError> {
-        let response = self.get(&format!("{}/{}", CLIENTS, client_id)).await?;
-        if response.status() == 404 {
-            return Ok(None);
+        let response = self.get(&format!("{}/{}", CLIENTS, client_id)).await;
+        if let Err(error) = response {
+            if matches!(error, IggyError::ResourceNotFound(_)) {
+                return Ok(None);
+            }
+
+            return Err(error);
         }
 
-        let client = response
+        let client = response?
             .json()
             .await
             .map_err(|_| IggyError::InvalidJsonResponse)?;

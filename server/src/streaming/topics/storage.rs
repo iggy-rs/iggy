@@ -4,15 +4,14 @@ use crate::streaming::storage::TopicStorage;
 use crate::streaming::topics::consumer_group::ConsumerGroup;
 use crate::streaming::topics::topic::Topic;
 use crate::streaming::topics::COMPONENT;
+use ahash::AHashSet;
 use anyhow::Context;
-use async_trait::async_trait;
 use error_set::ErrContext;
 use futures::future::join_all;
 use iggy::error::IggyError;
 use iggy::locking::IggySharedMut;
 use iggy::locking::IggySharedMutFn;
 use serde::{Deserialize, Serialize};
-use std::collections::HashSet;
 use std::path::Path;
 use std::sync::Arc;
 use tokio::fs;
@@ -23,16 +22,12 @@ use tracing::{error, info, warn};
 #[derive(Debug)]
 pub struct FileTopicStorage;
 
-unsafe impl Send for FileTopicStorage {}
-unsafe impl Sync for FileTopicStorage {}
-
 #[derive(Debug, Serialize, Deserialize)]
 struct ConsumerGroupData {
     id: u32,
     name: String,
 }
 
-#[async_trait]
 impl TopicStorage for FileTopicStorage {
     async fn load(&self, topic: &mut Topic, mut state: TopicState) -> Result<(), IggyError> {
         info!("Loading topic {} from disk...", topic);
@@ -101,15 +96,15 @@ impl TopicStorage for FileTopicStorage {
             unloaded_partitions.push(partition);
         }
 
-        let state_partition_ids = state.partitions.keys().copied().collect::<HashSet<u32>>();
+        let state_partition_ids = state.partitions.keys().copied().collect::<AHashSet<u32>>();
         let unloaded_partition_ids = unloaded_partitions
             .iter()
             .map(|partition| partition.partition_id)
-            .collect::<HashSet<u32>>();
+            .collect::<AHashSet<u32>>();
         let missing_ids = state_partition_ids
             .difference(&unloaded_partition_ids)
             .copied()
-            .collect::<HashSet<u32>>();
+            .collect::<AHashSet<u32>>();
         if missing_ids.is_empty() {
             info!(
                 "All partitions for topic with ID: '{}' for stream with ID: '{}' found on disk were found in state.",
@@ -153,7 +148,7 @@ impl TopicStorage for FileTopicStorage {
                 )
                 .await;
                 partition.persist().await.with_error_context(|_| {
-                    format!("{COMPONENT} - failed to persist partiton: {partition}")
+                    format!("{COMPONENT} - failed to persist partition: {partition}")
                 })?;
                 partition.segments.clear();
                 unloaded_partitions.push(partition);

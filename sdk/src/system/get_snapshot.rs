@@ -6,6 +6,7 @@ use crate::validatable::Validatable;
 use bytes::{BufMut, Bytes, BytesMut};
 use serde::{Deserialize, Serialize};
 use std::fmt::Display;
+use tracing::error;
 
 /// `GetSnapshot` command is used to get snapshot information.
 #[derive(Debug, Serialize, Deserialize, PartialEq)]
@@ -37,6 +38,10 @@ impl Command for GetSnapshot {
 
 impl Validatable<IggyError> for GetSnapshot {
     fn validate(&self) -> Result<(), IggyError> {
+        if self.snapshot_types.contains(&SystemSnapshotType::All) && self.snapshot_types.len() > 1 {
+            error!("When using 'All' snapshot type, no other types can be specified");
+            return Err(IggyError::InvalidCommand);
+        }
         Ok(())
     }
 }

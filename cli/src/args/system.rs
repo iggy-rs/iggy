@@ -55,6 +55,8 @@ pub(crate) struct SnapshotArgs {
     /// - `resource_usage`: Monitors CPU, memory, and other system resources.
     /// - `test`: Used for testing purposes.
     /// - `server_logs`: Server logs from the specified logging directory, useful for system diagnostics.
+    /// - `server_config`: Server configuration.
+    /// - `all`: Take all available snapshots.
     ///
     /// Examples:
     /// - `--snapshot-types filesystem_overview process_list`

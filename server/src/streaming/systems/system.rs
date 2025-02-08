@@ -9,11 +9,11 @@ use crate::streaming::storage::SystemStorage;
 use crate::streaming::streams::stream::Stream;
 use crate::streaming::systems::COMPONENT;
 use crate::streaming::users::permissioner::Permissioner;
+use ahash::AHashMap;
 use error_set::ErrContext;
 use iggy::error::IggyError;
 use iggy::utils::byte_size::IggyByteSize;
 use iggy::utils::crypto::{Aes256GcmEncryptor, EncryptorKind};
-use std::collections::HashMap;
 use std::path::Path;
 use std::sync::Arc;
 use tokio::fs::{create_dir, remove_dir_all};
@@ -65,9 +65,9 @@ impl Clone for SharedSystem {
 pub struct System {
     pub permissioner: Permissioner,
     pub(crate) storage: Arc<SystemStorage>,
-    pub(crate) streams: HashMap<u32, Stream>,
-    pub(crate) streams_ids: HashMap<String, u32>,
-    pub(crate) users: HashMap<UserId, User>,
+    pub(crate) streams: AHashMap<u32, Stream>,
+    pub(crate) streams_ids: AHashMap<String, u32>,
+    pub(crate) users: AHashMap<UserId, User>,
     pub(crate) config: Arc<SystemConfig>,
     pub(crate) client_manager: IggySharedMut<ClientManager>,
     pub(crate) encryptor: Option<Arc<EncryptorKind>>,
@@ -161,14 +161,14 @@ impl System {
 
         System {
             config: system_config,
-            streams: HashMap::new(),
-            streams_ids: HashMap::new(),
+            streams: AHashMap::new(),
+            streams_ids: AHashMap::new(),
             storage: Arc::new(storage),
             encryptor,
             client_manager: IggySharedMut::new(ClientManager::default()),
             permissioner: Permissioner::default(),
             metrics: Metrics::init(),
-            users: HashMap::new(),
+            users: AHashMap::new(),
             state,
             personal_access_token: pat_config,
             archiver,

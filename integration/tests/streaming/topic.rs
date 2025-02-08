@@ -1,10 +1,6 @@
-use std::collections::HashMap;
-use std::default::Default;
-use std::sync::atomic::{AtomicU32, AtomicU64};
-use std::sync::Arc;
-
 use crate::streaming::common::test_setup::TestSetup;
 use crate::streaming::create_messages;
+use ahash::AHashMap;
 use iggy::compression::compression_algorithm::CompressionAlgorithm;
 use iggy::messages::poll_messages::PollingStrategy;
 use iggy::messages::send_messages::Partitioning;
@@ -16,6 +12,9 @@ use iggy::utils::topic_size::MaxTopicSize;
 use server::state::system::{PartitionState, TopicState};
 use server::streaming::polling_consumer::PollingConsumer;
 use server::streaming::topics::topic::Topic;
+use std::default::Default;
+use std::sync::atomic::{AtomicU32, AtomicU64};
+use std::sync::Arc;
 use tokio::fs;
 
 #[tokio::test]
@@ -106,7 +105,7 @@ async fn should_load_existing_topic_from_disk() {
             id: topic_id,
             name,
             partitions: if partitions_count == 0 {
-                HashMap::new()
+                AHashMap::new()
             } else {
                 (1..=partitions_count)
                     .map(|id| (id, PartitionState { id, created_at }))

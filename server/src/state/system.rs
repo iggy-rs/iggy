@@ -1,5 +1,6 @@
 use crate::state::{EntryCommand, StateEntry, COMPONENT};
 use crate::streaming::personal_access_tokens::personal_access_token::PersonalAccessToken;
+use ahash::AHashMap;
 use error_set::ErrContext;
 use iggy::compression::compression_algorithm::CompressionAlgorithm;
 use iggy::error::IggyError;
@@ -9,14 +10,13 @@ use iggy::models::user_status::UserStatus;
 use iggy::utils::expiry::IggyExpiry;
 use iggy::utils::timestamp::IggyTimestamp;
 use iggy::utils::topic_size::MaxTopicSize;
-use std::collections::HashMap;
 use std::fmt::Display;
 use tracing::debug;
 
 #[derive(Debug)]
 pub struct SystemState {
-    pub streams: HashMap<u32, StreamState>,
-    pub users: HashMap<u32, UserState>,
+    pub streams: AHashMap<u32, StreamState>,
+    pub users: AHashMap<u32, UserState>,
 }
 
 #[derive(Debug)]
@@ -24,7 +24,7 @@ pub struct StreamState {
     pub id: u32,
     pub name: String,
     pub created_at: IggyTimestamp,
-    pub topics: HashMap<u32, TopicState>,
+    pub topics: AHashMap<u32, TopicState>,
     pub current_topic_id: u32,
 }
 
@@ -32,8 +32,8 @@ pub struct StreamState {
 pub struct TopicState {
     pub id: u32,
     pub name: String,
-    pub partitions: HashMap<u32, PartitionState>,
-    pub consumer_groups: HashMap<u32, ConsumerGroupState>,
+    pub partitions: AHashMap<u32, PartitionState>,
+    pub consumer_groups: AHashMap<u32, ConsumerGroupState>,
     pub compression_algorithm: CompressionAlgorithm,
     pub message_expiry: IggyExpiry,
     pub max_topic_size: MaxTopicSize,
@@ -62,7 +62,7 @@ pub struct UserState {
     pub password_hash: String,
     pub status: UserStatus,
     pub permissions: Option<Permissions>,
-    pub personal_access_tokens: HashMap<String, PersonalAccessTokenState>,
+    pub personal_access_tokens: AHashMap<String, PersonalAccessTokenState>,
 }
 
 #[derive(Debug)]
@@ -73,8 +73,8 @@ pub struct ConsumerGroupState {
 
 impl SystemState {
     pub async fn init(entries: Vec<StateEntry>) -> Result<Self, IggyError> {
-        let mut streams = HashMap::new();
-        let mut users = HashMap::new();
+        let mut streams = AHashMap::new();
+        let mut users = AHashMap::new();
         let mut current_stream_id = 0;
         let mut current_user_id = 0;
         for entry in entries {
@@ -90,7 +90,7 @@ impl SystemState {
                     let stream = StreamState {
                         id: stream_id,
                         name: command.name.clone(),
-                        topics: HashMap::new(),
+                        topics: AHashMap::new(),
                         current_topic_id: 0,
                         created_at: entry.timestamp,
                     };
@@ -126,7 +126,7 @@ impl SystemState {
                     let topic = TopicState {
                         id: topic_id,
                         name: command.name,
-                        consumer_groups: HashMap::new(),
+                        consumer_groups: AHashMap::new(),
                         current_consumer_group_id: 0,
                         compression_algorithm: command.compression_algorithm,
                         message_expiry: command.message_expiry,
@@ -134,7 +134,7 @@ impl SystemState {
                         replication_factor: command.replication_factor,
                         created_at: entry.timestamp,
                         partitions: if command.partitions_count > 0 {
-                            let mut partitions = HashMap::new();
+                            let mut partitions = AHashMap::new();
                             for i in 1..=command.partitions_count {
                                 partitions.insert(
                                     i,
@@ -146,7 +146,7 @@ impl SystemState {
                             }
                             partitions
                         } else {
-                            HashMap::new()
+                            AHashMap::new()
                         },
                     };
                     stream.topics.insert(topic.id, topic);
@@ -285,7 +285,7 @@ impl SystemState {
                         password_hash: command.password, // This is already hashed
                         status: command.status,
                         permissions: command.permissions,
-                        personal_access_tokens: HashMap::new(),
+                        personal_access_tokens: AHashMap::new(),
                     };
                     users.insert(user.id, user);
                 }
@@ -379,7 +379,7 @@ impl SystemState {
     }
 }
 
-fn find_stream_id(streams: &HashMap<u32, StreamState>, stream_id: &Identifier) -> u32 {
+fn find_stream_id(streams: &AHashMap<u32, StreamState>, stream_id: &Identifier) -> u32 {
     match stream_id.kind {
         IdKind::Numeric => stream_id
             .get_u32_value()
@@ -397,7 +397,7 @@ fn find_stream_id(streams: &HashMap<u32, StreamState>, stream_id: &Identifier) -
     }
 }
 
-fn find_topic_id(topics: &HashMap<u32, TopicState>, topic_id: &Identifier) -> u32 {
+fn find_topic_id(topics: &AHashMap<u32, TopicState>, topic_id: &Identifier) -> u32 {
     match topic_id.kind {
         IdKind::Numeric => topic_id
             .get_u32_value()
@@ -415,7 +415,10 @@ fn find_topic_id(topics: &HashMap<u32, TopicState>, topic_id: &Identifier) -> u3
     }
 }
 
-fn find_consumer_group_id(groups: &HashMap<u32, ConsumerGroupState>, group_id: &Identifier) -> u32 {
+fn find_consumer_group_id(
+    groups: &AHashMap<u32, ConsumerGroupState>,
+    group_id: &Identifier,
+) -> u32 {
     match group_id.kind {
         IdKind::Numeric => group_id
             .get_u32_value()
@@ -433,7 +436,7 @@ fn find_consumer_group_id(groups: &HashMap<u32, ConsumerGroupState>, group_id: &
     }
 }
 
-fn find_user_id(users: &HashMap<u32, UserState>, user_id: &Identifier) -> u32 {
+fn find_user_id(users: &AHashMap<u32, UserState>, user_id: &Identifier) -> u32 {
     match user_id.kind {
         IdKind::Numeric => user_id
             .get_u32_value()

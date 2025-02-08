@@ -1,5 +1,6 @@
 use crate::streaming::common::test_setup::TestSetup;
 use crate::streaming::create_messages;
+use ahash::AHashMap;
 use iggy::identifier::Identifier;
 use iggy::messages::poll_messages::PollingStrategy;
 use iggy::messages::send_messages::Partitioning;
@@ -11,7 +12,6 @@ use iggy::utils::topic_size::MaxTopicSize;
 use server::state::system::StreamState;
 use server::streaming::polling_consumer::PollingConsumer;
 use server::streaming::streams::stream::Stream;
-use std::collections::HashMap;
 use tokio::fs;
 
 #[tokio::test]
@@ -60,7 +60,7 @@ async fn should_load_existing_stream_from_disk() {
             id: stream_id,
             name: name.clone(),
             created_at: IggyTimestamp::now(),
-            topics: HashMap::new(),
+            topics: AHashMap::new(),
             current_topic_id: 0,
         };
         loaded_stream.load(state).await.unwrap();

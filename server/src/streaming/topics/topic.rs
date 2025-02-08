@@ -3,6 +3,7 @@ use crate::streaming::partitions::partition::Partition;
 use crate::streaming::polling_consumer::PollingConsumer;
 use crate::streaming::storage::SystemStorage;
 use crate::streaming::topics::consumer_group::ConsumerGroup;
+use ahash::AHashMap;
 use core::fmt;
 use iggy::compression::compression_algorithm::CompressionAlgorithm;
 use iggy::consumer::{Consumer, ConsumerKind};
@@ -13,7 +14,6 @@ use iggy::utils::expiry::IggyExpiry;
 use iggy::utils::sizeable::Sizeable;
 use iggy::utils::timestamp::IggyTimestamp;
 use iggy::utils::topic_size::MaxTopicSize;
-use std::collections::HashMap;
 use std::sync::atomic::{AtomicU32, AtomicU64, Ordering};
 use std::sync::Arc;
 use tokio::sync::RwLock;
@@ -34,10 +34,10 @@ pub struct Topic {
     pub(crate) messages_count: Arc<AtomicU64>,
     pub(crate) segments_count_of_parent_stream: Arc<AtomicU32>,
     pub(crate) config: Arc<SystemConfig>,
-    pub(crate) partitions: HashMap<u32, IggySharedMut<Partition>>,
+    pub(crate) partitions: AHashMap<u32, IggySharedMut<Partition>>,
     pub(crate) storage: Arc<SystemStorage>,
-    pub(crate) consumer_groups: HashMap<u32, RwLock<ConsumerGroup>>,
-    pub(crate) consumer_groups_ids: HashMap<String, u32>,
+    pub(crate) consumer_groups: AHashMap<u32, RwLock<ConsumerGroup>>,
+    pub(crate) consumer_groups_ids: AHashMap<String, u32>,
     pub(crate) current_consumer_group_id: AtomicU32,
     pub(crate) current_partition_id: AtomicU32,
     pub message_expiry: IggyExpiry,
@@ -100,7 +100,7 @@ impl Topic {
             stream_id,
             topic_id,
             name: name.to_string(),
-            partitions: HashMap::new(),
+            partitions: AHashMap::new(),
             path,
             partitions_path,
             storage,
@@ -109,8 +109,8 @@ impl Topic {
             messages_count_of_parent_stream,
             messages_count: Arc::new(AtomicU64::new(0)),
             segments_count_of_parent_stream,
-            consumer_groups: HashMap::new(),
-            consumer_groups_ids: HashMap::new(),
+            consumer_groups: AHashMap::new(),
+            consumer_groups_ids: AHashMap::new(),
             current_consumer_group_id: AtomicU32::new(1),
             current_partition_id: AtomicU32::new(1),
             message_expiry: Topic::get_message_expiry(message_expiry, &config),

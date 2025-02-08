@@ -3,6 +3,7 @@ use crate::http::jwt::json_web_token::{GeneratedToken, JwtClaims, RevokedAccessT
 use crate::http::jwt::storage::TokenStorage;
 use crate::http::jwt::COMPONENT;
 use crate::streaming::persistence::persister::PersisterKind;
+use ahash::AHashMap;
 use error_set::ErrContext;
 use iggy::error::IggyError;
 use iggy::locking::IggySharedMut;
@@ -12,7 +13,6 @@ use iggy::utils::duration::IggyDuration;
 use iggy::utils::expiry::IggyExpiry;
 use iggy::utils::timestamp::IggyTimestamp;
 use jsonwebtoken::{encode, Algorithm, DecodingKey, EncodingKey, Header, TokenData, Validation};
-use std::collections::HashMap;
 use std::sync::Arc;
 use tracing::{debug, error, info};
 
@@ -36,8 +36,8 @@ pub struct JwtManager {
     issuer: IssuerOptions,
     validator: ValidatorOptions,
     tokens_storage: TokenStorage,
-    revoked_tokens: IggySharedMut<HashMap<String, u64>>,
-    validations: HashMap<Algorithm, Validation>,
+    revoked_tokens: IggySharedMut<AHashMap<String, u64>>,
+    validations: AHashMap<Algorithm, Validation>,
 }
 
 impl JwtManager {
@@ -59,7 +59,7 @@ impl JwtManager {
             issuer,
             validator,
             tokens_storage: TokenStorage::new(persister, path),
-            revoked_tokens: IggySharedMut::new(HashMap::new()),
+            revoked_tokens: IggySharedMut::new(AHashMap::new()),
         })
     }
 

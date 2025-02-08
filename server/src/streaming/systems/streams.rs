@@ -3,13 +3,13 @@ use crate::streaming::session::Session;
 use crate::streaming::streams::stream::Stream;
 use crate::streaming::systems::system::System;
 use crate::streaming::systems::COMPONENT;
+use ahash::{AHashMap, AHashSet};
 use error_set::ErrContext;
 use futures::future::try_join_all;
 use iggy::error::IggyError;
 use iggy::identifier::{IdKind, Identifier};
 use iggy::locking::IggySharedMutFn;
 use std::cell::RefCell;
-use std::collections::{HashMap, HashSet};
 use std::sync::atomic::{AtomicU32, Ordering};
 use tokio::fs;
 use tokio::fs::read_dir;
@@ -62,15 +62,15 @@ impl System {
         let state_stream_ids = streams
             .iter()
             .map(|stream| stream.id)
-            .collect::<HashSet<u32>>();
+            .collect::<AHashSet<u32>>();
         let unloaded_stream_ids = unloaded_streams
             .iter()
             .map(|stream| stream.stream_id)
-            .collect::<HashSet<u32>>();
+            .collect::<AHashSet<u32>>();
         let missing_ids = state_stream_ids
             .difference(&unloaded_stream_ids)
             .copied()
-            .collect::<HashSet<u32>>();
+            .collect::<AHashSet<u32>>();
         if missing_ids.is_empty() {
             info!("All streams found on disk were found in state.");
         } else {
@@ -101,7 +101,7 @@ impl System {
         let mut streams_states = streams
             .into_iter()
             .map(|s| (s.id, s))
-            .collect::<HashMap<_, _>>();
+            .collect::<AHashMap<_, _>>();
         let loaded_streams = RefCell::new(Vec::new());
         let load_stream_tasks = unloaded_streams.into_iter().map(|mut stream| {
             let state = streams_states.remove(&stream.stream_id).unwrap();

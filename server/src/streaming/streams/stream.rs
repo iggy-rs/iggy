@@ -1,9 +1,9 @@
 use crate::configs::system::SystemConfig;
 use crate::streaming::storage::SystemStorage;
 use crate::streaming::topics::topic::Topic;
+use ahash::AHashMap;
 use iggy::utils::byte_size::IggyByteSize;
 use iggy::utils::timestamp::IggyTimestamp;
-use std::collections::HashMap;
 use std::fmt::Display;
 use std::sync::atomic::{AtomicU32, AtomicU64, Ordering};
 use std::sync::Arc;
@@ -19,8 +19,8 @@ pub struct Stream {
     pub size_bytes: Arc<AtomicU64>,
     pub messages_count: Arc<AtomicU64>,
     pub segments_count: Arc<AtomicU32>,
-    pub(crate) topics: HashMap<u32, Topic>,
-    pub(crate) topics_ids: HashMap<String, u32>,
+    pub(crate) topics: AHashMap<u32, Topic>,
+    pub(crate) topics_ids: AHashMap<String, u32>,
     pub(crate) config: Arc<SystemConfig>,
     pub(crate) storage: Arc<SystemStorage>,
 }
@@ -54,8 +54,8 @@ impl Stream {
             size_bytes: Arc::new(AtomicU64::new(0)),
             messages_count: Arc::new(AtomicU64::new(0)),
             segments_count: Arc::new(AtomicU32::new(0)),
-            topics: HashMap::new(),
-            topics_ids: HashMap::new(),
+            topics: AHashMap::new(),
+            topics_ids: AHashMap::new(),
             storage,
             created_at: IggyTimestamp::now(),
         }

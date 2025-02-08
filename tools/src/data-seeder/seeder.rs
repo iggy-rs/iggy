@@ -100,7 +100,7 @@ async fn create_topics(client: &IggyClient) -> Result<(), IggyError> {
 }
 
 async fn send_messages(client: &IggyClient) -> Result<(), IggyError> {
-    let mut rng = rand::thread_rng();
+    let mut rng = rand::rng();
     let streams = [PROD_STREAM_ID, TEST_STREAM_ID, DEV_STREAM_ID];
     let partitioning = Partitioning::balanced();
     for stream_id in streams {
@@ -110,13 +110,13 @@ async fn send_messages(client: &IggyClient) -> Result<(), IggyError> {
         for topic in topics {
             let topic_id = topic.id.try_into()?;
             let mut messages = Vec::new();
-            let message_batches = rng.gen_range(100..=1000);
+            let message_batches = rng.random_range(100..=1000);
             let mut message_id = 1;
             for _ in 1..=message_batches {
-                let messages_count = rng.gen_range(10..=100);
+                let messages_count = rng.random_range(10..=100);
                 for _ in 1..=messages_count {
                     let payload = format!("{}_data_{}", topic.name, message_id);
-                    let headers = match rng.gen_bool(0.5) {
+                    let headers = match rng.random_bool(0.5) {
                         false => None,
                         true => {
                             let mut headers = HashMap::new();

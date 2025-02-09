@@ -25,6 +25,7 @@ const MAX_BATCH_SIZE: usize = 1000000;
 unsafe impl Send for IggyProducer {}
 unsafe impl Sync for IggyProducer {}
 
+#[derive(Debug)]
 pub struct IggyProducer {
     initialized: bool,
     can_send: Arc<AtomicBool>,

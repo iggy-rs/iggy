@@ -17,6 +17,10 @@ pub enum SystemSnapshotType {
     Test,
     /// Server logs
     ServerLogs,
+    /// Server configuration
+    ServerConfig,
+    /// Everything
+    All,
 }
 
 /// Enum representing the various compression methods available for snapshots.
@@ -45,6 +49,8 @@ impl SystemSnapshotType {
             SystemSnapshotType::ResourceUsage => 3,
             SystemSnapshotType::Test => 4,
             SystemSnapshotType::ServerLogs => 5,
+            SystemSnapshotType::ServerConfig => 6,
+            SystemSnapshotType::All => 100,
         }
     }
 
@@ -55,8 +61,24 @@ impl SystemSnapshotType {
             3 => Ok(SystemSnapshotType::ResourceUsage),
             4 => Ok(SystemSnapshotType::Test),
             5 => Ok(SystemSnapshotType::ServerLogs),
+            6 => Ok(SystemSnapshotType::ServerConfig),
+            100 => Ok(SystemSnapshotType::All),
             _ => Err(IggyError::InvalidCommand),
         }
+    }
+
+    pub fn all_snapshot_types() -> Vec<SystemSnapshotType> {
+        vec![
+            SystemSnapshotType::FilesystemOverview,
+            SystemSnapshotType::ProcessList,
+            SystemSnapshotType::ResourceUsage,
+            SystemSnapshotType::ServerLogs,
+            SystemSnapshotType::ServerConfig,
+        ]
+    }
+
+    pub fn code(&self) -> u8 {
+        self.as_code()
     }
 }
 
@@ -68,6 +90,8 @@ impl fmt::Display for SystemSnapshotType {
             SystemSnapshotType::ResourceUsage => write!(f, "resource_usage"),
             SystemSnapshotType::Test => write!(f, "test"),
             SystemSnapshotType::ServerLogs => write!(f, "server_logs"),
+            SystemSnapshotType::ServerConfig => write!(f, "server_config"),
+            SystemSnapshotType::All => write!(f, "all"),
         }
     }
 }
@@ -82,6 +106,8 @@ impl FromStr for SystemSnapshotType {
             "resource_usage" => Ok(SystemSnapshotType::ResourceUsage),
             "test" => Ok(SystemSnapshotType::Test),
             "server_logs" => Ok(SystemSnapshotType::ServerLogs),
+            "server_config" => Ok(SystemSnapshotType::ServerConfig),
+            "all" => Ok(SystemSnapshotType::All),
             _ => Err(format!("Invalid snapshot type: {}", s)),
         }
     }

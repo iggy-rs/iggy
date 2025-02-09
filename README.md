@@ -22,7 +22,7 @@
 
 <div align="center">
 
-  ![iggy](assets/iggy.png)
+  ![iggy](assets/iggy_black.png)
 
 </div>
 

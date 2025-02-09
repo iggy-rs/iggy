@@ -1,4 +1,4 @@
-# Iggy
+# Apache Iggy (Incubating)
 
 <div style="display: flex; flex-wrap: wrap; justify-content: center; align-items: center; text-align: center;">
 
@@ -79,14 +79,12 @@ The name is an abbreviation for the Italian Greyhound - small yet extremely fast
 
 ## Roadmap
 
-- Low level optimizations (zero-copy etc.)
-- Shared-nothing design and io_uring support
-- Clustering & data replication
-- Advanced Web UI
+- Low level optimizations such zero-copy deserialization with [rkyv](https://github.com/rkyv/rkyv) (WiP)
+- Advanced Web UI (WiP)
+- Shared-nothing design and io_uring support (on experimental branch)
+- Clustering & data replication (on sandbox project)
 - Developer friendly SDK supporting multiple languages
 - Plugins & extensions support
-
-For the detailed information about current progress, please refer to the [project board](https://github.com/orgs/iggy-rs/projects/1).
 
 ---
 
@@ -326,6 +324,6 @@ Then, run the benchmarking app with the desired options:
 These benchmarks would start the server with the default configuration, create a stream, topic and partition, and then send or poll the messages. The default configuration is optimized for the best performance, so you might want to tweak it for your needs. If you need more options, please refer to `iggy-bench` subcommands `help` and `examples`.
 For example, to run the benchmark for the already started server, provide the additional argument `--server-address 0.0.0.0:8090`.
 
-Depending on the hardware, transport protocol (`quic`, `tcp` or `http`) and payload size (`messages-per-batch * message-size`) you might expect **over 3000 MB/s (e.g. 3M of 1 KB msg/sec) throughput for writes and 10000 MB/s for reads**. These results have been achieved on Ryzen 9 7950X with 64 GB RAM and gen 4 NVMe SSD.
+Depending on the hardware, transport protocol (`quic`, `tcp` or `http`) and payload size (`messages-per-batch * message-size`) you might expect **over 5000 MB/s (e.g. 5M of 1 KB msg/sec) throughput for writes and reads**. These results have been achieved on Ryzen 9 7950X with 64 GB RAM and gen 4 NVMe SSD.
 
 ---

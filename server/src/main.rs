@@ -46,7 +46,18 @@ async fn main() -> Result<(), ServerError> {
     let args = Args::parse();
     let config_provider = config_provider::resolve(&args.config_provider)?;
     let config = ServerConfig::load(&config_provider).await?;
-
+    if args.fresh {
+        let system_path = config.system.get_system_path();
+        if tokio::fs::metadata(&system_path).await.is_ok() {
+            println!(
+                "Removing system path at: {} because `--fresh` flag was set",
+                system_path
+            );
+            if let Err(e) = tokio::fs::remove_dir_all(&system_path).await {
+                eprintln!("Failed to remove system path at {}: {}", system_path, e);
+            }
+        }
+    }
     let mut logging = Logging::new(config.telemetry.clone());
     logging.early_init();
 

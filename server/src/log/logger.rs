@@ -16,6 +16,9 @@ use std::sync::{Arc, Mutex};
 use tracing::{event, info, trace, Level};
 use tracing_appender::non_blocking::WorkerGuard;
 use tracing_opentelemetry::OpenTelemetryLayer;
+use tracing_subscriber::field::{RecordFields, VisitOutput};
+use tracing_subscriber::fmt::format::DefaultVisitor;
+use tracing_subscriber::fmt::FormatFields;
 use tracing_subscriber::layer::SubscriberExt;
 use tracing_subscriber::util::SubscriberInitExt;
 use tracing_subscriber::{
@@ -71,8 +74,7 @@ impl EarlyLogDumper for Logging {
     fn dump_to_file<W: Write>(&self, writer: &mut W) {
         let early_logs_buffer = self.early_logs_buffer.lock().unwrap();
         for log in early_logs_buffer.iter() {
-            let log = strip_ansi_escapes::strip(log);
-            writer.write_all(&log).unwrap();
+            writer.write_all(log.as_bytes()).unwrap();
         }
     }
 
@@ -146,7 +148,7 @@ impl Logging {
             .event_format(Self::get_log_format())
             .with_target(true)
             .with_writer(VecStringMakeWriter(self.early_logs_buffer.clone()))
-            .with_ansi(true);
+            .with_ansi(false);
         let (file_layer, file_layer_reload_handle) = reload::Layer::new(file_layer.boxed());
         self.file_reload_handle = Some(file_layer_reload_handle);
         layers.push(file_layer.and_then(filtering_file_layer));
@@ -268,10 +270,11 @@ impl Logging {
             .expect("Failed to modify file filtering layer");
 
         // Initialize non-blocking stdout layer
-        let (_, stdout_guard) = tracing_appender::non_blocking(std::io::stdout());
+        let (non_blocking_stdout, stdout_guard) = tracing_appender::non_blocking(std::io::stdout());
         let stdout_layer = fmt::Layer::default()
             .with_ansi(true)
             .event_format(Self::get_log_format())
+            .with_writer(non_blocking_stdout)
             .boxed();
         self.stdout_guard = Some(stdout_guard);
 
@@ -298,6 +301,7 @@ impl Logging {
             .with_target(true)
             .with_writer(non_blocking_file)
             .with_ansi(false)
+            .fmt_fields(NoAnsiFields {})
             .boxed();
 
         self.file_guard = Some(file_guard);
@@ -381,5 +385,21 @@ impl Logging {
 impl Default for Logging {
     fn default() -> Self {
         Self::new(TelemetryConfig::default())
+    }
+}
+
+// This is a workaround for a bug with `with_ansi` setting in tracing
+// Bug thread: https://github.com/tokio-rs/tracing/issues/3116
+struct NoAnsiFields {}
+
+impl<'writer> FormatFields<'writer> for NoAnsiFields {
+    fn format_fields<R: RecordFields>(
+        &self,
+        writer: fmt::format::Writer<'writer>,
+        fields: R,
+    ) -> std::fmt::Result {
+        let mut a = DefaultVisitor::new(writer, true);
+        fields.record(&mut a);
+        a.finish()
     }
 }

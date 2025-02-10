@@ -6,10 +6,10 @@ use iggy::models::messages::{MessageState, PolledMessage};
 use iggy::utils::byte_size::IggyByteSize;
 use iggy::utils::expiry::IggyExpiry;
 use iggy::utils::{checksum, timestamp::IggyTimestamp};
+use server::configs::system::{SegmentConfig, SystemConfig};
 use server::streaming::local_sizeable::LocalSizeable;
 use server::streaming::models::messages::RetainedMessage;
-use server::streaming::segments::segment;
-use server::streaming::segments::segment::{INDEX_EXTENSION, LOG_EXTENSION};
+use server::streaming::segments::*;
 use std::sync::atomic::AtomicU64;
 use std::sync::Arc;
 use std::time::Duration;
@@ -24,13 +24,12 @@ async fn should_persist_segment() {
     let partition_id = 3;
     let start_offsets = get_start_offsets();
     for start_offset in start_offsets {
-        let segment = segment::Segment::create(
+        let mut segment = Segment::create(
             stream_id,
             topic_id,
             partition_id,
             start_offset,
             setup.config.clone(),
-            setup.storage.clone(),
             IggyExpiry::NeverExpire,
             Arc::new(AtomicU64::new(0)),
             Arc::new(AtomicU64::new(0)),
@@ -38,8 +37,7 @@ async fn should_persist_segment() {
             Arc::new(AtomicU64::new(0)),
             Arc::new(AtomicU64::new(0)),
             Arc::new(AtomicU64::new(0)),
-        )
-        .await;
+        );
 
         setup
             .create_partition_directory(stream_id, topic_id, partition_id)
@@ -63,13 +61,12 @@ async fn should_load_existing_segment_from_disk() {
     let partition_id = 3;
     let start_offsets = get_start_offsets();
     for start_offset in start_offsets {
-        let segment = segment::Segment::create(
+        let mut segment = Segment::create(
             stream_id,
             topic_id,
             partition_id,
             start_offset,
             setup.config.clone(),
-            setup.storage.clone(),
             IggyExpiry::NeverExpire,
             Arc::new(AtomicU64::new(0)),
             Arc::new(AtomicU64::new(0)),
@@ -77,8 +74,7 @@ async fn should_load_existing_segment_from_disk() {
             Arc::new(AtomicU64::new(0)),
             Arc::new(AtomicU64::new(0)),
             Arc::new(AtomicU64::new(0)),
-        )
-        .await;
+        );
         setup
             .create_partition_directory(stream_id, topic_id, partition_id)
             .await;
@@ -91,13 +87,12 @@ async fn should_load_existing_segment_from_disk() {
         )
         .await;
 
-        let mut loaded_segment = segment::Segment::create(
+        let mut loaded_segment = Segment::create(
             stream_id,
             topic_id,
             partition_id,
             start_offset,
             setup.config.clone(),
-            setup.storage.clone(),
             IggyExpiry::NeverExpire,
             Arc::new(AtomicU64::new(0)),
             Arc::new(AtomicU64::new(0)),
@@ -105,9 +100,8 @@ async fn should_load_existing_segment_from_disk() {
             Arc::new(AtomicU64::new(0)),
             Arc::new(AtomicU64::new(0)),
             Arc::new(AtomicU64::new(0)),
-        )
-        .await;
-        loaded_segment.load().await.unwrap();
+        );
+        loaded_segment.load_from_disk().await.unwrap();
         let loaded_messages = loaded_segment.get_messages(0, 10).await.unwrap();
 
         assert_eq!(loaded_segment.partition_id, segment.partition_id);
@@ -129,13 +123,12 @@ async fn should_persist_and_load_segment_with_messages() {
     let topic_id = 2;
     let partition_id = 3;
     let start_offset = 0;
-    let mut segment = segment::Segment::create(
+    let mut segment = Segment::create(
         stream_id,
         topic_id,
         partition_id,
         start_offset,
         setup.config.clone(),
-        setup.storage.clone(),
         IggyExpiry::NeverExpire,
         Arc::new(AtomicU64::new(0)),
         Arc::new(AtomicU64::new(0)),
@@ -143,8 +136,7 @@ async fn should_persist_and_load_segment_with_messages() {
         Arc::new(AtomicU64::new(0)),
         Arc::new(AtomicU64::new(0)),
         Arc::new(AtomicU64::new(0)),
-    )
-    .await;
+    );
 
     setup
         .create_partition_directory(stream_id, topic_id, partition_id)
@@ -181,13 +173,12 @@ async fn should_persist_and_load_segment_with_messages() {
         .await
         .unwrap();
     segment.persist_messages(None).await.unwrap();
-    let mut loaded_segment = segment::Segment::create(
+    let mut loaded_segment = Segment::create(
         stream_id,
         topic_id,
         partition_id,
         start_offset,
         setup.config.clone(),
-        setup.storage.clone(),
         IggyExpiry::NeverExpire,
         Arc::new(AtomicU64::new(0)),
         Arc::new(AtomicU64::new(0)),
@@ -195,9 +186,8 @@ async fn should_persist_and_load_segment_with_messages() {
         Arc::new(AtomicU64::new(0)),
         Arc::new(AtomicU64::new(0)),
         Arc::new(AtomicU64::new(0)),
-    )
-    .await;
-    loaded_segment.load().await.unwrap();
+    );
+    loaded_segment.load_from_disk().await.unwrap();
     let messages = loaded_segment
         .get_messages(0, messages_count as u32)
         .await
@@ -207,18 +197,24 @@ async fn should_persist_and_load_segment_with_messages() {
 
 #[tokio::test]
 async fn should_persist_and_load_segment_with_messages_with_nowait_confirmation() {
-    let setup = TestSetup::init().await;
+    let setup = TestSetup::init_with_config(SystemConfig {
+        segment: SegmentConfig {
+            server_confirmation: Confirmation::NoWait,
+            ..Default::default()
+        },
+        ..Default::default()
+    })
+    .await;
     let stream_id = 1;
     let topic_id = 2;
     let partition_id = 3;
     let start_offset = 0;
-    let mut segment = segment::Segment::create(
+    let mut segment = Segment::create(
         stream_id,
         topic_id,
         partition_id,
         start_offset,
         setup.config.clone(),
-        setup.storage.clone(),
         IggyExpiry::NeverExpire,
         Arc::new(AtomicU64::new(0)),
         Arc::new(AtomicU64::new(0)),
@@ -226,8 +222,7 @@ async fn should_persist_and_load_segment_with_messages_with_nowait_confirmation(
         Arc::new(AtomicU64::new(0)),
         Arc::new(AtomicU64::new(0)),
         Arc::new(AtomicU64::new(0)),
-    )
-    .await;
+    );
 
     setup
         .create_partition_directory(stream_id, topic_id, partition_id)
@@ -268,13 +263,12 @@ async fn should_persist_and_load_segment_with_messages_with_nowait_confirmation(
         .await
         .unwrap();
     sleep(Duration::from_millis(200)).await;
-    let mut loaded_segment = segment::Segment::create(
+    let mut loaded_segment = Segment::create(
         stream_id,
         topic_id,
         partition_id,
         start_offset,
         setup.config.clone(),
-        setup.storage.clone(),
         IggyExpiry::NeverExpire,
         Arc::new(AtomicU64::new(0)),
         Arc::new(AtomicU64::new(0)),
@@ -282,9 +276,8 @@ async fn should_persist_and_load_segment_with_messages_with_nowait_confirmation(
         Arc::new(AtomicU64::new(0)),
         Arc::new(AtomicU64::new(0)),
         Arc::new(AtomicU64::new(0)),
-    )
-    .await;
-    loaded_segment.load().await.unwrap();
+    );
+    loaded_segment.load_from_disk().await.unwrap();
     let messages = loaded_segment
         .get_messages(0, messages_count as u32)
         .await
@@ -301,13 +294,12 @@ async fn given_all_expired_messages_segment_should_be_expired() {
     let start_offset = 0;
     let message_expiry_ms = 1000;
     let message_expiry = 1000u64.into();
-    let mut segment = segment::Segment::create(
+    let mut segment = Segment::create(
         stream_id,
         topic_id,
         partition_id,
         start_offset,
         setup.config.clone(),
-        setup.storage.clone(),
         message_expiry,
         Arc::new(AtomicU64::new(0)),
         Arc::new(AtomicU64::new(0)),
@@ -315,8 +307,7 @@ async fn given_all_expired_messages_segment_should_be_expired() {
         Arc::new(AtomicU64::new(0)),
         Arc::new(AtomicU64::new(0)),
         Arc::new(AtomicU64::new(0)),
-    )
-    .await;
+    );
 
     setup
         .create_partition_directory(stream_id, topic_id, partition_id)
@@ -370,13 +361,12 @@ async fn given_at_least_one_not_expired_message_segment_should_not_be_expired() 
     let start_offset = 0;
     let message_expiry_ms = 1000;
     let message_expiry = message_expiry_ms.into();
-    let mut segment = segment::Segment::create(
+    let mut segment = Segment::create(
         stream_id,
         topic_id,
         partition_id,
         start_offset,
         setup.config.clone(),
-        setup.storage.clone(),
         message_expiry,
         Arc::new(AtomicU64::new(0)),
         Arc::new(AtomicU64::new(0)),
@@ -384,8 +374,7 @@ async fn given_at_least_one_not_expired_message_segment_should_not_be_expired() 
         Arc::new(AtomicU64::new(0)),
         Arc::new(AtomicU64::new(0)),
         Arc::new(AtomicU64::new(0)),
-    )
-    .await;
+    );
 
     setup
         .create_partition_directory(stream_id, topic_id, partition_id)

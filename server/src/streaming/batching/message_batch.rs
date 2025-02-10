@@ -1,12 +1,12 @@
 use crate::streaming::batching::batch_filter::BatchItemizer;
 use crate::streaming::batching::iterator::IntoMessagesIterator;
 use crate::streaming::models::messages::RetainedMessage;
-use bytes::{BufMut, Bytes, BytesMut};
+use bytes::Bytes;
 use iggy::utils::{byte_size::IggyByteSize, sizeable::Sizeable};
 
 pub const RETAINED_BATCH_OVERHEAD: u64 = 8 + 8 + 4 + 4;
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct RetainedMessageBatch {
     pub base_offset: u64,
     pub last_offset_delta: u32,
@@ -46,12 +46,15 @@ impl RetainedMessageBatch {
         self.base_offset + self.last_offset_delta as u64
     }
 
-    pub fn extend(&self, bytes: &mut BytesMut) {
-        bytes.put_u64_le(self.base_offset);
-        bytes.put_u32_le(self.length.as_bytes_u64() as u32);
-        bytes.put_u32_le(self.last_offset_delta);
-        bytes.put_u64_le(self.max_timestamp);
-        bytes.put_slice(&self.bytes);
+    pub fn header_as_bytes(&self) -> [u8; 24] {
+        let mut header: [u8; 24] = [0u8; 24];
+
+        header[0..8].copy_from_slice(&self.base_offset.to_le_bytes());
+        header[8..12].copy_from_slice(&(self.length.as_bytes_u64() as u32).to_le_bytes());
+        header[12..16].copy_from_slice(&self.last_offset_delta.to_le_bytes());
+        header[16..24].copy_from_slice(&self.max_timestamp.to_le_bytes());
+
+        header
     }
 }
 

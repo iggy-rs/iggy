@@ -7,7 +7,7 @@ use iggy::utils::timestamp::IggyTimestamp;
 use server::state::system::PartitionState;
 use server::streaming::batching::appendable_batch_info::AppendableBatchInfo;
 use server::streaming::partitions::partition::Partition;
-use server::streaming::segments::segment::{INDEX_EXTENSION, LOG_EXTENSION};
+use server::streaming::segments::*;
 use std::sync::atomic::{AtomicU32, AtomicU64};
 use std::sync::Arc;
 use tokio::fs;
@@ -21,7 +21,7 @@ async fn should_persist_partition_with_segment() {
     setup.create_partitions_directory(stream_id, topic_id).await;
     let partition_ids = get_partition_ids();
     for partition_id in partition_ids {
-        let partition = Partition::create(
+        let mut partition = Partition::create(
             stream_id,
             topic_id,
             partition_id,
@@ -53,7 +53,7 @@ async fn should_load_existing_partition_from_disk() {
     setup.create_partitions_directory(stream_id, topic_id).await;
     let partition_ids = get_partition_ids();
     for partition_id in partition_ids {
-        let partition = Partition::create(
+        let mut partition = Partition::create(
             stream_id,
             topic_id,
             partition_id,
@@ -128,7 +128,7 @@ async fn should_delete_existing_partition_from_disk() {
     setup.create_partitions_directory(stream_id, topic_id).await;
     let partition_ids = get_partition_ids();
     for partition_id in partition_ids {
-        let partition = Partition::create(
+        let mut partition = Partition::create(
             stream_id,
             topic_id,
             partition_id,

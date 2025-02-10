@@ -65,6 +65,13 @@ async fn main() -> Result<(), ServerError> {
 
     logging.late_init(config.system.get_system_path(), &config.system.logging)?;
 
+    #[cfg(feature = "disable-mimalloc")]
+    tracing::warn!(
+        "Using default system allocator because code was build with `disable-mimalloc` feature"
+    );
+    #[cfg(not(feature = "disable-mimalloc"))]
+    info!("Using mimalloc allocator");
+
     let system = SharedSystem::new(System::new(
         config.system.clone(),
         config.data_maintenance.clone(),

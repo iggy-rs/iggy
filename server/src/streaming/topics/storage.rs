@@ -15,7 +15,7 @@ use serde::{Deserialize, Serialize};
 use std::path::Path;
 use std::sync::Arc;
 use tokio::fs;
-use tokio::fs::create_dir;
+use tokio::fs::create_dir_all;
 use tokio::sync::{Mutex, RwLock};
 use tracing::{error, info, warn};
 
@@ -215,7 +215,7 @@ impl TopicStorage for FileTopicStorage {
     }
 
     async fn save(&self, topic: &Topic) -> Result<(), IggyError> {
-        if !Path::new(&topic.path).exists() && create_dir(&topic.path).await.is_err() {
+        if !Path::new(&topic.path).exists() && create_dir_all(&topic.path).await.is_err() {
             return Err(IggyError::CannotCreateTopicDirectory(
                 topic.topic_id,
                 topic.stream_id,
@@ -224,7 +224,7 @@ impl TopicStorage for FileTopicStorage {
         }
 
         if !Path::new(&topic.partitions_path).exists()
-            && create_dir(&topic.partitions_path).await.is_err()
+            && create_dir_all(&topic.partitions_path).await.is_err()
         {
             return Err(IggyError::CannotCreatePartitionsDirectory(
                 topic.stream_id,
@@ -237,7 +237,7 @@ impl TopicStorage for FileTopicStorage {
             topic.partitions.len()
         );
         for (_, partition) in topic.partitions.iter() {
-            let partition = partition.write().await;
+            let mut partition = partition.write().await;
             partition.persist().await.with_error_context(|_| {
                 format!("{COMPONENT} - failed to persist partition, topic: {topic}")
             })?;

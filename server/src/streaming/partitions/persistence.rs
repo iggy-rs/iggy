@@ -5,7 +5,7 @@ use error_set::ErrContext;
 use iggy::error::IggyError;
 use std::path::Path;
 use std::sync::atomic::Ordering;
-use tokio::fs::create_dir;
+use tokio::fs::create_dir_all;
 use tracing::error;
 
 impl Partition {
@@ -14,19 +14,16 @@ impl Partition {
         storage.partition.load(self, state).await
     }
 
-    pub async fn persist(&self) -> Result<(), IggyError> {
-        self.storage.partition.save(self).await
+    pub async fn persist(&mut self) -> Result<(), IggyError> {
+        let storage = self.storage.clone();
+        storage.partition.save(self).await
     }
 
-    pub async fn delete(&self) -> Result<(), IggyError> {
-        for segment in &self.segments {
-            self.storage
-                .segment
-                .delete(segment)
-                .await
-                .with_error_context(|_| {
-                    format!("{COMPONENT} - failed to delete segment: {segment}",)
-                })?;
+    pub async fn delete(&mut self) -> Result<(), IggyError> {
+        for segment in &mut self.segments {
+            segment.delete().await.with_error_context(|_| {
+                format!("{COMPONENT} - failed to delete segment: {segment}",)
+            })?;
             self.segments_count_of_parent_stream
                 .fetch_sub(1, Ordering::SeqCst);
         }
@@ -42,14 +39,10 @@ impl Partition {
         if let Some(cache) = self.cache.as_mut() {
             cache.purge();
         }
-        for segment in &self.segments {
-            self.storage
-                .segment
-                .delete(segment)
-                .await
-                .with_error_context(|_| {
-                    format!("{COMPONENT} - failed to delete segment: {segment}",)
-                })?;
+        for segment in &mut self.segments {
+            segment.delete().await.with_error_context(|_| {
+                format!("{COMPONENT} - failed to delete segment: {segment}",)
+            })?;
             self.segments_count_of_parent_stream
                 .fetch_sub(1, Ordering::SeqCst);
         }
@@ -75,7 +68,7 @@ impl Partition {
             })?;
 
         if !Path::new(&self.consumer_offsets_path).exists()
-            && create_dir(&self.consumer_offsets_path).await.is_err()
+            && create_dir_all(&self.consumer_offsets_path).await.is_err()
         {
             error!(
                 "Failed to create consumer offsets directory for partition with ID: {} for stream with ID: {} and topic with ID: {}.",
@@ -87,7 +80,9 @@ impl Partition {
         }
 
         if !Path::new(&self.consumer_group_offsets_path).exists()
-            && create_dir(&self.consumer_group_offsets_path).await.is_err()
+            && create_dir_all(&self.consumer_group_offsets_path)
+                .await
+                .is_err()
         {
             error!(
                 "Failed to create consumer group offsets directory for partition with ID: {} for stream with ID: {} and topic with ID: {}.",

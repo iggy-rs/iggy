@@ -2,7 +2,7 @@ use std::sync::atomic::Ordering;
 
 use crate::streaming::partitions::partition::Partition;
 use crate::streaming::partitions::COMPONENT;
-use crate::streaming::segments::segment::Segment;
+use crate::streaming::segments::*;
 use error_set::ErrContext;
 use iggy::error::IggyError;
 use iggy::utils::timestamp::IggyTimestamp;
@@ -22,14 +22,20 @@ impl Partition {
         &self.segments
     }
 
+    pub fn get_segments_mut(&mut self) -> &mut Vec<Segment> {
+        &mut self.segments
+    }
+
     pub fn get_segment(&self, start_offset: u64) -> Option<&Segment> {
         self.segments
             .iter()
             .find(|s| s.start_offset == start_offset)
     }
 
-    pub fn get_segments_mut(&mut self) -> &mut Vec<Segment> {
-        &mut self.segments
+    pub fn get_segment_mut(&mut self, start_offset: u64) -> Option<&mut Segment> {
+        self.segments
+            .iter_mut()
+            .find(|s| s.start_offset == start_offset)
     }
 
     pub async fn get_expired_segments_start_offsets(&self, now: IggyTimestamp) -> Vec<u64> {
@@ -49,13 +55,12 @@ impl Partition {
             "Creating the new segment for partition with ID: {}, stream with ID: {}, topic with ID: {}...",
             self.partition_id, self.stream_id, self.topic_id
         );
-        let new_segment = Segment::create(
+        let mut new_segment = Segment::create(
             self.stream_id,
             self.topic_id,
             self.partition_id,
             start_offset,
             self.config.clone(),
-            self.storage.clone(),
             self.message_expiry,
             self.size_of_parent_stream.clone(),
             self.size_of_parent_topic.clone(),
@@ -63,8 +68,8 @@ impl Partition {
             self.messages_count_of_parent_stream.clone(),
             self.messages_count_of_parent_topic.clone(),
             self.messages_count.clone(),
-        )
-        .await;
+        );
+
         new_segment.persist().await.with_error_context(|_| {
             format!("{COMPONENT} - failed to persist new segment: {new_segment}",)
         })?;
@@ -79,27 +84,24 @@ impl Partition {
     pub async fn delete_segment(&mut self, start_offset: u64) -> Result<DeletedSegment, IggyError> {
         let deleted_segment;
         {
-            let segment = self.get_segment(start_offset);
+            let segment = self.get_segment_mut(start_offset);
             if segment.is_none() {
                 return Err(IggyError::SegmentNotFound);
             }
 
             let segment = segment.unwrap();
-            self.storage
-                .segment
-                .delete(segment)
-                .await
-                .with_error_context(|_| {
-                    format!("{COMPONENT} - failed to delete segment: {segment}",)
-                })?;
-            self.segments_count_of_parent_stream
-                .fetch_sub(1, Ordering::SeqCst);
+            segment.delete().await.with_error_context(|_| {
+                format!("{COMPONENT} - failed to delete segment: {segment}",)
+            })?;
 
             deleted_segment = DeletedSegment {
                 end_offset: segment.end_offset,
                 messages_count: segment.get_messages_count(),
             };
         }
+
+        self.segments_count_of_parent_stream
+            .fetch_sub(1, Ordering::SeqCst);
 
         self.segments.retain(|s| s.start_offset != start_offset);
         self.segments

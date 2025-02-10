@@ -243,23 +243,35 @@ impl Stream {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::configs::system::SystemConfig;
-    use crate::streaming::storage::tests::get_test_system_storage;
+    use crate::{
+        configs::system::SystemConfig,
+        streaming::{
+            persistence::persister::{FilePersister, PersisterKind},
+            storage::SystemStorage,
+        },
+    };
     use iggy::utils::byte_size::IggyByteSize;
     use std::sync::Arc;
 
     #[tokio::test]
     async fn should_get_topic_by_id_and_name() {
+        let tempdir = tempfile::TempDir::new().unwrap();
+        let config = Arc::new(SystemConfig {
+            path: tempdir.path().to_str().unwrap().to_string(),
+            ..Default::default()
+        });
+        let storage = Arc::new(SystemStorage::new(
+            config.clone(),
+            Arc::new(PersisterKind::File(FilePersister {})),
+        ));
         let stream_id = 1;
         let stream_name = "test_stream";
         let topic_id = 2;
         let topic_name = "test_topic";
         let message_expiry = IggyExpiry::NeverExpire;
         let compression_algorithm = CompressionAlgorithm::None;
-        let config = Arc::new(SystemConfig::default());
         let max_topic_size = 2 * config.segment.size.as_bytes_u64();
         let max_topic_size = MaxTopicSize::Custom(IggyByteSize::from(max_topic_size));
-        let storage = Arc::new(get_test_system_storage());
         let mut stream = Stream::create(stream_id, stream_name, config, storage);
         stream
             .create_topic(

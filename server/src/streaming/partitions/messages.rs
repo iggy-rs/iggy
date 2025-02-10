@@ -4,7 +4,7 @@ use crate::streaming::models::messages::RetainedMessage;
 use crate::streaming::partitions::partition::Partition;
 use crate::streaming::partitions::COMPONENT;
 use crate::streaming::polling_consumer::PollingConsumer;
-use crate::streaming::segments::segment::Segment;
+use crate::streaming::segments::*;
 use error_set::ErrContext;
 use iggy::confirmation::Confirmation;
 use iggy::messages::send_messages::Message;
@@ -43,10 +43,7 @@ impl Partition {
         if !self.config.segment.cache_indexes {
             for segment in self.segments.iter() {
                 let index = segment
-                    .storage
-                    .as_ref()
-                    .segment
-                    .try_load_index_for_timestamp(segment, timestamp)
+                    .load_index_for_timestamp(timestamp)
                     .await
                     .with_error_context(|_| format!(
                         "{COMPONENT} - failed to load index for timestamp, partition: {}, segment start offset: {}, timestamp: {}",
@@ -139,9 +136,9 @@ impl Partition {
         count: u32,
     ) -> Result<Vec<Arc<RetainedMessage>>, IggyError> {
         trace!(
-            "Getting messages for start offset: {} for partition: {}...",
-            start_offset,
-            self.partition_id
+            "Getting messages for start offset: {start_offset} for partition: {}, current offset: {}...",
+            self.partition_id,
+            self.current_offset
         );
         if self.segments.is_empty() {
             return Ok(EMPTY_MESSAGES.into_iter().map(Arc::new).collect());
@@ -578,15 +575,17 @@ mod tests {
     use iggy::utils::expiry::IggyExpiry;
     use iggy::utils::sizeable::Sizeable;
     use std::sync::atomic::{AtomicU32, AtomicU64};
+    use tempfile::TempDir;
 
     use super::*;
     use crate::configs::system::{MessageDeduplicationConfig, SystemConfig};
     use crate::streaming::partitions::create_messages;
-    use crate::streaming::storage::tests::get_test_system_storage;
+    use crate::streaming::persistence::persister::{FilePersister, PersisterKind};
+    use crate::streaming::storage::SystemStorage;
 
     #[tokio::test]
     async fn given_disabled_message_deduplication_all_messages_should_be_appended() {
-        let mut partition = create_partition(false).await;
+        let (mut partition, _tempdir) = create_partition(false).await;
         let messages = create_messages();
         let messages_count = messages.len() as u32;
         let appendable_batch_info = AppendableBatchInfo {
@@ -610,7 +609,7 @@ mod tests {
 
     #[tokio::test]
     async fn given_enabled_message_deduplication_only_messages_with_unique_id_should_be_appended() {
-        let mut partition = create_partition(true).await;
+        let (mut partition, _tempdir) = create_partition(true).await;
         let messages = create_messages();
         let messages_count = messages.len() as u32;
         let unique_messages_count = 3;
@@ -633,34 +632,43 @@ mod tests {
         assert_eq!(loaded_messages.len(), unique_messages_count);
     }
 
-    async fn create_partition(deduplication_enabled: bool) -> Partition {
-        let storage = Arc::new(get_test_system_storage());
+    async fn create_partition(deduplication_enabled: bool) -> (Partition, TempDir) {
         let stream_id = 1;
         let topic_id = 2;
         let partition_id = 3;
         let with_segment = true;
+        let temp_dir = TempDir::new().unwrap();
         let config = Arc::new(SystemConfig {
+            path: temp_dir.path().to_path_buf().to_str().unwrap().to_string(),
             message_deduplication: MessageDeduplicationConfig {
                 enabled: deduplication_enabled,
                 ..Default::default()
             },
             ..Default::default()
         });
-        Partition::create(
-            stream_id,
-            topic_id,
-            partition_id,
-            with_segment,
-            config,
-            storage,
-            IggyExpiry::NeverExpire,
-            Arc::new(AtomicU64::new(0)),
-            Arc::new(AtomicU64::new(0)),
-            Arc::new(AtomicU64::new(0)),
-            Arc::new(AtomicU64::new(0)),
-            Arc::new(AtomicU32::new(0)),
-            IggyTimestamp::now(),
+        let storage = Arc::new(SystemStorage::new(
+            config.clone(),
+            Arc::new(PersisterKind::File(FilePersister {})),
+        ));
+
+        (
+            Partition::create(
+                stream_id,
+                topic_id,
+                partition_id,
+                with_segment,
+                config,
+                storage,
+                IggyExpiry::NeverExpire,
+                Arc::new(AtomicU64::new(0)),
+                Arc::new(AtomicU64::new(0)),
+                Arc::new(AtomicU64::new(0)),
+                Arc::new(AtomicU64::new(0)),
+                Arc::new(AtomicU32::new(0)),
+                IggyTimestamp::now(),
+            )
+            .await,
+            temp_dir,
         )
-        .await
     }
 }

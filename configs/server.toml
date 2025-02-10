@@ -446,7 +446,7 @@ validate_checksum = false
 # The threshold of buffered messages before triggering a save to disk (integer).
 # Specifies how many messages accumulate before persisting to storage.
 # Adjusting this can balance between write performance and data durability.
-messages_required_to_save = 1000
+messages_required_to_save = 5000
 
 # Segment configuration
 [system.segment]

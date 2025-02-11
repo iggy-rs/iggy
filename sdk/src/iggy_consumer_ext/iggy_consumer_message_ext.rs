@@ -1,6 +1,5 @@
 use async_trait::async_trait;
 use futures_util::StreamExt;
-
 use crate::clients::consumer::IggyConsumer;
 use crate::error::IggyError;
 use crate::event_consumer_trait::EventConsumer;

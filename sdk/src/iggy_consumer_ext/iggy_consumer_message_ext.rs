@@ -10,6 +10,25 @@ use tracing::{error, info};
 
 #[async_trait]
 impl IggyConsumerMessageExt for IggyConsumer {
+    /// Consume messages from the broker and process them with the given event processor
+    ///
+    /// # Arguments
+    ///
+    /// * `event_processor`: The event processor to use. This must be a reference to a static
+    /// object that implements the `EventConsumer` trait.
+    /// * `shutdown_rx`: A receiver which will receive a shutdown signal, which will be used to
+    /// stop message consumption.
+    ///
+    /// # Errors
+    ///
+    /// * `IggyError::Disconnected`: The client has been disconnected.
+    /// * `IggyError::CannotEstablishConnection`: The client cannot establish a connection to iggy.
+    /// * `IggyError::StaleClient`: This client is stale and cannot be used to consume messages.
+    /// * `IggyError::InvalidServerAddress`: The server address is invalid.
+    /// * `IggyError::InvalidClientAddress`: The client address is invalid.
+    /// * `IggyError::NotConnected`: The client is not connected.
+    /// * `IggyError::ClientShutdown`: The client has been shut down.
+    ///
     async fn consume_messages(
         mut self,
         event_processor: &'static (impl EventConsumer + Sync),

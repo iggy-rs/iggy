@@ -19,7 +19,6 @@ pub mod consumer_groups;
 pub mod consumer_offsets;
 pub mod diagnostic;
 pub mod error;
-pub mod message_consumer;
 pub mod http;
 pub mod identifier;
 pub mod iggy_consumer_ext;

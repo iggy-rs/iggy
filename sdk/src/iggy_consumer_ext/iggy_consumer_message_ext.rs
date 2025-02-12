@@ -1,9 +1,8 @@
-use async_trait::async_trait;
-use futures_util::StreamExt;
 use crate::clients::consumer::IggyConsumer;
 use crate::error::IggyError;
-use crate::message_consumer::MessageConsumer;
-use crate::iggy_consumer_ext::IggyConsumerMessageExt;
+use crate::iggy_consumer_ext::{IggyConsumerMessageExt, MessageConsumer};
+use async_trait::async_trait;
+use futures_util::StreamExt;
 use tokio::sync::oneshot;
 use tracing::{error, info};
 
@@ -45,7 +44,8 @@ impl IggyConsumerMessageExt for IggyConsumer {
                     match message {
                         Some(Ok(received_message)) => {
                             if let Err(err) = event_processor.consume(received_message.message).await {
-                                error!("Error while handling message: {err}");
+                                error!("Error while handling message from delivered from consumer {name} on topic: {topic} and stream {stream} du to error {err}",
+                                    name= self.name(), topic = self.topic(), stream = self.stream());
                             }
                         }
                         Some(Err(err)) => {

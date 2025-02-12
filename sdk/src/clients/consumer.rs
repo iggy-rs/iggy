@@ -40,6 +40,9 @@ pub enum AutoCommit {
     IntervalOrWhen(IggyDuration, AutoCommitWhen),
     /// The auto-commit is enabled and the offset is stored on the server depending on the mode.
     When(AutoCommitWhen),
+    /// The auto-commit is enabled and the offset is stored on the server depending on the mode after consuming the messages.
+    /// **This will only work with the `IggyConsumerMessageExt` trait.**
+    After(AutoCommitAfter),
 }
 
 /// The auto-commit mode for storing the offset on the server.
@@ -52,6 +55,18 @@ pub enum AutoCommitWhen {
     /// The offset is stored on the server when consuming each message.
     ConsumingEachMessage,
     /// The offset is stored on the server when consuming every Nth message.
+    ConsumingEveryNthMessage(u32),
+}
+
+/// The auto-commit mode for storing the offset on the server **after** receiving the messages.
+/// **This will only work with the `IggyConsumerMessageExt` trait.**
+#[derive(Debug, PartialEq, Copy, Clone)]
+pub enum AutoCommitAfter {
+    /// The offset is stored on the server after all the messages are consumed.
+    ConsumingAllMessages,
+    /// The offset is stored on the server after consuming each message.
+    ConsumingEachMessage,
+    /// The offset is stored on the server after consuming every Nth message.
     ConsumingEveryNthMessage(u32),
 }
 

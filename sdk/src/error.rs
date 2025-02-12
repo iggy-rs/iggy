@@ -330,6 +330,8 @@ pub enum IggyError {
     CommandLengthError(String) = 4029,
     #[error("Cannot sed messages due to client disconnection")]
     CannotSendMessagesDueToClientDisconnection = 4050,
+    #[error("Cannot process received message error: {0}")]
+    CannotProcessReceivedMessage(String) = 4051,
     #[error("Invalid offset: {0}")]
     InvalidOffset(u64) = 4100,
     #[error("Consumer group with ID: {0} for topic with ID: {1} was not found.")]

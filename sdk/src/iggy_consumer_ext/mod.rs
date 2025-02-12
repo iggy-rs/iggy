@@ -38,4 +38,3 @@ impl<T: MessageConsumer + Send + Sync> MessageConsumer for &T {
         (**self).consume(message).await
     }
 }
-

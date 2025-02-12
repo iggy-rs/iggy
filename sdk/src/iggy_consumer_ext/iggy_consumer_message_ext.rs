@@ -2,7 +2,7 @@ use async_trait::async_trait;
 use futures_util::StreamExt;
 use crate::clients::consumer::IggyConsumer;
 use crate::error::IggyError;
-use crate::event_consumer_trait::EventConsumer;
+use crate::message_consumer::MessageConsumer;
 use crate::iggy_consumer_ext::IggyConsumerMessageExt;
 use tokio::sync::oneshot;
 use tracing::{error, info};
@@ -30,7 +30,7 @@ impl IggyConsumerMessageExt for IggyConsumer {
     ///
     async fn consume_messages(
         mut self,
-        event_processor: &'static (impl EventConsumer + Sync),
+        event_processor: &'static (impl MessageConsumer + Sync),
         mut shutdown_rx: oneshot::Receiver<()>,
     ) -> Result<(), IggyError> {
         loop {

@@ -1,7 +1,7 @@
-mod iggy_consumer_message_ext;
-mod iggy_consumer_message_trait;
+mod consumer_message_ext;
+mod consumer_message_trait;
 
-pub use iggy_consumer_message_trait::IggyConsumerMessageExt;
+pub use consumer_message_trait::IggyConsumerMessageExt;
 
 use crate::error::IggyError;
 use crate::models::messages::PolledMessage;

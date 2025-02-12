@@ -1,6 +1,6 @@
 use crate::clients::consumer::IggyConsumer;
+use crate::consumer_ext::{IggyConsumerMessageExt, MessageConsumer};
 use crate::error::IggyError;
-use crate::iggy_consumer_ext::{IggyConsumerMessageExt, MessageConsumer};
 use async_trait::async_trait;
 use futures_util::StreamExt;
 use tokio::sync::oneshot;

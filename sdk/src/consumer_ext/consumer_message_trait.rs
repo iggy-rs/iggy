@@ -1,5 +1,5 @@
+use crate::consumer_ext::MessageConsumer;
 use crate::error::IggyError;
-use crate::iggy_consumer_ext::MessageConsumer;
 use async_trait::async_trait;
 use tokio::sync::oneshot;
 

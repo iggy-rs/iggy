@@ -1,12 +1,11 @@
 mod consumer_message_ext;
 mod consumer_message_trait;
 
+use crate::clients::consumer::ReceivedMessage;
+use crate::error::IggyError;
 pub use consumer_message_trait::IggyConsumerMessageExt;
 
-use crate::error::IggyError;
-use crate::models::messages::PolledMessage;
-
-/// Trait for event consumer
+/// Trait for message consumer
 #[allow(dead_code)] // Clippy can't see that the trait is used
 #[trait_variant::make(MessageConsumer: Send)]
 pub trait LocalMessageConsumer {
@@ -14,12 +13,12 @@ pub trait LocalMessageConsumer {
     ///
     /// # Arguments
     ///
-    /// * `data` - The event data
+    /// * `message` - The received message to consume
     ///
     /// # Errors
     ///
     /// * `IggyError` - If the message consumer fails to consume the message
-    async fn consume(&self, message: PolledMessage) -> Result<(), IggyError>;
+    async fn consume(&self, message: ReceivedMessage) -> Result<(), IggyError>;
 }
 
 // Default implementation for `&T`
@@ -29,12 +28,12 @@ impl<T: MessageConsumer + Send + Sync> MessageConsumer for &T {
     ///
     /// # Arguments
     ///
-    /// * `data` - The event data
+    /// * `message` - The received message to consume
     ///
     /// # Errors
     ///
     /// * `IggyError` - If the message consumer fails to consume the message
-    async fn consume(&self, message: PolledMessage) -> Result<(), IggyError> {
+    async fn consume(&self, message: ReceivedMessage) -> Result<(), IggyError> {
         (**self).consume(message).await
     }
 }

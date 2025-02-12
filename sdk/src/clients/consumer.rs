@@ -36,12 +36,17 @@ pub enum AutoCommit {
     Disabled,
     /// The auto-commit is enabled and the offset is stored on the server after a certain interval.
     Interval(IggyDuration),
-    /// The auto-commit is enabled and the offset is stored on the server after a certain interval or depending on the mode.
+    /// The auto-commit is enabled and the offset is stored on the server after a certain interval or depending on the mode when consuming the messages.
     IntervalOrWhen(IggyDuration, AutoCommitWhen),
-    /// The auto-commit is enabled and the offset is stored on the server depending on the mode.
+    /// The auto-commit is enabled and the offset is stored on the server after a certain interval or depending on the mode after consuming the messages.
+    ///
+    /// **This will only work with the `IggyConsumerMessageExt` trait when using `consume_messages()`.**
+    IntervalOrAfter(IggyDuration, AutoCommitAfter),
+    /// The auto-commit is enabled and the offset is stored on the server depending on the mode when consuming the messages.
     When(AutoCommitWhen),
     /// The auto-commit is enabled and the offset is stored on the server depending on the mode after consuming the messages.
-    /// **This will only work with the `IggyConsumerMessageExt` trait.**
+    ///
+    /// **This will only work with the `IggyConsumerMessageExt` trait when using `consume_messages()`.**
     After(AutoCommitAfter),
 }
 
@@ -59,7 +64,8 @@ pub enum AutoCommitWhen {
 }
 
 /// The auto-commit mode for storing the offset on the server **after** receiving the messages.
-/// **This will only work with the `IggyConsumerMessageExt` trait.**
+///
+/// **This will only work with the `IggyConsumerMessageExt` trait when using `consume_messages()`.**
 #[derive(Debug, PartialEq, Copy, Clone)]
 pub enum AutoCommitAfter {
     /// The offset is stored on the server after all the messages are consumed.
@@ -180,6 +186,10 @@ impl IggyConsumer {
         }
     }
 
+    pub(crate) fn auto_commit(&self) -> AutoCommit {
+        self.auto_commit
+    }
+
     /// Returns the name of the consumer.
     pub fn name(&self) -> &str {
         &self.consumer_name
@@ -271,6 +281,7 @@ impl IggyConsumer {
         match self.auto_commit {
             AutoCommit::Interval(interval) => self.store_offsets_in_background(interval),
             AutoCommit::IntervalOrWhen(interval, _) => self.store_offsets_in_background(interval),
+            AutoCommit::IntervalOrAfter(interval, _) => self.store_offsets_in_background(interval),
             _ => {}
         }
 
@@ -374,7 +385,7 @@ impl IggyConsumer {
         });
     }
 
-    fn send_store_offset(&self, partition_id: u32, offset: u64) {
+    pub(crate) fn send_store_offset(&self, partition_id: u32, offset: u64) {
         if let Err(error) = self.store_offset_sender.send((partition_id, offset)) {
             error!("Failed to send offset to store: {error}, please verify if `init()` on IggyConsumer object has been called.");
         }
@@ -952,6 +963,13 @@ impl IggyConsumerBuilder {
     pub fn auto_commit(self, auto_commit: AutoCommit) -> Self {
         Self {
             auto_commit,
+            ..self
+        }
+    }
+
+    pub fn commit_failed_messages(self) -> Self {
+        Self {
+            auto_commit: AutoCommit::Disabled,
             ..self
         }
     }

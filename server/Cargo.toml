@@ -56,7 +56,7 @@ opentelemetry-otlp = { version = "0.27.0", features = [
     "tokio",
 ] }
 opentelemetry-semantic-conventions = { version = "0.27.0" }
-opentelemetry_sdk = { version = "0.27.1", features = [
+opentelemetry_sdk = { version = "0.28.0", features = [
     "rt-tokio",
     "logs",
     "trace",

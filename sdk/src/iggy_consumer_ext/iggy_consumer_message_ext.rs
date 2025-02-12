@@ -73,9 +73,6 @@ impl IggyConsumerMessageExt for IggyConsumer {
             }
         }
 
-        // We have to wait for a moment for the iggy server.
-        tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
-
         Ok(())
     }
 }

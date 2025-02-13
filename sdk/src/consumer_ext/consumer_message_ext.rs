@@ -27,11 +27,14 @@ impl IggyConsumerMessageExt for IggyConsumer {
     /// * `IggyError::NotConnected`: The client is not connected.
     /// * `IggyError::ClientShutdown`: The client has been shut down.
     ///
-    async fn consume_messages(
+    async fn consume_messages<P>(
         mut self,
-        message_consumer: &'static (impl MessageConsumer + Sync),
+        message_consumer: &P,
         mut shutdown_rx: oneshot::Receiver<()>,
-    ) -> Result<(), IggyError> {
+    ) -> Result<(), IggyError>
+    where
+        P: 'static + MessageConsumer + Sync,
+    {
         let auto_commit = self.auto_commit();
         let store_offset_after_each_message = matches!(
             auto_commit,

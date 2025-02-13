@@ -1,5 +1,6 @@
 pub mod args;
 pub mod binary;
+pub mod builder;
 pub mod bytes_serializable;
 #[cfg(feature = "iggy-cli")]
 pub mod cli;
@@ -13,6 +14,7 @@ pub mod client_provider;
 pub mod clients;
 pub mod command;
 pub mod compression;
+pub mod config;
 pub mod confirmation;
 pub mod consumer;
 pub mod consumer_ext;

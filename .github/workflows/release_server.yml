@@ -38,6 +38,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Install musl-tools on Linux
         run: sudo apt-get update --yes && sudo apt-get install --yes musl-tools
@@ -95,10 +97,23 @@ jobs:
             fi
           done
 
+      - name: Create Changelog
+        uses: orhun/git-cliff-action@v4
+        id: changelog
+        with:
+          config: cliff.toml
+          args: -vv --latest
+        env:
+          OUTPUT: CHANGELOG.md
+          GITHUB_REPO: ${{ github.repository }}
+
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          files: zipped_artifacts/*
+          body: ${{ steps.changelog.outputs.content }}
+          files: |
+            zipped_artifacts/*
+            CHANGELOG.md
           tag_name: ${GITHUB_REF#refs/tags/}
           draft: false
           prerelease: false

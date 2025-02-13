@@ -21,6 +21,7 @@ use std::sync::atomic::{AtomicBool, AtomicU32, AtomicU64};
 use std::sync::Arc;
 use std::task::{Context, Poll};
 use std::time::Duration;
+use tokio::time;
 use tokio::time::sleep;
 use tracing::{error, info, trace, warn};
 
@@ -110,6 +111,8 @@ pub struct IggyConsumer {
     last_polled_at: Arc<AtomicU64>,
     current_partition_id: Arc<AtomicU32>,
     reconnection_retry_interval: IggyDuration,
+    init_retries: Option<u32>,
+    init_retry_interval: IggyDuration,
     allow_replay: bool,
 }
 
@@ -129,7 +132,9 @@ impl IggyConsumer {
         auto_join_consumer_group: bool,
         create_consumer_group_if_not_exists: bool,
         encryptor: Option<Arc<EncryptorKind>>,
-        retry_interval: IggyDuration,
+        reconnection_retry_interval: IggyDuration,
+        init_retries: Option<u32>,
+        init_retry_interval: IggyDuration,
         allow_replay: bool,
     ) -> Self {
         let (store_offset_sender, _) = flume::unbounded();
@@ -181,7 +186,9 @@ impl IggyConsumer {
             },
             last_polled_at: Arc::new(AtomicU64::new(0)),
             current_partition_id: Arc::new(AtomicU32::new(0)),
-            reconnection_retry_interval: retry_interval,
+            reconnection_retry_interval,
+            init_retries,
+            init_retry_interval,
             allow_replay,
         }
     }
@@ -255,19 +262,65 @@ impl IggyConsumer {
             return Ok(());
         }
 
+        let stream_id = self.stream_id.clone();
+        let topic_id = self.topic_id.clone();
+        let consumer_name = &self.consumer_name;
+
+        info!(
+            "Initializing consumer: {consumer_name} for stream: {stream_id}, topic: {topic_id}..."
+        );
+
         {
+            let mut retries = 0;
+            let init_retries = self.init_retries.unwrap_or_default();
+            let interval = self.init_retry_interval;
+
+            let mut timer = time::interval(interval.get_duration());
+            timer.tick().await;
+
             let client = self.client.read().await;
-            if client.get_stream(&self.stream_id).await?.is_none() {
+            let mut stream_exists = client.get_stream(&stream_id).await?.is_some();
+            let mut topic_exists = client.get_topic(&stream_id, &topic_id).await?.is_some();
+
+            loop {
+                if stream_exists && topic_exists {
+                    info!("Stream: {stream_id} and topic: {topic_id} were found. Initializing consumer...",);
+                    break;
+                }
+
+                if retries >= init_retries {
+                    break;
+                }
+
+                retries += 1;
+                if !stream_exists {
+                    warn!("Stream: {stream_id} does not exist. Retrying ({retries}/{init_retries}) in {interval}...",);
+                    timer.tick().await;
+                    stream_exists = client.get_stream(&stream_id).await?.is_some();
+                }
+
+                if !stream_exists {
+                    continue;
+                }
+
+                topic_exists = client.get_topic(&stream_id, &topic_id).await?.is_some();
+                if topic_exists {
+                    break;
+                }
+
+                warn!("Topic: {topic_id} does not exist in stream: {stream_id}. Retrying ({retries}/{init_retries}) in {interval}...",);
+                timer.tick().await;
+            }
+
+            if !stream_exists {
+                error!("Stream: {stream_id} was not found.");
                 return Err(IggyError::StreamNameNotFound(
                     self.stream_id.get_string_value().unwrap_or_default(),
                 ));
-            }
+            };
 
-            if client
-                .get_topic(&self.stream_id, &self.topic_id)
-                .await?
-                .is_none()
-            {
+            if !topic_exists {
+                error!("Topic: {topic_id} was not found in stream: {stream_id}.");
                 return Err(IggyError::TopicNameNotFound(
                     self.topic_id.get_string_value().unwrap_or_default(),
                     self.stream_id.get_string_value().unwrap_or_default(),
@@ -311,6 +364,10 @@ impl IggyConsumer {
         });
 
         self.initialized = true;
+        info!(
+            "Consumer: {consumer_name} has been initialized for stream: {}, topic: {}.",
+            self.stream_id, self.topic_id
+        );
         Ok(())
     }
 
@@ -894,6 +951,8 @@ pub struct IggyConsumerBuilder {
     create_consumer_group_if_not_exists: bool,
     encryptor: Option<Arc<EncryptorKind>>,
     reconnection_retry_interval: IggyDuration,
+    init_retries: Option<u32>,
+    init_retry_interval: IggyDuration,
     allow_replay: bool,
 }
 
@@ -927,6 +986,8 @@ impl IggyConsumerBuilder {
             encryptor,
             polling_interval,
             reconnection_retry_interval: IggyDuration::ONE_SECOND,
+            init_retries: None,
+            init_retry_interval: IggyDuration::ONE_SECOND,
             allow_replay: false,
         }
     }
@@ -1046,6 +1107,17 @@ impl IggyConsumerBuilder {
         }
     }
 
+    /// Sets the number of retries and the interval when initializing the consumer if the stream or topic is not found.
+    /// Might be useful when the stream or topic is created dynamically by the producer.
+    /// By default, the consumer will not retry.
+    pub fn init_retries(self, retries: u32, interval: IggyDuration) -> Self {
+        Self {
+            init_retries: Some(retries),
+            init_retry_interval: interval,
+            ..self
+        }
+    }
+
     /// Allows replaying the messages, `false` by default.
     pub fn allow_replay(self) -> Self {
         Self {
@@ -1073,6 +1145,8 @@ impl IggyConsumerBuilder {
             self.create_consumer_group_if_not_exists,
             self.encryptor,
             self.reconnection_retry_interval,
+            self.init_retries,
+            self.init_retry_interval,
             self.allow_replay,
         )
     }

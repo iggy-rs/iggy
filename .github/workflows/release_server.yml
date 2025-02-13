@@ -1,7 +1,7 @@
 name: release_server
 
 on:
-  push:
+  create:
     tags:
       - 'server-*'
 
@@ -19,12 +19,12 @@ jobs:
       - name: Check if trigger was a tag creation
         id: trigger
         run: |
-          if [[ "${{ github.event_name }}" == "push" && "${{ github.ref }}" == refs/tags/server-* ]];
+          if [[ "${{ github.event.ref_type }}" == "tag" && "${{ github.ref }}" == refs/tags/server-* ]];
           then
-            echo "This push was a tag creation."
+            echo "This event was a tag creation."
             echo "release=true" >> "$GITHUB_OUTPUT"
           else
-            echo "This push was not a tag creation."
+            echo "This event was not a tag creation."
             echo "release=false" >> "$GITHUB_OUTPUT"
           fi
     outputs:

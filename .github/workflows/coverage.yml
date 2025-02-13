@@ -51,6 +51,7 @@ jobs:
         run: source <(cargo llvm-cov show-env --export-prefix) && cargo llvm-cov report --lcov --output-path coverage.lcov --ignore-filename-regex '(bench\/|integration\/|tools\/|tpc\/)'
 
       - name: Upload code to Coveralls
+        if: ${{ !contains(github.event.pull_request.labels.*.name, 'skip-coverage') }}
         uses: coverallsapp/github-action@v2
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}

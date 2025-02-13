@@ -1,13 +1,13 @@
-name: post_release
+name: post_publish_server
 on:
   workflow_dispatch:
   workflow_run:
-    workflows: [ "release" ]
+    workflows: [ "publish_server" ]
     types:
       - completed
 
 jobs:
-  post_release:
+  post_publish_server:
     runs-on: ubuntu-latest
     if: ${{ github.event.workflow_run.conclusion == 'success' || github.event_name == 'workflow_dispatch'}}
     steps:
@@ -67,9 +67,9 @@ jobs:
       - name: Clean up
         run: docker rm -f iggy_container
 
-  finalize_post_release:
+  finalize_post_publish_server:
     runs-on: ubuntu-latest
-    needs: [ post_release ]
+    needs: [ post_publish_server ]
     if: always()
     steps:
       - uses: actions/checkout@v4

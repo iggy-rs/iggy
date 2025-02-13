@@ -8,7 +8,7 @@ use tracing::{error, info, trace};
 
 #[async_trait]
 impl IggyConsumerMessageExt for IggyConsumer {
-    /// Consume messages from the broker and process them with the given message consumer.
+    /// Consume messages from the stream and process them with the given message consumer.
     ///
     /// # Arguments
     ///
@@ -69,23 +69,23 @@ impl IggyConsumerMessageExt for IggyConsumer {
                             let current_offset = received_message.current_offset;
                             let message_offset = received_message.message.offset;
                             if let Err(err) = message_consumer.consume(received_message).await {
-                                error!("Error while handling message at offset: {message_offset}/{current_offset}, partition: {partition_id} for consumer {name} on topic: {topic} and stream: {stream} due to error: {err}",
+                                error!("Error while handling message at offset: {message_offset}/{current_offset}, partition: {partition_id} for consumer: {name} on topic: {topic} and stream: {stream} due to error: {err}",
                                     name = self.name(), topic = self.topic(), stream = self.stream());
                             } else {
-                                trace!("Message at offset: {message_offset}/{current_offset}, partition: {partition_id} has been handled by consumer {name} on topic: {topic} and stream: {stream}",
+                                trace!("Message at offset: {message_offset}/{current_offset}, partition: {partition_id} has been handled by consumer: {name} on topic: {topic} and stream: {stream}",
                                     name = self.name(), topic = self.topic(), stream = self.stream());
                             }
 
                             if store_offset_after_each_message {
-                                trace!("Storing offset: {message_offset}/{current_offset}, partition: {partition_id}, after each message for consumer {name} on topic: {topic} and stream: {stream}",
+                                trace!("Storing offset: {message_offset}/{current_offset}, partition: {partition_id}, after each message for consumer: {name} on topic: {topic} and stream: {stream}",
                                     name = self.name(), topic = self.topic(), stream = self.stream());
                                 self.send_store_offset(partition_id, message_offset);
                             } else if store_after_every_nth_message > 0  && message_offset % store_after_every_nth_message == 0 {
-                                trace!("Storing offset: {message_offset}/{current_offset}, partition: {partition_id}, after every {store_after_every_nth_message} message for consumer {name} on topic: {topic} and stream: {stream}",
+                                trace!("Storing offset: {message_offset}/{current_offset}, partition: {partition_id}, after every {store_after_every_nth_message} message for consumer: {name} on topic: {topic} and stream: {stream}",
                                     store_after_every_nth_message = store_after_every_nth_message, name = self.name(), topic = self.topic(), stream = self.stream());
                                 self.send_store_offset(partition_id, message_offset);
                             } else if store_offset_after_all_messages && message_offset == current_offset {
-                                trace!("Storing offset: {message_offset}/{current_offset}, partition: {partition_id}, after all messages for consumer {name} on topic: {topic} and stream: {stream}",
+                                trace!("Storing offset: {message_offset}/{current_offset}, partition: {partition_id}, after all messages for consumer: {name} on topic: {topic} and stream: {stream}",
                                     name = self.name(), topic = self.topic(), stream = self.stream());
                                 self.send_store_offset(partition_id, message_offset);
                             }
@@ -99,12 +99,12 @@ impl IggyConsumerMessageExt for IggyConsumer {
                                 IggyError::InvalidClientAddress |
                                 IggyError::NotConnected |
                                 IggyError::ClientShutdown => {
-                                    error!("{err:?}: shutdown client: {err}. Consumer {name} on topic: {topic} and stream: {stream}",
+                                    error!("Client error: {err} for consumer: {name} on topic: {topic} and stream: {stream}",
                                         name = self.name(), topic = self.topic(), stream = self.stream());
                                     return Err(err);
                                 }
                                 _ => {
-                                    error!("Error while handling message: {err}. Consumer {name} on topic: {topic} and stream: {stream}",
+                                    error!("Error while handling message: {err} for consumer: {name} on topic: {topic} and stream: {stream}",
                                         name = self.name(), topic = self.topic(), stream = self.stream());
                                     continue;
                                 }

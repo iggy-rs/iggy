@@ -96,3 +96,78 @@ impl IggyStreamConfig {
         &self.producer_config.topic_name()
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::str::FromStr;
+
+    #[test]
+    fn test_default() {
+        let config = IggyStreamConfig::default();
+        assert_eq!(config.stream_name(), "test_stream");
+        assert_eq!(config.topic_name(), "test_topic");
+        assert_eq!(config.consumer_config().batch_size(), 100);
+        assert_eq!(config.producer_config().batch_size(), 100);
+        assert_eq!(
+            config.consumer_config().polling_interval(),
+            IggyDuration::from_str("5ms").unwrap()
+        );
+        assert_eq!(
+            config.producer_config().send_interval(),
+            IggyDuration::from_str("5ms").unwrap()
+        );
+    }
+
+    #[test]
+    fn test_new() {
+        let consumer_config = IggyConsumerConfig::from_stream_topic(
+            "test_stream",
+            "test_topic",
+            100,
+            IggyDuration::from_str("5ms").unwrap(),
+        );
+        let producer_config = IggyProducerConfig::from_stream_topic(
+            "test_stream",
+            "test_topic",
+            100,
+            IggyDuration::from_str("5ms").unwrap(),
+        );
+        let config = IggyStreamConfig::new(consumer_config, producer_config);
+        assert_eq!(config.stream_name(), "test_stream");
+        assert_eq!(config.topic_name(), "test_topic");
+        assert_eq!(config.consumer_config().batch_size(), 100);
+        assert_eq!(config.producer_config().batch_size(), 100);
+        assert_eq!(
+            config.consumer_config().polling_interval(),
+            IggyDuration::from_str("5ms").unwrap()
+        );
+        assert_eq!(
+            config.producer_config().send_interval(),
+            IggyDuration::from_str("5ms").unwrap()
+        );
+    }
+
+    #[test]
+    fn test_from_stream_topic() {
+        let config = IggyStreamConfig::from_stream_topic(
+            "test_stream",
+            "test_topic",
+            100,
+            IggyDuration::from_str("5ms").unwrap(),
+            IggyDuration::from_str("5ms").unwrap(),
+        );
+        assert_eq!(config.stream_name(), "test_stream");
+        assert_eq!(config.topic_name(), "test_topic");
+        assert_eq!(config.consumer_config().batch_size(), 100);
+        assert_eq!(config.producer_config().batch_size(), 100);
+        assert_eq!(
+            config.consumer_config().polling_interval(),
+            IggyDuration::from_str("5ms").unwrap()
+        );
+        assert_eq!(
+            config.producer_config().send_interval(),
+            IggyDuration::from_str("5ms").unwrap()
+        );
+    }
+}

@@ -128,7 +128,7 @@ impl IggyConsumerConfig {
             consumer_name: format!("consumer-{}-{}", stream, topic),
             consumer_kind: ConsumerKind::ConsumerGroup,
             polling_interval,
-            polling_strategy: PollingStrategy::next(),
+            polling_strategy: PollingStrategy::last(),
             partitions_count: 1,
             replication_factor: None,
         }
@@ -182,5 +182,100 @@ impl IggyConsumerConfig {
 
     pub fn replication_factor(&self) -> Option<u8> {
         self.replication_factor
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_default() {
+        let stream_id = shared_config::get_identifier_from_string("test_stream");
+        let topic_id = shared_config::get_identifier_from_string("test_topic");
+
+        let config = IggyConsumerConfig::default();
+        assert_eq!(config.stream_id(), &stream_id);
+        assert_eq!(config.stream_name(), "test_stream");
+        assert_eq!(config.topic_id(), &topic_id);
+        assert_eq!(config.topic_name(), "test_topic");
+        assert_eq!(
+            config.auto_commit(),
+            AutoCommit::When(AutoCommitWhen::PollingMessages)
+        );
+        assert_eq!(config.batch_size(), 100);
+        assert_eq!(config.consumer_name(), "test_consumer");
+        assert_eq!(config.consumer_kind(), ConsumerKind::ConsumerGroup);
+        assert_eq!(
+            config.polling_interval(),
+            IggyDuration::from_str("5ms").unwrap()
+        );
+        assert_eq!(config.polling_strategy(), PollingStrategy::last());
+        assert_eq!(config.partitions_count(), 1);
+        assert_eq!(config.replication_factor(), None);
+    }
+
+    #[test]
+    fn test_new() {
+        let config = IggyConsumerConfig::new(
+            shared_config::get_identifier_from_string("test_stream"),
+            "test_stream".to_string(),
+            shared_config::get_identifier_from_string("test_topic"),
+            "test_topic".to_string(),
+            AutoCommit::When(AutoCommitWhen::PollingMessages),
+            100,
+            "test_consumer".to_string(),
+            ConsumerKind::ConsumerGroup,
+            IggyDuration::from_str("5ms").unwrap(),
+            PollingStrategy::last(),
+            1,
+            None,
+        );
+        assert_eq!(
+            config.stream_id(),
+            &shared_config::get_identifier_from_string("test_stream")
+        );
+        assert_eq!(config.stream_name(), "test_stream");
+        assert_eq!(
+            config.topic_id(),
+            &shared_config::get_identifier_from_string("test_topic")
+        );
+        assert_eq!(config.topic_name(), "test_topic");
+        assert_eq!(
+            config.auto_commit(),
+            AutoCommit::When(AutoCommitWhen::PollingMessages)
+        );
+        assert_eq!(config.batch_size(), 100);
+        assert_eq!(config.consumer_name(), "test_consumer");
+        assert_eq!(config.consumer_kind(), ConsumerKind::ConsumerGroup);
+        assert_eq!(
+            config.polling_interval(),
+            IggyDuration::from_str("5ms").unwrap()
+        );
+        assert_eq!(config.polling_strategy(), PollingStrategy::last());
+        assert_eq!(config.partitions_count(), 1);
+        assert_eq!(config.replication_factor(), None);
+    }
+
+    #[test]
+    fn test_from_stream_topic() {
+        let config = IggyConsumerConfig::from_stream_topic(
+            "test_stream",
+            "test_topic",
+            100,
+            IggyDuration::from_str("5ms").unwrap(),
+        );
+        assert_eq!(config.stream_name(), "test_stream");
+        assert_eq!(config.topic_name(), "test_topic");
+        assert_eq!(config.batch_size(), 100);
+        assert_eq!(config.consumer_name(), "consumer-test_stream-test_topic");
+        assert_eq!(config.consumer_kind(), ConsumerKind::ConsumerGroup);
+        assert_eq!(
+            config.polling_interval(),
+            IggyDuration::from_str("5ms").unwrap()
+        );
+        assert_eq!(config.polling_strategy(), PollingStrategy::last());
+        assert_eq!(config.partitions_count(), 1);
+        assert_eq!(config.replication_factor(), None);
     }
 }

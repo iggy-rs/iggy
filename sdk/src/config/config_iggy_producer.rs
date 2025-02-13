@@ -154,3 +154,83 @@ impl IggyProducerConfig {
         self.replication_factor
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_default() {
+        let stream_id = shared_config::get_identifier_from_string("test_stream");
+        let topic_id = shared_config::get_identifier_from_string("test_topic");
+
+        let config = IggyProducerConfig::default();
+        assert_eq!(config.stream_id(), &stream_id);
+        assert_eq!(config.stream_name(), "test_stream");
+        assert_eq!(config.topic_id(), &topic_id);
+        assert_eq!(config.topic_name(), "test_topic");
+        assert_eq!(config.batch_size(), 100);
+        assert_eq!(
+            config.send_interval(),
+            IggyDuration::from_str("5ms").unwrap()
+        );
+        assert_eq!(config.partitioning(), &Partitioning::balanced());
+        assert_eq!(config.partitions_count(), 1);
+        assert_eq!(config.replication_factor(), None);
+    }
+
+    #[test]
+    fn test_new() {
+        let stream_id = shared_config::get_identifier_from_string("test_stream");
+        let topic_id = shared_config::get_identifier_from_string("test_topic");
+
+        let config = IggyProducerConfig::new(
+            stream_id.clone(),
+            String::from("test_stream"),
+            topic_id.clone(),
+            String::from("test_topic"),
+            100,
+            IggyDuration::from_str("5ms").unwrap(),
+            Partitioning::balanced(),
+            1,
+            None,
+        );
+        assert_eq!(config.stream_id(), &stream_id);
+        assert_eq!(config.stream_name(), "test_stream");
+        assert_eq!(config.topic_id(), &topic_id);
+        assert_eq!(config.topic_name(), "test_topic");
+        assert_eq!(config.batch_size(), 100);
+        assert_eq!(
+            config.send_interval(),
+            IggyDuration::from_str("5ms").unwrap()
+        );
+        assert_eq!(config.partitioning(), &Partitioning::balanced());
+        assert_eq!(config.partitions_count(), 1);
+        assert_eq!(config.replication_factor(), None);
+    }
+
+    #[test]
+    fn test_from_stream_topic() {
+        let stream_id = shared_config::get_identifier_from_string("test_stream");
+        let topic_id = shared_config::get_identifier_from_string("test_topic");
+
+        let config = IggyProducerConfig::from_stream_topic(
+            "test_stream",
+            "test_topic",
+            100,
+            IggyDuration::from_str("5ms").unwrap(),
+        );
+        assert_eq!(config.stream_id(), &stream_id);
+        assert_eq!(config.stream_name(), "test_stream");
+        assert_eq!(config.topic_id(), &topic_id);
+        assert_eq!(config.topic_name(), "test_topic");
+        assert_eq!(config.batch_size(), 100);
+        assert_eq!(
+            config.send_interval(),
+            IggyDuration::from_str("5ms").unwrap()
+        );
+        assert_eq!(config.partitioning(), &Partitioning::balanced());
+        assert_eq!(config.partitions_count(), 1);
+        assert_eq!(config.replication_factor(), None);
+    }
+}

@@ -1,26 +1,31 @@
 use bon::Builder;
 
-use crate::config::shared_config;
+use crate::clients::consumer::{AutoCommit, AutoCommitWhen};
+use crate::consumer::ConsumerKind;
 use crate::identifier::Identifier;
-use crate::messages::send_messages::Partitioning;
+use crate::messages::poll_messages::PollingStrategy;
+use crate::stream_config::shared_config;
 use crate::utils::duration::IggyDuration;
 use std::str::FromStr;
 
 #[derive(Builder, Debug, Clone)]
 #[builder(on(String, into))]
-pub struct IggyProducerConfig {
+pub struct IggyConsumerConfig {
     stream_id: Identifier,
     stream_name: String,
     topic_id: Identifier,
     topic_name: String,
+    auto_commit: AutoCommit,
     batch_size: u32,
-    send_interval: IggyDuration,
-    partitioning: Partitioning,
+    consumer_name: String,
+    consumer_kind: ConsumerKind,
+    polling_interval: IggyDuration,
+    polling_strategy: PollingStrategy,
     partitions_count: u32,
     replication_factor: Option<u8>,
 }
 
-impl Default for IggyProducerConfig {
+impl Default for IggyConsumerConfig {
     fn default() -> Self {
         let stream_id = shared_config::get_identifier_from_string("test_stream");
         let topic_id = shared_config::get_identifier_from_string("test_topic");
@@ -30,17 +35,20 @@ impl Default for IggyProducerConfig {
             stream_name: "test_stream".to_string(),
             topic_id,
             topic_name: "test_topic".to_string(),
+            auto_commit: AutoCommit::When(AutoCommitWhen::PollingMessages),
             batch_size: 100,
-            send_interval: IggyDuration::from_str("5ms").unwrap(),
-            partitioning: Partitioning::balanced(),
+            consumer_name: "test_consumer".to_string(),
+            consumer_kind: ConsumerKind::ConsumerGroup,
+            polling_interval: IggyDuration::from_str("5ms").unwrap(),
+            polling_strategy: PollingStrategy::last(),
             partitions_count: 1,
             replication_factor: None,
         }
     }
 }
 
-impl IggyProducerConfig {
-    /// Creates a new `IggyProducerConfig` with all fields defined.
+impl IggyConsumerConfig {
+    /// Creates a new `IggyConsumerConfig` from the given arguments.
     ///
     /// # Args
     ///
@@ -48,23 +56,28 @@ impl IggyProducerConfig {
     /// * `stream_name` - The stream name.
     /// * `topic_id` - The topic identifier.
     /// * `topic_name` - The topic name.
+    /// * `auto_commit` - The auto-commit configuration to use.
     /// * `batch_size` - The max number of messages to send in a batch.
-    /// * `send_interval` - The interval between messages sent.
-    /// * `partitioning` - The partitioning strategy to use.
+    /// * `consumer_name` - The name of the consumer group.
+    /// * `consumer_kind` - The consumer kind to use.
+    /// * `polling_interval` - The interval between polling for new messages.
+    /// * `polling_strategy` - The polling strategy to use.
     /// * `partition` - The number of partitions to create.
-    /// * `replication_factor` - The replication factor to use.
     ///
     /// Returns:
-    /// A new `IggyProducerConfig`.
+    /// A new `IggyConsumerConfig`.
     ///
     pub fn new(
         stream_id: Identifier,
         stream_name: String,
         topic_id: Identifier,
         topic_name: String,
+        auto_commit: AutoCommit,
         batch_size: u32,
-        send_interval: IggyDuration,
-        partitioning: Partitioning,
+        consumer_name: String,
+        consumer_kind: ConsumerKind,
+        polling_interval: IggyDuration,
+        polling_strategy: PollingStrategy,
         partitions_count: u32,
         replication_factor: Option<u8>,
     ) -> Self {
@@ -73,32 +86,34 @@ impl IggyProducerConfig {
             stream_name,
             topic_id,
             topic_name,
+            auto_commit,
             batch_size,
-            send_interval,
-            partitioning,
+            consumer_name,
+            consumer_kind,
+            polling_interval,
+            polling_strategy,
             partitions_count,
             replication_factor,
         }
     }
 
-    /// Creates a new `IggyProducerConfig` from the given stream and topic names, along with the
-    /// max batch size and the send interval.
+    /// Creates a new `IggyConsumerConfig` from the given arguments.
     ///
     /// # Args
     ///
     /// * `stream` - The stream name.
     /// * `topic` - The topic name.
     /// * `batch_size` - The max number of messages to send in a batch.
-    /// * `send_interval` - The interval between messages sent.
+    /// * `polling_interval` - The interval between polling for new messages.
     ///
     /// Returns:
-    /// A new `IggyProducerConfig`.
+    /// A new `IggyConsumerConfig`.
     ///
     pub fn from_stream_topic(
         stream: &str,
         topic: &str,
         batch_size: u32,
-        send_interval: IggyDuration,
+        polling_interval: IggyDuration,
     ) -> Self {
         let stream_id = shared_config::get_identifier_from_string(stream);
         let topic_id = shared_config::get_identifier_from_string(topic);
@@ -108,16 +123,19 @@ impl IggyProducerConfig {
             stream_name: stream.to_string(),
             topic_id,
             topic_name: topic.to_string(),
+            auto_commit: AutoCommit::When(AutoCommitWhen::PollingMessages),
             batch_size,
-            send_interval,
-            partitioning: Partitioning::balanced(),
+            consumer_name: format!("consumer-{}-{}", stream, topic),
+            consumer_kind: ConsumerKind::ConsumerGroup,
+            polling_interval,
+            polling_strategy: PollingStrategy::last(),
             partitions_count: 1,
             replication_factor: None,
         }
     }
 }
 
-impl IggyProducerConfig {
+impl IggyConsumerConfig {
     pub fn stream_id(&self) -> &Identifier {
         &self.stream_id
     }
@@ -134,16 +152,28 @@ impl IggyProducerConfig {
         &self.topic_name
     }
 
+    pub fn auto_commit(&self) -> AutoCommit {
+        self.auto_commit
+    }
+
     pub fn batch_size(&self) -> u32 {
         self.batch_size
     }
 
-    pub fn send_interval(&self) -> IggyDuration {
-        self.send_interval
+    pub fn consumer_name(&self) -> &str {
+        &self.consumer_name
     }
 
-    pub fn partitioning(&self) -> &Partitioning {
-        &self.partitioning
+    pub fn consumer_kind(&self) -> ConsumerKind {
+        self.consumer_kind
+    }
+
+    pub fn polling_interval(&self) -> IggyDuration {
+        self.polling_interval
+    }
+
+    pub fn polling_strategy(&self) -> PollingStrategy {
+        self.polling_strategy
     }
 
     pub fn partitions_count(&self) -> u32 {
@@ -162,14 +192,17 @@ mod tests {
     #[test]
     fn test_builder() {
         // Builder is generated by the bon macro
-        let config = IggyProducerConfig::builder()
+        let config = IggyConsumerConfig::builder()
             .stream_id(shared_config::get_identifier_from_string("test_stream"))
-            .stream_name("test_stream")
+            .stream_name("test_stream".to_string())
             .topic_id(shared_config::get_identifier_from_string("test_topic"))
-            .topic_name("test_topic")
+            .topic_name("test_topic".to_string())
+            .auto_commit(AutoCommit::When(AutoCommitWhen::PollingMessages))
             .batch_size(100)
-            .send_interval(IggyDuration::from_str("5ms").unwrap())
-            .partitioning(Partitioning::balanced())
+            .consumer_name("test_consumer".to_string())
+            .consumer_kind(ConsumerKind::ConsumerGroup)
+            .polling_interval(IggyDuration::from_str("5ms").unwrap())
+            .polling_strategy(PollingStrategy::last())
             .partitions_count(1)
             .build();
 
@@ -183,14 +216,19 @@ mod tests {
             &shared_config::get_identifier_from_string("test_topic")
         );
         assert_eq!(config.topic_name(), "test_topic");
-        assert_eq!(config.batch_size(), 100);
         assert_eq!(
-            config.send_interval(),
+            config.auto_commit(),
+            AutoCommit::When(AutoCommitWhen::PollingMessages)
+        );
+        assert_eq!(config.batch_size(), 100);
+        assert_eq!(config.consumer_name(), "test_consumer");
+        assert_eq!(config.consumer_kind(), ConsumerKind::ConsumerGroup);
+        assert_eq!(
+            config.polling_interval(),
             IggyDuration::from_str("5ms").unwrap()
         );
-        assert_eq!(config.partitioning(), &Partitioning::balanced());
+        assert_eq!(config.polling_strategy(), PollingStrategy::last());
         assert_eq!(config.partitions_count(), 1);
-        assert_eq!(config.replication_factor(), None);
     }
 
     #[test]
@@ -198,72 +236,87 @@ mod tests {
         let stream_id = shared_config::get_identifier_from_string("test_stream");
         let topic_id = shared_config::get_identifier_from_string("test_topic");
 
-        let config = IggyProducerConfig::default();
+        let config = IggyConsumerConfig::default();
         assert_eq!(config.stream_id(), &stream_id);
         assert_eq!(config.stream_name(), "test_stream");
         assert_eq!(config.topic_id(), &topic_id);
         assert_eq!(config.topic_name(), "test_topic");
-        assert_eq!(config.batch_size(), 100);
         assert_eq!(
-            config.send_interval(),
+            config.auto_commit(),
+            AutoCommit::When(AutoCommitWhen::PollingMessages)
+        );
+        assert_eq!(config.batch_size(), 100);
+        assert_eq!(config.consumer_name(), "test_consumer");
+        assert_eq!(config.consumer_kind(), ConsumerKind::ConsumerGroup);
+        assert_eq!(
+            config.polling_interval(),
             IggyDuration::from_str("5ms").unwrap()
         );
-        assert_eq!(config.partitioning(), &Partitioning::balanced());
+        assert_eq!(config.polling_strategy(), PollingStrategy::last());
         assert_eq!(config.partitions_count(), 1);
         assert_eq!(config.replication_factor(), None);
     }
 
     #[test]
     fn test_new() {
-        let stream_id = shared_config::get_identifier_from_string("test_stream");
-        let topic_id = shared_config::get_identifier_from_string("test_topic");
-
-        let config = IggyProducerConfig::new(
-            stream_id.clone(),
-            String::from("test_stream"),
-            topic_id.clone(),
-            String::from("test_topic"),
+        let config = IggyConsumerConfig::new(
+            shared_config::get_identifier_from_string("test_stream"),
+            "test_stream".to_string(),
+            shared_config::get_identifier_from_string("test_topic"),
+            "test_topic".to_string(),
+            AutoCommit::When(AutoCommitWhen::PollingMessages),
             100,
+            "test_consumer".to_string(),
+            ConsumerKind::ConsumerGroup,
             IggyDuration::from_str("5ms").unwrap(),
-            Partitioning::balanced(),
+            PollingStrategy::last(),
             1,
             None,
         );
-        assert_eq!(config.stream_id(), &stream_id);
-        assert_eq!(config.stream_name(), "test_stream");
-        assert_eq!(config.topic_id(), &topic_id);
-        assert_eq!(config.topic_name(), "test_topic");
-        assert_eq!(config.batch_size(), 100);
         assert_eq!(
-            config.send_interval(),
+            config.stream_id(),
+            &shared_config::get_identifier_from_string("test_stream")
+        );
+        assert_eq!(config.stream_name(), "test_stream");
+        assert_eq!(
+            config.topic_id(),
+            &shared_config::get_identifier_from_string("test_topic")
+        );
+        assert_eq!(config.topic_name(), "test_topic");
+        assert_eq!(
+            config.auto_commit(),
+            AutoCommit::When(AutoCommitWhen::PollingMessages)
+        );
+        assert_eq!(config.batch_size(), 100);
+        assert_eq!(config.consumer_name(), "test_consumer");
+        assert_eq!(config.consumer_kind(), ConsumerKind::ConsumerGroup);
+        assert_eq!(
+            config.polling_interval(),
             IggyDuration::from_str("5ms").unwrap()
         );
-        assert_eq!(config.partitioning(), &Partitioning::balanced());
+        assert_eq!(config.polling_strategy(), PollingStrategy::last());
         assert_eq!(config.partitions_count(), 1);
         assert_eq!(config.replication_factor(), None);
     }
 
     #[test]
     fn test_from_stream_topic() {
-        let stream_id = shared_config::get_identifier_from_string("test_stream");
-        let topic_id = shared_config::get_identifier_from_string("test_topic");
-
-        let config = IggyProducerConfig::from_stream_topic(
+        let config = IggyConsumerConfig::from_stream_topic(
             "test_stream",
             "test_topic",
             100,
             IggyDuration::from_str("5ms").unwrap(),
         );
-        assert_eq!(config.stream_id(), &stream_id);
         assert_eq!(config.stream_name(), "test_stream");
-        assert_eq!(config.topic_id(), &topic_id);
         assert_eq!(config.topic_name(), "test_topic");
         assert_eq!(config.batch_size(), 100);
+        assert_eq!(config.consumer_name(), "consumer-test_stream-test_topic");
+        assert_eq!(config.consumer_kind(), ConsumerKind::ConsumerGroup);
         assert_eq!(
-            config.send_interval(),
+            config.polling_interval(),
             IggyDuration::from_str("5ms").unwrap()
         );
-        assert_eq!(config.partitioning(), &Partitioning::balanced());
+        assert_eq!(config.polling_strategy(), PollingStrategy::last());
         assert_eq!(config.partitions_count(), 1);
         assert_eq!(config.replication_factor(), None);
     }

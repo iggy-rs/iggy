@@ -12,7 +12,7 @@ use serde::{Deserialize, Serialize};
 use std::path::Path;
 use std::sync::Arc;
 use tokio::fs;
-use tokio::fs::create_dir;
+use tokio::fs::create_dir_all;
 use tokio::sync::Mutex;
 use tracing::{error, info, warn};
 
@@ -172,7 +172,7 @@ impl StreamStorage for FileStreamStorage {
     }
 
     async fn save(&self, stream: &Stream) -> Result<(), IggyError> {
-        if !Path::new(&stream.path).exists() && create_dir(&stream.path).await.is_err() {
+        if !Path::new(&stream.path).exists() && create_dir_all(&stream.path).await.is_err() {
             return Err(IggyError::CannotCreateStreamDirectory(
                 stream.stream_id,
                 stream.path.clone(),
@@ -180,7 +180,7 @@ impl StreamStorage for FileStreamStorage {
         }
 
         if !Path::new(&stream.topics_path).exists()
-            && create_dir(&stream.topics_path).await.is_err()
+            && create_dir_all(&stream.topics_path).await.is_err()
         {
             return Err(IggyError::CannotCreateTopicsDirectory(
                 stream.stream_id,

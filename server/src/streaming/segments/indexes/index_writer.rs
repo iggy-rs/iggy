@@ -1,0 +1,108 @@
+use super::{Index, INDEX_SIZE};
+use error_set::ErrContext;
+use iggy::error::IggyError;
+use std::sync::{
+    atomic::{AtomicU64, Ordering},
+    Arc,
+};
+use tokio::{
+    fs::{File, OpenOptions},
+    io::AsyncWriteExt,
+    sync::RwLock,
+};
+use tracing::trace;
+
+/// A dedicated struct for writing to the index file.
+#[derive(Debug)]
+pub struct SegmentIndexWriter {
+    file_path: String,
+    file: RwLock<Option<File>>,
+    index_size_bytes: Arc<AtomicU64>,
+    fsync: bool,
+}
+
+impl SegmentIndexWriter {
+    /// Opens the index file in write mode.
+    pub async fn new(
+        file_path: &str,
+        index_size_bytes: Arc<AtomicU64>,
+        fsync: bool,
+    ) -> Result<Self, IggyError> {
+        let file = OpenOptions::new()
+            .write(true)
+            .append(true)
+            .create(true)
+            .open(file_path)
+            .await
+            .with_error_context(|e| format!("Failed to open index file: {file_path}, error: {e}"))
+            .map_err(|_| IggyError::CannotReadFile)?;
+
+        let _ = file.sync_all().await.with_error_context(|e| {
+            format!("Failed to fsync index file after creation: {file_path}, error: {e}",)
+        });
+
+        let actual_index_size = file
+            .metadata()
+            .await
+            .with_error_context(|e| {
+                format!("Failed to get metadata of index file: {file_path}, error: {e}")
+            })
+            .map_err(|_| IggyError::CannotReadFileMetadata)?
+            .len();
+
+        index_size_bytes.store(actual_index_size, Ordering::Release);
+
+        trace!("Opened index file for writing: {file_path}, size: {actual_index_size}");
+
+        Ok(Self {
+            file_path: file_path.to_string(),
+            file: RwLock::new(Some(file)),
+            index_size_bytes,
+            fsync,
+        })
+    }
+
+    /// Append the given index record to the index file.
+    pub async fn save_index(&self, index: Index) -> Result<(), IggyError> {
+        let mut buf = [0u8; INDEX_SIZE as usize];
+        buf[0..4].copy_from_slice(&index.offset.to_le_bytes());
+        buf[4..8].copy_from_slice(&index.position.to_le_bytes());
+        buf[8..16].copy_from_slice(&index.timestamp.to_le_bytes());
+
+        {
+            let mut file = self.file.write().await;
+            let file = file
+                .as_mut()
+                .unwrap_or_else(|| panic!("File {} should be open", self.file_path));
+            file.write_all(&buf)
+                .await
+                .with_error_context(|e| {
+                    format!(
+                        "Failed to write index to file: {}, error: {e}",
+                        self.file_path
+                    )
+                })
+                .map_err(|_| IggyError::CannotSaveIndexToSegment)?;
+        }
+        if self.fsync {
+            let _ = self.fsync().await;
+        }
+        self.index_size_bytes
+            .fetch_add(INDEX_SIZE, Ordering::Release);
+        Ok(())
+    }
+
+    pub async fn fsync(&self) -> Result<(), IggyError> {
+        let mut file = self.file.write().await;
+        let file = file
+            .as_mut()
+            .unwrap_or_else(|| panic!("File {} should be open", self.file_path));
+        file.sync_all()
+            .await
+            .with_error_context(|e| {
+                format!("Failed to fsync index file: {}, error: {e}", self.file_path)
+            })
+            .map_err(|_| IggyError::CannotWriteToFile)?;
+        Ok(())
+    }
+}

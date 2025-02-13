@@ -1,13 +1,15 @@
 [package]
 name = "server"
-version = "0.4.156"
+version = "0.4.200"
 edition = "2021"
 build = "src/build.rs"
 license = "Apache-2.0"
 
 [features]
-default = []
+default = ["mimalloc"]
 tokio-console = ["dep:console-subscriber", "tokio/tracing"]
+disable-mimalloc = []
+mimalloc = ["dep:mimalloc"]
 
 [dependencies]
 ahash = { version = "0.8.11" }
@@ -41,7 +43,7 @@ futures = "0.3.31"
 human-repr = "1.1.0"
 iggy = { path = "../sdk" }
 jsonwebtoken = "9.3.1"
-mimalloc = "0.1"
+mimalloc = { version = "0.1", optional = true }
 moka = { version = "0.12.10", features = ["future"] }
 openssl = { version = "0.10.70", features = ["vendored"] }
 opentelemetry = { version = "0.27.1", features = ["trace", "logs"] }

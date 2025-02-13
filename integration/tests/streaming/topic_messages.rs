@@ -98,7 +98,7 @@ async fn assert_polling_messages(cache: CacheConfig, expect_enabled_cache: bool)
         )
         .await
         .unwrap();
-
+    assert_eq!(topic.get_messages_count(), messages_count as u64);
     assert_eq!(polled_messages.messages.len(), messages_count as usize);
     let partition = topic.get_partition(partition_id).unwrap();
     let partition = partition.read().await;

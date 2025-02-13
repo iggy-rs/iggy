@@ -1,17 +1,17 @@
+use super::indexes::*;
+use super::logs::*;
 use crate::configs::system::SystemConfig;
 use crate::streaming::batching::batch_accumulator::BatchAccumulator;
-use crate::streaming::persistence::task::LogPersisterTask;
-use crate::streaming::segments::index::Index;
-use crate::streaming::storage::SystemStorage;
+use crate::streaming::segments::*;
+use error_set::ErrContext;
+use iggy::error::IggyError;
 use iggy::utils::byte_size::IggyByteSize;
 use iggy::utils::expiry::IggyExpiry;
 use iggy::utils::timestamp::IggyTimestamp;
-use std::sync::atomic::AtomicU64;
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
-
-pub const LOG_EXTENSION: &str = "log";
-pub const INDEX_EXTENSION: &str = "index";
-pub const MAX_SIZE_BYTES: u64 = 1000 * 1000 * 1000;
+use tokio::fs::remove_file;
+use tracing::info;
 
 #[derive(Debug)]
 pub struct Segment {
@@ -33,23 +33,26 @@ pub struct Segment {
     pub messages_count_of_parent_topic: Arc<AtomicU64>,
     pub messages_count_of_parent_partition: Arc<AtomicU64>,
     pub is_closed: bool,
-    pub persister_task: LogPersisterTask,
-    pub(crate) message_expiry: IggyExpiry,
-    pub(crate) unsaved_messages: Option<BatchAccumulator>,
-    pub(crate) config: Arc<SystemConfig>,
-    pub(crate) indexes: Option<Vec<Index>>,
-    pub(crate) storage: Arc<SystemStorage>,
+    pub log_writer: Option<SegmentLogWriter>,
+    pub log_reader: Option<SegmentLogReader>,
+    pub index_writer: Option<SegmentIndexWriter>,
+    pub index_reader: Option<SegmentIndexReader>,
+    pub message_expiry: IggyExpiry,
+    pub unsaved_messages: Option<BatchAccumulator>,
+    pub config: Arc<SystemConfig>,
+    pub indexes: Option<Vec<Index>>,
+    pub log_size_bytes: Arc<AtomicU64>,
+    pub index_size_bytes: Arc<AtomicU64>,
 }
 
 impl Segment {
     #[allow(clippy::too_many_arguments)]
-    pub async fn create(
+    pub fn create(
         stream_id: u32,
         topic_id: u32,
         partition_id: u32,
         start_offset: u64,
         config: Arc<SystemConfig>,
-        storage: Arc<SystemStorage>,
         message_expiry: IggyExpiry,
         size_of_parent_stream: Arc<AtomicU64>,
         size_of_parent_topic: Arc<AtomicU64>,
@@ -59,9 +62,16 @@ impl Segment {
         messages_count_of_parent_partition: Arc<AtomicU64>,
     ) -> Segment {
         let path = config.get_segment_path(stream_id, topic_id, partition_id, start_offset);
-        let persister = storage.persister.clone();
-        let task_max_retries = config.state.max_file_operation_retries;
-        let task_retry_sleep = config.state.retry_delay.get_duration();
+        let log_path = Self::get_log_path(&path);
+        let index_path = Self::get_index_path(&path);
+        let message_expiry = match message_expiry {
+            IggyExpiry::ServerDefault => config.segment.message_expiry,
+            _ => message_expiry,
+        };
+        let indexes = match config.segment.cache_indexes {
+            true => Some(Vec::new()),
+            false => None,
+        };
 
         Segment {
             stream_id,
@@ -70,21 +80,19 @@ impl Segment {
             start_offset,
             end_offset: 0,
             current_offset: start_offset,
-            log_path: Self::get_log_path(&path),
-            index_path: Self::get_index_path(&path),
+            log_path,
+            index_path,
             size_bytes: IggyByteSize::from(0),
             last_index_position: 0,
             max_size_bytes: config.segment.size,
-            message_expiry: match message_expiry {
-                IggyExpiry::ServerDefault => config.segment.message_expiry,
-                _ => message_expiry,
-            },
-            indexes: match config.segment.cache_indexes {
-                true => Some(Vec::new()),
-                false => None,
-            },
+            message_expiry,
+            indexes,
             unsaved_messages: None,
             is_closed: false,
+            log_writer: None,
+            log_reader: None,
+            index_writer: None,
+            index_reader: None,
             size_of_parent_stream,
             size_of_parent_partition,
             size_of_parent_topic,
@@ -92,14 +100,195 @@ impl Segment {
             messages_count_of_parent_topic,
             messages_count_of_parent_partition,
             config,
-            storage,
-            persister_task: LogPersisterTask::new(
-                Self::get_log_path(&path),
-                persister,
-                task_max_retries,
-                task_retry_sleep,
-            ),
+            log_size_bytes: Arc::new(AtomicU64::new(0)),
+            index_size_bytes: Arc::new(AtomicU64::new(0)),
         }
+    }
+
+    /// Load the segment state from disk.
+    pub async fn load_from_disk(&mut self) -> Result<(), IggyError> {
+        info!(
+            "Loading segment from disk: log_path: {}, index_path: {}",
+            self.log_path, self.index_path
+        );
+
+        if self.log_reader.is_none() || self.index_reader.is_none() {
+            self.initialize_writing().await?;
+            self.initialize_reading().await?;
+        }
+
+        let log_size_bytes = self.log_size_bytes.load(Ordering::Acquire);
+        info!("Log file size: {}", IggyByteSize::from(log_size_bytes));
+
+        // TODO(hubcio): in future, remove size_bytes and use only atomic log_size_bytes everywhere
+        self.size_bytes = IggyByteSize::from(log_size_bytes);
+        self.last_index_position = log_size_bytes as _;
+
+        if self.config.segment.cache_indexes {
+            self.indexes = Some(
+                self.index_reader
+                    .as_ref()
+                    .unwrap()
+                    .load_all_indexes_impl()
+                    .await
+                    .with_error_context(|e| {
+                        format!("Failed to load indexes, error: {e} for {}", self)
+                    })
+                    .map_err(|_| IggyError::CannotReadFile)?,
+            );
+
+            let last_index_offset = if self.indexes.as_ref().unwrap().is_empty() {
+                0_u64
+            } else {
+                self.indexes.as_ref().unwrap().last().unwrap().offset as u64
+            };
+
+            self.current_offset = self.start_offset + last_index_offset;
+
+            info!(
+                "Loaded {} indexes for segment with start offset: {} and partition with ID: {} for topic with ID: {} and stream with ID: {}.",
+                self.indexes.as_ref().unwrap().len(),
+                self.start_offset,
+                self.partition_id,
+                self.topic_id,
+                self.stream_id
+            );
+        }
+
+        if self.is_full().await {
+            self.is_closed = true;
+        }
+
+        let messages_count = self.get_messages_count();
+
+        info!(
+            "Loaded segment with log file of size {} ({} messages) for start offset {}, current offset: {}, and partition with ID: {} for topic with ID: {} and stream with ID: {}.",
+            IggyByteSize::from(log_size_bytes),
+            messages_count,
+            self.start_offset,
+            self.current_offset,
+            self.partition_id,
+            self.topic_id,
+            self.stream_id
+        );
+
+        self.size_of_parent_stream
+            .fetch_add(log_size_bytes, Ordering::SeqCst);
+        self.size_of_parent_topic
+            .fetch_add(log_size_bytes, Ordering::SeqCst);
+        self.size_of_parent_partition
+            .fetch_add(log_size_bytes, Ordering::SeqCst);
+        self.messages_count_of_parent_stream
+            .fetch_add(messages_count, Ordering::SeqCst);
+        self.messages_count_of_parent_topic
+            .fetch_add(messages_count, Ordering::SeqCst);
+        self.messages_count_of_parent_partition
+            .fetch_add(messages_count, Ordering::SeqCst);
+
+        Ok(())
+    }
+
+    /// Save the segment state to disk.
+    pub async fn persist(&mut self) -> Result<(), IggyError> {
+        info!("Saving segment with start offset: {} for partition with ID: {} for topic with ID: {} and stream with ID: {}",
+            self.start_offset, self.partition_id, self.topic_id, self.stream_id);
+        self.initialize_writing().await?;
+        self.initialize_reading().await?;
+        info!("Saved segment log file with start offset: {} for partition with ID: {} for topic with ID: {} and stream with ID: {}",
+            self.start_offset, self.partition_id, self.topic_id, self.stream_id);
+        Ok(())
+    }
+
+    pub async fn delete(&mut self) -> Result<(), IggyError> {
+        let segment_size = self.size_bytes;
+        let segment_count_of_messages = self.get_messages_count();
+        info!(
+            "Deleting segment of size {segment_size} with start offset: {} for partition with ID: {} for stream with ID: {} and topic with ID: {}...",
+            self.start_offset, self.partition_id, self.stream_id, self.topic_id,
+        );
+
+        {
+            let log_writer = self.log_writer.take().unwrap();
+            let _log_reader = self.log_reader.take().unwrap();
+            let index_writer = self.index_writer.take().unwrap();
+            let _index_reader = self.index_reader.take().unwrap();
+
+            let _ = tokio::spawn(async move {
+                let _ = log_writer.fsync().await;
+                let _ = index_writer.fsync().await;
+            })
+            .await;
+        }
+
+        let _ = remove_file(&self.log_path).await.with_error_context(|e| {
+            format!("Failed to delete log file: {}, error: {e}", self.log_path)
+        });
+        let _ = remove_file(&self.index_path).await.with_error_context(|e| {
+            format!(
+                "Failed to delete index file: {}, error: {e}",
+                self.index_path
+            )
+        });
+
+        let segment_size_bytes = self.size_bytes.as_bytes_u64();
+        self.size_of_parent_stream
+            .fetch_sub(segment_size_bytes, Ordering::SeqCst);
+        self.size_of_parent_topic
+            .fetch_sub(segment_size_bytes, Ordering::SeqCst);
+        self.size_of_parent_partition
+            .fetch_sub(segment_size_bytes, Ordering::SeqCst);
+        self.messages_count_of_parent_stream
+            .fetch_sub(segment_count_of_messages, Ordering::SeqCst);
+        self.messages_count_of_parent_topic
+            .fetch_sub(segment_count_of_messages, Ordering::SeqCst);
+        self.messages_count_of_parent_partition
+            .fetch_sub(segment_count_of_messages, Ordering::SeqCst);
+
+        info!(
+            "Deleted segment of size {segment_size} with start offset: {} for partition with ID: {} for stream with ID: {} and topic with ID: {}.",
+            self.start_offset, self.partition_id, self.stream_id, self.topic_id,
+        );
+
+        Ok(())
+    }
+
+    pub async fn initialize_writing(&mut self) -> Result<(), IggyError> {
+        // TODO(hubcio): consider splitting enforce_fsync for index/log to separate entries in config
+        let log_fsync = self.config.partition.enforce_fsync;
+        let index_fsync = self.config.partition.enforce_fsync;
+
+        let server_confirmation = self.config.segment.server_confirmation;
+        let max_file_operation_retries = self.config.state.max_file_operation_retries;
+        let retry_delay = self.config.state.retry_delay;
+
+        let log_writer = SegmentLogWriter::new(
+            &self.log_path,
+            self.log_size_bytes.clone(),
+            log_fsync,
+            server_confirmation,
+            max_file_operation_retries,
+            retry_delay,
+        )
+        .await?;
+
+        let index_writer =
+            SegmentIndexWriter::new(&self.index_path, self.index_size_bytes.clone(), index_fsync)
+                .await?;
+
+        self.log_writer = Some(log_writer);
+        self.index_writer = Some(index_writer);
+        Ok(())
+    }
+
+    pub async fn initialize_reading(&mut self) -> Result<(), IggyError> {
+        let log_reader = SegmentLogReader::new(&self.log_path, self.log_size_bytes.clone()).await?;
+        // TODO(hubcio): there is no need to store open fd for reader if we have index cache enabled
+        let index_reader =
+            SegmentIndexReader::new(&self.index_path, self.index_size_bytes.clone()).await?;
+
+        self.log_reader = Some(log_reader);
+        self.index_reader = Some(index_reader);
+        Ok(())
     }
 
     pub async fn is_full(&self) -> bool {
@@ -136,6 +325,16 @@ impl Segment {
         }
     }
 
+    pub async fn close(&mut self) -> Result<(), IggyError> {
+        let log_writer = self.log_writer.take().unwrap();
+        let index_writer = self.index_writer.take().unwrap();
+        tokio::spawn(async move {
+            log_writer.shutdown_persister_task().await;
+            index_writer.fsync().await
+        });
+        Ok(())
+    }
+
     fn get_log_path(path: &str) -> String {
         format!("{}.{}", path, LOG_EXTENSION)
     }
@@ -168,12 +367,10 @@ impl std::fmt::Display for Segment {
 mod tests {
     use super::*;
     use crate::configs::system::SegmentConfig;
-    use crate::streaming::storage::tests::get_test_system_storage;
     use iggy::utils::duration::IggyDuration;
 
     #[tokio::test]
     async fn should_be_created_given_valid_parameters() {
-        let storage = Arc::new(get_test_system_storage());
         let stream_id = 1;
         let topic_id = 2;
         let partition_id = 3;
@@ -196,7 +393,6 @@ mod tests {
             partition_id,
             start_offset,
             config,
-            storage,
             message_expiry,
             size_of_parent_stream,
             size_of_parent_topic,
@@ -204,8 +400,7 @@ mod tests {
             messages_count_of_parent_stream,
             messages_count_of_parent_topic,
             messages_count_of_parent_partition,
-        )
-        .await;
+        );
 
         assert_eq!(segment.stream_id, stream_id);
         assert_eq!(segment.topic_id, topic_id);
@@ -225,7 +420,6 @@ mod tests {
 
     #[tokio::test]
     async fn should_not_initialize_indexes_cache_when_disabled() {
-        let storage = Arc::new(get_test_system_storage());
         let stream_id = 1;
         let topic_id = 2;
         let partition_id = 3;
@@ -251,7 +445,6 @@ mod tests {
             partition_id,
             start_offset,
             config,
-            storage,
             message_expiry,
             size_of_parent_stream,
             size_of_parent_topic,
@@ -259,8 +452,7 @@ mod tests {
             messages_count_of_parent_stream,
             messages_count_of_parent_topic,
             messages_count_of_parent_partition,
-        )
-        .await;
+        );
 
         assert!(segment.indexes.is_none());
     }

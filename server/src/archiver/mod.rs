@@ -56,7 +56,7 @@ pub enum ArchiverKind {
 }
 
 impl ArchiverKind {
-    pub fn get_disk_arhiver(config: DiskArchiverConfig) -> Self {
+    pub fn get_disk_archiver(config: DiskArchiverConfig) -> Self {
         Self::Disk(DiskArchiver::new(config))
     }
 

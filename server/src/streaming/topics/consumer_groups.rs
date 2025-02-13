@@ -198,7 +198,8 @@ impl Topic {
 mod tests {
     use super::*;
     use crate::configs::system::SystemConfig;
-    use crate::streaming::storage::tests::get_test_system_storage;
+    use crate::streaming::persistence::persister::{FilePersister, PersisterKind};
+    use crate::streaming::storage::SystemStorage;
     use iggy::compression::compression_algorithm::CompressionAlgorithm;
     use iggy::utils::expiry::IggyExpiry;
     use iggy::utils::topic_size::MaxTopicSize;
@@ -350,13 +351,20 @@ mod tests {
     }
 
     async fn get_topic() -> Topic {
-        let storage = Arc::new(get_test_system_storage());
+        let tempdir = tempfile::TempDir::new().unwrap();
+        let config = Arc::new(SystemConfig {
+            path: tempdir.path().to_str().unwrap().to_string(),
+            ..Default::default()
+        });
+        let storage = Arc::new(SystemStorage::new(
+            config.clone(),
+            Arc::new(PersisterKind::File(FilePersister {})),
+        ));
         let stream_id = 1;
         let id = 2;
         let name = "test";
         let compression_algorithm = CompressionAlgorithm::None;
         let partitions_count = 3;
-        let config = Arc::new(SystemConfig::default());
         let size_of_parent_stream = Arc::new(AtomicU64::new(0));
         let messages_count_of_parent_stream = Arc::new(AtomicU64::new(0));
         let segments_count_of_parent_stream = Arc::new(AtomicU32::new(0));

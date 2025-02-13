@@ -10,7 +10,7 @@ use crate::configs::server::{PersonalAccessTokenConfig, ServerConfig};
 use crate::configs::system::{CacheConfig, SegmentConfig};
 use crate::configs::COMPONENT;
 use crate::server_error::ConfigError;
-use crate::streaming::segments::segment;
+use crate::streaming::segments::*;
 use error_set::ErrContext;
 use iggy::compression::compression_algorithm::CompressionAlgorithm;
 use iggy::utils::byte_size::IggyByteSize;
@@ -149,7 +149,7 @@ impl Validatable<ConfigError> for CacheConfig {
 
 impl Validatable<ConfigError> for SegmentConfig {
     fn validate(&self) -> Result<(), ConfigError> {
-        if self.size > segment::MAX_SIZE_BYTES {
+        if self.size > SEGMENT_MAX_SIZE_BYTES {
             return Err(ConfigError::InvalidConfiguration);
         }
 

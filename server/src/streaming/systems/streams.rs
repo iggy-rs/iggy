@@ -400,7 +400,8 @@ mod tests {
     use crate::configs::server::{DataMaintenanceConfig, PersonalAccessTokenConfig};
     use crate::configs::system::SystemConfig;
     use crate::state::{MockState, StateKind};
-    use crate::streaming::storage::tests::get_test_system_storage;
+    use crate::streaming::persistence::persister::{FilePersister, PersisterKind};
+    use crate::streaming::storage::SystemStorage;
     use crate::streaming::users::user::User;
     use iggy::users::defaults::{DEFAULT_ROOT_PASSWORD, DEFAULT_ROOT_USERNAME};
     use std::{
@@ -410,10 +411,18 @@ mod tests {
 
     #[tokio::test]
     async fn should_get_stream_by_id_and_name() {
+        let tempdir = tempfile::TempDir::new().unwrap();
+        let config = Arc::new(SystemConfig {
+            path: tempdir.path().to_str().unwrap().to_string(),
+            ..Default::default()
+        });
+        let storage = SystemStorage::new(
+            config.clone(),
+            Arc::new(PersisterKind::File(FilePersister {})),
+        );
+
         let stream_id = 1;
         let stream_name = "test";
-        let config = Arc::new(SystemConfig::default());
-        let storage = get_test_system_storage();
         let mut system = System::create(
             config,
             storage,

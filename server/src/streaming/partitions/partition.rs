@@ -3,7 +3,7 @@ use crate::streaming::cache::buffer::SmartCache;
 use crate::streaming::cache::memory_tracker::CacheMemoryTracker;
 use crate::streaming::deduplication::message_deduplicator::MessageDeduplicator;
 use crate::streaming::models::messages::RetainedMessage;
-use crate::streaming::segments::segment::Segment;
+use crate::streaming::segments::*;
 use crate::streaming::storage::SystemStorage;
 use dashmap::DashMap;
 use iggy::consumer::ConsumerKind;
@@ -153,7 +153,6 @@ impl Partition {
                 partition_id,
                 0,
                 partition.config.clone(),
-                partition.storage.clone(),
                 partition.message_expiry,
                 partition.size_of_parent_stream.clone(),
                 partition.size_of_parent_topic.clone(),
@@ -161,8 +160,7 @@ impl Partition {
                 partition.messages_count_of_parent_stream.clone(),
                 partition.messages_count_of_parent_topic.clone(),
                 partition.messages_count.clone(),
-            )
-            .await;
+            );
             partition.segments.push(segment);
             partition
                 .segments_count_of_parent_stream
@@ -214,7 +212,8 @@ impl fmt::Display for Partition {
 mod tests {
     use crate::configs::system::{CacheConfig, SystemConfig};
     use crate::streaming::partitions::partition::Partition;
-    use crate::streaming::storage::tests::get_test_system_storage;
+    use crate::streaming::persistence::persister::{FilePersister, PersisterKind};
+    use crate::streaming::storage::SystemStorage;
     use iggy::utils::duration::IggyDuration;
     use iggy::utils::expiry::IggyExpiry;
     use iggy::utils::timestamp::IggyTimestamp;
@@ -223,12 +222,20 @@ mod tests {
 
     #[tokio::test]
     async fn should_be_created_with_a_single_segment_given_valid_parameters() {
-        let storage = Arc::new(get_test_system_storage());
+        let tempdir = tempfile::TempDir::new().unwrap();
+        let config = Arc::new(SystemConfig {
+            path: tempdir.path().to_str().unwrap().to_string(),
+            ..Default::default()
+        });
+        let storage = Arc::new(SystemStorage::new(
+            config.clone(),
+            Arc::new(PersisterKind::File(FilePersister {})),
+        ));
+
         let stream_id = 1;
         let topic_id = 2;
         let partition_id = 3;
         let with_segment = true;
-        let config = Arc::new(SystemConfig::default());
         let path = config.get_partition_path(stream_id, topic_id, partition_id);
         let message_expiry = IggyExpiry::ExpireDuration(IggyDuration::from(10));
         let partition = Partition::create(
@@ -265,7 +272,16 @@ mod tests {
 
     #[tokio::test]
     async fn should_not_initialize_cache_given_zero_capacity() {
-        let storage = Arc::new(get_test_system_storage());
+        let tempdir = tempfile::TempDir::new().unwrap();
+        let config = Arc::new(SystemConfig {
+            path: tempdir.path().to_str().unwrap().to_string(),
+            ..Default::default()
+        });
+        let storage = Arc::new(SystemStorage::new(
+            config.clone(),
+            Arc::new(PersisterKind::File(FilePersister {})),
+        ));
+
         let partition = Partition::create(
             1,
             1,
@@ -293,7 +309,16 @@ mod tests {
 
     #[tokio::test]
     async fn should_not_initialize_segments_given_false_with_segment_parameter() {
-        let storage = Arc::new(get_test_system_storage());
+        let tempdir = tempfile::TempDir::new().unwrap();
+        let config = Arc::new(SystemConfig {
+            path: tempdir.path().to_str().unwrap().to_string(),
+            ..Default::default()
+        });
+        let storage = Arc::new(SystemStorage::new(
+            config.clone(),
+            Arc::new(PersisterKind::File(FilePersister {})),
+        ));
+
         let topic_id = 1;
         let partition = Partition::create(
             1,

@@ -15,6 +15,7 @@ pub mod command;
 pub mod compression;
 pub mod confirmation;
 pub mod consumer;
+pub mod consumer_ext;
 pub mod consumer_groups;
 pub mod consumer_offsets;
 pub mod diagnostic;

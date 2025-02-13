@@ -116,16 +116,19 @@ impl IggyProducer {
             return Ok(());
         }
 
+        let stream_id = self.stream_id.clone();
+        let topic_id = self.topic_id.clone();
+        info!("Initializing producer for stream: {stream_id} and topic: {topic_id}...");
         self.subscribe_events().await;
         let client = self.client.clone();
         let client = client.read().await;
-        if client.get_stream(&self.stream_id).await?.is_none() {
+        if client.get_stream(&stream_id).await?.is_none() {
             if !self.create_stream_if_not_exists {
                 error!("Stream does not exist and auto-creation is disabled.");
                 return Err(IggyError::StreamNameNotFound(self.stream_name.clone()));
             }
 
-            let (name, id) = match self.stream_id.kind {
+            let (name, id) = match stream_id.kind {
                 IdKind::Numeric => (
                     self.stream_name.to_owned(),
                     Some(self.stream_id.get_u32_value()?),
@@ -136,11 +139,7 @@ impl IggyProducer {
             client.create_stream(&name, id).await?;
         }
 
-        if client
-            .get_topic(&self.stream_id, &self.topic_id)
-            .await?
-            .is_none()
-        {
+        if client.get_topic(&stream_id, &topic_id).await?.is_none() {
             if !self.create_topic_if_not_exists {
                 error!("Topic does not exist and auto-creation is disabled.");
                 return Err(IggyError::TopicNameNotFound(
@@ -172,6 +171,7 @@ impl IggyProducer {
         }
 
         self.initialized = true;
+        info!("Producer has been initialized for stream: {stream_id} and topic: {topic_id}.");
         Ok(())
     }
 

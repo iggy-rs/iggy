@@ -15,9 +15,11 @@ pub trait IggyConsumerMessageExt {
     /// * `message_consumer`: The consumer to send messages to.
     /// * `shutdown_rx`: The receiver to listen to for shutdown.
     ///
-    async fn consume_messages(
+    async fn consume_messages<P>(
         mut self,
-        message_consumer: &'static (impl MessageConsumer + Sync),
+        message_consumer: &P,
         shutdown_rx: oneshot::Receiver<()>,
-    ) -> Result<(), IggyError>;
+    ) -> Result<(), IggyError>
+    where
+        P: 'static + MessageConsumer + Sync;
 }

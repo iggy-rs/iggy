@@ -17,9 +17,9 @@ pub trait IggyConsumerMessageExt {
     ///
     async fn consume_messages<P>(
         mut self,
-        message_consumer: &P,
+        message_consumer: &'static P,
         shutdown_rx: oneshot::Receiver<()>,
     ) -> Result<(), IggyError>
     where
-        P: 'static + MessageConsumer + Sync;
+        P: MessageConsumer + Sync;
 }

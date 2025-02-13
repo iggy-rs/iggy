@@ -29,11 +29,11 @@ impl IggyConsumerMessageExt for IggyConsumer {
     ///
     async fn consume_messages<P>(
         mut self,
-        message_consumer: &P,
+        message_consumer: &'static P,
         mut shutdown_rx: oneshot::Receiver<()>,
     ) -> Result<(), IggyError>
     where
-        P: 'static + MessageConsumer + Sync,
+        P: MessageConsumer + Sync,
     {
         let auto_commit = self.auto_commit();
         let store_offset_after_each_message = matches!(

@@ -1,5 +1,10 @@
+use crate::archiver::{ArchiverKind, ArchiverKindType};
 use crate::configs::server::{DataMaintenanceConfig, PersonalAccessTokenConfig};
 use crate::configs::system::SystemConfig;
+use crate::map_toggle_str;
+use crate::state::file::FileState;
+use crate::state::system::SystemState;
+use crate::state::StateKind;
 use crate::streaming::cache::memory_tracker::CacheMemoryTracker;
 use crate::streaming::clients::client_manager::ClientManager;
 use crate::streaming::diagnostics::metrics::Metrics;
@@ -9,28 +14,22 @@ use crate::streaming::storage::SystemStorage;
 use crate::streaming::streams::stream::Stream;
 use crate::streaming::systems::COMPONENT;
 use crate::streaming::users::permissioner::Permissioner;
+use crate::streaming::users::user::User;
+use crate::versioning::SemanticVersion;
 use ahash::AHashMap;
 use error_set::ErrContext;
 use iggy::error::IggyError;
+use iggy::locking::IggySharedMut;
+use iggy::locking::IggySharedMutFn;
+use iggy::models::user_info::UserId;
 use iggy::utils::byte_size::IggyByteSize;
 use iggy::utils::crypto::{Aes256GcmEncryptor, EncryptorKind};
 use std::path::Path;
 use std::sync::Arc;
-use tokio::fs::{create_dir, remove_dir_all};
+use tokio::fs::{create_dir_all, remove_dir_all};
+use tokio::sync::{RwLock, RwLockReadGuard, RwLockWriteGuard};
 use tokio::time::Instant;
 use tracing::{error, info, instrument, trace};
-
-use crate::archiver::{ArchiverKind, ArchiverKindType};
-use crate::map_toggle_str;
-use crate::state::file::FileState;
-use crate::state::system::SystemState;
-use crate::state::StateKind;
-use crate::streaming::users::user::User;
-use crate::versioning::SemanticVersion;
-use iggy::locking::IggySharedMut;
-use iggy::locking::IggySharedMutFn;
-use iggy::models::user_info::UserId;
-use tokio::sync::{RwLock, RwLockReadGuard, RwLockWriteGuard};
 
 #[derive(Debug)]
 pub struct SharedSystem {
@@ -138,7 +137,7 @@ impl System {
         let archiver: Option<Arc<ArchiverKind>> = if archiver_config.enabled {
             info!("Archiving is enabled, kind: {}", archiver_config.kind);
             match archiver_config.kind {
-                ArchiverKindType::Disk => Some(Arc::new(ArchiverKind::get_disk_arhiver(
+                ArchiverKindType::Disk => Some(Arc::new(ArchiverKind::get_disk_archiver(
                     archiver_config
                         .disk
                         .clone()
@@ -178,17 +177,17 @@ impl System {
     #[instrument(skip_all, name = "trace_system_init")]
     pub async fn init(&mut self) -> Result<(), IggyError> {
         let system_path = self.config.get_system_path();
-        if !Path::new(&system_path).exists() && create_dir(&system_path).await.is_err() {
+        if !Path::new(&system_path).exists() && create_dir_all(&system_path).await.is_err() {
             return Err(IggyError::CannotCreateBaseDirectory(system_path));
         }
 
         let state_path = self.config.get_state_path();
-        if !Path::new(&state_path).exists() && create_dir(&state_path).await.is_err() {
+        if !Path::new(&state_path).exists() && create_dir_all(&state_path).await.is_err() {
             return Err(IggyError::CannotCreateStateDirectory(state_path));
         }
 
         let streams_path = self.config.get_streams_path();
-        if !Path::new(&streams_path).exists() && create_dir(&streams_path).await.is_err() {
+        if !Path::new(&streams_path).exists() && create_dir_all(&streams_path).await.is_err() {
             return Err(IggyError::CannotCreateStreamsDirectory(streams_path));
         }
 
@@ -197,7 +196,7 @@ impl System {
             return Err(IggyError::CannotRemoveRuntimeDirectory(runtime_path));
         }
 
-        if create_dir(&runtime_path).await.is_err() {
+        if create_dir_all(&runtime_path).await.is_err() {
             return Err(IggyError::CannotCreateRuntimeDirectory(runtime_path));
         }
 

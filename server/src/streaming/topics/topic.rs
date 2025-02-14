@@ -263,15 +263,23 @@ impl fmt::Display for Topic {
 
 #[cfg(test)]
 mod tests {
+    use super::*;
+    use crate::streaming::persistence::persister::{FilePersister, PersisterKind};
     use iggy::locking::IggySharedMutFn;
     use std::str::FromStr;
 
-    use super::*;
-    use crate::streaming::storage::tests::get_test_system_storage;
-
     #[tokio::test]
     async fn should_be_created_given_valid_parameters() {
-        let storage = Arc::new(get_test_system_storage());
+        let tempdir = tempfile::TempDir::new().unwrap();
+        let config = Arc::new(SystemConfig {
+            path: tempdir.path().to_str().unwrap().to_string(),
+            ..Default::default()
+        });
+        let storage = Arc::new(SystemStorage::new(
+            config.clone(),
+            Arc::new(PersisterKind::File(FilePersister {})),
+        ));
+
         let stream_id = 1;
         let topic_id = 2;
         let name = "test";
@@ -280,7 +288,6 @@ mod tests {
         let compression_algorithm = CompressionAlgorithm::None;
         let max_topic_size = MaxTopicSize::Custom(IggyByteSize::from_str("2 GB").unwrap());
         let replication_factor = 1;
-        let config = Arc::new(SystemConfig::default());
         let path = config.get_topic_path(stream_id, topic_id);
         let size_of_parent_stream = Arc::new(AtomicU64::new(0));
         let messages_count_of_parent_stream = Arc::new(AtomicU64::new(0));

@@ -60,7 +60,7 @@ impl Topic {
         })?;
         for partition_id in &partition_ids {
             let partition = self.partitions.get(partition_id).unwrap();
-            let partition = partition.read().await;
+            let mut partition = partition.write().await;
             partition.persist().await.with_error_context(|_| {
                 format!(
                     "{COMPONENT} - failed to persist partition with id: {}",
@@ -88,7 +88,7 @@ impl Topic {
         let mut messages_count = 0;
         for partition_id in current_partitions_count - count + 1..=current_partitions_count {
             let partition = self.partitions.remove(&partition_id).unwrap();
-            let partition = partition.read().await;
+            let mut partition = partition.write().await;
             let partition_messages_count = partition.get_messages_count();
             segments_count += partition.get_segments_count();
             messages_count += partition_messages_count;

@@ -24,9 +24,9 @@ pub async fn handle(
     system
         .append_messages(session, stream_id, topic_id, partitioning, messages, None)
         .await
-        .with_error_context(|_| {
+        .with_error_context(|e| {
             format!(
-                "{COMPONENT} - failed to append messages for stream_id: {}, topic_id: {}, partitioning: {}, session: {}",
+                "{COMPONENT} - failed to append messages for stream_id: {}, topic_id: {}, partitioning: {}, session: {}, error: {e}",
                 command.stream_id, command.topic_id, command.partitioning, session
             )
         })?;

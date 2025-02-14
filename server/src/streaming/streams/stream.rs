@@ -79,11 +79,19 @@ impl Display for Stream {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::streaming::storage::tests::get_test_system_storage;
+    use crate::streaming::persistence::persister::{FilePersister, PersisterKind};
 
     #[test]
     fn should_be_created_given_valid_parameters() {
-        let storage = Arc::new(get_test_system_storage());
+        let tempdir = tempfile::TempDir::new().unwrap();
+        let config = Arc::new(SystemConfig {
+            path: tempdir.path().to_str().unwrap().to_string(),
+            ..Default::default()
+        });
+        let storage = Arc::new(SystemStorage::new(
+            config.clone(),
+            Arc::new(PersisterKind::File(FilePersister {})),
+        ));
         let id = 1;
         let name = "test";
         let config = Arc::new(SystemConfig::default());

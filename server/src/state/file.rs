@@ -17,7 +17,7 @@ use std::sync::Arc;
 use tokio::io::{AsyncReadExt, BufReader};
 use tracing::{debug, error, info};
 
-const BUF_READER_CAPACITY_BYTES: usize = 512 * 1000;
+pub const BUF_READER_CAPACITY_BYTES: usize = 512 * 1000;
 const FILE_STATE_PARSE_ERROR: &str = "STATE - failed to parse file state";
 
 #[derive(Debug)]

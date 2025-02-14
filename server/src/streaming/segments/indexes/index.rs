@@ -79,13 +79,11 @@ impl IndexRange {
 mod tests {
     use super::*;
     use crate::configs::system::{SegmentConfig, SystemConfig};
-    use crate::streaming::storage::tests::get_test_system_storage;
     use iggy::utils::expiry::IggyExpiry;
     use std::sync::atomic::AtomicU64;
     use std::sync::Arc;
 
     async fn create_segment() -> Segment {
-        let storage = Arc::new(get_test_system_storage());
         let stream_id = 1;
         let topic_id = 2;
         let partition_id = 3;
@@ -104,7 +102,6 @@ mod tests {
             partition_id,
             start_offset,
             config,
-            storage,
             IggyExpiry::NeverExpire,
             Arc::new(AtomicU64::new(0)),
             Arc::new(AtomicU64::new(0)),
@@ -113,7 +110,6 @@ mod tests {
             Arc::new(AtomicU64::new(0)),
             Arc::new(AtomicU64::new(0)),
         )
-        .await
     }
 
     fn create_test_indices(segment: &mut Segment) {

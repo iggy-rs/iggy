@@ -20,7 +20,7 @@ impl IggyStreamConsumer {
     ///
     /// If the builds fails, an `IggyError` is returned.
     ///
-    pub async fn new(
+    pub async fn build(
         client: &IggyClient,
         config: &IggyConsumerConfig,
     ) -> Result<IggyConsumer, IggyError> {

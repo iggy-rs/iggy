@@ -61,6 +61,7 @@ impl IggyProducerConfig {
     /// Returns:
     /// A new `IggyProducerConfig`.
     ///
+    #[allow(clippy::too_many_arguments)]
     pub fn new(
         stream_id: Identifier,
         stream_name: String,

@@ -4,19 +4,10 @@ use crate::stream_config::IggyProducerConfig;
 use crate::utils::duration::IggyDuration;
 use bon::Builder;
 
-#[derive(Builder, Debug, Clone)]
+#[derive(Builder, Default, Debug, Clone)]
 pub struct IggyStreamConfig {
     consumer_config: IggyConsumerConfig,
     producer_config: IggyProducerConfig,
-}
-
-impl Default for IggyStreamConfig {
-    fn default() -> Self {
-        Self {
-            consumer_config: IggyConsumerConfig::default(),
-            producer_config: IggyProducerConfig::default(),
-        }
-    }
 }
 
 impl IggyStreamConfig {
@@ -81,19 +72,19 @@ impl IggyStreamConfig {
     }
 
     pub fn stream_id(&self) -> &Identifier {
-        &self.producer_config.stream_id()
+        self.producer_config.stream_id()
     }
 
     pub fn stream_name(&self) -> &str {
-        &self.producer_config.stream_name()
+        self.producer_config.stream_name()
     }
 
     pub fn topic_id(&self) -> &Identifier {
-        &self.producer_config.topic_id()
+        self.producer_config.topic_id()
     }
 
     pub fn topic_name(&self) -> &str {
-        &self.producer_config.topic_name()
+        self.producer_config.topic_name()
     }
 }
 

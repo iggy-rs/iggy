@@ -79,6 +79,7 @@ impl IggyConsumerConfig {
     /// Returns:
     /// A new `IggyConsumerConfig`.
     ///
+    #[allow(clippy::too_many_arguments)]
     pub fn new(
         stream_id: Identifier,
         stream_name: String,
@@ -255,8 +256,8 @@ mod tests {
             AutoCommit::When(AutoCommitWhen::PollingMessages)
         );
         assert_eq!(config.batch_size(), 100);
-        assert_eq!(config.create_stream_if_not_exists(), true);
-        assert_eq!(config.create_topic_if_not_exists(), true);
+        assert!(config.create_stream_if_not_exists());
+        assert!(config.create_topic_if_not_exists());
         assert_eq!(config.consumer_name(), "test_consumer");
         assert_eq!(config.consumer_kind(), ConsumerKind::ConsumerGroup);
         assert_eq!(
@@ -282,8 +283,8 @@ mod tests {
             AutoCommit::When(AutoCommitWhen::PollingMessages)
         );
         assert_eq!(config.batch_size(), 100);
-        assert_eq!(config.create_stream_if_not_exists(), false);
-        assert_eq!(config.create_topic_if_not_exists(), false);
+        assert!(!config.create_stream_if_not_exists());
+        assert!(!config.create_topic_if_not_exists());
         assert_eq!(config.consumer_name(), "test_consumer");
         assert_eq!(config.consumer_kind(), ConsumerKind::ConsumerGroup);
         assert_eq!(
@@ -329,8 +330,8 @@ mod tests {
             AutoCommit::When(AutoCommitWhen::PollingMessages)
         );
         assert_eq!(config.batch_size(), 100);
-        assert_eq!(config.create_stream_if_not_exists(), false);
-        assert_eq!(config.create_topic_if_not_exists(), false);
+        assert!(!config.create_stream_if_not_exists());
+        assert!(!config.create_topic_if_not_exists());
         assert_eq!(config.consumer_name(), "test_consumer");
         assert_eq!(config.consumer_kind(), ConsumerKind::ConsumerGroup);
         assert_eq!(
@@ -353,8 +354,8 @@ mod tests {
         assert_eq!(config.stream_name(), "test_stream");
         assert_eq!(config.topic_name(), "test_topic");
         assert_eq!(config.batch_size(), 100);
-        assert_eq!(config.create_stream_if_not_exists(), false);
-        assert_eq!(config.create_topic_if_not_exists(), false);
+        assert!(!config.create_stream_if_not_exists());
+        assert!(!config.create_topic_if_not_exists());
         assert_eq!(config.consumer_name(), "consumer-test_stream-test_topic");
         assert_eq!(config.consumer_kind(), ConsumerKind::ConsumerGroup);
         assert_eq!(

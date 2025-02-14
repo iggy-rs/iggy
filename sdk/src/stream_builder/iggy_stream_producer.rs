@@ -22,7 +22,7 @@ impl IggyStreamProducer {
     ///
     /// If the client is not connected or the producer cannot be built, an `IggyError` is returned.
     ///
-    pub async fn new(
+    pub async fn build(
         client: &IggyClient,
         config: &IggyProducerConfig,
     ) -> Result<IggyProducer, IggyError> {

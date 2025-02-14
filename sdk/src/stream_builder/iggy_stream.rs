@@ -22,7 +22,7 @@ impl IggyStream {
     ///
     /// If the builds fails, an `IggyError` is returned.
     ///
-    pub async fn new(
+    pub async fn build(
         client: &IggyClient,
         config: &IggyStreamConfig,
     ) -> Result<(IggyProducer, IggyConsumer), IggyError> {
@@ -72,7 +72,7 @@ impl IggyStream {
         let client = build::build_iggy_client::build_iggy_client(connection_string).await?;
 
         info!("Build iggy producer and consumer");
-        let (iggy_producer, iggy_consumer) = Self::new(&client, config).await?;
+        let (iggy_producer, iggy_consumer) = Self::build(&client, config).await?;
         Ok((client, iggy_producer, iggy_consumer))
     }
 }

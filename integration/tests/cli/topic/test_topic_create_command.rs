@@ -7,10 +7,12 @@ use async_trait::async_trait;
 use humantime::Duration as HumanDuration;
 use iggy::client::Client;
 use iggy::compression::compression_algorithm::CompressionAlgorithm;
+use iggy::utils::byte_size::IggyByteSize;
 use iggy::utils::expiry::IggyExpiry;
 use iggy::utils::topic_size::MaxTopicSize;
 use predicates::str::diff;
 use serial_test::parallel;
+use std::str::FromStr;
 use std::time::Duration;
 
 struct TestTopicCreateCmd {
@@ -71,6 +73,8 @@ impl TestTopicCreateCmd {
         args.push(format!("{}", self.partitions_count));
         args.push(format!("{}", self.compression_algorithm));
         args.extend(self.message_expiry.clone().unwrap_or_default());
+        args.push("--max-topic-size".to_string());
+        args.push(format!("{}", self.max_topic_size));
 
         args
     }
@@ -185,7 +189,7 @@ pub async fn should_be_successful() {
             1,
             Default::default(),
             None,
-            MaxTopicSize::ServerDefault,
+            MaxTopicSize::Unlimited,
             1,
             TestStreamId::Numeric,
         ))
@@ -199,7 +203,7 @@ pub async fn should_be_successful() {
             5,
             Default::default(),
             None,
-            MaxTopicSize::ServerDefault,
+            MaxTopicSize::Unlimited,
             1,
             TestStreamId::Named,
         ))
@@ -213,7 +217,7 @@ pub async fn should_be_successful() {
             1,
             Default::default(),
             Some(vec![String::from("3days"), String::from("5s")]),
-            MaxTopicSize::ServerDefault,
+            MaxTopicSize::Unlimited,
             1,
             TestStreamId::Named,
         ))
@@ -232,7 +236,7 @@ pub async fn should_be_successful() {
                 String::from("1m"),
                 String::from("1s"),
             ]),
-            MaxTopicSize::ServerDefault,
+            MaxTopicSize::Custom(IggyByteSize::from_str("1GB").unwrap()),
             1,
             TestStreamId::Numeric,
         ))

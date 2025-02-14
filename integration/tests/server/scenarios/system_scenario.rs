@@ -131,10 +131,7 @@ pub async fn run(client_factory: &dyn ClientFactory) {
     assert_eq!(topic.size, 0);
     assert_eq!(topic.messages_count, 0);
     assert_eq!(topic.message_expiry, IggyExpiry::NeverExpire);
-    assert_eq!(
-        topic.max_topic_size,
-        MaxTopicSize::from_str("10 GB").unwrap()
-    );
+    assert_eq!(topic.max_topic_size, MaxTopicSize::Unlimited);
     assert_eq!(topic.replication_factor, 1);
 
     // 11. Get topic details by ID

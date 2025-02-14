@@ -14,7 +14,7 @@ use std::{
 };
 use tokio::{
     fs::{File, OpenOptions},
-    io::{AsyncSeekExt, AsyncWriteExt},
+    io::AsyncWriteExt,
     sync::RwLock,
 };
 use tracing::{error, trace};
@@ -101,8 +101,9 @@ impl SegmentLogWriter {
         let batch_size = batch.get_size_bytes();
         match confirmation {
             Confirmation::Wait => {
-                let position = self.write_batch(batch).await?;
-                self.log_size_bytes.store(position, Ordering::Release);
+                self.write_batch(batch).await?;
+                self.log_size_bytes
+                    .fetch_add(batch_size.as_bytes_u64(), Ordering::AcqRel);
                 trace!(
                     "Written batch of size {batch_size} bytes to log file: {}",
                     self.file_path
@@ -127,7 +128,7 @@ impl SegmentLogWriter {
     }
 
     /// Write a batch of bytes to the log file and return the new file position.
-    async fn write_batch(&self, batch_to_write: RetainedMessageBatch) -> Result<u64, IggyError> {
+    async fn write_batch(&self, batch_to_write: RetainedMessageBatch) -> Result<(), IggyError> {
         let mut file_guard = self.file.write().await;
         if let Some(ref mut file) = *file_guard {
             let header = batch_to_write.header_as_bytes();
@@ -141,18 +142,7 @@ impl SegmentLogWriter {
                 })
                 .map_err(|_| IggyError::CannotWriteToFile)?;
 
-            let new_position = file
-                .stream_position()
-                .await
-                .with_error_context(|e| {
-                    format!(
-                        "Failed to get position of file: {}, error: {e}",
-                        self.file_path
-                    )
-                })
-                .map_err(|_| IggyError::CannotReadFileMetadata)?;
-
-            Ok(new_position)
+            Ok(())
         } else {
             error!("File handle is not available for synchronous write.");
             Err(IggyError::CannotWriteToFile)

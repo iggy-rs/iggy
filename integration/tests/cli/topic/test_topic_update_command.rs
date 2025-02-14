@@ -7,10 +7,12 @@ use async_trait::async_trait;
 use humantime::Duration as HumanDuration;
 use iggy::client::Client;
 use iggy::compression::compression_algorithm::CompressionAlgorithm;
+use iggy::utils::byte_size::IggyByteSize;
 use iggy::utils::expiry::IggyExpiry;
 use iggy::utils::topic_size::MaxTopicSize;
 use predicates::str::diff;
 use serial_test::parallel;
+use std::str::FromStr;
 use std::time::Duration;
 
 struct TestTopicUpdateCmd {
@@ -84,7 +86,7 @@ impl TestTopicUpdateCmd {
         command.push(self.topic_new_compression_algorithm.to_string());
 
         if let MaxTopicSize::Custom(max_size) = &self.topic_new_max_size {
-            command.push(format!("--max-topic-bytes={}", max_size));
+            command.push(format!("--max-topic-size={}", max_size));
         }
 
         if self.topic_new_replication_factor != 1 {
@@ -162,9 +164,9 @@ impl IggyCmdTestCase for TestTopicUpdateCmd {
         })
         .to_string();
 
-        let max_topic_size = self.max_topic_size.to_string();
+        let max_topic_size = self.topic_new_max_size.to_string();
 
-        let replication_factor = self.replication_factor;
+        let replication_factor = self.topic_new_replication_factor;
         let new_topic_name = &self.topic_new_name;
 
         let expected_message = format!("Executing update topic with ID: {topic_id}, name: {new_topic_name}, \
@@ -231,12 +233,12 @@ pub async fn should_be_successful() {
             String::from("sync"),
             Default::default(),
             None,
-            MaxTopicSize::ServerDefault,
+            MaxTopicSize::Unlimited,
             1,
             String::from("new_name"),
             CompressionAlgorithm::Gzip,
             None,
-            MaxTopicSize::ServerDefault,
+            MaxTopicSize::Custom(IggyByteSize::from_str("1GB").unwrap()),
             1,
             TestStreamId::Numeric,
             TestTopicId::Numeric,
@@ -250,12 +252,12 @@ pub async fn should_be_successful() {
             String::from("topic"),
             Default::default(),
             None,
-            MaxTopicSize::ServerDefault,
+            MaxTopicSize::Unlimited,
             1,
             String::from("testing"),
             CompressionAlgorithm::Gzip,
             None,
-            MaxTopicSize::ServerDefault,
+            MaxTopicSize::Unlimited,
             1,
             TestStreamId::Named,
             TestTopicId::Numeric,
@@ -269,12 +271,12 @@ pub async fn should_be_successful() {
             String::from("development"),
             Default::default(),
             None,
-            MaxTopicSize::ServerDefault,
+            MaxTopicSize::Unlimited,
             1,
             String::from("development"),
             CompressionAlgorithm::Gzip,
             None,
-            MaxTopicSize::ServerDefault,
+            MaxTopicSize::Unlimited,
             1,
             TestStreamId::Numeric,
             TestTopicId::Named,
@@ -288,7 +290,7 @@ pub async fn should_be_successful() {
             String::from("probe"),
             Default::default(),
             None,
-            MaxTopicSize::ServerDefault,
+            MaxTopicSize::Unlimited,
             1,
             String::from("development"),
             CompressionAlgorithm::Gzip,
@@ -298,7 +300,7 @@ pub async fn should_be_successful() {
                 String::from("1m"),
                 String::from("1s"),
             ]),
-            MaxTopicSize::ServerDefault,
+            MaxTopicSize::Unlimited,
             1,
             TestStreamId::Numeric,
             TestTopicId::Numeric,
@@ -312,12 +314,12 @@ pub async fn should_be_successful() {
             String::from("testing"),
             Default::default(),
             Some(vec![String::from("1s")]),
-            MaxTopicSize::ServerDefault,
+            MaxTopicSize::Unlimited,
             1,
             String::from("testing"),
             CompressionAlgorithm::Gzip,
             Some(vec![String::from("1m 6s")]),
-            MaxTopicSize::ServerDefault,
+            MaxTopicSize::Unlimited,
             1,
             TestStreamId::Numeric,
             TestTopicId::Numeric,
@@ -335,12 +337,12 @@ pub async fn should_be_successful() {
                 String::from("1m"),
                 String::from("1h"),
             ]),
-            MaxTopicSize::ServerDefault,
+            MaxTopicSize::Unlimited,
             1,
             String::from("testing"),
             CompressionAlgorithm::Gzip,
             None,
-            MaxTopicSize::ServerDefault,
+            MaxTopicSize::Unlimited,
             1,
             TestStreamId::Numeric,
             TestTopicId::Named,

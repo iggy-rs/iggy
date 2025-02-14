@@ -84,7 +84,9 @@ impl Topic {
             return Err(IggyError::NoPartitions(self.topic_id, self.stream_id));
         }
 
-        if self.is_full() {
+        // Don't return an error if the topic is full and delete_oldest_segments is true.
+        // Oldest segment will be removed eventually by MaintainMessages background job.
+        if self.is_full() && self.config.topic.delete_oldest_segments {
             return Err(IggyError::TopicFull(self.topic_id, self.stream_id));
         }
 

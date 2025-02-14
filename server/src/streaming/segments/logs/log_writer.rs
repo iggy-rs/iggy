@@ -161,15 +161,15 @@ impl SegmentLogWriter {
 
     pub async fn fsync(&self) -> Result<(), IggyError> {
         let mut file = self.file.write().await;
-        let file = file
-            .as_mut()
-            .unwrap_or_else(|| panic!("File {} should be open", self.file_path));
-        file.sync_all()
-            .await
-            .with_error_context(|e| {
-                format!("Failed to fsync log file: {}, error: {e}", self.file_path)
-            })
-            .map_err(|_| IggyError::CannotWriteToFile)?;
+        if let Some(file) = file.as_mut() {
+            file.sync_all()
+                .await
+                .with_error_context(|e| {
+                    format!("Failed to fsync log file: {}, error: {e}", self.file_path)
+                })
+                .map_err(|_| IggyError::CannotWriteToFile)?;
+        }
+
         Ok(())
     }
 

@@ -87,6 +87,7 @@ impl FromStr for MaxTopicSize {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let result = match s {
+            "unlimited" => MaxTopicSize::Unlimited,
             "0" | "server_default" => MaxTopicSize::ServerDefault,
             value => {
                 let size = value.parse::<IggyByteSize>().map_err(|e| format!("{e}"))?;

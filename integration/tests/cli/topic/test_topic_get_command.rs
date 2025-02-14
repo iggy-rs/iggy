@@ -110,7 +110,7 @@ impl IggyCmdTestCase for TestTopicGetCmd {
             )))
             .stdout(contains("Topic size          | 0"))
             .stdout(contains("Message expiry      | unlimited"))
-            .stdout(contains("Max topic size      | 10.00 GB"))
+            .stdout(contains("Max topic size      | unlimited"))
             .stdout(contains("Topic message count | 0"))
             .stdout(contains("Partitions count    | 1"));
     }

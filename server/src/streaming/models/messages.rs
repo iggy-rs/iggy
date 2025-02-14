@@ -1,4 +1,5 @@
 use crate::streaming::local_sizeable::LocalSizeable;
+use crate::streaming::local_sizeable::RealSize;
 use crate::streaming::models::COMPONENT;
 use bytes::{BufMut, Bytes, BytesMut};
 use error_set::ErrContext;
@@ -11,6 +12,7 @@ use iggy::utils::sizeable::Sizeable;
 use iggy::{messages::send_messages::Message, models::messages::MessageState};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+use std::mem;
 use std::ops::Deref;
 use std::sync::Arc;
 
@@ -149,6 +151,36 @@ impl Sizeable for RetainedMessage {
         let headers_len = self.headers.as_ref().map(|h| 4 + h.len()).unwrap_or(4);
         let size = 16 + 8 + 8 + 4 + 1 + headers_len + self.payload.len();
         IggyByteSize::from(size as u64)
+    }
+}
+
+impl RealSize for RetainedMessage {
+    fn real_size(&self) -> IggyByteSize {
+        let mut total_size = 0;
+
+        total_size += mem::size_of::<u128>(); // id
+        total_size += mem::size_of::<u64>(); // offset
+        total_size += mem::size_of::<u64>(); // timestamp
+        total_size += mem::size_of::<u32>(); // checksum
+        total_size += mem::size_of::<MessageState>(); // message_state
+
+        total_size += mem::size_of::<Option<Bytes>>(); // headers
+        if let Some(headers) = &self.headers {
+            total_size += headers.len(); // headers length
+            total_size += mem::size_of::<Bytes>() * 2; // Bytes overhead
+        }
+
+        total_size += self.payload.len(); // payload length
+        total_size += mem::size_of::<Bytes>() * 2; // Bytes overhead
+
+        IggyByteSize::from(total_size as u64)
+    }
+}
+
+impl RealSize for Arc<RetainedMessage> {
+    fn real_size(&self) -> IggyByteSize {
+        let arc_overhead = mem::size_of::<usize>() as u64 * 2;
+        self.deref().real_size() + IggyByteSize::from(arc_overhead)
     }
 }
 

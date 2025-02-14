@@ -1,4 +1,4 @@
-use crate::streaming::local_sizeable::LocalSizeable;
+use crate::streaming::local_sizeable::RealSize;
 
 use super::memory_tracker::CacheMemoryTracker;
 use atone::Vc;
@@ -11,17 +11,17 @@ use std::sync::{
 };
 
 #[derive(Debug)]
-pub struct SmartCache<T: LocalSizeable + Debug> {
-    current_size: IggyByteSize,
+pub struct SmartCache<T: RealSize + Debug> {
     buffer: Vc<T>,
     memory_tracker: Arc<CacheMemoryTracker>,
+    current_size: IggyByteSize,
     hits: AtomicU64,
     misses: AtomicU64,
 }
 
 impl<T> SmartCache<T>
 where
-    T: LocalSizeable + Clone + Debug,
+    T: RealSize + Clone + Debug,
 {
     pub fn new() -> Self {
         let current_size = IggyByteSize::default();
@@ -29,9 +29,9 @@ where
         let memory_tracker = CacheMemoryTracker::get_instance().unwrap();
 
         Self {
-            current_size,
             buffer,
             memory_tracker,
+            current_size,
             hits: AtomicU64::new(0),
             misses: AtomicU64::new(0),
         }
@@ -49,11 +49,11 @@ where
     /// removes the oldest elements until there's enough space for the new element.
     /// It's preferred to use `extend` instead of this method.
     pub fn push_safe(&mut self, element: T) {
-        let element_size = element.get_size_bytes();
+        let element_size = element.real_size();
 
         while !self.memory_tracker.will_fit_into_cache(element_size) {
             if let Some(oldest_element) = self.buffer.pop_front() {
-                let oldest_size = oldest_element.get_size_bytes();
+                let oldest_size = oldest_element.real_size();
                 self.memory_tracker
                     .decrement_used_memory(oldest_size.as_bytes_u64());
                 self.current_size -= oldest_size;
@@ -74,7 +74,7 @@ where
             if removed_size >= size_to_remove {
                 break;
             }
-            let elem_size = element.get_size_bytes();
+            let elem_size = element.real_size();
             self.memory_tracker
                 .decrement_used_memory(elem_size.as_bytes_u64());
             self.current_size -= elem_size;
@@ -101,7 +101,7 @@ where
     /// even if it exceeds the memory limit.
     pub fn extend(&mut self, elements: impl IntoIterator<Item = T>) {
         let elements = elements.into_iter().inspect(|element| {
-            let element_size = element.get_size_bytes();
+            let element_size = element.real_size();
             self.memory_tracker
                 .increment_used_memory(element_size.as_bytes_u64());
             self.current_size += element_size;
@@ -111,7 +111,7 @@ where
 
     /// Always appends the element into the buffer, even if it exceeds the memory limit.
     pub fn append(&mut self, element: T) {
-        let element_size = element.get_size_bytes();
+        let element_size = element.real_size();
         self.memory_tracker
             .increment_used_memory(element_size.as_bytes_u64());
         self.current_size += element_size;
@@ -154,7 +154,7 @@ where
 
 impl<T> Index<usize> for SmartCache<T>
 where
-    T: LocalSizeable + Clone + Debug,
+    T: RealSize + Clone + Debug,
 {
     type Output = T;
 
@@ -163,7 +163,7 @@ where
     }
 }
 
-impl<T: LocalSizeable + Clone + Debug> Default for SmartCache<T> {
+impl<T: RealSize + Clone + Debug> Default for SmartCache<T> {
     fn default() -> Self {
         Self::new()
     }

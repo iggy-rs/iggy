@@ -54,6 +54,7 @@ jobs:
         if: ${{ !contains(github.event.pull_request.labels.*.name, 'skip-coverage') }}
         uses: coverallsapp/github-action@v2
         with:
+          fail-on-error: false
           github-token: ${{ secrets.GITHUB_TOKEN }}
 
   finalize_coverage:

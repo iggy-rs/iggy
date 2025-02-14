@@ -3,8 +3,10 @@ use bon::Builder;
 use crate::identifier::Identifier;
 use crate::messages::send_messages::Partitioning;
 use crate::stream_config::shared_config;
+use crate::utils::crypto::EncryptorKind;
 use crate::utils::duration::IggyDuration;
 use std::str::FromStr;
+use std::sync::Arc;
 
 #[derive(Builder, Debug, Clone)]
 #[builder(on(String, into))]
@@ -18,6 +20,7 @@ pub struct IggyProducerConfig {
     partitioning: Partitioning,
     partitions_count: u32,
     replication_factor: Option<u8>,
+    encryptor: Option<Arc<EncryptorKind>>,
 }
 
 impl Default for IggyProducerConfig {
@@ -35,6 +38,7 @@ impl Default for IggyProducerConfig {
             partitioning: Partitioning::balanced(),
             partitions_count: 1,
             replication_factor: None,
+            encryptor: None,
         }
     }
 }
@@ -67,6 +71,7 @@ impl IggyProducerConfig {
         partitioning: Partitioning,
         partitions_count: u32,
         replication_factor: Option<u8>,
+        encryptor: Option<Arc<EncryptorKind>>,
     ) -> Self {
         Self {
             stream_id,
@@ -78,6 +83,7 @@ impl IggyProducerConfig {
             partitioning,
             partitions_count,
             replication_factor,
+            encryptor,
         }
     }
 
@@ -113,6 +119,7 @@ impl IggyProducerConfig {
             partitioning: Partitioning::balanced(),
             partitions_count: 1,
             replication_factor: None,
+            encryptor: None,
         }
     }
 }
@@ -152,6 +159,10 @@ impl IggyProducerConfig {
 
     pub fn replication_factor(&self) -> Option<u8> {
         self.replication_factor
+    }
+
+    pub fn encryptor(&self) -> &Option<Arc<EncryptorKind>> {
+        &self.encryptor
     }
 }
 
@@ -227,6 +238,7 @@ mod tests {
             IggyDuration::from_str("5ms").unwrap(),
             Partitioning::balanced(),
             1,
+            None,
             None,
         );
         assert_eq!(config.stream_id(), &stream_id);

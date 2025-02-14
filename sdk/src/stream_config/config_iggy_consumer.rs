@@ -5,8 +5,10 @@ use crate::consumer::ConsumerKind;
 use crate::identifier::Identifier;
 use crate::messages::poll_messages::PollingStrategy;
 use crate::stream_config::shared_config;
+use crate::utils::crypto::EncryptorKind;
 use crate::utils::duration::IggyDuration;
 use std::str::FromStr;
+use std::sync::Arc;
 
 #[derive(Builder, Debug, Clone)]
 #[builder(on(String, into))]
@@ -23,6 +25,7 @@ pub struct IggyConsumerConfig {
     polling_strategy: PollingStrategy,
     partitions_count: u32,
     replication_factor: Option<u8>,
+    encryptor: Option<Arc<EncryptorKind>>,
 }
 
 impl Default for IggyConsumerConfig {
@@ -43,6 +46,7 @@ impl Default for IggyConsumerConfig {
             polling_strategy: PollingStrategy::last(),
             partitions_count: 1,
             replication_factor: None,
+            encryptor: None,
         }
     }
 }
@@ -80,6 +84,7 @@ impl IggyConsumerConfig {
         polling_strategy: PollingStrategy,
         partitions_count: u32,
         replication_factor: Option<u8>,
+        encryptor: Option<Arc<EncryptorKind>>,
     ) -> Self {
         Self {
             stream_id,
@@ -94,6 +99,7 @@ impl IggyConsumerConfig {
             polling_strategy,
             partitions_count,
             replication_factor,
+            encryptor,
         }
     }
 
@@ -131,6 +137,7 @@ impl IggyConsumerConfig {
             polling_strategy: PollingStrategy::last(),
             partitions_count: 1,
             replication_factor: None,
+            encryptor: None,
         }
     }
 }
@@ -182,6 +189,10 @@ impl IggyConsumerConfig {
 
     pub fn replication_factor(&self) -> Option<u8> {
         self.replication_factor
+    }
+
+    pub fn encryptor(&self) -> &Option<Arc<EncryptorKind>> {
+        &self.encryptor
     }
 }
 
@@ -271,6 +282,7 @@ mod tests {
             IggyDuration::from_str("5ms").unwrap(),
             PollingStrategy::last(),
             1,
+            None,
             None,
         );
         assert_eq!(

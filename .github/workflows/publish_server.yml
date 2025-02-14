@@ -234,11 +234,19 @@ jobs:
         run: |
           docker buildx imagetools inspect ${{ env.DOCKERHUB_REGISTRY_NAME }}:latest
 
+  github_release:
+    uses: ./.github/workflows/release_server.yml
+    needs: tag
+    if: ${{ needs.tag.outputs.tag_created == 'true' }}
+    with:
+      tag_name: "server-${{ needs.tag.outputs.server_version }}"
+
   finalize_publish_server:
     runs-on: ubuntu-latest
     needs:
       - release_and_publish
       - merge_docker_manifest
+      - github_release
     if: always()
     steps:
       - name: Checkout code

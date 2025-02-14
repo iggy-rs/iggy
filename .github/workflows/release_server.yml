@@ -1,9 +1,12 @@
 name: release_server
 
 on:
-  create:
-    tags:
-      - 'server-*'
+  workflow_call:
+    inputs:
+      tag_name:
+        description: 'The name of the tag to be released'
+        required: true
+        type: string
 
 env:
   GITHUB_TOKEN: ${{ github.token }}
@@ -12,28 +15,8 @@ env:
   IGGY_CI_BUILD: true
 
 jobs:
-  check_release_trigger:
-    name: Check if trigger was server tag creation
-    runs-on: ubuntu-latest
-    steps:
-      - name: Check if trigger was a tag creation
-        id: trigger
-        run: |
-          if [[ "${{ github.event.ref_type }}" == "tag" && "${{ github.ref }}" == refs/tags/server-* ]];
-          then
-            echo "This event was a tag creation."
-            echo "release=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "This event was not a tag creation."
-            echo "release=false" >> "$GITHUB_OUTPUT"
-          fi
-    outputs:
-      release: ${{ steps.trigger.outputs.release == 'true' }}
-
   release_server:
     name: Build and release server binary
-    needs: check_release_trigger
-    if: ${{ needs.check_release_trigger.outputs.release == 'true' }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -114,7 +97,7 @@ jobs:
           files: |
             zipped_artifacts/*
             CHANGELOG.md
-          tag_name: ${GITHUB_REF#refs/tags/}
+          tag_name: ${{ inputs.tag_name }}
           draft: false
           prerelease: false
         env:
@@ -124,7 +107,6 @@ jobs:
     name: Finalize release
     runs-on: ubuntu-latest
     needs:
-      - check_release_trigger
       - release_server
     if: always()
     steps:

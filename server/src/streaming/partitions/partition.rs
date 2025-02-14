@@ -212,7 +212,7 @@ impl fmt::Display for Partition {
 mod tests {
     use crate::configs::system::{CacheConfig, SystemConfig};
     use crate::streaming::partitions::partition::Partition;
-    use crate::streaming::persistence::persister::{FilePersister, PersisterKind};
+    use crate::streaming::persistence::persister::{FileWithSyncPersister, PersisterKind};
     use crate::streaming::storage::SystemStorage;
     use iggy::utils::duration::IggyDuration;
     use iggy::utils::expiry::IggyExpiry;
@@ -229,7 +229,7 @@ mod tests {
         });
         let storage = Arc::new(SystemStorage::new(
             config.clone(),
-            Arc::new(PersisterKind::File(FilePersister {})),
+            Arc::new(PersisterKind::FileWithSync(FileWithSyncPersister {})),
         ));
 
         let stream_id = 1;
@@ -279,7 +279,7 @@ mod tests {
         });
         let storage = Arc::new(SystemStorage::new(
             config.clone(),
-            Arc::new(PersisterKind::File(FilePersister {})),
+            Arc::new(PersisterKind::FileWithSync(FileWithSyncPersister {})),
         ));
 
         let partition = Partition::create(
@@ -316,7 +316,7 @@ mod tests {
         });
         let storage = Arc::new(SystemStorage::new(
             config.clone(),
-            Arc::new(PersisterKind::File(FilePersister {})),
+            Arc::new(PersisterKind::FileWithSync(FileWithSyncPersister {})),
         ));
 
         let topic_id = 1;

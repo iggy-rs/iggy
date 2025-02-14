@@ -246,7 +246,7 @@ mod tests {
     use crate::{
         configs::system::SystemConfig,
         streaming::{
-            persistence::persister::{FilePersister, PersisterKind},
+            persistence::persister::{FileWithSyncPersister, PersisterKind},
             storage::SystemStorage,
         },
     };
@@ -262,7 +262,7 @@ mod tests {
         });
         let storage = Arc::new(SystemStorage::new(
             config.clone(),
-            Arc::new(PersisterKind::File(FilePersister {})),
+            Arc::new(PersisterKind::FileWithSync(FileWithSyncPersister {})),
         ));
         let stream_id = 1;
         let stream_name = "test_stream";

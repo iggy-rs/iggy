@@ -580,7 +580,7 @@ mod tests {
     use super::*;
     use crate::configs::system::{MessageDeduplicationConfig, SystemConfig};
     use crate::streaming::partitions::create_messages;
-    use crate::streaming::persistence::persister::{FilePersister, PersisterKind};
+    use crate::streaming::persistence::persister::{FileWithSyncPersister, PersisterKind};
     use crate::streaming::storage::SystemStorage;
 
     #[tokio::test]
@@ -648,7 +648,7 @@ mod tests {
         });
         let storage = Arc::new(SystemStorage::new(
             config.clone(),
-            Arc::new(PersisterKind::File(FilePersister {})),
+            Arc::new(PersisterKind::FileWithSync(FileWithSyncPersister {})),
         ));
 
         (

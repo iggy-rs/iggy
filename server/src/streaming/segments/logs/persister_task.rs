@@ -1,17 +1,15 @@
-use crate::streaming::batching::message_batch::RetainedMessageBatch;
+use crate::streaming::batching::message_batch::{RetainedMessageBatch, RETAINED_BATCH_OVERHEAD};
 use flume::{unbounded, Receiver};
 use iggy::{error::IggyError, utils::duration::IggyDuration};
 use std::{
     io::IoSlice,
-    sync::{atomic::AtomicU64, Arc},
+    sync::{
+        atomic::{AtomicU64, Ordering},
+        Arc,
+    },
     time::Duration,
 };
-use tokio::{
-    fs::File,
-    io::{AsyncSeekExt, AsyncWriteExt},
-    select,
-    time::sleep,
-};
+use tokio::{fs::File, io::AsyncWriteExt, select, time::sleep};
 use tracing::{error, trace, warn};
 
 #[derive(Debug)]
@@ -35,12 +33,12 @@ impl PersisterTask {
         file: File,
         file_path: String,
         fsync: bool,
-        file_size: Arc<AtomicU64>,
+        log_file_size: Arc<AtomicU64>,
         max_retries: u32,
         retry_delay: IggyDuration,
     ) -> Self {
         let (sender, receiver) = unbounded();
-        let file_size_clone = file_size.clone();
+        let log_file_size_clone = log_file_size.clone();
         let file_path_clone = file_path.clone();
         let handle = tokio::spawn(async move {
             Self::run(
@@ -50,7 +48,7 @@ impl PersisterTask {
                 fsync,
                 max_retries,
                 retry_delay,
-                file_size_clone,
+                log_file_size_clone,
             )
             .await;
         });
@@ -171,12 +169,12 @@ impl PersisterTask {
         fsync: bool,
         max_retries: u32,
         retry_delay: IggyDuration,
-        file_size: Arc<AtomicU64>,
+        log_file_size: Arc<AtomicU64>,
     ) {
         while let Ok(request) = receiver.recv_async().await {
             match request {
                 PersisterTaskCommand::WriteRequest(batch_to_write) => {
-                    if let Err(e) = Self::write_with_retries(
+                    match Self::write_with_retries(
                         &mut file,
                         &file_path,
                         batch_to_write,
@@ -186,21 +184,14 @@ impl PersisterTask {
                     )
                     .await
                     {
-                        error!(
+                        Ok(bytes_written) => {
+                            log_file_size.fetch_add(bytes_written, Ordering::AcqRel);
+                        }
+                        Err(e) => {
+                            error!(
                             "Failed to persist data in LogPersisterTask for file {file_path}: {:?}",
                             e
-                        );
-                    } else {
-                        match file.stream_position().await {
-                            Ok(pos) => {
-                                file_size.store(pos, std::sync::atomic::Ordering::Release);
-                            }
-                            Err(e) => {
-                                error!(
-                                    "Failed to get file stream position in LogPersisterTask for file {file_path}: {:?}",
-                                    e
-                                );
-                            }
+                        )
                         }
                     }
                 }
@@ -227,10 +218,11 @@ impl PersisterTask {
         fsync: bool,
         max_retries: u32,
         retry_delay: IggyDuration,
-    ) -> Result<(), IggyError> {
+    ) -> Result<u64, IggyError> {
         let header = batch_to_write.header_as_bytes();
         let batch_bytes = batch_to_write.bytes;
         let slices = [IoSlice::new(&header), IoSlice::new(&batch_bytes)];
+        let bytes_written = RETAINED_BATCH_OVERHEAD + batch_bytes.len() as u64;
 
         let mut attempts = 0;
         loop {
@@ -238,7 +230,7 @@ impl PersisterTask {
                 Ok(_) => {
                     if fsync {
                         match file.sync_all().await {
-                            Ok(_) => return Ok(()),
+                            Ok(_) => return Ok(bytes_written),
                             Err(e) => {
                                 attempts += 1;
                                 error!(
@@ -248,7 +240,7 @@ impl PersisterTask {
                             }
                         }
                     } else {
-                        return Ok(());
+                        return Ok(bytes_written);
                     }
                 }
                 Err(e) => {
@@ -265,7 +257,7 @@ impl PersisterTask {
                 );
                 return Err(IggyError::CannotWriteToFile);
             }
-            tokio::time::sleep(retry_delay.get_duration()).await;
+            sleep(retry_delay.get_duration()).await;
         }
     }
 }

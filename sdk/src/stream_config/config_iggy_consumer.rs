@@ -19,6 +19,8 @@ pub struct IggyConsumerConfig {
     topic_name: String,
     auto_commit: AutoCommit,
     batch_size: u32,
+    create_stream_if_not_exists: bool,
+    create_topic_if_not_exists: bool,
     consumer_name: String,
     consumer_kind: ConsumerKind,
     polling_interval: IggyDuration,
@@ -40,6 +42,8 @@ impl Default for IggyConsumerConfig {
             topic_name: "test_topic".to_string(),
             auto_commit: AutoCommit::When(AutoCommitWhen::PollingMessages),
             batch_size: 100,
+            create_stream_if_not_exists: false,
+            create_topic_if_not_exists: false,
             consumer_name: "test_consumer".to_string(),
             consumer_kind: ConsumerKind::ConsumerGroup,
             polling_interval: IggyDuration::from_str("5ms").unwrap(),
@@ -56,17 +60,21 @@ impl IggyConsumerConfig {
     ///
     /// # Args
     ///
-    /// * `stream_id` - The stream identifier.
+    /// * `stream_id` - The stream id.
     /// * `stream_name` - The stream name.
-    /// * `topic_id` - The topic identifier.
+    /// * `topic_id` - The topic id.
     /// * `topic_name` - The topic name.
-    /// * `auto_commit` - The auto-commit configuration to use.
+    /// * `auto_commit` - The auto commit config.
     /// * `batch_size` - The max number of messages to send in a batch.
-    /// * `consumer_name` - The name of the consumer group.
-    /// * `consumer_kind` - The consumer kind to use.
+    /// * `create_stream_if_not_exists` - Whether to create the stream if it does not exists.
+    /// * `create_topic_if_not_exists` - Whether to create the topic if it does not exists.
+    /// * `consumer_name` - The consumer name.
+    /// * `consumer_kind` - The consumer kind.
     /// * `polling_interval` - The interval between polling for new messages.
-    /// * `polling_strategy` - The polling strategy to use.
-    /// * `partition` - The number of partitions to create.
+    /// * `polling_strategy` - The polling strategy.
+    /// * `partitions_count` - The number of partitions.
+    /// * `replication_factor` - The replication factor.
+    /// * `encryptor` - The encryptor.
     ///
     /// Returns:
     /// A new `IggyConsumerConfig`.
@@ -78,6 +86,8 @@ impl IggyConsumerConfig {
         topic_name: String,
         auto_commit: AutoCommit,
         batch_size: u32,
+        create_stream_if_not_exists: bool,
+        create_topic_if_not_exists: bool,
         consumer_name: String,
         consumer_kind: ConsumerKind,
         polling_interval: IggyDuration,
@@ -93,6 +103,8 @@ impl IggyConsumerConfig {
             topic_name,
             auto_commit,
             batch_size,
+            create_stream_if_not_exists,
+            create_topic_if_not_exists,
             consumer_name,
             consumer_kind,
             polling_interval,
@@ -131,6 +143,8 @@ impl IggyConsumerConfig {
             topic_name: topic.to_string(),
             auto_commit: AutoCommit::When(AutoCommitWhen::PollingMessages),
             batch_size,
+            create_stream_if_not_exists: false,
+            create_topic_if_not_exists: false,
             consumer_name: format!("consumer-{}-{}", stream, topic),
             consumer_kind: ConsumerKind::ConsumerGroup,
             polling_interval,
@@ -165,6 +179,13 @@ impl IggyConsumerConfig {
 
     pub fn batch_size(&self) -> u32 {
         self.batch_size
+    }
+    pub fn create_stream_if_not_exists(&self) -> bool {
+        self.create_stream_if_not_exists
+    }
+
+    pub fn create_topic_if_not_exists(&self) -> bool {
+        self.create_topic_if_not_exists
     }
 
     pub fn consumer_name(&self) -> &str {
@@ -210,6 +231,8 @@ mod tests {
             .topic_name("test_topic".to_string())
             .auto_commit(AutoCommit::When(AutoCommitWhen::PollingMessages))
             .batch_size(100)
+            .create_stream_if_not_exists(true)
+            .create_topic_if_not_exists(true)
             .consumer_name("test_consumer".to_string())
             .consumer_kind(ConsumerKind::ConsumerGroup)
             .polling_interval(IggyDuration::from_str("5ms").unwrap())
@@ -232,6 +255,8 @@ mod tests {
             AutoCommit::When(AutoCommitWhen::PollingMessages)
         );
         assert_eq!(config.batch_size(), 100);
+        assert_eq!(config.create_stream_if_not_exists(), true);
+        assert_eq!(config.create_topic_if_not_exists(), true);
         assert_eq!(config.consumer_name(), "test_consumer");
         assert_eq!(config.consumer_kind(), ConsumerKind::ConsumerGroup);
         assert_eq!(
@@ -257,6 +282,8 @@ mod tests {
             AutoCommit::When(AutoCommitWhen::PollingMessages)
         );
         assert_eq!(config.batch_size(), 100);
+        assert_eq!(config.create_stream_if_not_exists(), false);
+        assert_eq!(config.create_topic_if_not_exists(), false);
         assert_eq!(config.consumer_name(), "test_consumer");
         assert_eq!(config.consumer_kind(), ConsumerKind::ConsumerGroup);
         assert_eq!(
@@ -277,6 +304,8 @@ mod tests {
             "test_topic".to_string(),
             AutoCommit::When(AutoCommitWhen::PollingMessages),
             100,
+            false,
+            false,
             "test_consumer".to_string(),
             ConsumerKind::ConsumerGroup,
             IggyDuration::from_str("5ms").unwrap(),
@@ -300,6 +329,8 @@ mod tests {
             AutoCommit::When(AutoCommitWhen::PollingMessages)
         );
         assert_eq!(config.batch_size(), 100);
+        assert_eq!(config.create_stream_if_not_exists(), false);
+        assert_eq!(config.create_topic_if_not_exists(), false);
         assert_eq!(config.consumer_name(), "test_consumer");
         assert_eq!(config.consumer_kind(), ConsumerKind::ConsumerGroup);
         assert_eq!(
@@ -322,6 +353,8 @@ mod tests {
         assert_eq!(config.stream_name(), "test_stream");
         assert_eq!(config.topic_name(), "test_topic");
         assert_eq!(config.batch_size(), 100);
+        assert_eq!(config.create_stream_if_not_exists(), false);
+        assert_eq!(config.create_topic_if_not_exists(), false);
         assert_eq!(config.consumer_name(), "consumer-test_stream-test_topic");
         assert_eq!(config.consumer_kind(), ConsumerKind::ConsumerGroup);
         assert_eq!(

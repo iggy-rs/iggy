@@ -9,7 +9,11 @@ use crate::utils::topic_size::MaxTopicSize;
 use tracing::info;
 
 /// Builds an `IggyStream` and `IggyTopic` if any of them does not exists
-/// using the given `IggyClient` and `IggyProducerConfig`.
+/// and if the boolean flags to create them are set to true. In that case it will build
+/// them using the given `IggyClient` and `IggyProducerConfig`.
+///
+/// If the boolean flags to create them are set to false, it will not build them and will return
+/// and return Ok(()) since this is expected behavior.d
 ///
 /// # Arguments
 ///
@@ -24,10 +28,21 @@ pub(crate) async fn build_iggy_stream_topic_if_not_exists(
     client: &IggyClient,
     config: &IggyConsumerConfig,
 ) -> Result<(), IggyError> {
+    let stream_id = config.stream_id();
+    let stream_name = config.stream_name();
+    let topic_id = config.topic_id();
+    let topic_name = config.topic_name();
+
     info!("Check if stream exists.");
     if client.get_stream(config.stream_id()).await?.is_none() {
-        let stream_id = config.stream_id();
-        let stream_name = config.stream_name();
+        info!("Check if stream should be created.");
+        if !config.create_stream_if_not_exists() {
+            info!(
+                "Stream {stream_name} does not exists and create stream is disabled. \
+                If you want to create the stream automatically, please set create_stream_if_not_exists to true."
+            );
+            return Ok(());
+        }
 
         let (name, id) = extract_name_id_from_identifier(stream_id, stream_name)?;
         info!("Creating stream: {name}");
@@ -40,15 +55,20 @@ pub(crate) async fn build_iggy_stream_topic_if_not_exists(
         .await?
         .is_none()
     {
+        info!("Check if topic should be created.");
+        if !config.create_topic_if_not_exists() {
+            info!("Topic {topic_name} for stream {stream_name} does not exists and create topic is disabled.\
+            If you want to create the topic automatically, please set create_topic_if_not_exists to true.");
+            return Ok(());
+        }
+
         let stream_id = config.stream_id();
         let stream_name = config.stream_name();
-        let topic_id = config.topic_id();
-        let topic_name = config.topic_name();
         let partitions_count = config.partitions_count();
         let replication_factor = config.replication_factor();
 
         let (name, id) = extract_name_id_from_identifier(topic_id, topic_name)?;
-        info!("Creating topic: {name} for stream: {}", stream_name);
+        info!("Create topic: {name} for stream: {}", stream_name);
         client
             .create_topic(
                 stream_id,

@@ -5,7 +5,7 @@ on:
 
 jobs:
   check:
-    name: Check
+    name: cargo check
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -14,7 +14,7 @@ jobs:
         with:
           command: check
   fmt:
-    name: Rustfmt
+    name: cargo fmt
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -25,7 +25,7 @@ jobs:
           command: fmt
           args: --all -- --check
   clippy:
-    name: Clippy
+    name: cargo clippy
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -36,7 +36,7 @@ jobs:
           args: --all-targets --all-features -- -D warnings
 
   sort:
-    name: Sort dependencies
+    name: cargo sort
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -45,7 +45,7 @@ jobs:
       - run: cargo sort --check --workspace
 
   doctest:
-    name: Test documentation
+    name: cargo test docs
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -53,14 +53,14 @@ jobs:
       - run: cargo test --doc
 
   unused_dependencies:
-    name: Unused dependencies
+    name: cargo machete
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: bnjbvr/cargo-machete@v0.7.0
 
   check-commit-message:
-    name: Validate commit messages
+    name: commit messages
     runs-on: ubuntu-latest
     # This action isn't working with workflow_dispatch, skip it
     if: github.event_name != 'workflow_dispatch'
@@ -74,6 +74,7 @@ jobs:
           accessToken: ${{ secrets.GITHUB_TOKEN }} # needed only when checkAllCommitMessages is true
           pattern: '^.{0,80}(\n.*)*$'
           error: "Subject of all commits in the PR and PR body/title has to be shorter than 80 characters."
+
 # Uncomment this when we have a proper release - 1.0.0
 #   semver-checks:
 #     name: SemVer SDK

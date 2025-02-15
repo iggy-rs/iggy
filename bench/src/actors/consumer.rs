@@ -1,6 +1,7 @@
 use super::utils::calculate_latency_from_first_message;
 use crate::analytics::metrics::individual::from_records;
 use crate::analytics::record::BenchmarkRecord;
+use crate::rate_limiter::RateLimiter;
 use human_repr::HumanCount;
 use iggy::client::{ConsumerGroupClient, MessageClient};
 use iggy::clients::client::IggyClient;
@@ -34,6 +35,7 @@ pub struct Consumer {
     moving_average_window: u32,
     polling_kind: PollingKind,
     calculate_latency_from_message_payload: bool,
+    rate_limiter: Option<RateLimiter>,
 }
 
 impl Consumer {
@@ -52,6 +54,7 @@ impl Consumer {
         moving_average_window: u32,
         polling_kind: PollingKind,
         calculate_latency_from_message_payload: bool,
+        rate_limiter: Option<RateLimiter>,
     ) -> Self {
         Self {
             client_factory,
@@ -67,6 +70,7 @@ impl Consumer {
             moving_average_window,
             polling_kind,
             calculate_latency_from_message_payload,
+            rate_limiter,
         }
     }
 
@@ -184,6 +188,9 @@ impl Consumer {
         let mut records = Vec::with_capacity(message_batches as usize);
         let start_timestamp = Instant::now();
         while self.batches_left_to_receive.load(Ordering::Acquire) > 0 {
+            if let Some(limiter) = &self.rate_limiter {
+                limiter.throttle(batch_size_total_bytes).await;
+            }
             let offset = current_iteration * messages_per_batch as u64;
 
             let (strategy, auto_commit) = match self.polling_kind {

@@ -35,7 +35,7 @@ jobs:
 
       - name: Run predefined benchmarks
         timeout-minutes: 60
-        run: ./scripts/performance/run-standard-performance-suite.sh
+        run: ./scripts/performance/run-standard-performance-suite.sh --identifier iggy-ci
 
       - name: Upload benchmark results
         uses: actions/upload-artifact@v4

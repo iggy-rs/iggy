@@ -82,68 +82,73 @@ RUSTFLAGS="-C target-cpu=native" cargo build --release
 ##############################
 
 # Large batch tests with cache enabled
-LARGE_BATCH_ONLY_CACHE_PINNED_PRODUCER=$(construct_bench_command "$IGGY_BENCH_CMD" "pinned-producer" 8 8 1000 1000 1000 tcp "only_cache" "$IDENTIFIER")  # 8GB data, 1KB messages, 1000 msgs/batch with forced cache
-LARGE_BATCH_ONLY_CACHE_PINNED_CONSUMER=$(construct_bench_command "$IGGY_BENCH_CMD" "pinned-consumer" 8 8 1000 1000 1000 tcp "only_cache" "$IDENTIFIER")  # 8GB data, 1KB messages, 1000 msgs/batch with forced cache
+NORMAL_BATCH_ONLY_CACHE_PINNED_PRODUCER=$(construct_bench_command "$IGGY_BENCH_CMD" "pinned-producer" 8 8 1000 1000 1000 tcp "send_only_cache" "$IDENTIFIER")  # 8GB data, 1KB messages, 1000 msgs/batch with forced cache
+NORMAL_BATCH_ONLY_CACHE_PINNED_CONSUMER=$(construct_bench_command "$IGGY_BENCH_CMD" "pinned-consumer" 8 8 1000 1000 1000 tcp "poll_only_cache" "$IDENTIFIER")  # 8GB data, 1KB messages, 1000 msgs/batch with forced cache
 
 # Large batch tests with cache disabled
-LARGE_BATCH_NO_CACHE_PINNED_PRODUCER=$(construct_bench_command "$IGGY_BENCH_CMD" "pinned-producer" 8 8 1000 1000 1000 tcp "no_cache" "$IDENTIFIER")  # 8GB data, 1KB messages, 1000 msgs/batch with disabled cache
-LARGE_BATCH_NO_CACHE_PINNED_CONSUMER=$(construct_bench_command "$IGGY_BENCH_CMD" "pinned-consumer" 8 8 1000 1000 1000 tcp "no_cache" "$IDENTIFIER")  # 8GB data, 1KB messages, 1000 msgs/batch with disabled cache
+NORMAL_BATCH_NO_CACHE_PINNED_PRODUCER=$(construct_bench_command "$IGGY_BENCH_CMD" "pinned-producer" 8 8 1000 1000 1000 tcp "send_no_cache" "$IDENTIFIER")  # 8GB data, 1KB messages, 1000 msgs/batch with disabled cache
+NORMAL_BATCH_NO_CACHE_PINNED_CONSUMER=$(construct_bench_command "$IGGY_BENCH_CMD" "pinned-consumer" 8 8 1000 1000 1000 tcp "send_no_cache" "$IDENTIFIER")  # 8GB data, 1KB messages, 1000 msgs/batch with disabled cache
 
-# Large batch tests with no wait configuration
-LARGE_BATCH_NO_WAIT_PINNED_PRODUCER=$(construct_bench_command "$IGGY_BENCH_CMD" "pinned-producer" 8 8 1000 1000 1000 tcp "no_wait" "$IDENTIFIER")  # 8GB data, 1KB messages, 1000 msgs/batch with no_wait config
-LARGE_BATCH_NO_WAIT_PINNED_CONSUMER=$(construct_bench_command "$IGGY_BENCH_CMD" "pinned-consumer" 8 8 1000 1000 1000 tcp "no_wait" "$IDENTIFIER")  # 8GB data, 1KB messages, 1000 msgs/batch with no_wait config
+# Large batch tests with no wait and with cache configuration
+NORMAL_BATCH_NO_WAIT_ONLY_CACHE_PINNED_PRODUCER=$(construct_bench_command "$IGGY_BENCH_CMD" "pinned-producer" 8 8 1000 1000 1000 tcp "send_no_wait_only_cache" "$IDENTIFIER")  # 8GB data, 1KB messages, 1000 msgs/batch with no_wait config
+NORMAL_BATCH_NO_WAIT_ONLY_CACHE_PINNED_CONSUMER=$(construct_bench_command "$IGGY_BENCH_CMD" "pinned-consumer" 8 8 1000 1000 1000 tcp "send_no_wait_only_cache" "$IDENTIFIER")  # 8GB data, 1KB messages, 1000 msgs/batch with no_wait config
 
-# Small batch tests with cache enabled
-SMALL_BATCH_ONLY_CACHE_PINNED_PRODUCER=$(construct_bench_command "$IGGY_BENCH_CMD" "pinned-producer" 8 8 1000 100 10000 tcp "only_cache" "$IDENTIFIER")    # 8GB data, 1KB messages, 100 msgs/batch with forced cache
-SMALL_BATCH_ONLY_CACHE_PINNED_CONSUMER=$(construct_bench_command "$IGGY_BENCH_CMD" "pinned-consumer" 8 8 1000 100 10000 tcp "only_cache" "$IDENTIFIER")     # 8GB data, 1KB messages, 100 msgs/batch with forced cache
+# Single actor tests with cache disabled
+NO_CACHE_SINGLE_PINNED_PRODUCER=$(construct_bench_command "$IGGY_BENCH_CMD" "pinned-producer" 1 1 1000 1000 5000 tcp "1_producer_no_cache" "$IDENTIFIER")    # 8GB data, 1KB messages, 100 msgs/batch with forced cache
+NO_CACHE_SINGLE_PINNED_CONSUMER=$(construct_bench_command "$IGGY_BENCH_CMD" "pinned-consumer" 1 1 1000 1000 5000 tcp "1_consumer_no_cache" "$IDENTIFIER")     # 8GB data, 1KB messages, 100 msgs/batch with forced cache
+
+# Single actor tests with cache disabled and rate limit 100 MB/s
+NO_CACHE_RL_SINGLE_PINNED_PRODUCER=$(construct_bench_command "$IGGY_BENCH_CMD" "pinned-producer" 1 1 1000 1000 2000 tcp "1_producer_no_cache_rl_100MB" "$IDENTIFIER" "100MB")    # 8GB data, 1KB messages, 100 msgs/batch with forced cache
+NO_CACHE_RL_SINGLE_PINNED_CONSUMER=$(construct_bench_command "$IGGY_BENCH_CMD" "pinned-consumer" 1 1 1000 1000 2000 tcp "1_consumer_no_cache_rl_100MB" "$IDENTIFIER" "100MB")     # 8GB data, 1KB messages, 100 msgs/batch with forced cache
 
 # Consumer group tests with cache enabled
-BALANCED_ONLY_CACHE_PRODUCER=$(construct_bench_command "$IGGY_BENCH_CMD" "balanced-producer" 1 8 100 1000 10000 tcp "only_cache" "$IDENTIFIER")  # Balanced producer benchmark
-BALANCED_ONLY_CACHE_CONSUMER_GROUP=$(construct_bench_command "$IGGY_BENCH_CMD" "balanced-consumer-group" 1 8 100 1000 10000 tcp "only_cache" "$IDENTIFIER")  # Consumer group benchmark
-
-# Consumer group tests with cache disabled
-BALANCED_NO_CACHE_PRODUCER=$(construct_bench_command "$IGGY_BENCH_CMD" "balanced-producer" 1 8 100 1000 10000 tcp "no_cache" "$IDENTIFIER")  # Balanced producer benchmark
-BALANCED_NO_CACHE_CONSUMER_GROUP=$(construct_bench_command "$IGGY_BENCH_CMD" "balanced-consumer-group" 1 8 100 1000 10000 tcp "no_cache" "$IDENTIFIER")  # Consumer group benchmark
+BALANCED_ONLY_CACHE_PRODUCER=$(construct_bench_command "$IGGY_BENCH_CMD" "balanced-producer" 1 8 1000 1000 1000 tcp "only_cache" "$IDENTIFIER")  # Balanced producer benchmark
+BALANCED_ONLY_CACHE_CONSUMER_GROUP=$(construct_bench_command "$IGGY_BENCH_CMD" "balanced-consumer-group" 1 8 1000 1000 1000 tcp "only_cache" "$IDENTIFIER")  # Consumer group benchmark
 
 ###############################
 #      Single benchmarks      #
 ###############################
 
 # Parallel producer and consumer
-LARGE_BATCH_NO_CACHE_PINNED_PRODUCER_AND_CONSUMER=$(construct_bench_command "$IGGY_BENCH_CMD" "pinned-producer-and-consumer" 8 8 1000 1000 1000 tcp "no_cache" "$IDENTIFIER")    # 8GB data, 1KB messages, 100 msgs/batch, no cache
-LARGE_BATCH_ONLY_CACHE_PINNED_PRODUCER_AND_CONSUMER=$(construct_bench_command "$IGGY_BENCH_CMD" "pinned-producer-and-consumer" 8 8 1000 1000 1000 tcp "only_cache" "$IDENTIFIER")     # 8GB data, 1KB messages, 100 msgs/batch, no cache
+NORMAL_BATCH_NO_CACHE_PINNED_PRODUCER_AND_CONSUMER=$(construct_bench_command "$IGGY_BENCH_CMD" "pinned-producer-and-consumer" 8 8 1000 1000 1000 tcp "no_cache" "$IDENTIFIER")    # 8GB data, 1KB messages, 100 msgs/batch, no cache
+NORMAL_BATCH_ONLY_CACHE_PINNED_PRODUCER_AND_CONSUMER=$(construct_bench_command "$IGGY_BENCH_CMD" "pinned-producer-and-consumer" 8 8 1000 1000 1000 tcp "only_cache" "$IDENTIFIER")     # 8GB data, 1KB messages, 100 msgs/batch, no cache
 
-# Parallel consumer group test
-BALANCED_NO_CACHE_CONSUMER_GROUP_PRODUCER_AND_CONSUMER=$(construct_bench_command "$IGGY_BENCH_CMD" "balanced-producer-and-consumer-group" 1 8 100 1000 10000 tcp "no_cache" "$IDENTIFIER")
-BALANCED_ONLY_CACHE_CONSUMER_GROUP_PRODUCER_AND_CONSUMER=$(construct_bench_command "$IGGY_BENCH_CMD" "balanced-producer-and-consumer-group" 1 8 100 1000 10000 tcp "only_cache" "$IDENTIFIER")
+# Parallel producer and consumer group test
+BALANCED_NO_CACHE_CONSUMER_GROUP_PRODUCER_AND_CONSUMER=$(construct_bench_command "$IGGY_BENCH_CMD" "balanced-producer-and-consumer-group" 1 8 1000 1000 1000 tcp "cg_no_cache" "$IDENTIFIER")
+BALANCED_ONLY_CACHE_CONSUMER_GROUP_PRODUCER_AND_CONSUMER=$(construct_bench_command "$IGGY_BENCH_CMD" "balanced-producer-and-consumer-group" 1 8 1000 1000 1000 tcp "cg_only_cache" "$IDENTIFIER")
 
 # End-to-end tests
-END_TO_END_NO_CACHE_PRODUCING_CONSUMER=$(construct_bench_command "$IGGY_BENCH_CMD" "end-to-end-producing-consumer" 1 8 100 1000 10000 tcp "no_cache" "$IDENTIFIER")  # Combined producer and consumer benchmark
-END_TO_END_ONLY_CACHE_PRODUCING_CONSUMER=$(construct_bench_command "$IGGY_BENCH_CMD" "end-to-end-producing-consumer" 1 8 100 1000 10000 tcp "only_cache" "$IDENTIFIER")  # Combined producer and consumer benchmark
+END_TO_END_NO_CACHE_PRODUCING_CONSUMER=$(construct_bench_command "$IGGY_BENCH_CMD" "end-to-end-producing-consumer" 8 8 1000 1000 1000 tcp "e2e_no_cache" "$IDENTIFIER")  # Combined producer and consumer benchmark
+END_TO_END_ONLY_CACHE_PRODUCING_CONSUMER=$(construct_bench_command "$IGGY_BENCH_CMD" "end-to-end-producing-consumer" 8 8 1000 1000 1000 tcp "e2e_only_cache" "$IDENTIFIER")  # Combined producer and consumer benchmark
+END_TO_END_NO_CACHE_PRODUCING_CONSUMER_GROUP=$(construct_bench_command "$IGGY_BENCH_CMD" "end-to-end-producing-consumer-group" 1 8 1000 1000 1000 tcp "e2ecg_no_cache" "$IDENTIFIER")  # Combined producer and consumer benchmark
+END_TO_END_ONLY_CACHE_PRODUCING_CONSUMER_GROUP=$(construct_bench_command "$IGGY_BENCH_CMD" "end-to-end-producing-consumer-group" 1 8 1000 1000 1000 tcp "e2ecg_only_cache" "$IDENTIFIER")  # Combined producer and consumer benchmark
+
+
 
 # Make an array of the suites
 DOUBLE_SUITES=(
-    "$LARGE_BATCH_ONLY_CACHE_PINNED_PRODUCER"
-    "$LARGE_BATCH_ONLY_CACHE_PINNED_CONSUMER"
-    "$LARGE_BATCH_NO_CACHE_PINNED_PRODUCER"
-    "$LARGE_BATCH_NO_CACHE_PINNED_CONSUMER"
-    "$LARGE_BATCH_NO_WAIT_PINNED_PRODUCER"
-    "$LARGE_BATCH_NO_WAIT_PINNED_CONSUMER"
-    "$SMALL_BATCH_ONLY_CACHE_PINNED_PRODUCER"
-    "$SMALL_BATCH_ONLY_CACHE_PINNED_CONSUMER"
+    "$NORMAL_BATCH_ONLY_CACHE_PINNED_PRODUCER"
+    "$NORMAL_BATCH_ONLY_CACHE_PINNED_CONSUMER"
+    "$NORMAL_BATCH_NO_CACHE_PINNED_PRODUCER"
+    "$NORMAL_BATCH_NO_CACHE_PINNED_CONSUMER"
+    "$NORMAL_BATCH_NO_WAIT_ONLY_CACHE_PINNED_PRODUCER"
+    "$NORMAL_BATCH_NO_WAIT_ONLY_CACHE_PINNED_CONSUMER"
     "$BALANCED_ONLY_CACHE_PRODUCER"
     "$BALANCED_ONLY_CACHE_CONSUMER_GROUP"
-    "$BALANCED_NO_CACHE_PRODUCER"
-    "$BALANCED_NO_CACHE_CONSUMER_GROUP"
+    "$NO_CACHE_RL_SINGLE_PINNED_PRODUCER"
+    "$NO_CACHE_RL_SINGLE_PINNED_CONSUMER"
+
 )
 
 SINGLE_SUITES=(
-    "$LARGE_BATCH_NO_CACHE_PINNED_PRODUCER_AND_CONSUMER"
-    "$LARGE_BATCH_ONLY_CACHE_PINNED_PRODUCER_AND_CONSUMER"
+    "$NORMAL_BATCH_NO_CACHE_PINNED_PRODUCER_AND_CONSUMER"
+    "$NORMAL_BATCH_ONLY_CACHE_PINNED_PRODUCER_AND_CONSUMER"
     "$END_TO_END_ONLY_CACHE_PRODUCING_CONSUMER"
     "$END_TO_END_NO_CACHE_PRODUCING_CONSUMER"
     "$BALANCED_ONLY_CACHE_CONSUMER_GROUP_PRODUCER_AND_CONSUMER"
     "$BALANCED_NO_CACHE_CONSUMER_GROUP_PRODUCER_AND_CONSUMER"
+    "$END_TO_END_ONLY_CACHE_PRODUCING_CONSUMER_GROUP"
+    "$END_TO_END_NO_CACHE_PRODUCING_CONSUMER_GROUP"
 )
 
 echo

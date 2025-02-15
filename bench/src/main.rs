@@ -15,6 +15,7 @@ use std::fs;
 use std::path::Path;
 use tracing::{error, info};
 use tracing_subscriber::{fmt, layer::SubscriberExt, util::SubscriberInitExt, EnvFilter};
+use utils::cpu_name::append_cpu_name_lowercase;
 
 #[tokio::main]
 async fn main() -> Result<(), IggyError> {
@@ -32,7 +33,9 @@ async fn main() -> Result<(), IggyError> {
         if !dir_path.exists() {
             fs::create_dir_all(dir_path).unwrap();
         }
-        dir_path.join(args.generate_dir_name())
+        let mut dir_name = args.generate_dir_name();
+        append_cpu_name_lowercase(&mut dir_name);
+        dir_path.join(dir_name)
     });
 
     // Configure logging

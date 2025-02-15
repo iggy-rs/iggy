@@ -11,6 +11,7 @@ use std::{fs, path::Path};
 use tracing::error;
 
 pub mod client_factory;
+pub mod cpu_name;
 pub mod server_starter;
 
 pub async fn get_server_stats(

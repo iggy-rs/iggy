@@ -607,7 +607,7 @@ dependencies = [
 
 [[package]]
 name = "bench"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "async-trait",
  "atomic-time",
@@ -624,6 +624,7 @@ dependencies = [
  "integration",
  "nonzero_lit",
  "serde",
+ "sysinfo",
  "tokio",
  "toml",
  "tracing",
@@ -2459,7 +2460,7 @@ dependencies = [
 
 [[package]]
 name = "iggy-bench-report"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "byte-unit",
  "charming",

@@ -19,9 +19,10 @@ const AXIS_TEXT_SIZE: u32 = 16;
 
 impl IggyChart {
     /// Create a new `IggyChart` with default tooltip, legend, grid, and toolbox.
-    pub fn new(title: &str, subtext: &str, dark: bool) -> Self {
-        let mut chart = Chart::new()
-            .title(
+    pub fn new(title: &str, subtext: &str, dark: bool, strip_title_and_subtext: bool) -> Self {
+        let chart = Chart::new();
+        let chart = if !strip_title_and_subtext {
+            chart.title(
                 Title::new()
                     .text(title)
                     .text_align(TextAlign::Center)
@@ -31,6 +32,16 @@ impl IggyChart {
                     .left("50%")
                     .top("1%"),
             )
+        } else {
+            chart
+        };
+        let grid_top = if !strip_title_and_subtext {
+            "16%"
+        } else {
+            "4%"
+        };
+
+        let chart = chart
             .tooltip(Tooltip::new().axis_pointer(AxisPointer::new().type_(AxisPointerType::Cross)))
             .legend(
                 Legend::new()
@@ -46,7 +57,13 @@ impl IggyChart {
                     .item_height(14)
                     .type_(LegendType::Scroll),
             )
-            .grid(Grid::new().left("5%").right("19%").top("16%").bottom("8%"))
+            .grid(
+                Grid::new()
+                    .left("5%")
+                    .right("20%")
+                    .top(grid_top)
+                    .bottom("8%"),
+            )
             .data_zoom(
                 DataZoom::new()
                     .show(true)
@@ -65,9 +82,11 @@ impl IggyChart {
                 ),
             );
 
-        if dark {
-            chart = chart.background_color("#242424");
-        }
+        let chart = if dark {
+            chart.background_color("#242424")
+        } else {
+            chart
+        };
 
         Self { inner: chart }
     }

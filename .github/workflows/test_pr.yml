@@ -12,7 +12,7 @@ on:
   pull_request:
     branches:
       - master
-    types: [opened, synchronize, reopened]
+    types: [ opened, synchronize, reopened ]
 
 env:
   CRATE_NAME: iggy
@@ -27,9 +27,25 @@ concurrency:
 
 jobs:
   sanity:
+    name: check
     uses: ./.github/workflows/sanity.yml
 
+  coverage:
+    name: Code coverage
+    if: |
+      (github.event_name == 'pull_request' &&
+        (contains(github.event.pull_request.changed_files, '.rs') ||
+         contains(github.event.pull_request.changed_files, 'Cargo.toml') ||
+         contains(github.event.pull_request.changed_files, 'Cargo.lock')))
+      ||
+      (github.event_name == 'push' &&
+        (contains(github.event.head_commit.modified, '.rs') ||
+         contains(github.event.head_commit.modified, 'Cargo.toml') ||
+         contains(github.event.head_commit.modified, 'Cargo.lock')))
+    uses: ./.github/workflows/coverage.yml
+
   backwards_compatibility:
+    name: Backwards compatibility
     uses: ./.github/workflows/backwards_compatibility.yml
     needs: sanity
     with:
@@ -138,6 +154,7 @@ jobs:
     runs-on: ubuntu-latest
     needs:
       - sanity
+      - coverage
       - backwards_compatibility
       - build_and_test
     if: always()

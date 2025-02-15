@@ -1,19 +1,8 @@
 name: coverage
+
 on:
-  pull_request:
-    branches:
-      - master
-    paths:
-      - '**/*.rs'
-      - '**/Cargo.toml'
-      - '**/Cargo.lock'
-  push:
-    branches:
-      - master
-    paths:
-      - '**/*.rs'
-      - '**/Cargo.toml'
-      - '**/Cargo.lock'
+  workflow_dispatch:
+  workflow_call:
 
 env:
   CARGO_TERM_COLOR: always
@@ -21,11 +10,13 @@ env:
 
 jobs:
   coverage:
+    name: Code coverage
     runs-on: ubuntu-latest
     env:
       CARGO_TERM_COLOR: always
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
 
       - name: Cache cargo & target directories
         uses: Swatinem/rust-cache@v2
@@ -34,7 +25,7 @@ jobs:
 
       - name: Install gnome-keyring and keyutils on Linux
         run: |
-          sudo apt-get update --yes && sudo apt-get install --yes gnome-keyring keyutils
+          sudo apt-get update --yes && sudo apt-get install --yes gnome-keyring keyutils lcov
           rm -f $HOME/.local/share/keyrings/*
           echo -n "test" | gnome-keyring-daemon --unlock
 
@@ -50,27 +41,13 @@ jobs:
       - name: Generate code coverage
         run: source <(cargo llvm-cov show-env --export-prefix) && cargo llvm-cov report --lcov --output-path coverage.lcov --ignore-filename-regex '(bench\/|integration\/|tools\/|tpc\/)'
 
+      - name: Display code coverage
+        run: lcov --summary coverage.lcov
+
       - name: Upload code to Coveralls
-        if: ${{ !contains(github.event.pull_request.labels.*.name, 'skip-coverage') }}
+        # Do not upload coverage for user triggered workflows
+        if: github.event_name == 'workflow_call'
         uses: coverallsapp/github-action@v2
         with:
           fail-on-error: false
           github-token: ${{ secrets.GITHUB_TOKEN }}
-
-  finalize_coverage:
-    runs-on: ubuntu-latest
-    needs: coverage
-    if: always()
-    steps:
-      - uses: actions/checkout@v4
-      - name: Everything is fine
-        if: ${{ !(contains(needs.*.result, 'failure')) }}
-        run: exit 0
-      - name: Something went wrong
-        if: ${{ contains(needs.*.result, 'failure') && github.event_name == 'push' }}
-        uses: JasonEtco/create-an-issue@v2.9.2
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          GITHUB_BOT_CONTEXT_STRING: "coveralls coverage reporting job"
-        with:
-          filename: .github/BOT_ISSUE_TEMPLATE.md

@@ -264,7 +264,7 @@ impl fmt::Display for Topic {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::streaming::persistence::persister::{FilePersister, PersisterKind};
+    use crate::streaming::persistence::persister::{FileWithSyncPersister, PersisterKind};
     use iggy::locking::IggySharedMutFn;
     use std::str::FromStr;
 
@@ -277,7 +277,7 @@ mod tests {
         });
         let storage = Arc::new(SystemStorage::new(
             config.clone(),
-            Arc::new(PersisterKind::File(FilePersister {})),
+            Arc::new(PersisterKind::FileWithSync(FileWithSyncPersister {})),
         ));
 
         let stream_id = 1;

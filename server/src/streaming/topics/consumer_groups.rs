@@ -198,7 +198,7 @@ impl Topic {
 mod tests {
     use super::*;
     use crate::configs::system::SystemConfig;
-    use crate::streaming::persistence::persister::{FilePersister, PersisterKind};
+    use crate::streaming::persistence::persister::{FileWithSyncPersister, PersisterKind};
     use crate::streaming::storage::SystemStorage;
     use iggy::compression::compression_algorithm::CompressionAlgorithm;
     use iggy::utils::expiry::IggyExpiry;
@@ -358,7 +358,7 @@ mod tests {
         });
         let storage = Arc::new(SystemStorage::new(
             config.clone(),
-            Arc::new(PersisterKind::File(FilePersister {})),
+            Arc::new(PersisterKind::FileWithSync(FileWithSyncPersister {})),
         ));
         let stream_id = 1;
         let id = 2;

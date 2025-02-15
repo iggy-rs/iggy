@@ -422,9 +422,10 @@ path = "topics"
 # the oldest segment will be deleted upon reaching 10 GB.
 # Example: `max_topic_size = "10 GB"` means oldest messages in topics will be deleted when they reach 10 GB.
 # Note: this setting can be overwritten with CreateTopic and UpdateTopic requests.
-max_size = "10 GB"
+max_size = "unlimited"
 
 # Configures whether the oldest segments are deleted when a topic reaches its maximum size (boolean).
+# Note: segments are removed in intervals defined by `system.message_cleaner.interval`.
 delete_oldest_segments = false
 
 # Partition configuration

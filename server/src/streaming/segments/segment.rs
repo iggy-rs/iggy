@@ -11,7 +11,7 @@ use iggy::utils::timestamp::IggyTimestamp;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
 use tokio::fs::remove_file;
-use tracing::info;
+use tracing::{info, warn};
 
 #[derive(Debug)]
 pub struct Segment {
@@ -199,59 +199,6 @@ impl Segment {
         Ok(())
     }
 
-    pub async fn delete(&mut self) -> Result<(), IggyError> {
-        let segment_size = self.size_bytes;
-        let segment_count_of_messages = self.get_messages_count();
-        info!(
-            "Deleting segment of size {segment_size} with start offset: {} for partition with ID: {} for stream with ID: {} and topic with ID: {}...",
-            self.start_offset, self.partition_id, self.stream_id, self.topic_id,
-        );
-
-        {
-            let log_writer = self.log_writer.take().unwrap();
-            let _log_reader = self.log_reader.take().unwrap();
-            let index_writer = self.index_writer.take().unwrap();
-            let _index_reader = self.index_reader.take().unwrap();
-
-            let _ = tokio::spawn(async move {
-                let _ = log_writer.fsync().await;
-                let _ = index_writer.fsync().await;
-            })
-            .await;
-        }
-
-        let _ = remove_file(&self.log_path).await.with_error_context(|e| {
-            format!("Failed to delete log file: {}, error: {e}", self.log_path)
-        });
-        let _ = remove_file(&self.index_path).await.with_error_context(|e| {
-            format!(
-                "Failed to delete index file: {}, error: {e}",
-                self.index_path
-            )
-        });
-
-        let segment_size_bytes = self.size_bytes.as_bytes_u64();
-        self.size_of_parent_stream
-            .fetch_sub(segment_size_bytes, Ordering::SeqCst);
-        self.size_of_parent_topic
-            .fetch_sub(segment_size_bytes, Ordering::SeqCst);
-        self.size_of_parent_partition
-            .fetch_sub(segment_size_bytes, Ordering::SeqCst);
-        self.messages_count_of_parent_stream
-            .fetch_sub(segment_count_of_messages, Ordering::SeqCst);
-        self.messages_count_of_parent_topic
-            .fetch_sub(segment_count_of_messages, Ordering::SeqCst);
-        self.messages_count_of_parent_partition
-            .fetch_sub(segment_count_of_messages, Ordering::SeqCst);
-
-        info!(
-            "Deleted segment of size {segment_size} with start offset: {} for partition with ID: {} for stream with ID: {} and topic with ID: {}.",
-            self.start_offset, self.partition_id, self.stream_id, self.topic_id,
-        );
-
-        Ok(())
-    }
-
     pub async fn initialize_writing(&mut self) -> Result<(), IggyError> {
         // TODO(hubcio): consider splitting enforce_fsync for index/log to separate entries in config
         let log_fsync = self.config.partition.enforce_fsync;
@@ -325,13 +272,81 @@ impl Segment {
         }
     }
 
-    pub async fn close(&mut self) -> Result<(), IggyError> {
-        let log_writer = self.log_writer.take().unwrap();
-        let index_writer = self.index_writer.take().unwrap();
-        tokio::spawn(async move {
-            log_writer.shutdown_persister_task().await;
-            index_writer.fsync().await
+    pub async fn shutdown_reading(&mut self) {
+        if let Some(log_reader) = self.log_reader.take() {
+            drop(log_reader);
+        }
+        if let Some(index_reader) = self.index_reader.take() {
+            drop(index_reader);
+        }
+    }
+
+    pub async fn shutdown_writing(&mut self) {
+        if let Some(log_writer) = self.log_writer.take() {
+            tokio::spawn(async move {
+                let _ = log_writer.fsync().await;
+                log_writer.shutdown_persister_task().await;
+            });
+        } else {
+            warn!(
+                "Log writer already closed when calling close() for {}",
+                self
+            );
+        }
+
+        if let Some(index_writer) = self.index_writer.take() {
+            tokio::spawn(async move {
+                let _ = index_writer.fsync().await;
+                drop(index_writer)
+            });
+        } else {
+            warn!("Index writer already closed when calling close()");
+        }
+    }
+
+    pub async fn delete(&mut self) -> Result<(), IggyError> {
+        let segment_size = self.size_bytes;
+        let segment_count_of_messages = self.get_messages_count();
+        info!(
+            "Deleting segment of size {segment_size} with start offset: {} for partition with ID: {} for stream with ID: {} and topic with ID: {}...",
+            self.start_offset, self.partition_id, self.stream_id, self.topic_id,
+        );
+
+        self.shutdown_reading().await;
+
+        if !self.is_closed {
+            self.shutdown_writing().await;
+        }
+
+        let _ = remove_file(&self.log_path).await.with_error_context(|e| {
+            format!("Failed to delete log file: {}, error: {e}", self.log_path)
         });
+        let _ = remove_file(&self.index_path).await.with_error_context(|e| {
+            format!(
+                "Failed to delete index file: {}, error: {e}",
+                self.index_path
+            )
+        });
+
+        let segment_size_bytes = self.size_bytes.as_bytes_u64();
+        self.size_of_parent_stream
+            .fetch_sub(segment_size_bytes, Ordering::SeqCst);
+        self.size_of_parent_topic
+            .fetch_sub(segment_size_bytes, Ordering::SeqCst);
+        self.size_of_parent_partition
+            .fetch_sub(segment_size_bytes, Ordering::SeqCst);
+        self.messages_count_of_parent_stream
+            .fetch_sub(segment_count_of_messages, Ordering::SeqCst);
+        self.messages_count_of_parent_topic
+            .fetch_sub(segment_count_of_messages, Ordering::SeqCst);
+        self.messages_count_of_parent_partition
+            .fetch_sub(segment_count_of_messages, Ordering::SeqCst);
+
+        info!(
+            "Deleted segment of size {segment_size} with start offset: {} for partition with ID: {} for stream with ID: {} and topic with ID: {}.",
+            self.start_offset, self.partition_id, self.stream_id, self.topic_id,
+        );
+
         Ok(())
     }
 

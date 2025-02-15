@@ -151,7 +151,7 @@ impl Segment {
             self.end_offset = self.current_offset;
             self.is_closed = true;
             self.unsaved_messages = None;
-            self.close().await?;
+            self.shutdown_writing().await;
             info!(
                 "Closed segment with start offset: {}, end offset: {} for partition with ID: {}.",
                 self.start_offset, self.end_offset, self.partition_id

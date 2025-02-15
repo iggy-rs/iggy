@@ -84,7 +84,9 @@ impl Topic {
             return Err(IggyError::NoPartitions(self.topic_id, self.stream_id));
         }
 
-        if self.is_full() {
+        // Don't return an error if the topic is full and delete_oldest_segments is true.
+        // Oldest segment will be removed eventually by MaintainMessages background job.
+        if self.is_full() && self.config.topic.delete_oldest_segments {
             return Err(IggyError::TopicFull(self.topic_id, self.stream_id));
         }
 
@@ -310,7 +312,7 @@ impl Topic {
 mod tests {
     use super::*;
     use crate::configs::system::SystemConfig;
-    use crate::streaming::persistence::persister::FilePersister;
+    use crate::streaming::persistence::persister::FileWithSyncPersister;
     use crate::streaming::persistence::persister::PersisterKind;
     use crate::streaming::storage::SystemStorage;
     use bytes::Bytes;
@@ -432,7 +434,7 @@ mod tests {
         });
         let storage = Arc::new(SystemStorage::new(
             config.clone(),
-            Arc::new(PersisterKind::File(FilePersister {})),
+            Arc::new(PersisterKind::FileWithSync(FileWithSyncPersister {})),
         ));
         let stream_id = 1;
         let id = 2;

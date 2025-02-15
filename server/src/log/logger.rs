@@ -2,12 +2,12 @@ use crate::configs::server::{TelemetryConfig, TelemetryTransport};
 use crate::configs::system::LoggingConfig;
 use crate::server_error::LogError;
 use crate::VERSION;
+use opentelemetry::global;
 use opentelemetry::trace::TracerProvider;
-use opentelemetry::{global, KeyValue};
+use opentelemetry::KeyValue;
 use opentelemetry_appender_tracing::layer::OpenTelemetryTracingBridge;
 use opentelemetry_otlp::{WithExportConfig, WithHttpConfig};
 use opentelemetry_sdk::propagation::TraceContextPropagator;
-use opentelemetry_sdk::runtime::Tokio;
 use opentelemetry_sdk::Resource;
 use std::io::{self, Write};
 use std::path::PathBuf;
@@ -164,19 +164,16 @@ impl Logging {
         }
 
         let service_name = self.telemetry_config.service_name.to_owned();
-        let resource = Resource::new(vec![
-            KeyValue::new(
-                opentelemetry_semantic_conventions::resource::SERVICE_NAME,
-                service_name.to_owned(),
-            ),
-            KeyValue::new(
+        let resource = Resource::builder()
+            .with_service_name(service_name.to_owned())
+            .with_attribute(KeyValue::new(
                 opentelemetry_semantic_conventions::resource::SERVICE_VERSION,
                 VERSION,
-            ),
-        ]);
+            ))
+            .build();
 
         let logger_provider = match self.telemetry_config.logs.transport {
-            TelemetryTransport::GRPC => opentelemetry_sdk::logs::LoggerProvider::builder()
+            TelemetryTransport::GRPC => opentelemetry_sdk::logs::SdkLoggerProvider::builder()
                 .with_resource(resource.clone())
                 .with_batch_exporter(
                     opentelemetry_otlp::LogExporter::builder()
@@ -184,10 +181,9 @@ impl Logging {
                         .with_endpoint(self.telemetry_config.logs.endpoint.clone())
                         .build()
                         .expect("Failed to initialize gRPC logger."),
-                    Tokio,
                 )
                 .build(),
-            TelemetryTransport::HTTP => opentelemetry_sdk::logs::LoggerProvider::builder()
+            TelemetryTransport::HTTP => opentelemetry_sdk::logs::SdkLoggerProvider::builder()
                 .with_resource(resource.clone())
                 .with_batch_exporter(
                     opentelemetry_otlp::LogExporter::builder()
@@ -197,13 +193,12 @@ impl Logging {
                         .with_protocol(opentelemetry_otlp::Protocol::HttpBinary)
                         .build()
                         .expect("Failed to initialize HTTP logger."),
-                    Tokio,
                 )
                 .build(),
         };
 
         let tracer_provider = match self.telemetry_config.traces.transport {
-            TelemetryTransport::GRPC => opentelemetry_sdk::trace::TracerProvider::builder()
+            TelemetryTransport::GRPC => opentelemetry_sdk::trace::SdkTracerProvider::builder()
                 .with_resource(resource.clone())
                 .with_batch_exporter(
                     opentelemetry_otlp::SpanExporter::builder()
@@ -211,10 +206,9 @@ impl Logging {
                         .with_endpoint(self.telemetry_config.traces.endpoint.clone())
                         .build()
                         .expect("Failed to initialize gRPC tracer."),
-                    Tokio,
                 )
                 .build(),
-            TelemetryTransport::HTTP => opentelemetry_sdk::trace::TracerProvider::builder()
+            TelemetryTransport::HTTP => opentelemetry_sdk::trace::SdkTracerProvider::builder()
                 .with_resource(resource.clone())
                 .with_batch_exporter(
                     opentelemetry_otlp::SpanExporter::builder()
@@ -224,7 +218,6 @@ impl Logging {
                         .with_protocol(opentelemetry_otlp::Protocol::HttpBinary)
                         .build()
                         .expect("Failed to initialize HTTP tracer."),
-                    Tokio,
                 )
                 .build(),
         };
@@ -232,7 +225,6 @@ impl Logging {
         let tracer = tracer_provider.tracer(service_name);
         global::set_tracer_provider(tracer_provider.clone());
         global::set_text_map_propagator(TraceContextPropagator::new());
-        global::shutdown_tracer_provider();
 
         Registry::default()
             .with(layers)

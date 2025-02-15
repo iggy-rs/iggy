@@ -12,7 +12,7 @@ use iggy::utils::duration::IggyDuration;
 use iggy::utils::timestamp::IggyTimestamp;
 use std::sync::Arc;
 use tokio::time;
-use tracing::{debug, error, info, instrument};
+use tracing::{debug, error, info, instrument, trace};
 
 pub struct MessagesMaintainer {
     cleaner_enabled: bool,
@@ -127,9 +127,10 @@ impl ServerCommand<MaintainMessagesCommand> for MaintainMessagesExecutor {
                 };
 
                 if deleted_segments.segments_count == 0 {
-                    info!(
+                    trace!(
                         "No segments were deleted for stream ID: {}, topic ID: {}",
-                        topic.stream_id, topic.topic_id
+                        topic.stream_id,
+                        topic.topic_id
                     );
                     continue;
                 }

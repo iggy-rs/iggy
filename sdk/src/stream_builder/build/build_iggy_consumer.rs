@@ -53,8 +53,16 @@ pub(crate) async fn build_iggy_consumer(
         builder = builder.encryptor(encryptor);
     }
 
+    if let Some(init_retries) = config.init_retries() {
+        trace!("Set reconnection retry interval");
+        let reconnection_retry_interval = config.reconnection_retry_interval();
+        builder = builder.reconnection_retry_interval(reconnection_retry_interval);
+        builder = builder.init_retries(init_retries, reconnection_retry_interval);
+    }
+
     trace!("Initialize consumer");
     let mut consumer = builder.build();
+
     consumer.init().await.map_err(|err| {
         error!("Failed to initialize consumer: {err}");
         err

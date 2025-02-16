@@ -162,8 +162,8 @@ impl IggyProducerConfig {
         self.replication_factor
     }
 
-    pub fn encryptor(&self) -> &Option<Arc<EncryptorKind>> {
-        &self.encryptor
+    pub fn encryptor(&self) -> Option<Arc<EncryptorKind>> {
+        self.encryptor.clone()
     }
 }
 

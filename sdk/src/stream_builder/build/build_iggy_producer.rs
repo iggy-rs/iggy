@@ -4,7 +4,7 @@ use crate::error::IggyError;
 use crate::stream_builder::IggyProducerConfig;
 use crate::utils::expiry::IggyExpiry;
 use crate::utils::topic_size::MaxTopicSize;
-use tracing::{error, info};
+use tracing::{error, trace};
 
 /// Build a producer from the stream configuration.
 ///
@@ -26,7 +26,7 @@ pub(crate) async fn build_iggy_producer(
     client: &IggyClient,
     config: &IggyProducerConfig,
 ) -> Result<IggyProducer, IggyError> {
-    info!("Extract config fields.");
+    trace!("Extract config fields.");
     let stream = config.stream_name();
     let topic = config.topic_name();
     let batch_size = config.batch_size();
@@ -36,8 +36,8 @@ pub(crate) async fn build_iggy_producer(
     let replication_factor = config.replication_factor();
     // let encryptor = config.encryptor().to_owned().unwrap();
 
-    info!("Build iggy producer");
-    let mut producer = client
+    trace!("Build iggy producer");
+    let mut builder = client
         .producer(stream, topic)?
         .batch_size(batch_size)
         .send_interval(send_interval)
@@ -48,17 +48,18 @@ pub(crate) async fn build_iggy_producer(
             replication_factor,
             IggyExpiry::ServerDefault,
             MaxTopicSize::ServerDefault,
-        )
-        .build();
+        );
 
-    info!("Initialize iggy producer");
-    match producer.init().await {
-        Ok(_) => {}
-        Err(err) => {
-            error!("Failed to initialize producer: {}", err);
-            return Err(err);
-        }
-    };
+    if let Some(encryptor) = config.encryptor() {
+        builder = builder.encryptor(encryptor);
+    }
+
+    trace!("Initialize iggy producer");
+    let mut producer = builder.build();
+    producer.init().await.map_err(|err| {
+        error!("Failed to initialize consumer: {err}");
+        err
+    })?;
 
     Ok(producer)
 }

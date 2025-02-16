@@ -6,7 +6,7 @@ use crate::identifier::{IdKind, Identifier};
 use crate::stream_builder::IggyConsumerConfig;
 use crate::utils::expiry::IggyExpiry;
 use crate::utils::topic_size::MaxTopicSize;
-use tracing::info;
+use tracing::{trace, warn};
 
 /// Builds an `IggyStream` and `IggyTopic` if any of them does not exists
 /// and if the boolean flags to create them are set to true. In that case it will build
@@ -33,11 +33,11 @@ pub(crate) async fn build_iggy_stream_topic_if_not_exists(
     let topic_id = config.topic_id();
     let topic_name = config.topic_name();
 
-    info!("Check if stream exists.");
+    trace!("Check if stream exists.");
     if client.get_stream(config.stream_id()).await?.is_none() {
-        info!("Check if stream should be created.");
+        trace!("Check if stream should be created.");
         if !config.create_stream_if_not_exists() {
-            info!(
+            warn!(
                 "Stream {stream_name} does not exists and create stream is disabled. \
                 If you want to create the stream automatically, please set create_stream_if_not_exists to true."
             );
@@ -45,19 +45,19 @@ pub(crate) async fn build_iggy_stream_topic_if_not_exists(
         }
 
         let (name, id) = extract_name_id_from_identifier(stream_id, stream_name)?;
-        info!("Creating stream: {name}");
+        trace!("Creating stream: {name}");
         client.create_stream(&name, id).await?;
     }
 
-    info!("Check if topic exists.");
+    trace!("Check if topic exists.");
     if client
         .get_topic(config.stream_id(), config.topic_id())
         .await?
         .is_none()
     {
-        info!("Check if topic should be created.");
+        trace!("Check if topic should be created.");
         if !config.create_topic_if_not_exists() {
-            info!("Topic {topic_name} for stream {stream_name} does not exists and create topic is disabled.\
+            warn!("Topic {topic_name} for stream {stream_name} does not exists and create topic is disabled.\
             If you want to create the topic automatically, please set create_topic_if_not_exists to true.");
             return Ok(());
         }
@@ -68,7 +68,7 @@ pub(crate) async fn build_iggy_stream_topic_if_not_exists(
         let replication_factor = config.replication_factor();
 
         let (name, id) = extract_name_id_from_identifier(topic_id, topic_name)?;
-        info!("Create topic: {name} for stream: {}", stream_name);
+        trace!("Create topic: {name} for stream: {}", stream_name);
         client
             .create_topic(
                 stream_id,

@@ -3,7 +3,7 @@ use crate::clients::consumer::IggyConsumer;
 use crate::consumer::ConsumerKind;
 use crate::error::IggyError;
 use crate::stream_builder::IggyConsumerConfig;
-use tracing::{error, info};
+use tracing::{error, trace};
 
 /// Builds an `IggyConsumer` from the given `IggyClient` and `IggyConsumerConfig`.
 ///
@@ -25,7 +25,7 @@ pub(crate) async fn build_iggy_consumer(
     client: &IggyClient,
     config: &IggyConsumerConfig,
 ) -> Result<IggyConsumer, IggyError> {
-    info!("Extract config fields.");
+    trace!("Extract config fields.");
     let stream = config.stream_name();
     let topic = config.topic_name();
     let auto_commit = config.auto_commit();
@@ -35,10 +35,9 @@ pub(crate) async fn build_iggy_consumer(
     let polling_interval = config.polling_interval();
     let polling_strategy = config.polling_strategy();
     let partition = config.partitions_count();
-    // let encryptor = config.encryptor().to_owned().unwrap();
 
-    info!("Build iggy consumer");
-    let mut consumer = match consumer_kind {
+    trace!("Build iggy consumer");
+    let mut builder = match consumer_kind {
         ConsumerKind::Consumer => client.consumer(consumer_name, stream, topic, partition)?,
         ConsumerKind::ConsumerGroup => client.consumer_group(consumer_name, stream, topic)?,
     }
@@ -47,17 +46,19 @@ pub(crate) async fn build_iggy_consumer(
     .auto_join_consumer_group()
     .polling_strategy(polling_strategy)
     .poll_interval(polling_interval)
-    .batch_size(batch_size)
-    .build();
+    .batch_size(batch_size);
 
-    info!("Initialize producer");
-    match consumer.init().await {
-        Ok(_) => {}
-        Err(err) => {
-            error!("Failed to initialize consumer: {}", err);
-            return Err(err);
-        }
+    if let Some(encryptor) = config.encryptor() {
+        trace!("Set encryptor");
+        builder = builder.encryptor(encryptor);
     }
+
+    trace!("Initialize consumer");
+    let mut consumer = builder.build();
+    consumer.init().await.map_err(|err| {
+        error!("Failed to initialize consumer: {err}");
+        err
+    })?;
 
     Ok(consumer)
 }

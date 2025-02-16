@@ -29,11 +29,11 @@ pub(crate) async fn build_iggy_producer(
     trace!("Extract config fields.");
     let stream = config.stream_name();
     let topic = config.topic_name();
+    let topic_partitions_count = config.topic_partitions_count();
+    let topic_replication_factor = config.topic_replication_factor();
     let batch_size = config.batch_size();
     let send_interval = config.send_interval();
-    let partitions_count = config.partitions_count();
     let partitioning = config.partitioning().to_owned();
-    let replication_factor = config.replication_factor();
     let send_retries = config.send_retries_count();
     let send_retries_interval = config.send_retries_interval();
 
@@ -46,8 +46,8 @@ pub(crate) async fn build_iggy_producer(
         .create_stream_if_not_exists()
         .send_retries(send_retries, send_retries_interval)
         .create_topic_if_not_exists(
-            partitions_count,
-            replication_factor,
+            topic_partitions_count,
+            topic_replication_factor,
             IggyExpiry::ServerDefault,
             MaxTopicSize::ServerDefault,
         );

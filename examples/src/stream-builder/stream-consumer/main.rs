@@ -27,7 +27,7 @@ async fn main() -> Result<(), IggyError> {
         }
     });
 
-    // wait some time for all messages to arrive
+    // Wait a bit for all messages to arrive.
     tokio::time::sleep(tokio::time::Duration::from_secs(10)).await;
     println!("Stop the message stream and shutdown iggy client");
     tx.send(()).expect("Failed to send shutdown signal");

@@ -13,6 +13,7 @@ impl MessageConsumer for PrintEventConsumer {
         let message = String::from_utf8_lossy(raw_message);
         // Print message
         println!("Message received: {}", message);
+
         Ok(())
     }
 }

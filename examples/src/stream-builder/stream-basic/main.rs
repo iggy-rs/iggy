@@ -14,7 +14,7 @@ async fn main() -> Result<(), IggyError> {
     let client = shared::client::build_client("test_stream", "test_topic", true).await?;
 
     println!("Build iggy producer & consumer");
-    //For customization, use the `new` or `from_stream_topic` constructor
+    // For customization, use the `new` or `from_stream_topic` constructor
     let stream_config = IggyStreamConfig::default();
     let (producer, consumer) = IggyStream::build(&client, &stream_config).await?;
 
@@ -36,7 +36,7 @@ async fn main() -> Result<(), IggyError> {
     producer.send_one(Message::from_str("Hola Iggy")?).await?;
     producer.send_one(Message::from_str("Hi Apache")?).await?;
 
-    // wait a bit for all messages to arrive.
+    // Wait a bit for all messages to arrive.
     tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
 
     println!("Stop the message stream and shutdown iggy client");

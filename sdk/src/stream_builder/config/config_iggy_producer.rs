@@ -1,8 +1,8 @@
 use bon::Builder;
 
+use crate::config::shared_config;
 use crate::identifier::Identifier;
 use crate::messages::send_messages::Partitioning;
-use crate::stream_config::shared_config;
 use crate::utils::crypto::EncryptorKind;
 use crate::utils::duration::IggyDuration;
 use std::str::FromStr;

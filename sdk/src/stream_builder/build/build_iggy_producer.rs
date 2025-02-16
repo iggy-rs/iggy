@@ -1,7 +1,7 @@
 use crate::clients::client::IggyClient;
 use crate::clients::producer::IggyProducer;
+use crate::config::IggyProducerConfig;
 use crate::error::IggyError;
-use crate::stream_config::IggyProducerConfig;
 use crate::utils::expiry::IggyExpiry;
 use crate::utils::topic_size::MaxTopicSize;
 use tracing::{error, info};

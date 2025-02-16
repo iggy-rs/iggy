@@ -1,10 +1,10 @@
 use bon::Builder;
 
 use crate::clients::consumer::{AutoCommit, AutoCommitWhen};
+use crate::config::shared_config;
 use crate::consumer::ConsumerKind;
 use crate::identifier::Identifier;
 use crate::messages::poll_messages::PollingStrategy;
-use crate::stream_config::shared_config;
 use crate::utils::crypto::EncryptorKind;
 use crate::utils::duration::IggyDuration;
 use std::str::FromStr;

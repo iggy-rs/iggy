@@ -93,24 +93,7 @@ mod tests {
     use std::str::FromStr;
 
     #[test]
-    fn test_default() {
-        let config = IggyStreamConfig::default();
-        assert_eq!(config.stream_name(), "test_stream");
-        assert_eq!(config.topic_name(), "test_topic");
-        assert_eq!(config.consumer_config().batch_size(), 100);
-        assert_eq!(config.producer_config().batch_size(), 100);
-        assert_eq!(
-            config.consumer_config().polling_interval(),
-            IggyDuration::from_str("5ms").unwrap()
-        );
-        assert_eq!(
-            config.producer_config().send_interval(),
-            IggyDuration::from_str("5ms").unwrap()
-        );
-    }
-
-    #[test]
-    fn test_new() {
+    fn should_be_equal() {
         let consumer_config = IggyConsumerConfig::from_stream_topic(
             "test_stream",
             "test_topic",
@@ -139,7 +122,24 @@ mod tests {
     }
 
     #[test]
-    fn test_from_stream_topic() {
+    fn should_be_default() {
+        let config = IggyStreamConfig::default();
+        assert_eq!(config.stream_name(), "test_stream");
+        assert_eq!(config.topic_name(), "test_topic");
+        assert_eq!(config.consumer_config().batch_size(), 100);
+        assert_eq!(config.producer_config().batch_size(), 100);
+        assert_eq!(
+            config.consumer_config().polling_interval(),
+            IggyDuration::from_str("5ms").unwrap()
+        );
+        assert_eq!(
+            config.producer_config().send_interval(),
+            IggyDuration::from_str("5ms").unwrap()
+        );
+    }
+
+    #[test]
+    fn should_be_from_stream_topic() {
         let config = IggyStreamConfig::from_stream_topic(
             "test_stream",
             "test_topic",

@@ -112,7 +112,7 @@ impl Segment {
         };
         let saved_bytes = self
             .log_writer
-            .as_ref()
+            .as_mut()
             .unwrap()
             .save_batches(batch, confirmation)
             .await
@@ -124,7 +124,7 @@ impl Segment {
             })?;
 
         self.index_writer
-            .as_ref()
+            .as_mut()
             .unwrap()
             .save_index(index)
             .await

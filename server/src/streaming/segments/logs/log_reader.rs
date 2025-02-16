@@ -8,7 +8,6 @@ use crate::streaming::{
 use bytes::BytesMut;
 use error_set::ErrContext;
 use iggy::{error::IggyError, utils::byte_size::IggyByteSize};
-use nix::fcntl::{posix_fadvise, PosixFadviseAdvice};
 use std::{
     fs::{File, OpenOptions},
     os::{fd::AsRawFd, unix::prelude::FileExt},

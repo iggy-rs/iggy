@@ -67,38 +67,17 @@ impl SegmentIndexReader {
                     "Error reading batch header at offset 0 in file {}: {e}",
                     self.file_path
                 );
-                return Err(IggyError::CannotReadIndexOffset);
+                return Err(IggyError::CannotReadFile);
             }
         };
 
-        let indexes_count = (file_size / INDEX_SIZE) as usize;
-        let mut indexes = Vec::with_capacity(indexes_count);
-        for chunk in buf.chunks_exact(INDEX_SIZE as usize) {
-            let offset = u32::from_le_bytes(
-                chunk[0..4]
-                    .try_into()
-                    .with_error_context(|e| format!("Failed to parse index offset: {e}"))
-                    .map_err(|_| IggyError::CannotReadIndexOffset)?,
-            );
-            let position = u32::from_le_bytes(
-                chunk[4..8]
-                    .try_into()
-                    .with_error_context(|e| format!("Failed to parse index position: {e}"))
-                    .map_err(|_| IggyError::CannotReadIndexOffset)?,
-            );
-            let timestamp = u64::from_le_bytes(
-                chunk[8..16]
-                    .try_into()
-                    .with_error_context(|e| format!("Failed to parse index timestamp: {e}"))
-                    .map_err(|_| IggyError::CannotReadIndexOffset)?,
-            );
-            let current_index = Index {
-                offset,
-                position,
-                timestamp,
-            };
-            indexes.push(current_index);
-        }
+        let indexes: Vec<Index> = buf
+            .chunks_exact(INDEX_SIZE as usize)
+            .map(parse_index)
+            .collect::<Result<Vec<_>, IggyError>>()
+            .with_error_context(|e| {
+                format!("Failed to parse indexes in file {}: {e}", self.file_path)
+            })?;
         if indexes.len() as u64 != file_size / INDEX_SIZE {
             error!(
                 "Loaded {} indexes from disk, expected {}, file {} is probably corrupted!",
@@ -143,39 +122,18 @@ impl SegmentIndexReader {
                     "Error reading batch header at offset 0 in file {}: {e}",
                     self.file_path
                 );
-                return Err(IggyError::CannotReadIndexOffset);
+                return Err(IggyError::CannotReadFile);
             }
         };
         for chunk in buf.chunks_exact(INDEX_SIZE as usize) {
-            let offset = u32::from_le_bytes(
-                chunk[0..4]
-                    .try_into()
-                    .with_error_context(|e: &std::array::TryFromSliceError| {
-                        format!("Failed to parse index offset: {e}")
-                    })
-                    .map_err(|_| IggyError::CannotReadIndexOffset)?,
-            );
-            let position = u32::from_le_bytes(
-                chunk[4..8]
-                    .try_into()
-                    .with_error_context(|e| format!("Failed to parse index position: {e}"))
-                    .map_err(|_| IggyError::CannotReadIndexOffset)?,
-            );
-            let timestamp = u64::from_le_bytes(
-                chunk[8..16]
-                    .try_into()
-                    .with_error_context(|e| format!("Failed to parse index timestamp: {e}"))
-                    .map_err(|_| IggyError::CannotReadIndexOffset)?,
-            );
-            let current_index = Index {
-                offset,
-                position,
-                timestamp,
-            };
-            if offset >= relative_start_offset && index_range.start == Index::default() {
+            let current_index = parse_index(chunk)
+                .with_error_context(|e| format!("Failed to parse index {}: {e}", self.file_path))?;
+            if current_index.offset >= relative_start_offset
+                && index_range.start == Index::default()
+            {
                 index_range.start = current_index;
             }
-            if offset >= relative_end_offset {
+            if current_index.offset >= relative_end_offset {
                 index_range.end = current_index;
                 break;
             }
@@ -204,34 +162,12 @@ impl SegmentIndexReader {
                     "Error reading batch header at offset 0 in file {}: {e}",
                     self.file_path
                 );
-                return Err(IggyError::CannotReadIndexOffset);
+                return Err(IggyError::CannotReadFile);
             }
         };
         let mut last_index: Option<Index> = None;
         for chunk in buf.chunks_exact(INDEX_SIZE as usize) {
-            let offset = u32::from_le_bytes(
-                chunk[0..4]
-                    .try_into()
-                    .with_error_context(|e| format!("Failed to parse index offset: {e}"))
-                    .map_err(|_| IggyError::CannotReadIndexOffset)?,
-            );
-            let position = u32::from_le_bytes(
-                chunk[4..8]
-                    .try_into()
-                    .with_error_context(|e| format!("Failed to parse index position: {e}"))
-                    .map_err(|_| IggyError::CannotReadIndexPosition)?,
-            );
-            let time = u64::from_le_bytes(
-                chunk[8..16]
-                    .try_into()
-                    .with_error_context(|e| format!("Failed to parse index timestamp: {e}"))
-                    .map_err(|_| IggyError::CannotReadIndexTimestamp)?,
-            );
-            let current = Index {
-                offset,
-                position,
-                timestamp: time,
-            };
+            let current = parse_index(chunk)?;
             if current.timestamp >= timestamp {
                 return Ok(last_index.or(Some(current)));
             }
@@ -253,4 +189,30 @@ impl SegmentIndexReader {
         })
         .await?
     }
+}
+
+fn parse_index(chunk: &[u8]) -> Result<Index, IggyError> {
+    let offset = u32::from_le_bytes(
+        chunk[0..4]
+            .try_into()
+            .with_error_context(|e| format!("Failed to parse index offset: {e}"))
+            .map_err(|_| IggyError::CannotReadIndexOffset)?,
+    );
+    let position = u32::from_le_bytes(
+        chunk[4..8]
+            .try_into()
+            .with_error_context(|e| format!("Failed to parse index position: {e}"))
+            .map_err(|_| IggyError::CannotReadIndexPosition)?,
+    );
+    let timestamp = u64::from_le_bytes(
+        chunk[8..16]
+            .try_into()
+            .with_error_context(|e| format!("Failed to parse index timestamp: {e}"))
+            .map_err(|_| IggyError::CannotReadIndexTimestamp)?,
+    );
+    Ok(Index {
+        offset,
+        position,
+        timestamp,
+    })
 }

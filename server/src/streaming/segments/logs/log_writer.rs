@@ -16,7 +16,6 @@ use std::{
 use tokio::{
     fs::{File, OpenOptions},
     io::AsyncWriteExt,
-    sync::RwLock,
 };
 use tracing::{error, trace};
 
@@ -25,7 +24,7 @@ use tracing::{error, trace};
 pub struct SegmentLogWriter {
     file_path: String,
     /// Holds the file for synchronous writes; when asynchronous persistence is enabled, this will be None.
-    file: RwLock<Option<File>>,
+    file: Option<File>,
     /// When set, asynchronous writes are handled by this persister task.
     persister_task: Option<PersisterTask>,
     log_size_bytes: Arc<AtomicU64>,
@@ -68,7 +67,7 @@ impl SegmentLogWriter {
 
         trace!("Opened log file for writing: {file_path}, size: {actual_log_size}");
 
-        let (file_option, persister_task) = match server_confirmation {
+        let (file, persister_task) = match server_confirmation {
             Confirmation::NoWait => {
                 let persister = PersisterTask::new(
                     file,
@@ -85,7 +84,7 @@ impl SegmentLogWriter {
 
         Ok(Self {
             file_path: file_path.to_string(),
-            file: RwLock::new(file_option),
+            file,
             persister_task,
             log_size_bytes,
             fsync,
@@ -94,7 +93,7 @@ impl SegmentLogWriter {
 
     /// Append a message batch to the log file.
     pub async fn save_batches(
-        &self,
+        &mut self,
         batch: RetainedMessageBatch,
         confirmation: Confirmation,
     ) -> Result<IggyByteSize, IggyError> {
@@ -128,9 +127,8 @@ impl SegmentLogWriter {
     }
 
     /// Write a batch of bytes to the log file and return the new file position.
-    async fn write_batch(&self, batch_to_write: RetainedMessageBatch) -> Result<(), IggyError> {
-        let mut file_guard = self.file.write().await;
-        if let Some(ref mut file) = *file_guard {
+    async fn write_batch(&mut self, batch_to_write: RetainedMessageBatch) -> Result<(), IggyError> {
+        if let Some(ref mut file) = self.file {
             let header = batch_to_write.header_as_bytes();
             let batch_bytes = batch_to_write.bytes;
             let slices = [IoSlice::new(&header), IoSlice::new(&batch_bytes)];
@@ -150,8 +148,7 @@ impl SegmentLogWriter {
     }
 
     pub async fn fsync(&self) -> Result<(), IggyError> {
-        let mut file = self.file.write().await;
-        if let Some(file) = file.as_mut() {
+        if let Some(file) = self.file.as_ref() {
             file.sync_all()
                 .await
                 .with_error_context(|e| {

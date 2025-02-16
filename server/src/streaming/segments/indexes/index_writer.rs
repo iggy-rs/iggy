@@ -8,7 +8,6 @@ use std::sync::{
 use tokio::{
     fs::{File, OpenOptions},
     io::AsyncWriteExt,
-    sync::RwLock,
 };
 use tracing::trace;
 
@@ -16,7 +15,7 @@ use tracing::trace;
 #[derive(Debug)]
 pub struct SegmentIndexWriter {
     file_path: String,
-    file: RwLock<File>,
+    file: File,
     index_size_bytes: Arc<AtomicU64>,
     fsync: bool,
 }
@@ -56,22 +55,22 @@ impl SegmentIndexWriter {
 
         Ok(Self {
             file_path: file_path.to_string(),
-            file: RwLock::new(file),
+            file,
             index_size_bytes,
             fsync,
         })
     }
 
     /// Append the given index record to the index file.
-    pub async fn save_index(&self, index: Index) -> Result<(), IggyError> {
+    pub async fn save_index(&mut self, index: Index) -> Result<(), IggyError> {
         let mut buf = [0u8; INDEX_SIZE as usize];
         buf[0..4].copy_from_slice(&index.offset.to_le_bytes());
         buf[4..8].copy_from_slice(&index.position.to_le_bytes());
         buf[8..16].copy_from_slice(&index.timestamp.to_le_bytes());
 
         {
-            let mut file = self.file.write().await;
-            file.write_all(&buf)
+            self.file
+                .write_all(&buf)
                 .await
                 .with_error_context(|e| {
                     format!(
@@ -90,8 +89,8 @@ impl SegmentIndexWriter {
     }
 
     pub async fn fsync(&self) -> Result<(), IggyError> {
-        let file = self.file.write().await;
-        file.sync_all()
+        self.file
+            .sync_all()
             .await
             .with_error_context(|e| {
                 format!("Failed to fsync index file: {}, error: {e}", self.file_path)

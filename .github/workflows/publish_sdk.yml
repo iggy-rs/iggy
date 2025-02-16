@@ -70,18 +70,26 @@ jobs:
 
       - uses: actions-rs/toolchain@v1
         with:
-            toolchain: stable
-            override: true
+          toolchain: stable
+          override: true
 
       - name: publish
         run: |
           cargo login "${{ secrets.CARGO_REGISTRY_TOKEN }}"
           cargo publish -p iggy
 
+  github_release:
+    uses: ./.github/workflows/release_sdk.yml
+    needs: tag
+    if: ${{ needs.tag.outputs.tag_created == 'true' }}
+    with:
+      tag_name: "iggy-${{ needs.tag.outputs.iggy_version }}"
+
   finalize_sdk:
     runs-on: ubuntu-latest
     needs:
       - publish
+      - github_release
     if: always()
     steps:
       - uses: actions/checkout@v4

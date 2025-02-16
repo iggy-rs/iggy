@@ -52,6 +52,18 @@ path = "src/new-sdk/consumer/main.rs"
 name = "new-sdk-producer"
 path = "src/new-sdk/producer/main.rs"
 
+[[example]]
+name = "stream-basic"
+path = "src/stream/stream-basic/main.rs"
+
+[[example]]
+name = "stream-consumer"
+path = "src/stream/stream-consumer/main.rs"
+
+[[example]]
+name = "stream-producer"
+path = "src/stream/stream-producer/main.rs"
+
 [dependencies]
 ahash = { version = "0.8.11", features = ["serde"] }
 anyhow = "1.0.95"

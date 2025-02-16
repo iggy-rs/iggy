@@ -43,6 +43,7 @@ jobs:
          contains(github.event.head_commit.modified, 'Cargo.toml') ||
          contains(github.event.head_commit.modified, 'Cargo.lock')))
     uses: ./.github/workflows/coverage.yml
+    needs: sanity
 
   backwards_compatibility:
     name: Backwards compatibility

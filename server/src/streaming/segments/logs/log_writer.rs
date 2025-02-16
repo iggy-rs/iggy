@@ -5,8 +5,10 @@ use iggy::{
     error::IggyError,
     utils::{byte_size::IggyByteSize, duration::IggyDuration, sizeable::Sizeable},
 };
+use nix::fcntl::{fallocate, FallocateFlags};
 use std::{
     io::IoSlice,
+    os::fd::{AsFd, AsRawFd},
     sync::{
         atomic::{AtomicU64, Ordering},
         Arc,
@@ -20,6 +22,9 @@ use tokio::{
 use tracing::{error, trace};
 
 use super::PersisterTask;
+
+const ONE_GB: u64 = 1000 * 1000 * 1000;
+
 /// A dedicated struct for writing to the log file.
 #[derive(Debug)]
 pub struct SegmentLogWriter {

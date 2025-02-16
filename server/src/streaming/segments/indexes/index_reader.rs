@@ -11,7 +11,7 @@ use std::sync::{
 use tokio::{
     fs::{File, OpenOptions},
     io::{AsyncReadExt, AsyncSeekExt, SeekFrom},
-    sync::RwLock,
+    sync::Mutex,
 };
 use tracing::{error, trace, warn};
 
@@ -19,7 +19,7 @@ use tracing::{error, trace, warn};
 #[derive(Debug)]
 pub struct SegmentIndexReader {
     file_path: String,
-    file: RwLock<Option<File>>,
+    file: Mutex<Option<File>>,
     index_size_bytes: Arc<AtomicU64>,
 }
 
@@ -46,7 +46,7 @@ impl SegmentIndexReader {
         trace!("Opened index file for reading: {file_path}, size: {actual_index_size}",);
         Ok(Self {
             file_path: file_path.to_string(),
-            file: RwLock::new(Some(file)),
+            file: Mutex::new(Some(file)),
             index_size_bytes,
         })
     }
@@ -58,7 +58,7 @@ impl SegmentIndexReader {
             warn!("Index {} file is empty.", self.file_path);
             return Ok(Vec::new());
         }
-        let mut file = self.file.write().await;
+        let mut file = self.file.lock().await;
         let file = file
             .as_mut()
             .unwrap_or_else(|| panic!("File {} should be open", self.file_path));
@@ -135,7 +135,7 @@ impl SegmentIndexReader {
         let relative_start_offset = (index_start_offset - segment_start_offset) as u32;
         let relative_end_offset = (index_end_offset - segment_start_offset) as u32;
         let mut index_range = IndexRange::default();
-        let mut file = self.file.write().await;
+        let mut file = self.file.lock().await;
 
         let file = file
             .as_mut()
@@ -200,7 +200,7 @@ impl SegmentIndexReader {
             return Ok(Some(Index::default()));
         }
 
-        let mut file = self.file.write().await;
+        let mut file = self.file.lock().await;
         let file = file
             .as_mut()
             .unwrap_or_else(|| panic!("File {} should be open", self.file_path));

@@ -3018,6 +3018,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "nix"
+version = "0.29.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "71e2746dc3a24dd78b3cfcb7be93368c6de9963d30f43a6a73998a9cf4b17b46"
+dependencies = [
+ "bitflags 2.8.0",
+ "cfg-if",
+ "cfg_aliases",
+ "libc",
+]
+
+[[package]]
 name = "nom"
 version = "7.1.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3153,6 +3165,17 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "62948e14d923ea95ea2c7c86c71013138b66525b86bdc08d2dcc262bdb497b87"
 dependencies = [
  "memchr",
+]
+
+[[package]]
+name = "off64"
+version = "0.6.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4334b01034c8d2e23d578d6bc6ad4e28bffe68e0a98f7c4b3c2a3154163ebb87"
+dependencies = [
+ "async-trait",
+ "chrono",
+ "num",
 ]
 
 [[package]]
@@ -4437,6 +4460,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "seekable-async-file"
+version = "0.12.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "27b0b94876ed2b5ac6a9e023edbd6baa1551d0ea7044f3c7dba55c158cd9dabe"
+dependencies = [
+ "async-trait",
+ "futures",
+ "off64",
+ "signal-future",
+ "tokio",
+]
+
+[[package]]
 name = "semver"
 version = "1.0.25"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4594,6 +4630,7 @@ dependencies = [
  "mimalloc",
  "mockall",
  "moka",
+ "nix",
  "openssl",
  "opentelemetry",
  "opentelemetry-appender-tracing",
@@ -4608,6 +4645,7 @@ dependencies = [
  "rust-s3",
  "rustls",
  "rustls-pemfile",
+ "seekable-async-file",
  "serde",
  "serde_json",
  "serde_with",
@@ -4667,6 +4705,12 @@ name = "shlex"
 version = "1.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0fda2ff0d084019ba4d7c6f371c95d8fd75ce3524c3cb8fb653a3023f6323e64"
+
+[[package]]
+name = "signal-future"
+version = "0.0.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "fd7f53ace1d1c322ccf78f25c9f90229e6866bc79dbf1c4e31d5c9ac6c546c7f"
 
 [[package]]
 name = "signal-hook-registry"

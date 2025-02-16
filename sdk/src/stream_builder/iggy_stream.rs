@@ -4,10 +4,10 @@ use crate::clients::consumer::IggyConsumer;
 use crate::clients::producer::IggyProducer;
 use crate::error::IggyError;
 use crate::stream_builder::{build, IggyStreamConfig};
-use tracing::info;
+use tracing::trace;
 
 #[derive(Debug, Default, Clone, Eq, PartialEq)]
-pub struct IggyStream {}
+pub struct IggyStream;
 
 impl IggyStream {
     /// Build and connect iggy client, producer and consumer
@@ -25,29 +25,17 @@ impl IggyStream {
         client: &IggyClient,
         config: &IggyStreamConfig,
     ) -> Result<(IggyProducer, IggyConsumer), IggyError> {
-        info!("Check if client is connected");
+        trace!("Check if client is connected");
         if client.ping().await.is_err() {
             return Err(IggyError::NotConnected);
         }
 
-        info!("Build iggy producer");
+        trace!("Build iggy producer");
         // The producer creates stream and topic if it doesn't exist
-        let iggy_producer =
-            match build::build_iggy_producer::build_iggy_producer(client, config.producer_config())
-                .await
-            {
-                Ok(iggy_producer) => iggy_producer,
-                Err(err) => return Err(err),
-            };
+        let iggy_producer = build::build_iggy_producer(client, config.producer_config()).await?;
 
-        info!("Build iggy consumer");
-        let iggy_consumer =
-            match build::build_iggy_consumer::build_iggy_consumer(client, config.consumer_config())
-                .await
-            {
-                Ok(iggy_consumer) => iggy_consumer,
-                Err(err) => return Err(err),
-            };
+        trace!("Build iggy consumer");
+        let iggy_consumer = build::build_iggy_consumer(client, config.consumer_config()).await?;
 
         Ok((iggy_producer, iggy_consumer))
     }
@@ -67,10 +55,10 @@ impl IggyStream {
         connection_string: &str,
         config: &IggyStreamConfig,
     ) -> Result<(IggyClient, IggyProducer, IggyConsumer), IggyError> {
-        info!("Build and connect iggy client");
-        let client = build::build_iggy_client::build_iggy_client(connection_string).await?;
+        trace!("Build and connect iggy client");
+        let client = build::build_iggy_client(connection_string).await?;
 
-        info!("Build iggy producer and consumer");
+        trace!("Build iggy producer and consumer");
         let (iggy_producer, iggy_consumer) = Self::build(&client, config).await?;
         Ok((client, iggy_producer, iggy_consumer))
     }

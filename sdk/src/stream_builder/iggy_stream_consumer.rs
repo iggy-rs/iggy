@@ -3,9 +3,10 @@ use crate::clients::client::IggyClient;
 use crate::clients::consumer::IggyConsumer;
 use crate::error::IggyError;
 use crate::stream_builder::{build, IggyConsumerConfig};
-use tracing::info;
+use tracing::trace;
+
 #[derive(Debug, Default, Clone, Eq, PartialEq)]
-pub struct IggyStreamConsumer {}
+pub struct IggyStreamConsumer;
 
 impl IggyStreamConsumer {
     /// Creates a new `IggyStreamConsumer` with an existing client and `IggyConsumerConfig`.
@@ -23,23 +24,16 @@ impl IggyStreamConsumer {
         client: &IggyClient,
         config: &IggyConsumerConfig,
     ) -> Result<IggyConsumer, IggyError> {
-        info!("Check if client is connected");
+        trace!("Check if client is connected");
         if client.ping().await.is_err() {
             return Err(IggyError::NotConnected);
         }
 
-        info!("Check if stream and topic exist");
-        match build::build_iggy_stream_topic_if_not_exists(client, config).await {
-            Ok(_) => (),
-            Err(err) => return Err(err),
-        }
+        trace!("Check if stream and topic exist");
+        build::build_iggy_stream_topic_if_not_exists(client, config).await?;
 
-        info!("Build iggy consumer");
-        let iggy_consumer =
-            match build::build_iggy_consumer::build_iggy_consumer(client, config).await {
-                Ok(iggy_consumer) => iggy_consumer,
-                Err(err) => return Err(err),
-            };
+        trace!("Build iggy consumer");
+        let iggy_consumer = build::build_iggy_consumer(client, config).await?;
 
         Ok(iggy_consumer)
     }
@@ -60,20 +54,14 @@ impl IggyStreamConsumer {
         connection_string: &str,
         config: &IggyConsumerConfig,
     ) -> Result<(IggyClient, IggyConsumer), IggyError> {
-        info!("Build and connect iggy client");
+        trace!("Build and connect iggy client");
         let client = build::build_iggy_client(connection_string).await?;
 
-        info!("Check if stream and topic exist");
-        match build::build_iggy_stream_topic_if_not_exists(&client, config).await {
-            Ok(_) => (),
-            Err(err) => return Err(err),
-        }
+        trace!("Check if stream and topic exist");
+        build::build_iggy_stream_topic_if_not_exists(&client, config).await?;
 
-        info!("Build iggy consumer");
-        let iggy_consumer = match build::build_iggy_consumer(&client, config).await {
-            Ok(iggy_consumer) => iggy_consumer,
-            Err(err) => return Err(err),
-        };
+        trace!("Build iggy consumer");
+        let iggy_consumer = build::build_iggy_consumer(&client, config).await?;
 
         Ok((client, iggy_consumer))
     }

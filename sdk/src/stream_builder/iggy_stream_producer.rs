@@ -3,10 +3,10 @@ use crate::clients::client::IggyClient;
 use crate::clients::producer::IggyProducer;
 use crate::error::IggyError;
 use crate::stream_builder::{build, IggyProducerConfig};
-use tracing::info;
+use tracing::trace;
 
 #[derive(Debug, Default, Clone, Eq, PartialEq)]
-pub struct IggyStreamProducer {}
+pub struct IggyStreamProducer;
 
 impl IggyStreamProducer {
     /// Creates a new `IggyProducer` instance and its associated producer using the `client` and
@@ -25,17 +25,14 @@ impl IggyStreamProducer {
         client: &IggyClient,
         config: &IggyProducerConfig,
     ) -> Result<IggyProducer, IggyError> {
-        info!("Check if client is connected");
+        trace!("Check if client is connected");
         if client.ping().await.is_err() {
             return Err(IggyError::NotConnected);
         }
 
+        trace!("Build iggy producer");
         // The producer creates stream and topic if it doesn't exist
-        info!("Build iggy producer");
-        let iggy_producer = match build::build_iggy_producer(client, config).await {
-            Ok(iggy_producer) => iggy_producer,
-            Err(err) => return Err(err),
-        };
+        let iggy_producer = build::build_iggy_producer(client, config).await?;
 
         Ok(iggy_producer)
     }
@@ -56,14 +53,12 @@ impl IggyStreamProducer {
         connection_string: &str,
         config: &IggyProducerConfig,
     ) -> Result<(IggyClient, IggyProducer), IggyError> {
-        info!("Build and connect iggy client");
+        trace!("Build and connect iggy client");
         let client = build::build_iggy_client::build_iggy_client(connection_string).await?;
 
-        info!("Build iggy producer");
-        let iggy_producer = match build::build_iggy_producer(&client, config).await {
-            Ok(iggy_producer) => iggy_producer,
-            Err(err) => return Err(err),
-        };
+        trace!("Build iggy producer");
+        // The producer creates stream and topic if it doesn't exist
+        let iggy_producer = build::build_iggy_producer(&client, config).await?;
 
         Ok((client, iggy_producer))
     }

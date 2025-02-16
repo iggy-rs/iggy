@@ -53,28 +53,12 @@ jobs:
 
   build_and_test:
     needs: sanity
-    name: ${{ matrix.platform.skip_tests == true && 'build' || 'build and test' }} ${{ matrix.platform.os_name }}
-    runs-on: ${{ matrix.platform.os }}
+    name: 'build and test Linux-x86_64-musl'
+    runs-on: ubuntu-latest
     timeout-minutes: 45
     strategy:
       fail-fast: false
-      matrix:
-        platform:
-          - os_name: Linux-x86_64-musl
-            os: ubuntu-latest
-            target: x86_64-unknown-linux-musl
-            cargo_command: cargo
-            skip_tests: false
 
-          - os_name: Windows-x86_64
-            os: windows-latest
-            target: x86_64-pc-windows-msvc
-            skip_tests: true
-
-        toolchain:
-          - stable
-          # - nightly
-          # - beta
     steps:
       - uses: actions/checkout@v4
 
@@ -88,46 +72,30 @@ jobs:
           sudo apt-get update --yes && sudo apt-get install --yes musl-tools gnome-keyring keyutils
           rm -f $HOME/.local/share/keyrings/*
           echo -n "test" | gnome-keyring-daemon --unlock
-        if: ${{ matrix.platform.os == 'ubuntu-latest' }}
 
       - name: Build binary (Linux)
         uses: houseabsolute/actions-rust-cross@v0
         with:
           command: "build"
-          target: ${{ matrix.platform.target }}
-          toolchain: ${{ matrix.toolchain }}
+          target: x86_64-unknown-linux-musl
+          toolchain: stable
           args: "--verbose"
-        if: ${{ matrix.platform.os == 'ubuntu-latest' }}
-
-      - name: Build binary (Windows)
-        uses: houseabsolute/actions-rust-cross@v0
-        env:
-          AWS_LC_SYS_NO_ASM: 1
-        with:
-          command: "build"
-          target: ${{ matrix.platform.target }}
-          toolchain: ${{ matrix.toolchain }}
-          args: "--verbose"
-        if: ${{ matrix.platform.os == 'windows-latest' }}
 
       - name: Run tests
         uses: houseabsolute/actions-rust-cross@v0
         with:
           command: "test"
-          target: ${{ matrix.platform.target }}
-          toolchain: ${{ matrix.toolchain }}
+          target: x86_64-unknown-linux-musl
+          toolchain: stable
           args: "--verbose"
-        if: ${{ !matrix.platform.skip_tests }}
 
       - name: Check CLI examples from README
         run: ./scripts/run-examples-from-readme.sh
-        if: ${{ matrix.platform.os == 'ubuntu-latest' }}
 
       - name: Check if workspace is clean
         run: git status | grep "working tree clean" || { git status ; exit 1; }
-        if: ${{ matrix.platform.os == 'ubuntu-latest' }}
 
-  # TODO: below job is nonblocking: temporary solution until we decide whether
+  # TODO: below job is non-blocking: temporary solution until we decide whether
   #       we want to use the new M1 macs for CI, determine cost and performance
   build_and_test_macos:
     needs: sanity
@@ -150,12 +118,34 @@ jobs:
       - name: Run tests
         run: cargo test --verbose --target aarch64-apple-darwin
 
+  build_windows:
+    needs: sanity
+    name: build Windows
+    runs-on: windows-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo & target directories
+        uses: Swatinem/rust-cache@v2
+        with:
+          key: "v2"
+
+      - name: Build iggy package
+        run: cargo build --verbose --target x86_64-pc-windows-msvc -p iggy
+
+      - name: Build iggy-cli binary
+        run: cargo build --verbose --target x86_64-pc-windows-msvc --bin iggy
+
   finalize_pr:
     runs-on: ubuntu-latest
     needs:
       - sanity
       - coverage
       - backwards_compatibility
+      - build_windows
       - build_and_test
     if: always()
     steps:

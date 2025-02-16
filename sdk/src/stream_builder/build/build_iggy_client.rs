@@ -20,15 +20,7 @@ use crate::error::IggyError;
 /// an `IggyError` will be returned.
 ///
 pub(crate) async fn build_iggy_client(connection_string: &str) -> Result<IggyClient, IggyError> {
-    let client = match IggyClient::from_connection_string(connection_string) {
-        Ok(client) => client,
-        Err(err) => return Err(err),
-    };
-
-    match client.connect().await {
-        Ok(_) => {}
-        Err(err) => return Err(err),
-    };
-
+    let client = IggyClient::from_connection_string(connection_string)?;
+    client.connect().await?;
     Ok(client)
 }

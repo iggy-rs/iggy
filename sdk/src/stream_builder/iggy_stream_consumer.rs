@@ -1,9 +1,8 @@
 use crate::client::SystemClient;
 use crate::clients::client::IggyClient;
 use crate::clients::consumer::IggyConsumer;
-use crate::config::IggyConsumerConfig;
 use crate::error::IggyError;
-use crate::stream_builder::build;
+use crate::stream_builder::{build, IggyConsumerConfig};
 use tracing::info;
 #[derive(Debug, Default, Clone, Eq, PartialEq)]
 pub struct IggyStreamConsumer {}

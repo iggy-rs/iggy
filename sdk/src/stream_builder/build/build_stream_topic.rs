@@ -1,9 +1,9 @@
 use crate::client::{StreamClient, TopicClient};
 use crate::clients::client::IggyClient;
 use crate::compression::compression_algorithm::CompressionAlgorithm;
-use crate::config::IggyConsumerConfig;
 use crate::error::IggyError;
 use crate::identifier::{IdKind, Identifier};
+use crate::stream_builder::IggyConsumerConfig;
 use crate::utils::expiry::IggyExpiry;
 use crate::utils::topic_size::MaxTopicSize;
 use tracing::info;

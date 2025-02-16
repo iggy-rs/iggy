@@ -1,6 +1,5 @@
-use crate::config::IggyConsumerConfig;
-use crate::config::IggyProducerConfig;
 use crate::identifier::Identifier;
+use crate::stream_builder::{IggyConsumerConfig, IggyProducerConfig};
 use crate::utils::duration::IggyDuration;
 use bon::Builder;
 

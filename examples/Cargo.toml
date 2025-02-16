@@ -64,6 +64,10 @@ path = "src/stream-builder/stream-consumer/main.rs"
 name = "stream-producer"
 path = "src/stream-builder/stream-producer/main.rs"
 
+[[example]]
+name = "stream-producer-config"
+path = "src/stream-builder/stream-producer-config/main.rs"
+
 [dependencies]
 ahash = { version = "0.8.11", features = ["serde"] }
 anyhow = "1.0.95"

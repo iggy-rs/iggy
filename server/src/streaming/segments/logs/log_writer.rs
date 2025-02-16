@@ -1,3 +1,4 @@
+use super::PersisterTask;
 use crate::streaming::batching::message_batch::RetainedMessageBatch;
 use error_set::ErrContext;
 use iggy::{
@@ -19,7 +20,6 @@ use tokio::{
 };
 use tracing::{error, trace};
 
-use super::PersisterTask;
 /// A dedicated struct for writing to the log file.
 #[derive(Debug)]
 pub struct SegmentLogWriter {

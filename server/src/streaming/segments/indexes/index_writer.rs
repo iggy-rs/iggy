@@ -16,7 +16,7 @@ use tracing::trace;
 #[derive(Debug)]
 pub struct SegmentIndexWriter {
     file_path: String,
-    file: RwLock<Option<File>>,
+    file: RwLock<File>,
     index_size_bytes: Arc<AtomicU64>,
     fsync: bool,
 }
@@ -56,7 +56,7 @@ impl SegmentIndexWriter {
 
         Ok(Self {
             file_path: file_path.to_string(),
-            file: RwLock::new(Some(file)),
+            file: RwLock::new(file),
             index_size_bytes,
             fsync,
         })
@@ -71,9 +71,6 @@ impl SegmentIndexWriter {
 
         {
             let mut file = self.file.write().await;
-            let file = file
-                .as_mut()
-                .unwrap_or_else(|| panic!("File {} should be open", self.file_path));
             file.write_all(&buf)
                 .await
                 .with_error_context(|e| {
@@ -93,10 +90,7 @@ impl SegmentIndexWriter {
     }
 
     pub async fn fsync(&self) -> Result<(), IggyError> {
-        let mut file = self.file.write().await;
-        let file = file
-            .as_mut()
-            .unwrap_or_else(|| panic!("File {} should be open", self.file_path));
+        let file = self.file.write().await;
         file.sync_all()
             .await
             .with_error_context(|e| {

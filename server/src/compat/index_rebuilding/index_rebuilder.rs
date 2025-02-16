@@ -1,6 +1,6 @@
 use crate::streaming::utils::file;
 use crate::{
-    server_error::CompatError, streaming::batching::message_batch::RETAINED_BATCH_OVERHEAD,
+    server_error::CompatError, streaming::batching::message_batch::RETAINED_BATCH_HEADER_LEN,
 };
 use std::io::SeekFrom;
 use tokio::io::{AsyncReadExt, AsyncSeekExt, AsyncWriteExt, BufReader, BufWriter};
@@ -73,7 +73,7 @@ impl IndexRebuilder {
             match Self::read_batch_header(&mut reader).await {
                 Ok(header) => {
                     // Calculate next position before writing current entry
-                    next_position = position + RETAINED_BATCH_OVERHEAD as u32 + header.length;
+                    next_position = position + RETAINED_BATCH_HEADER_LEN as u32 + header.length;
 
                     // Write index entry using current position
                     Self::write_index_entry(&mut writer, &header, position, self.start_offset)

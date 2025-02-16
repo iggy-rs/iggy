@@ -3044,6 +3044,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "nix"
+version = "0.29.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "71e2746dc3a24dd78b3cfcb7be93368c6de9963d30f43a6a73998a9cf4b17b46"
+dependencies = [
+ "bitflags 2.8.0",
+ "cfg-if",
+ "cfg_aliases",
+ "libc",
+]
+
+[[package]]
 name = "nom"
 version = "7.1.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4591,7 +4603,7 @@ dependencies = [
 
 [[package]]
 name = "server"
-version = "0.4.203"
+version = "0.4.204"
 dependencies = [
  "ahash 0.8.11",
  "anyhow",
@@ -4620,6 +4632,7 @@ dependencies = [
  "mimalloc",
  "mockall",
  "moka",
+ "nix",
  "openssl",
  "opentelemetry",
  "opentelemetry-appender-tracing",

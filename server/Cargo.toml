@@ -1,6 +1,6 @@
 [package]
 name = "server"
-version = "0.4.203"
+version = "0.4.204"
 edition = "2021"
 build = "src/build.rs"
 license = "Apache-2.0"
@@ -45,6 +45,7 @@ iggy = { path = "../sdk" }
 jsonwebtoken = "9.3.1"
 mimalloc = { version = "0.1", optional = true }
 moka = { version = "0.12.10", features = ["future"] }
+nix = { version = "0.29", features = ["fs"] }
 openssl = { version = "0.10.70", features = ["vendored"] }
 opentelemetry = { version = "0.28.0", features = ["trace", "logs"] }
 opentelemetry-appender-tracing = { version = "0.28.1", features = ["log"] }

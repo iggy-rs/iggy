@@ -4,7 +4,7 @@ use crate::streaming::models::messages::RetainedMessage;
 use bytes::Bytes;
 use iggy::utils::{byte_size::IggyByteSize, sizeable::Sizeable};
 
-pub const RETAINED_BATCH_OVERHEAD: u64 = 8 + 8 + 4 + 4;
+pub const RETAINED_BATCH_HEADER_LEN: u64 = 8 + 8 + 4 + 4;
 
 #[derive(Debug)]
 pub struct RetainedMessageBatch {
@@ -81,6 +81,6 @@ where
 
 impl Sizeable for RetainedMessageBatch {
     fn get_size_bytes(&self) -> IggyByteSize {
-        self.length + RETAINED_BATCH_OVERHEAD.into()
+        self.length + RETAINED_BATCH_HEADER_LEN.into()
     }
 }

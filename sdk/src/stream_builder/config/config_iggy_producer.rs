@@ -1,0 +1,330 @@
+use bon::Builder;
+
+use crate::error::IggyError;
+use crate::identifier::Identifier;
+use crate::messages::send_messages::Partitioning;
+use crate::utils::crypto::EncryptorKind;
+use crate::utils::duration::IggyDuration;
+use std::str::FromStr;
+use std::sync::Arc;
+
+#[derive(Builder, Debug, Clone)]
+#[builder(on(String, into))]
+pub struct IggyProducerConfig {
+    stream_id: Identifier,
+    stream_name: String,
+    topic_id: Identifier,
+    topic_name: String,
+    batch_size: u32,
+    send_interval: IggyDuration,
+    partitioning: Partitioning,
+    partitions_count: u32,
+    replication_factor: Option<u8>,
+    encryptor: Option<Arc<EncryptorKind>>,
+    send_retries_count: Option<u32>,
+    send_retries_interval: Option<IggyDuration>,
+}
+
+impl Default for IggyProducerConfig {
+    fn default() -> Self {
+        let stream_id = Identifier::from_str_value("test_stream").unwrap();
+        let topic_id = Identifier::from_str_value("test_topic").unwrap();
+
+        Self {
+            stream_id,
+            stream_name: "test_stream".to_string(),
+            topic_id,
+            topic_name: "test_topic".to_string(),
+            batch_size: 100,
+            send_interval: IggyDuration::from_str("5ms").unwrap(),
+            partitioning: Partitioning::balanced(),
+            partitions_count: 1,
+            replication_factor: None,
+            encryptor: None,
+            send_retries_count: Some(3),
+            send_retries_interval: Some(IggyDuration::new_from_secs(1)),
+        }
+    }
+}
+
+impl IggyProducerConfig {
+    /// Creates a new `IggyProducerConfig` with all fields defined.
+    ///
+    /// # Args
+    ///
+    /// * `stream_id` - The stream identifier.
+    /// * `stream_name` - The stream name.
+    /// * `topic_id` - The topic identifier.
+    /// * `topic_name` - The topic name.
+    /// * `batch_size` - The max number of messages to send in a batch.
+    /// * `send_interval` - The interval between messages sent.
+    /// * `partitioning` - The partitioning strategy to use.
+    /// * `partition` - The number of partitions to create.
+    /// * `replication_factor` - The replication factor to use.
+    /// * `encryptor` - The encryptor to use.
+    /// * `send_retries_count` - The number of retries to send messages.
+    /// * `send_retries_interval` - The interval between retries.
+    ///
+    /// Returns:
+    /// A new `IggyProducerConfig`.
+    ///
+    #[allow(clippy::too_many_arguments)]
+    pub fn new(
+        stream_id: Identifier,
+        stream_name: String,
+        topic_id: Identifier,
+        topic_name: String,
+        batch_size: u32,
+        send_interval: IggyDuration,
+        partitioning: Partitioning,
+        partitions_count: u32,
+        replication_factor: Option<u8>,
+        encryptor: Option<Arc<EncryptorKind>>,
+        send_retries_count: Option<u32>,
+        send_retries_interval: Option<IggyDuration>,
+    ) -> Self {
+        Self {
+            stream_id,
+            stream_name,
+            topic_id,
+            topic_name,
+            batch_size,
+            send_interval,
+            partitioning,
+            partitions_count,
+            replication_factor,
+            encryptor,
+            send_retries_count,
+            send_retries_interval,
+        }
+    }
+
+    /// Creates a new `IggyProducerConfig` from the given stream and topic names, along with the
+    /// max batch size and the send interval.
+    ///
+    /// # Args
+    ///
+    /// * `stream` - The stream name.
+    /// * `topic` - The topic name.
+    /// * `batch_size` - The max number of messages to send in a batch.
+    /// * `send_interval` - The interval between messages sent.
+    ///
+    /// Returns:
+    /// A new `IggyProducerConfig`.
+    ///
+    pub fn from_stream_topic(
+        stream: &str,
+        topic: &str,
+        batch_size: u32,
+        send_interval: IggyDuration,
+    ) -> Result<Self, IggyError> {
+        let stream_id = Identifier::from_str_value(stream)?;
+        let topic_id = Identifier::from_str_value(topic)?;
+
+        Ok(Self {
+            stream_id,
+            stream_name: stream.to_string(),
+            topic_id,
+            topic_name: topic.to_string(),
+            batch_size,
+            send_interval,
+            partitioning: Partitioning::balanced(),
+            partitions_count: 1,
+            replication_factor: None,
+            encryptor: None,
+            send_retries_count: Some(3),
+            send_retries_interval: Some(IggyDuration::new_from_secs(1)),
+        })
+    }
+}
+
+impl IggyProducerConfig {
+    pub fn stream_id(&self) -> &Identifier {
+        &self.stream_id
+    }
+
+    pub fn stream_name(&self) -> &str {
+        &self.stream_name
+    }
+
+    pub fn topic_id(&self) -> &Identifier {
+        &self.topic_id
+    }
+
+    pub fn topic_name(&self) -> &str {
+        &self.topic_name
+    }
+
+    pub fn batch_size(&self) -> u32 {
+        self.batch_size
+    }
+
+    pub fn send_interval(&self) -> IggyDuration {
+        self.send_interval
+    }
+
+    pub fn partitioning(&self) -> &Partitioning {
+        &self.partitioning
+    }
+
+    pub fn partitions_count(&self) -> u32 {
+        self.partitions_count
+    }
+
+    pub fn replication_factor(&self) -> Option<u8> {
+        self.replication_factor
+    }
+
+    pub fn encryptor(&self) -> Option<Arc<EncryptorKind>> {
+        self.encryptor.clone()
+    }
+
+    pub fn send_retries_count(&self) -> Option<u32> {
+        self.send_retries_count
+    }
+
+    pub fn send_retries_interval(&self) -> Option<IggyDuration> {
+        self.send_retries_interval
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn should_be_equal() {
+        let stream_id = Identifier::from_str_value("test_stream").unwrap();
+        let topic_id = Identifier::from_str_value("test_topic").unwrap();
+
+        // Builder is generated by the bon macro
+        let config = IggyProducerConfig::builder()
+            .stream_id(stream_id)
+            .stream_name("test_stream")
+            .topic_id(topic_id)
+            .topic_name("test_topic")
+            .batch_size(100)
+            .send_interval(IggyDuration::from_str("5ms").unwrap())
+            .partitioning(Partitioning::balanced())
+            .partitions_count(1)
+            .send_retries_count(3)
+            .send_retries_interval(IggyDuration::new_from_secs(1))
+            .build();
+
+        assert_eq!(
+            config.stream_id(),
+            &Identifier::from_str_value("test_stream").unwrap()
+        );
+        assert_eq!(config.stream_name(), "test_stream");
+        assert_eq!(
+            config.topic_id(),
+            &Identifier::from_str_value("test_topic").unwrap()
+        );
+        assert_eq!(config.topic_name(), "test_topic");
+        assert_eq!(config.batch_size(), 100);
+        assert_eq!(
+            config.send_interval(),
+            IggyDuration::from_str("5ms").unwrap()
+        );
+        assert_eq!(config.partitioning(), &Partitioning::balanced());
+        assert_eq!(config.partitions_count(), 1);
+        assert_eq!(config.replication_factor(), None);
+        assert_eq!(config.send_retries_count(), Some(3));
+        assert_eq!(
+            config.send_retries_interval(),
+            Some(IggyDuration::new_from_secs(1))
+        );
+    }
+
+    #[test]
+    fn should_be_default() {
+        let stream_id = Identifier::from_str_value("test_stream").unwrap();
+        let topic_id = Identifier::from_str_value("test_topic").unwrap();
+
+        let config = IggyProducerConfig::default();
+        assert_eq!(config.stream_id(), &stream_id);
+        assert_eq!(config.stream_name(), "test_stream");
+        assert_eq!(config.topic_id(), &topic_id);
+        assert_eq!(config.topic_name(), "test_topic");
+        assert_eq!(config.batch_size(), 100);
+        assert_eq!(
+            config.send_interval(),
+            IggyDuration::from_str("5ms").unwrap()
+        );
+        assert_eq!(config.partitioning(), &Partitioning::balanced());
+        assert_eq!(config.partitions_count(), 1);
+        assert_eq!(config.replication_factor(), None);
+        assert_eq!(config.send_retries_count(), Some(3));
+        assert_eq!(
+            config.send_retries_interval(),
+            Some(IggyDuration::new_from_secs(1))
+        );
+    }
+
+    #[test]
+    fn should_be_new() {
+        let stream_id = Identifier::from_str_value("test_stream").unwrap();
+        let topic_id = Identifier::from_str_value("test_topic").unwrap();
+
+        let config = IggyProducerConfig::new(
+            stream_id.clone(),
+            String::from("test_stream"),
+            topic_id.clone(),
+            String::from("test_topic"),
+            100,
+            IggyDuration::from_str("5ms").unwrap(),
+            Partitioning::balanced(),
+            1,
+            None,
+            None,
+            Some(3),
+            Some(IggyDuration::new_from_secs(1)),
+        );
+        assert_eq!(config.stream_id(), &stream_id);
+        assert_eq!(config.stream_name(), "test_stream");
+        assert_eq!(config.topic_id(), &topic_id);
+        assert_eq!(config.topic_name(), "test_topic");
+        assert_eq!(config.batch_size(), 100);
+        assert_eq!(
+            config.send_interval(),
+            IggyDuration::from_str("5ms").unwrap()
+        );
+        assert_eq!(config.partitioning(), &Partitioning::balanced());
+        assert_eq!(config.partitions_count(), 1);
+        assert_eq!(config.replication_factor(), None);
+        assert_eq!(config.send_retries_count(), Some(3));
+        assert_eq!(
+            config.send_retries_interval(),
+            Some(IggyDuration::new_from_secs(1))
+        );
+    }
+
+    #[test]
+    fn should_be_from_stream_topic() {
+        let stream_id = Identifier::from_str_value("test_stream").unwrap();
+        let topic_id = Identifier::from_str_value("test_topic").unwrap();
+
+        let res = IggyProducerConfig::from_stream_topic(
+            "test_stream",
+            "test_topic",
+            100,
+            IggyDuration::from_str("5ms").unwrap(),
+        );
+
+        assert!(res.is_ok());
+        let config = res.unwrap();
+
+        assert_eq!(config.stream_id(), &stream_id);
+        assert_eq!(config.stream_name(), "test_stream");
+        assert_eq!(config.topic_id(), &topic_id);
+        assert_eq!(config.topic_name(), "test_topic");
+        assert_eq!(config.batch_size(), 100);
+        assert_eq!(
+            config.send_interval(),
+            IggyDuration::from_str("5ms").unwrap()
+        );
+        assert_eq!(config.partitioning(), &Partitioning::balanced());
+        assert_eq!(config.partitions_count(), 1);
+        assert_eq!(config.replication_factor(), None);
+    }
+}

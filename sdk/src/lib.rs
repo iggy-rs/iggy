@@ -30,6 +30,7 @@ pub mod partitions;
 pub mod personal_access_tokens;
 pub mod quic;
 pub mod snapshot;
+pub mod stream_builder;
 pub mod streams;
 pub mod system;
 pub mod tcp;

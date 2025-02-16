@@ -97,6 +97,7 @@ function construct_bench_command() {
     local protocol=$8
     local remark=${9:-""}
     local identifier=${10:-$(hostname)}
+    local rate_limit=${11:-""}
 
     # Set variables based on benchmark mode
     local actor_args=""
@@ -122,6 +123,9 @@ function construct_bench_command() {
         "end-to-end-producing-consumer")
             actor_args="--producers ${actors}"
             ;;
+        "end-to-end-producing-consumer-group")
+            actor_args="--producers ${actors}"
+            ;;
         *)
             echo "Error: Invalid benchmark mode '$benchmark_mode'." >&2
             return 1
@@ -133,7 +137,7 @@ function construct_bench_command() {
     local commit_date
     commit_date=$(get_git_commit_date .) || { echo "Failed to get git commit date."; exit 1; }
 
-    echo "$bench_command \
+    echo "$bench_command ${rate_limit:+ --rate-limit ${rate_limit}} \
 --message-size ${message_size} \
 --messages-per-batch ${messages_per_batch} \
 --message-batches ${message_batches} \

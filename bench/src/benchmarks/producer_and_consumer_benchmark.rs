@@ -81,6 +81,9 @@ impl Benchmarkable for ProducerAndConsumerBenchmark {
                 self.args.moving_average_window(),
                 polling_kind,
                 false, // TODO: Calculate latency from timestamp in first message, it should be an argument to iggy-bench
+                self.args
+                    .rate_limit()
+                    .map(|rl| RateLimiter::new(rl.as_bytes_u64())),
             );
             let future = Box::pin(async move { consumer.run().await });
             futures.as_mut().unwrap().push(future);

@@ -1,6 +1,7 @@
 use crate::actors::consumer::Consumer;
 use crate::args::common::IggyBenchArgs;
 use crate::benchmarks::benchmark::{BenchmarkFutures, Benchmarkable};
+use crate::rate_limiter::RateLimiter;
 use async_trait::async_trait;
 use iggy::messages::poll_messages::PollingKind;
 use iggy_bench_report::benchmark_kind::BenchmarkKind;
@@ -72,6 +73,8 @@ impl Benchmarkable for ConsumerBenchmark {
                 args.moving_average_window(),
                 polling_kind,
                 false, // TODO: Calculate latency from timestamp in first message, it should be an argument to iggy-bench
+                args.rate_limit()
+                    .map(|rl| RateLimiter::new(rl.as_bytes_u64())),
             );
 
             let future = Box::pin(async move { consumer.run().await });

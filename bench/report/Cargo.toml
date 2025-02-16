@@ -1,6 +1,6 @@
 [package]
 name = "iggy-bench-report"
-version = "0.2.0"
+version = "0.2.1"
 edition = "2021"
 description = "Benchmark report and chart generation library for iggy-bench binary and iggy-benchmarks-dashboard web app"
 license = "Apache-2.0"

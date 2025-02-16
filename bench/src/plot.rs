@@ -20,7 +20,7 @@ impl ChartType {
         }
     }
 
-    fn create_chart(&self) -> fn(&BenchmarkReport, bool) -> Chart {
+    fn create_chart(&self) -> fn(&BenchmarkReport, bool, bool) -> Chart {
         match self {
             ChartType::Throughput => iggy_bench_report::create_throughput_chart,
             ChartType::Latency => iggy_bench_report::create_latency_chart,
@@ -71,7 +71,7 @@ pub fn plot_chart(
     should_open_in_browser: bool,
 ) -> std::io::Result<()> {
     let data_processing_start = Instant::now();
-    let chart = (chart_type.create_chart())(report, true); // Use dark theme by default
+    let chart = (chart_type.create_chart())(report, true, false); // Use dark theme by default
     let data_processing_time = data_processing_start.elapsed();
 
     let chart_render_start = Instant::now();

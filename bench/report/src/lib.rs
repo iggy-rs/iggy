@@ -13,10 +13,14 @@ use plotting::chart_kind::ChartKind;
 
 pub use types::*;
 
-pub fn create_throughput_chart(report: &BenchmarkReport, dark: bool) -> Chart {
+pub fn create_throughput_chart(
+    report: &BenchmarkReport,
+    dark: bool,
+    strip_title_and_subtext: bool,
+) -> Chart {
     let title = report.title(ChartKind::Throughput);
 
-    let mut chart = IggyChart::new(&title, &report.subtext(), dark)
+    let mut chart = IggyChart::new(&title, &report.subtext(), dark, strip_title_and_subtext)
         .with_time_x_axis()
         .with_dual_y_axis("Throughput [MB/s]", "Throughput [msg/s]");
 
@@ -74,10 +78,14 @@ pub fn create_throughput_chart(report: &BenchmarkReport, dark: bool) -> Chart {
     chart.inner
 }
 
-pub fn create_latency_chart(report: &BenchmarkReport, dark: bool) -> Chart {
+pub fn create_latency_chart(
+    report: &BenchmarkReport,
+    dark: bool,
+    strip_title_and_subtext: bool,
+) -> Chart {
     let title = report.title(ChartKind::Latency);
 
-    let mut chart = IggyChart::new(&title, &report.subtext(), dark)
+    let mut chart = IggyChart::new(&title, &report.subtext(), dark, strip_title_and_subtext)
         .with_time_x_axis()
         .with_y_axis("Latency [ms]");
 

@@ -3,6 +3,7 @@ use crate::args::common::IggyBenchArgs;
 use crate::benchmarks::benchmark::Benchmarkable;
 use crate::plot::{plot_chart, ChartType};
 use crate::utils::collect_server_logs_and_save_to_file;
+use crate::utils::cpu_name::append_cpu_name_lowercase;
 use crate::utils::server_starter::start_server_if_needed;
 use futures::future::select_all;
 use iggy::error::IggyError;
@@ -74,9 +75,10 @@ impl BenchmarkRunner {
 
         if let Some(output_dir) = benchmark.args().output_dir() {
             // Generate the full output path using the directory name generator
-            let dir_name = benchmark.args().generate_dir_name();
+            let mut dir_name = benchmark.args().generate_dir_name();
+            append_cpu_name_lowercase(&mut dir_name);
             let full_output_path = Path::new(&output_dir)
-                .join(dir_name)
+                .join(dir_name.clone())
                 .to_string_lossy()
                 .to_string();
 

@@ -228,7 +228,7 @@ impl IggyConsumerConfig {
     }
 
     pub fn reconnection_retry_interval(&self) -> IggyDuration {
-        self.reconnection_retry_interval.clone()
+        self.reconnection_retry_interval
     }
 
     pub fn init_retries(&self) -> Option<u32> {

@@ -62,6 +62,8 @@ impl IggyProducerConfig {
     /// * `partition` - The number of partitions to create.
     /// * `replication_factor` - The replication factor to use.
     /// * `encryptor` - The encryptor to use.
+    /// * `send_retries_count` - The number of retries to send messages.
+    /// * `send_retries_interval` - The interval between retries.
     ///
     /// Returns:
     /// A new `IggyProducerConfig`.

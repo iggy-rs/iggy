@@ -1,0 +1,59 @@
+name: release_sdk
+
+on:
+  workflow_call:
+    inputs:
+      tag_name:
+        description: 'The name of the tag to be released'
+        required: true
+        type: string
+
+env:
+  GITHUB_TOKEN: ${{ github.token }}
+
+jobs:
+  release_sdk:
+    name: Release SDK
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Create Changelog
+        uses: orhun/git-cliff-action@v4
+        id: changelog
+        with:
+          config: cliff.toml
+          args: -vv --latest
+        env:
+          OUTPUT: CHANGELOG.md
+          GITHUB_REPO: ${{ github.repository }}
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          body: ${{ steps.changelog.outputs.content }}
+          files: |
+            CHANGELOG.md
+          tag_name: ${{ inputs.tag_name }}
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  finalize_release:
+    name: Finalize release
+    runs-on: ubuntu-latest
+    needs:
+      - release_sdk
+    if: always()
+    steps:
+      - name: Everything is fine
+        if: ${{ !(contains(needs.*.result, 'failure')) }}
+        run: exit 0
+
+      - name: Some checks failed
+        if: ${{ contains(needs.*.result, 'failure') }}
+        run: exit 1

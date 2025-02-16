@@ -1,3 +1,4 @@
+use crate::error::IggyError;
 use crate::identifier::Identifier;
 use crate::stream_builder::{IggyConsumerConfig, IggyProducerConfig};
 use crate::utils::duration::IggyDuration;
@@ -47,17 +48,17 @@ impl IggyStreamConfig {
         batch_size: u32,
         send_interval: IggyDuration,
         polling_interval: IggyDuration,
-    ) -> Self {
+    ) -> Result<Self, IggyError> {
         let consumer_config =
-            IggyConsumerConfig::from_stream_topic(stream, topic, batch_size, polling_interval);
+            IggyConsumerConfig::from_stream_topic(stream, topic, batch_size, polling_interval)?;
 
         let producer_config =
-            IggyProducerConfig::from_stream_topic(stream, topic, batch_size, send_interval);
+            IggyProducerConfig::from_stream_topic(stream, topic, batch_size, send_interval)?;
 
-        Self {
+        Ok(Self {
             consumer_config,
             producer_config,
-        }
+        })
     }
 }
 
@@ -99,13 +100,16 @@ mod tests {
             "test_topic",
             100,
             IggyDuration::from_str("5ms").unwrap(),
-        );
+        )
+        .unwrap();
+
         let producer_config = IggyProducerConfig::from_stream_topic(
             "test_stream",
             "test_topic",
             100,
             IggyDuration::from_str("5ms").unwrap(),
-        );
+        )
+        .unwrap();
         let config = IggyStreamConfig::new(consumer_config, producer_config);
         assert_eq!(config.stream_name(), "test_stream");
         assert_eq!(config.topic_name(), "test_topic");
@@ -140,13 +144,17 @@ mod tests {
 
     #[test]
     fn should_be_from_stream_topic() {
-        let config = IggyStreamConfig::from_stream_topic(
+        let res = IggyStreamConfig::from_stream_topic(
             "test_stream",
             "test_topic",
             100,
             IggyDuration::from_str("5ms").unwrap(),
             IggyDuration::from_str("5ms").unwrap(),
         );
+
+        assert!(res.is_ok());
+        let config = res.unwrap();
+
         assert_eq!(config.stream_name(), "test_stream");
         assert_eq!(config.topic_name(), "test_topic");
         assert_eq!(config.consumer_config().batch_size(), 100);

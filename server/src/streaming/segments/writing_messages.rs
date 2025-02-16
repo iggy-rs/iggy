@@ -1,6 +1,6 @@
 use super::indexes::*;
 use crate::streaming::batching::batch_accumulator::BatchAccumulator;
-use crate::streaming::batching::message_batch::RETAINED_BATCH_OVERHEAD;
+use crate::streaming::batching::message_batch::RETAINED_BATCH_HEADER_LEN;
 use crate::streaming::models::messages::RetainedMessage;
 use crate::streaming::segments::segment::Segment;
 use error_set::ErrContext;
@@ -112,7 +112,7 @@ impl Segment {
         };
         let saved_bytes = self
             .log_writer
-            .as_ref()
+            .as_mut()
             .unwrap()
             .save_batches(batch, confirmation)
             .await
@@ -124,20 +124,20 @@ impl Segment {
             })?;
 
         self.index_writer
-            .as_ref()
+            .as_mut()
             .unwrap()
             .save_index(index)
             .await
             .with_error_context(|e| format!("Failed to save index, error: {e} for {}", self))?;
 
         self.last_index_position += batch_size.as_bytes_u64() as u32;
-        self.size_bytes += IggyByteSize::from(RETAINED_BATCH_OVERHEAD);
+        self.size_bytes += IggyByteSize::from(RETAINED_BATCH_HEADER_LEN);
         self.size_of_parent_stream
-            .fetch_add(RETAINED_BATCH_OVERHEAD, Ordering::AcqRel);
+            .fetch_add(RETAINED_BATCH_HEADER_LEN, Ordering::AcqRel);
         self.size_of_parent_topic
-            .fetch_add(RETAINED_BATCH_OVERHEAD, Ordering::AcqRel);
+            .fetch_add(RETAINED_BATCH_HEADER_LEN, Ordering::AcqRel);
         self.size_of_parent_partition
-            .fetch_add(RETAINED_BATCH_OVERHEAD, Ordering::AcqRel);
+            .fetch_add(RETAINED_BATCH_HEADER_LEN, Ordering::AcqRel);
 
         trace!(
             "Saved {} messages on disk in segment with start offset: {} for partition with ID: {}, total bytes written: {}.",

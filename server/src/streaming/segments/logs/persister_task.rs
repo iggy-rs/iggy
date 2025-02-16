@@ -1,4 +1,4 @@
-use crate::streaming::batching::message_batch::{RetainedMessageBatch, RETAINED_BATCH_OVERHEAD};
+use crate::streaming::batching::message_batch::{RetainedMessageBatch, RETAINED_BATCH_HEADER_LEN};
 use flume::{unbounded, Receiver};
 use iggy::{error::IggyError, utils::duration::IggyDuration};
 use std::{
@@ -222,7 +222,7 @@ impl PersisterTask {
         let header = batch_to_write.header_as_bytes();
         let batch_bytes = batch_to_write.bytes;
         let slices = [IoSlice::new(&header), IoSlice::new(&batch_bytes)];
-        let bytes_written = RETAINED_BATCH_OVERHEAD + batch_bytes.len() as u64;
+        let bytes_written = RETAINED_BATCH_HEADER_LEN + batch_bytes.len() as u64;
 
         let mut attempts = 0;
         loop {

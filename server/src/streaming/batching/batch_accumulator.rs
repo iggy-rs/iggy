@@ -1,4 +1,4 @@
-use super::message_batch::{RetainedMessageBatch, RETAINED_BATCH_OVERHEAD};
+use super::message_batch::{RetainedMessageBatch, RETAINED_BATCH_HEADER_LEN};
 use crate::streaming::local_sizeable::LocalSizeable;
 use crate::streaming::models::messages::RetainedMessage;
 use bytes::BytesMut;
@@ -109,6 +109,6 @@ impl BatchAccumulator {
 
 impl Sizeable for BatchAccumulator {
     fn get_size_bytes(&self) -> IggyByteSize {
-        self.current_size + RETAINED_BATCH_OVERHEAD.into()
+        self.current_size + RETAINED_BATCH_HEADER_LEN.into()
     }
 }

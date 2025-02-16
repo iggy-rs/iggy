@@ -21,6 +21,8 @@ pub struct IggyProducerConfig {
     partitions_count: u32,
     replication_factor: Option<u8>,
     encryptor: Option<Arc<EncryptorKind>>,
+    send_retries_count: Option<u32>,
+    send_retries_interval: Option<IggyDuration>,
 }
 
 impl Default for IggyProducerConfig {
@@ -39,6 +41,8 @@ impl Default for IggyProducerConfig {
             partitions_count: 1,
             replication_factor: None,
             encryptor: None,
+            send_retries_count: Some(3),
+            send_retries_interval: Some(IggyDuration::new_from_secs(1)),
         }
     }
 }
@@ -74,6 +78,8 @@ impl IggyProducerConfig {
         partitions_count: u32,
         replication_factor: Option<u8>,
         encryptor: Option<Arc<EncryptorKind>>,
+        send_retries_count: Option<u32>,
+        send_retries_interval: Option<IggyDuration>,
     ) -> Self {
         Self {
             stream_id,
@@ -86,6 +92,8 @@ impl IggyProducerConfig {
             partitions_count,
             replication_factor,
             encryptor,
+            send_retries_count,
+            send_retries_interval,
         }
     }
 
@@ -122,6 +130,8 @@ impl IggyProducerConfig {
             partitions_count: 1,
             replication_factor: None,
             encryptor: None,
+            send_retries_count: Some(3),
+            send_retries_interval: Some(IggyDuration::new_from_secs(1)),
         })
     }
 }
@@ -166,6 +176,14 @@ impl IggyProducerConfig {
     pub fn encryptor(&self) -> Option<Arc<EncryptorKind>> {
         self.encryptor.clone()
     }
+
+    pub fn send_retries_count(&self) -> Option<u32> {
+        self.send_retries_count
+    }
+
+    pub fn send_retries_interval(&self) -> Option<IggyDuration> {
+        self.send_retries_interval
+    }
 }
 
 #[cfg(test)]
@@ -187,6 +205,8 @@ mod tests {
             .send_interval(IggyDuration::from_str("5ms").unwrap())
             .partitioning(Partitioning::balanced())
             .partitions_count(1)
+            .send_retries_count(3)
+            .send_retries_interval(IggyDuration::new_from_secs(1))
             .build();
 
         assert_eq!(
@@ -207,6 +227,11 @@ mod tests {
         assert_eq!(config.partitioning(), &Partitioning::balanced());
         assert_eq!(config.partitions_count(), 1);
         assert_eq!(config.replication_factor(), None);
+        assert_eq!(config.send_retries_count(), Some(3));
+        assert_eq!(
+            config.send_retries_interval(),
+            Some(IggyDuration::new_from_secs(1))
+        );
     }
 
     #[test]
@@ -227,6 +252,11 @@ mod tests {
         assert_eq!(config.partitioning(), &Partitioning::balanced());
         assert_eq!(config.partitions_count(), 1);
         assert_eq!(config.replication_factor(), None);
+        assert_eq!(config.send_retries_count(), Some(3));
+        assert_eq!(
+            config.send_retries_interval(),
+            Some(IggyDuration::new_from_secs(1))
+        );
     }
 
     #[test]
@@ -245,6 +275,8 @@ mod tests {
             1,
             None,
             None,
+            Some(3),
+            Some(IggyDuration::new_from_secs(1)),
         );
         assert_eq!(config.stream_id(), &stream_id);
         assert_eq!(config.stream_name(), "test_stream");
@@ -258,6 +290,11 @@ mod tests {
         assert_eq!(config.partitioning(), &Partitioning::balanced());
         assert_eq!(config.partitions_count(), 1);
         assert_eq!(config.replication_factor(), None);
+        assert_eq!(config.send_retries_count(), Some(3));
+        assert_eq!(
+            config.send_retries_interval(),
+            Some(IggyDuration::new_from_secs(1))
+        );
     }
 
     #[test]

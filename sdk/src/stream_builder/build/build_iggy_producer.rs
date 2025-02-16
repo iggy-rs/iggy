@@ -34,6 +34,8 @@ pub(crate) async fn build_iggy_producer(
     let partitions_count = config.partitions_count();
     let partitioning = config.partitioning().to_owned();
     let replication_factor = config.replication_factor();
+    let send_retries = config.send_retries_count();
+    let send_retries_interval = config.send_retries_interval();
 
     trace!("Build iggy producer");
     let mut builder = client
@@ -42,6 +44,7 @@ pub(crate) async fn build_iggy_producer(
         .send_interval(send_interval)
         .partitioning(partitioning)
         .create_stream_if_not_exists()
+        .send_retries(send_retries, send_retries_interval)
         .create_topic_if_not_exists(
             partitions_count,
             replication_factor,

@@ -950,7 +950,7 @@ pub struct IggyConsumerBuilder {
     auto_join_consumer_group: bool,
     create_consumer_group_if_not_exists: bool,
     encryptor: Option<Arc<EncryptorKind>>,
-    reconnection_retry_interval: IggyDuration,
+    polling_retry_interval: IggyDuration,
     init_retries: Option<u32>,
     init_retry_interval: IggyDuration,
     allow_replay: bool,
@@ -985,7 +985,7 @@ impl IggyConsumerBuilder {
             create_consumer_group_if_not_exists: true,
             encryptor,
             polling_interval,
-            reconnection_retry_interval: IggyDuration::ONE_SECOND,
+            polling_retry_interval: IggyDuration::ONE_SECOND,
             init_retries: None,
             init_retry_interval: IggyDuration::ONE_SECOND,
             allow_replay: false,
@@ -1099,10 +1099,10 @@ impl IggyConsumerBuilder {
         }
     }
 
-    /// Sets the reconnection retry interval in case of server disconnection.
-    pub fn reconnection_retry_interval(self, interval: IggyDuration) -> Self {
+    /// Sets the polling retry interval in case of server disconnection.
+    pub fn polling_retry_interval(self, interval: IggyDuration) -> Self {
         Self {
-            reconnection_retry_interval: interval,
+            polling_retry_interval: interval,
             ..self
         }
     }
@@ -1144,7 +1144,7 @@ impl IggyConsumerBuilder {
             self.auto_join_consumer_group,
             self.create_consumer_group_if_not_exists,
             self.encryptor,
-            self.reconnection_retry_interval,
+            self.polling_retry_interval,
             self.init_retries,
             self.init_retry_interval,
             self.allow_replay,

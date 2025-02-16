@@ -28,8 +28,9 @@ pub struct IggyConsumerConfig {
     partitions_count: u32,
     replication_factor: Option<u8>,
     encryptor: Option<Arc<EncryptorKind>>,
-    reconnection_retry_interval: IggyDuration,
+    polling_retry_interval: IggyDuration,
     init_retries: Option<u32>,
+    init_interval: IggyDuration,
 }
 
 impl Default for IggyConsumerConfig {
@@ -53,8 +54,9 @@ impl Default for IggyConsumerConfig {
             partitions_count: 1,
             replication_factor: None,
             encryptor: None,
-            reconnection_retry_interval: IggyDuration::new_from_secs(1),
+            polling_retry_interval: IggyDuration::new_from_secs(1),
             init_retries: Some(5),
+            init_interval: IggyDuration::new_from_secs(3),
         }
     }
 }
@@ -79,8 +81,10 @@ impl IggyConsumerConfig {
     /// * `partitions_count` - The number of partitions.
     /// * `replication_factor` - The replication factor.
     /// * `encryptor` - The encryptor.
-    /// * `reconnection_retry_interval` - The reconnection retry interval.
+    /// * `polling_retry_interval` - The polling retry interval.
     /// * `init_retries` - The number of init retries.
+    /// * `init_interval` - The init interval.
+    ///
     ///
     /// Returns:
     /// A new `IggyConsumerConfig`.
@@ -102,8 +106,9 @@ impl IggyConsumerConfig {
         partitions_count: u32,
         replication_factor: Option<u8>,
         encryptor: Option<Arc<EncryptorKind>>,
-        reconnection_retry_interval: IggyDuration,
+        polling_retry_interval: IggyDuration,
         init_retries: Option<u32>,
+        init_interval: IggyDuration,
     ) -> Self {
         Self {
             stream_id,
@@ -121,8 +126,9 @@ impl IggyConsumerConfig {
             partitions_count,
             replication_factor,
             encryptor,
-            reconnection_retry_interval,
+            polling_retry_interval,
             init_retries,
+            init_interval,
         }
     }
 
@@ -163,8 +169,9 @@ impl IggyConsumerConfig {
             partitions_count: 1,
             replication_factor: None,
             encryptor: None,
-            reconnection_retry_interval: IggyDuration::new_from_secs(1),
+            polling_retry_interval: IggyDuration::new_from_secs(1),
             init_retries: Some(5),
+            init_interval: IggyDuration::new_from_secs(3),
         })
     }
 }
@@ -229,12 +236,16 @@ impl IggyConsumerConfig {
         self.encryptor.clone()
     }
 
-    pub fn reconnection_retry_interval(&self) -> IggyDuration {
-        self.reconnection_retry_interval
+    pub fn polling_retry_interval(&self) -> IggyDuration {
+        self.polling_retry_interval
     }
 
     pub fn init_retries(&self) -> Option<u32> {
         self.init_retries
+    }
+
+    pub fn init_interval(&self) -> IggyDuration {
+        self.init_interval
     }
 }
 
@@ -261,9 +272,10 @@ mod tests {
             .consumer_kind(ConsumerKind::ConsumerGroup)
             .polling_interval(IggyDuration::from_str("5ms").unwrap())
             .polling_strategy(PollingStrategy::last())
+            .polling_retry_interval(IggyDuration::new_from_secs(1))
             .partitions_count(1)
             .init_retries(3)
-            .reconnection_retry_interval(IggyDuration::new_from_secs(1))
+            .init_interval(IggyDuration::new_from_secs(3))
             .build();
 
         assert_eq!(
@@ -293,10 +305,12 @@ mod tests {
         assert_eq!(config.partitions_count(), 1);
 
         assert_eq!(
-            config.reconnection_retry_interval(),
+            config.polling_retry_interval(),
             IggyDuration::new_from_secs(1)
         );
         assert_eq!(config.init_retries(), Some(3));
+
+        assert_eq!(config.init_interval(), IggyDuration::new_from_secs(3));
     }
 
     #[test]
@@ -325,6 +339,10 @@ mod tests {
         assert_eq!(config.polling_strategy(), PollingStrategy::last());
         assert_eq!(config.partitions_count(), 1);
         assert_eq!(config.replication_factor(), None);
+
+        assert_eq!(config.polling_retry_interval(), IggyDuration::ONE_SECOND);
+        assert_eq!(config.init_retries(), Some(5));
+        assert_eq!(config.init_interval(), IggyDuration::new_from_secs(3));
     }
 
     #[test]
@@ -347,6 +365,7 @@ mod tests {
             None,
             IggyDuration::new_from_secs(1),
             Some(3),
+            IggyDuration::new_from_secs(3),
         );
         assert_eq!(
             config.stream_id(),
@@ -376,10 +395,11 @@ mod tests {
         assert_eq!(config.replication_factor(), None);
 
         assert_eq!(
-            config.reconnection_retry_interval(),
+            config.polling_retry_interval(),
             IggyDuration::new_from_secs(1)
         );
         assert_eq!(config.init_retries(), Some(3));
+        assert_eq!(config.init_interval(), IggyDuration::new_from_secs(3));
     }
 
     #[test]

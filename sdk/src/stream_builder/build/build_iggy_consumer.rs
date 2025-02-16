@@ -35,7 +35,7 @@ pub(crate) async fn build_iggy_consumer(
     let polling_interval = config.polling_interval();
     let polling_strategy = config.polling_strategy();
     let partition = config.partitions_count();
-    let reconnection_retry_interval = config.reconnection_retry_interval();
+    let polling_retry_interval = config.polling_retry_interval();
 
     trace!("Build iggy consumer");
     let mut builder = match consumer_kind {
@@ -48,7 +48,7 @@ pub(crate) async fn build_iggy_consumer(
     .polling_strategy(polling_strategy)
     .poll_interval(polling_interval)
     .batch_size(batch_size)
-    .reconnection_retry_interval(reconnection_retry_interval);
+    .polling_retry_interval(polling_retry_interval);
 
     if let Some(encryptor) = config.encryptor() {
         trace!("Set encryptor");
@@ -56,8 +56,9 @@ pub(crate) async fn build_iggy_consumer(
     }
 
     if let Some(init_retries) = config.init_retries() {
+        let init_interval = config.init_interval();
         trace!("Set init_retries");
-        builder = builder.init_retries(init_retries, reconnection_retry_interval);
+        builder = builder.init_retries(init_retries, init_interval);
     }
 
     trace!("Initialize consumer");

@@ -57,6 +57,7 @@ impl IggyProducerConfig {
     /// * `partitioning` - The partitioning strategy to use.
     /// * `partition` - The number of partitions to create.
     /// * `replication_factor` - The replication factor to use.
+    /// * `encryptor` - The encryptor to use.
     ///
     /// Returns:
     /// A new `IggyProducerConfig`.

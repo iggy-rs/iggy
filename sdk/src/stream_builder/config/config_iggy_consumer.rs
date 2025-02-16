@@ -79,6 +79,8 @@ impl IggyConsumerConfig {
     /// * `partitions_count` - The number of partitions.
     /// * `replication_factor` - The replication factor.
     /// * `encryptor` - The encryptor.
+    /// * `reconnection_retry_interval` - The reconnection retry interval.
+    /// * `init_retries` - The number of init retries.
     ///
     /// Returns:
     /// A new `IggyConsumerConfig`.

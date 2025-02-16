@@ -34,7 +34,6 @@ pub(crate) async fn build_iggy_producer(
     let partitions_count = config.partitions_count();
     let partitioning = config.partitioning().to_owned();
     let replication_factor = config.replication_factor();
-    // let encryptor = config.encryptor().to_owned().unwrap();
 
     trace!("Build iggy producer");
     let mut builder = client

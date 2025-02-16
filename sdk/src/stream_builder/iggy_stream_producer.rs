@@ -62,4 +62,28 @@ impl IggyStreamProducer {
 
         Ok((client, iggy_producer))
     }
+
+    /// Builds an `IggyClient` from the given connection string.
+    ///
+    /// # Arguments
+    ///
+    /// * `connection_string` - The connection string to use.
+    ///
+    /// # Errors
+    ///
+    /// * `IggyError` - If the connection string is invalid or the client cannot be initialized.
+    ///
+    /// # Details
+    ///
+    /// This function will create a new `IggyClient` with the given `connection_string`.
+    /// It will then connect to the server using the provided connection string.
+    /// If the connection string is invalid or the client cannot be initialized,
+    /// an `IggyError` will be returned.
+    ///
+    pub async fn build_iggy_client(connection_string: &str) -> Result<IggyClient, IggyError> {
+        trace!("Build and connect iggy client");
+        let client = build::build_iggy_client(connection_string).await?;
+
+        Ok(client)
+    }
 }

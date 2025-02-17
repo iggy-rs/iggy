@@ -46,7 +46,6 @@ pub(crate) async fn handle_connection(
         sender.read(&mut command_buffer).await?;
         let command = ServerCommand::from_bytes(command_buffer.freeze());
         if command.is_err() {
-            error!("Received an invalid TCP command.");
             sender
                 .send_error_response(IggyError::InvalidCommand)
                 .await?;

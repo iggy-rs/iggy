@@ -29,13 +29,13 @@ pub struct IggyProducerConfig {
     send_interval: IggyDuration,
     /// Specifies to which partition the messages should be sent.
     partitioning: Partitioning,
-    /// Sets the client side encryptor for encrypting the messages' payloads. Currently only Aes256Gcm is supported.
-    /// Note, this is independent of server side encryption meaning you can add client encryption, server encryption, or both.
-    encryptor: Option<Arc<EncryptorKind>>,
     /// Sets the maximum number of send retries in case of a message sending failure.
     send_retries_count: Option<u32>,
     /// Sets the interval between send retries in case of a message sending failure.
     send_retries_interval: Option<IggyDuration>,
+    /// Sets a optional client side encryptor for encrypting the messages' payloads. Currently only Aes256Gcm is supported.
+    /// Note, this is independent of server side encryption meaning you can add client encryption, server encryption, or both.
+    encryptor: Option<Arc<EncryptorKind>>,
 }
 
 impl Default for IggyProducerConfig {

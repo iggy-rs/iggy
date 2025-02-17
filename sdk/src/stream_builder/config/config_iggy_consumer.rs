@@ -13,24 +13,44 @@ use std::sync::Arc;
 #[derive(Builder, Debug, Clone)]
 #[builder(on(String, into))]
 pub struct IggyConsumerConfig {
+    /// Identifier of the stream. Must be unique.
     stream_id: Identifier,
+    /// Name of the stream. Must be unique.
     stream_name: String,
+    /// Identifier of the topic. Must be unique.
     topic_id: Identifier,
+    /// Name of the topic. Must be unique.
     topic_name: String,
+    /// The auto-commit configuration for storing the message offset on the server. See  `AutoCommit` for details.
     auto_commit: AutoCommit,
+    /// The max number of messages to send in a batch. The greater the batch size, the higher the throughput for bulk data.
+    /// Note, there is a tradeoff between batch size and latency, so you want to benchmark your setup.
     batch_size: u32,
+    /// Create the stream if it doesn't exist.
     create_stream_if_not_exists: bool,
+    /// Create the topic if it doesn't exist.
     create_topic_if_not_exists: bool,
+    /// The name of the consumer. Must be unique
     consumer_name: String,
+    /// The type of consumer. It can be either `Consumer` or `ConsumerGroup`. ConsumerGroup is default.
     consumer_kind: ConsumerKind,
-    polling_interval: IggyDuration,
-    polling_strategy: PollingStrategy,
+    /// Sets the number of partitions for ConsumerKind `Consumer`. Does not apply to `ConsumerGroup`.
     partitions_count: u32,
+    /// Sets the replication factor for the consumed topic.
     replication_factor: Option<u8>,
-    encryptor: Option<Arc<EncryptorKind>>,
+    /// The polling interval for messages.
+    polling_interval: IggyDuration,
+    /// `PollingStrategy` specifies from where to start polling messages. See `PollingStrategy` for details.
+    polling_strategy: PollingStrategy,
+    /// Sets the polling retry interval in case of server disconnection.
     polling_retry_interval: IggyDuration,
+    /// Sets the number of retries and the interval when initializing the consumer if the stream or topic is not found.
+    /// Might be useful when the stream or topic is created dynamically by the producer.
     init_retries: Option<u32>,
     init_interval: IggyDuration,
+    /// Sets a optional client side encryptor for encrypting the messages' payloads. Currently only Aes256Gcm is supported.
+    /// Note, this is independent of server side encryption meaning you can add client encryption, server encryption, or both.
+    encryptor: Option<Arc<EncryptorKind>>,
 }
 
 impl Default for IggyConsumerConfig {

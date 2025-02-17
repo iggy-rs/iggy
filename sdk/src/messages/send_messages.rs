@@ -521,15 +521,15 @@ impl Display for SendMessages {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
-            "{}|{}|{}|{}",
+            "{}|{}|{}|batch_len:{}|batch_size:{}",
             self.stream_id,
             self.topic_id,
             self.partitioning,
+            self.messages.len(),
             self.messages
                 .iter()
-                .map(std::string::ToString::to_string)
-                .collect::<Vec<String>>()
-                .join("|")
+                .map(Message::get_size_bytes)
+                .sum::<IggyByteSize>(),
         )
     }
 }

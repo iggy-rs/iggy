@@ -61,6 +61,10 @@ name = "stream-consumer"
 path = "src/stream-builder/stream-consumer/main.rs"
 
 [[example]]
+name = "stream-consumer-config"
+path = "src/stream-builder/stream-consumer-config/main.rs"
+
+[[example]]
 name = "stream-producer"
 path = "src/stream-builder/stream-producer/main.rs"
 

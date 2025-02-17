@@ -13,7 +13,7 @@ async fn main() -> Result<(), IggyError> {
     let stream = "test_stream";
     let topic = "test_topic";
 
-    // The config builder simplifies the IggyProducer configuration.
+    // The builder simplifies the IggyProducer configuration.
     let config = IggyProducerConfig::builder()
         // Set the stream identifier and name.
         .stream_id(Identifier::from_str_value(stream)?)
@@ -42,7 +42,7 @@ async fn main() -> Result<(), IggyError> {
         .partitioning(Partitioning::balanced())
         // Sets the retry policy (maximum number of retries and interval between them) in case of messages sending failure.
         // The error can be related either to disconnecting from the server or to the server rejecting the messages.
-        // Default is 3 retries with 1 second interval between them.
+        // Default is 3 retries with 1 second interval between them. Customize to your requirements.
         .send_retries_count(3)
         .send_retries_interval(IggyDuration::new_from_secs(1))
         // Optionally, set a custom client side encryptor for encrypting the messages' payloads. Currently only Aes256Gcm is supported.

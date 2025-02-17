@@ -97,19 +97,19 @@ pub(crate) struct TopicCreateArgs {
     /// Compression algorithm for the topic, set to "none" for no compression
     #[arg(value_parser = clap::value_parser!(CompressionAlgorithm), verbatim_doc_comment)]
     pub(crate) compression_algorithm: CompressionAlgorithm,
-    /// Max topic size
+    /// Max topic size in human-readable format like "unlimited" or "15GB"
     ///
-    /// ("unlimited" or skipping parameter disables max topic size functionality in topic)
+    /// "server_default" or skipping parameter makes CLI to use server default (from current server config) max topic size
     /// Can't be lower than segment size in the config.
-    #[arg(short, long, default_value = "unlimited", verbatim_doc_comment)]
+    #[arg(short, long, default_value = "server_default", verbatim_doc_comment)]
     pub(crate) max_topic_size: MaxTopicSize,
     /// Replication factor for the topic
     #[arg(short, long, default_value = "1")]
     pub(crate) replication_factor: u8,
-    /// Message expiry time in human-readable format like 15days 2min 2s
+    /// Message expiry time in human-readable format like "unlimited" or "15days 2min 2s"
     ///
-    /// ("unlimited" or skipping parameter disables message expiry functionality in topic)
-    #[arg(value_parser = clap::value_parser!(IggyExpiry), verbatim_doc_comment)]
+    /// "server_default" or skipping parameter makes CLI to use server default (from current server config) expiry time
+    #[arg(default_value = "server_default", value_parser = clap::value_parser!(IggyExpiry), verbatim_doc_comment)]
     pub(crate) message_expiry: Vec<IggyExpiry>,
 }
 
@@ -144,19 +144,19 @@ pub(crate) struct TopicUpdateArgs {
     /// Compression algorithm for the topic, set to "none" for no compression
     #[arg(value_parser = clap::value_parser!(CompressionAlgorithm), verbatim_doc_comment)]
     pub(crate) compression_algorithm: CompressionAlgorithm,
-    /// New max topic size
+    /// New max topic size in human-readable format like "unlimited" or "15GB"
     ///
-    /// ("unlimited" or skipping parameter causes removal of max topic size parameter in topic)
+    /// "server_default" or skipping parameter makes CLI to use server default (from current server config) max topic size
     /// Can't be lower than segment size in the config.
-    #[arg(short, long, default_value = "unlimited", verbatim_doc_comment)]
+    #[arg(short, long, default_value = "server_default", verbatim_doc_comment)]
     pub(crate) max_topic_size: MaxTopicSize,
     #[arg(short, long, default_value = "1")]
     /// New replication factor for the topic
     pub(crate) replication_factor: u8,
-    /// New message expiry time in human-readable format like 15days 2min 2s
+    /// New message expiry time in human-readable format like "unlimited" or "15days 2min 2s"
     ///
-    /// ("unlimited" or skipping parameter causes removal of expiry parameter in topic)
-    #[arg(value_parser = clap::value_parser!(IggyExpiry), verbatim_doc_comment)]
+    /// "server_default" or skipping parameter makes CLI to use server default (from current server config) expiry time
+    #[arg(default_value = "server_default", value_parser = clap::value_parser!(IggyExpiry), verbatim_doc_comment)]
     pub(crate) message_expiry: Vec<IggyExpiry>,
 }
 

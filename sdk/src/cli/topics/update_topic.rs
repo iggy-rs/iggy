@@ -65,11 +65,13 @@ impl CliCommand for UpdateTopicCmd {
             })?;
 
         event!(target: PRINT_TARGET, Level::INFO,
-            "Topic with ID: {} updated name: {}, updated message expiry: {}, updated compression algorithm: {} in stream with ID: {}",
+            "Topic with ID: {} updated name: {}, updated message expiry: {}, updated compression algorithm: {}, updated max topic size: {}, updated replication factor: {} in stream with ID: {}",
             self.update_topic.topic_id,
             self.update_topic.name,
             self.message_expiry,
             self.update_topic.compression_algorithm,
+            self.max_topic_size,
+            self.replication_factor,
             self.update_topic.stream_id,
         );
 

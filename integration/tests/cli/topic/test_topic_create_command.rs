@@ -111,7 +111,7 @@ impl IggyCmdTestCase for TestTopicCreateCmd {
         let compression_algorithm = &self.compression_algorithm;
         let message_expiry = (match &self.message_expiry {
             Some(value) => value.join(" "),
-            None => IggyExpiry::NeverExpire.to_string(),
+            None => IggyExpiry::ServerDefault.to_string(),
         })
         .to_string();
 
@@ -189,7 +189,7 @@ pub async fn should_be_successful() {
             1,
             Default::default(),
             None,
-            MaxTopicSize::Unlimited,
+            MaxTopicSize::ServerDefault,
             1,
             TestStreamId::Numeric,
         ))
@@ -203,7 +203,7 @@ pub async fn should_be_successful() {
             5,
             Default::default(),
             None,
-            MaxTopicSize::Unlimited,
+            MaxTopicSize::ServerDefault,
             1,
             TestStreamId::Named,
         ))
@@ -281,21 +281,23 @@ Arguments:
           Compression algorithm for the topic, set to "none" for no compression
 
   [MESSAGE_EXPIRY]...
-          Message expiry time in human-readable format like 15days 2min 2s
+          Message expiry time in human-readable format like "unlimited" or "15days 2min 2s"
 {CLAP_INDENT}
-          ("unlimited" or skipping parameter disables message expiry functionality in topic)
+          "server_default" or skipping parameter makes CLI to use server default (from current server config) expiry time
+{CLAP_INDENT}
+          [default: server_default]
 
 Options:
   -t, --topic-id <TOPIC_ID>
           Topic ID to create
 
   -m, --max-topic-size <MAX_TOPIC_SIZE>
-          Max topic size
+          Max topic size in human-readable format like "unlimited" or "15GB"
 {CLAP_INDENT}
-          ("unlimited" or skipping parameter disables max topic size functionality in topic)
+          "server_default" or skipping parameter makes CLI to use server default (from current server config) max topic size
           Can't be lower than segment size in the config.
 {CLAP_INDENT}
-          [default: unlimited]
+          [default: server_default]
 
   -r, --replication-factor <REPLICATION_FACTOR>
           Replication factor for the topic
@@ -327,13 +329,17 @@ Arguments:
   <NAME>                   Name of the topic
   <PARTITIONS_COUNT>       Number of partitions inside the topic
   <COMPRESSION_ALGORITHM>  Compression algorithm for the topic, set to "none" for no compression
-  [MESSAGE_EXPIRY]...      Message expiry time in human-readable format like 15days 2min 2s
+  [MESSAGE_EXPIRY]...      Message expiry time in human-readable format like "unlimited" or "15days 2min 2s" [default: server_default]
 
 Options:
-  -t, --topic-id <TOPIC_ID>                      Topic ID to create
-  -m, --max-topic-size <MAX_TOPIC_SIZE>          Max topic size [default: unlimited]
-  -r, --replication-factor <REPLICATION_FACTOR>  Replication factor for the topic [default: 1]
-  -h, --help                                     Print help (see more with '--help')
+  -t, --topic-id <TOPIC_ID>
+          Topic ID to create
+  -m, --max-topic-size <MAX_TOPIC_SIZE>
+          Max topic size in human-readable format like "unlimited" or "15GB" [default: server_default]
+  -r, --replication-factor <REPLICATION_FACTOR>
+          Replication factor for the topic [default: 1]
+  -h, --help
+          Print help (see more with '--help')
 "#,
             ),
         ))

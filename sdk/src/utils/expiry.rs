@@ -41,7 +41,7 @@ impl From<&IggyExpiry> for Option<u64> {
 impl Display for IggyExpiry {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Self::NeverExpire => write!(f, "none"),
+            Self::NeverExpire => write!(f, "never_expire"),
             Self::ServerDefault => write!(f, "server_default"),
             Self::ExpireDuration(value) => write!(f, "{value}"),
         }
@@ -79,7 +79,7 @@ impl FromStr for IggyExpiry {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let result = match s {
-            "unlimited" | "none" | "None" | "Unlimited" => IggyExpiry::NeverExpire,
+            "unlimited" | "none" | "None" | "Unlimited" | "never_expire" => IggyExpiry::NeverExpire,
             "default" | "server_default" | "Default" | "Server_default" => {
                 IggyExpiry::ServerDefault
             }
@@ -281,7 +281,7 @@ mod tests {
 
     #[test]
     fn should_check_display_expiry() {
-        assert_eq!(IggyExpiry::NeverExpire.to_string(), "none");
+        assert_eq!(IggyExpiry::NeverExpire.to_string(), "never_expire");
         assert_eq!(
             IggyExpiry::ExpireDuration(IggyDuration::from(333333000000)).to_string(),
             "3days 20h 35m 33s"

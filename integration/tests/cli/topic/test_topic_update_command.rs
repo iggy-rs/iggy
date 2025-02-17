@@ -84,10 +84,7 @@ impl TestTopicUpdateCmd {
 
         command.push(self.topic_new_name.clone());
         command.push(self.topic_new_compression_algorithm.to_string());
-
-        if let MaxTopicSize::Custom(max_size) = &self.topic_new_max_size {
-            command.push(format!("--max-topic-size={}", max_size));
-        }
+        command.push(format!("--max-topic-size={}", self.topic_new_max_size));
 
         if self.topic_new_replication_factor != 1 {
             command.push(format!(
@@ -113,7 +110,7 @@ impl IggyCmdTestCase for TestTopicUpdateCmd {
         assert!(stream.is_ok());
 
         let message_expiry = match &self.message_expiry {
-            None => IggyExpiry::NeverExpire,
+            None => IggyExpiry::ServerDefault,
             Some(message_expiry) => {
                 let duration: Duration =
                     *message_expiry.join(" ").parse::<HumanDuration>().unwrap();
@@ -160,20 +157,20 @@ impl IggyCmdTestCase for TestTopicUpdateCmd {
 
         let message_expiry = (match &self.topic_new_message_expiry {
             Some(value) => value.join(" "),
-            None => IggyExpiry::NeverExpire.to_string(),
+            None => IggyExpiry::ServerDefault.to_string(),
         })
         .to_string();
 
-        let max_topic_size = self.topic_new_max_size.to_string();
-
         let replication_factor = self.topic_new_replication_factor;
         let new_topic_name = &self.topic_new_name;
+        let new_max_topic_size = self.topic_new_max_size.to_string();
 
         let expected_message = format!("Executing update topic with ID: {topic_id}, name: {new_topic_name}, \
-                                message expiry: {message_expiry}, compression algorithm: {compression_algorithm}, max topic size: {max_topic_size}, \
+                                message expiry: {message_expiry}, compression algorithm: {compression_algorithm}, max topic size: {new_max_topic_size}, \
                                 replication factor: {replication_factor}, in stream with ID: {stream_id}\n\
                                 Topic with ID: {topic_id} updated name: {new_topic_name}, updated message expiry: {message_expiry}, \
-                                updated compression algorithm: {compression_algorithm} in stream with ID: {stream_id}\n");
+                                updated compression algorithm: {compression_algorithm}, updated max topic size: {new_max_topic_size}, \
+                                updated replication factor: {replication_factor} in stream with ID: {stream_id}\n");
 
         command_state.success().stdout(diff(expected_message));
     }
@@ -233,7 +230,7 @@ pub async fn should_be_successful() {
             String::from("sync"),
             Default::default(),
             None,
-            MaxTopicSize::Unlimited,
+            MaxTopicSize::ServerDefault,
             1,
             String::from("new_name"),
             CompressionAlgorithm::Gzip,
@@ -252,7 +249,7 @@ pub async fn should_be_successful() {
             String::from("topic"),
             Default::default(),
             None,
-            MaxTopicSize::Unlimited,
+            MaxTopicSize::ServerDefault,
             1,
             String::from("testing"),
             CompressionAlgorithm::Gzip,
@@ -271,7 +268,7 @@ pub async fn should_be_successful() {
             String::from("development"),
             Default::default(),
             None,
-            MaxTopicSize::Unlimited,
+            MaxTopicSize::ServerDefault,
             1,
             String::from("development"),
             CompressionAlgorithm::Gzip,
@@ -290,7 +287,7 @@ pub async fn should_be_successful() {
             String::from("probe"),
             Default::default(),
             None,
-            MaxTopicSize::Unlimited,
+            MaxTopicSize::ServerDefault,
             1,
             String::from("development"),
             CompressionAlgorithm::Gzip,
@@ -314,12 +311,12 @@ pub async fn should_be_successful() {
             String::from("testing"),
             Default::default(),
             Some(vec![String::from("1s")]),
-            MaxTopicSize::Unlimited,
+            MaxTopicSize::ServerDefault,
             1,
             String::from("testing"),
             CompressionAlgorithm::Gzip,
             Some(vec![String::from("1m 6s")]),
-            MaxTopicSize::Unlimited,
+            MaxTopicSize::ServerDefault,
             1,
             TestStreamId::Numeric,
             TestTopicId::Numeric,
@@ -337,7 +334,7 @@ pub async fn should_be_successful() {
                 String::from("1m"),
                 String::from("1h"),
             ]),
-            MaxTopicSize::Unlimited,
+            MaxTopicSize::ServerDefault,
             1,
             String::from("testing"),
             CompressionAlgorithm::Gzip,
@@ -391,18 +388,20 @@ Arguments:
           Compression algorithm for the topic, set to "none" for no compression
 
   [MESSAGE_EXPIRY]...
-          New message expiry time in human-readable format like 15days 2min 2s
+          New message expiry time in human-readable format like "unlimited" or "15days 2min 2s"
 {CLAP_INDENT}
-          ("unlimited" or skipping parameter causes removal of expiry parameter in topic)
+          "server_default" or skipping parameter makes CLI to use server default (from current server config) expiry time
+{CLAP_INDENT}
+          [default: server_default]
 
 Options:
   -m, --max-topic-size <MAX_TOPIC_SIZE>
-          New max topic size
+          New max topic size in human-readable format like "unlimited" or "15GB"
 {CLAP_INDENT}
-          ("unlimited" or skipping parameter causes removal of max topic size parameter in topic)
+          "server_default" or skipping parameter makes CLI to use server default (from current server config) max topic size
           Can't be lower than segment size in the config.
 {CLAP_INDENT}
-          [default: unlimited]
+          [default: server_default]
 
   -r, --replication-factor <REPLICATION_FACTOR>
           New replication factor for the topic
@@ -435,12 +434,15 @@ Arguments:
   <TOPIC_ID>               Topic ID to update
   <NAME>                   New name for the topic
   <COMPRESSION_ALGORITHM>  Compression algorithm for the topic, set to "none" for no compression
-  [MESSAGE_EXPIRY]...      New message expiry time in human-readable format like 15days 2min 2s
+  [MESSAGE_EXPIRY]...      New message expiry time in human-readable format like "unlimited" or "15days 2min 2s" [default: server_default]
 
 Options:
-  -m, --max-topic-size <MAX_TOPIC_SIZE>          New max topic size [default: unlimited]
-  -r, --replication-factor <REPLICATION_FACTOR>  New replication factor for the topic [default: 1]
-  -h, --help                                     Print help (see more with '--help')
+  -m, --max-topic-size <MAX_TOPIC_SIZE>
+          New max topic size in human-readable format like "unlimited" or "15GB" [default: server_default]
+  -r, --replication-factor <REPLICATION_FACTOR>
+          New replication factor for the topic [default: 1]
+  -h, --help
+          Print help (see more with '--help')
 "#,
             ),
         ))

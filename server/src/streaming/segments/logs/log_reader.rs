@@ -76,7 +76,7 @@ impl SegmentLogReader {
     ) -> Result<Vec<RetainedMessageBatch>, IggyError> {
         let mut file_size = self.file_size();
         if file_size == 0 {
-            warn!("Log file {} is empty.", self.file_path);
+            trace!("Log file {} is empty.", self.file_path);
             return Ok(Vec::new());
         }
 
@@ -111,7 +111,7 @@ impl SegmentLogReader {
     pub async fn load_message_ids_impl(&self) -> Result<Vec<u128>, IggyError> {
         let mut file_size = self.file_size();
         if file_size == 0 {
-            warn!("Log file {} is empty.", self.file_path);
+            trace!("Log file {} is empty.", self.file_path);
             return Ok(Vec::new());
         }
 
@@ -149,7 +149,7 @@ impl SegmentLogReader {
     {
         let mut file_size = self.file_size();
         if file_size == 0 {
-            warn!("Log file {} is empty.", self.file_path);
+            trace!("Log file {} is empty.", self.file_path);
             return Ok(());
         }
 
@@ -186,7 +186,7 @@ impl SegmentLogReader {
     ) -> Result<(), IggyError> {
         let mut file_size = self.file_size();
         if file_size == 0 {
-            warn!("Log file {} is empty.", self.file_path);
+            trace!("Log file {} is empty.", self.file_path);
             return Ok(());
         }
 

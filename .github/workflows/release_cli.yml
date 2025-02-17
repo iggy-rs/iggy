@@ -1,0 +1,78 @@
+name: release_cli
+
+on:
+  workflow_call:
+    inputs:
+      tag_name:
+        description: 'The name of the tag to be released'
+        required: true
+        type: string
+
+env:
+  GITHUB_TOKEN: ${{ github.token }}
+  RUST_BACKTRACE: 1
+  CARGO_TERM_COLOR: always
+  IGGY_CI_BUILD: true
+
+jobs:
+  release_cli:
+    name: Build and release iggy-cli binary
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install musl-tools on Linux
+        run: sudo apt-get update --yes && sudo apt-get install --yes musl-tools
+
+      - name: Build iggy-cli release binary for x86_64-unknown-linux-musl
+        uses: houseabsolute/actions-rust-cross@v0
+        with:
+          command: "build"
+          target: x86_64-unknown-linux-musl
+          toolchain: stable
+          args: "--verbose --release --no-default-features --bin iggy"
+
+      - name: Prepare iggy-cli x86_64-unknown-linux-musl artifacts
+        run: |
+          tar cvfz iggy-cli-x86_64-unknown-linux-musl.tgz -C target/x86_64-unknown-linux-musl/release/ iggy
+
+      - name: Create Changelog
+        uses: orhun/git-cliff-action@v4
+        id: changelog
+        with:
+          config: cliff.toml
+          args: -vv --latest
+        env:
+          OUTPUT: CHANGELOG.md
+          GITHUB_REPO: ${{ github.repository }}
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          body: ${{ steps.changelog.outputs.content }}
+          files: |
+            iggy-cli-x86_64-unknown-linux-musl.tgz
+            CHANGELOG.md
+          tag_name: ${{ inputs.tag_name }}
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  finalize_release:
+    name: Finalize release
+    runs-on: ubuntu-latest
+    needs:
+      - release_cli
+    if: always()
+    steps:
+      - name: Everything is fine
+        if: ${{ !(contains(needs.*.result, 'failure')) }}
+        run: exit 0
+
+      - name: Some checks failed
+        if: ${{ contains(needs.*.result, 'failure') }}
+        run: exit 1

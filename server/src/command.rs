@@ -1,4 +1,5 @@
 use bytes::{BufMut, Bytes, BytesMut};
+use error_set::ErrContext;
 use iggy::command::*;
 use iggy::consumer_groups::create_consumer_group::CreateConsumerGroup;
 use iggy::consumer_groups::delete_consumer_group::DeleteConsumerGroup;
@@ -51,6 +52,7 @@ use iggy::{
 };
 use std::fmt::{Display, Formatter};
 use strum::EnumString;
+use tracing::error;
 
 #[derive(Debug, PartialEq, EnumString)]
 pub enum ServerCommand {
@@ -156,6 +158,7 @@ impl BytesSerializable for ServerCommand {
         let code = u32::from_le_bytes(
             bytes[..4]
                 .try_into()
+                .with_error_context(|e| format!("failed to decode command from bytes, error: {e}"))
                 .map_err(|_| IggyError::InvalidNumberEncoding)?,
         );
         let payload = bytes.slice(4..);
@@ -263,7 +266,10 @@ impl BytesSerializable for ServerCommand {
             GET_SNAPSHOT_FILE_CODE => Ok(ServerCommand::GetSnapshotFile(GetSnapshot::from_bytes(
                 payload,
             )?)),
-            _ => Err(IggyError::InvalidCommand),
+            _ => {
+                error!("Invalid server command: {code}");
+                Err(IggyError::InvalidCommand)
+            }
         }
     }
 }

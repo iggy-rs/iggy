@@ -64,8 +64,8 @@ pub(crate) async fn build_iggy_stream_topic_if_not_exists(
 
         let stream_id = config.stream_id();
         let stream_name = config.stream_name();
-        let partitions_count = config.partitions_count();
-        let replication_factor = config.replication_factor();
+        let topic_partitions_count = config.partitions_count();
+        let topic_replication_factor = config.replication_factor();
 
         let (name, id) = extract_name_id_from_identifier(topic_id, topic_name)?;
         trace!("Create topic: {name} for stream: {}", stream_name);
@@ -73,9 +73,9 @@ pub(crate) async fn build_iggy_stream_topic_if_not_exists(
             .create_topic(
                 stream_id,
                 topic_name,
-                partitions_count,
+                topic_partitions_count,
                 CompressionAlgorithm::None,
-                replication_factor,
+                topic_replication_factor,
                 id,
                 IggyExpiry::ServerDefault,
                 MaxTopicSize::ServerDefault,

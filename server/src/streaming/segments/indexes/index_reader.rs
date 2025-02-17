@@ -55,7 +55,7 @@ impl SegmentIndexReader {
     pub async fn load_all_indexes_impl(&self) -> Result<Vec<Index>, IggyError> {
         let file_size = self.file_size();
         if file_size == 0 {
-            warn!("Index {} file is empty.", self.file_path);
+            trace!("Index file {} is empty.", self.file_path);
             return Ok(Vec::new());
         }
 
@@ -97,15 +97,17 @@ impl SegmentIndexReader {
         segment_start_offset: u64,
     ) -> Result<Option<IndexRange>, IggyError> {
         if index_start_offset > index_end_offset {
-            warn!(
+            trace!(
                 "Index start offset {} is greater than index end offset {} for file {}.",
-                index_start_offset, index_end_offset, self.file_path
+                index_start_offset,
+                index_end_offset,
+                self.file_path
             );
             return Ok(None);
         }
         let file_size = self.file_size();
         if file_size == 0 {
-            warn!("Index {} file is empty.", self.file_path);
+            trace!("Index file {} is empty.", self.file_path);
             return Ok(None);
         }
         trace!("Index file length: {} bytes.", file_size);

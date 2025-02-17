@@ -230,6 +230,9 @@ pub struct Args {
     /// The optional CA file for the TCP transport
     pub tcp_tls_ca_file: Option<String>,
 
+    /// Disable nodelay for the TCP transport
+    pub tcp_nodelay: bool,
+
     /// The optional client address for the QUIC transport
     pub quic_client_address: String,
 
@@ -320,6 +323,7 @@ impl Default for Args {
             tcp_tls_enabled: false,
             tcp_tls_domain: "localhost".to_string(),
             tcp_tls_ca_file: None,
+            tcp_nodelay: false,
             quic_client_address: "127.0.0.1:0".to_string(),
             quic_server_address: "127.0.0.1:8080".to_string(),
             quic_server_name: "localhost".to_string(),

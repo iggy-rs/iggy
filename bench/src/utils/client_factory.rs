@@ -12,6 +12,7 @@ pub fn create_client_factory(args: &IggyBenchArgs) -> Arc<dyn ClientFactory> {
         }),
         Transport::Tcp => Arc::new(TcpClientFactory {
             server_addr: args.server_address().to_owned(),
+            nodelay: args.nodelay(),
         }),
         Transport::Quic => Arc::new(QuicClientFactory {
             server_addr: args.server_address().to_owned(),

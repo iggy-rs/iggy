@@ -84,6 +84,9 @@ pub struct Args {
     #[arg(long, default_value = "localhost")]
     pub tcp_tls_domain: String,
 
+    #[arg(long, default_value = "false")]
+    pub tcp_nodelay: bool,
+
     #[arg(long, default_value = "127.0.0.1:0")]
     pub quic_client_address: String,
 
@@ -176,6 +179,7 @@ impl Default for Args {
             tcp_server_address: "127.0.0.1:8090".to_string(),
             tcp_tls_enabled: false,
             tcp_tls_domain: "localhost".to_string(),
+            tcp_nodelay: true,
             quic_client_address: "127.0.0.1:0".to_string(),
             quic_server_address: "127.0.0.1:8080".to_string(),
             quic_server_name: "localhost".to_string(),
@@ -215,6 +219,7 @@ impl Args {
             tcp_tls_enabled: self.tcp_tls_enabled,
             tcp_tls_domain: self.tcp_tls_domain.clone(),
             tcp_tls_ca_file: None,
+            tcp_nodelay: self.tcp_nodelay,
             quic_client_address: self.quic_client_address.clone(),
             quic_server_address: self.quic_server_address.clone(),
             quic_server_name: self.quic_server_name.clone(),

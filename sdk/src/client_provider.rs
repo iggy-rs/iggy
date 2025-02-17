@@ -112,6 +112,7 @@ impl ClientProviderConfig {
                     tls_enabled: args.tcp_tls_enabled,
                     tls_domain: args.tcp_tls_domain,
                     tls_ca_file: args.tcp_tls_ca_file,
+                    nodelay: args.tcp_nodelay,
                     heartbeat_interval: IggyDuration::from_str(&args.tcp_heartbeat_interval)
                         .unwrap(),
                     reconnection: TcpClientReconnectionConfig {

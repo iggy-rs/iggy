@@ -51,7 +51,12 @@ async fn should_fill_data_and_verify_after_restart() {
     ];
 
     // 4. Connect and login to newly started server
-    let client = TcpClientFactory { server_addr }.create_client().await;
+    let client = TcpClientFactory {
+        server_addr,
+        ..Default::default()
+    }
+    .create_client()
+    .await;
     let client = IggyClient::create(client, None, None);
     login_root(&client).await;
     let topic_id = Identifier::numeric(1).unwrap();
@@ -88,6 +93,7 @@ async fn should_fill_data_and_verify_after_restart() {
     let client = IggyClient::create(
         TcpClientFactory {
             server_addr: server_addr.clone(),
+            ..Default::default()
         }
         .create_client()
         .await,

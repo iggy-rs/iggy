@@ -38,19 +38,23 @@ impl SegmentLogReader {
             .open(file_path)
             .with_error_context(|e| format!("Failed to open log file: {file_path}, error: {e}"))
             .map_err(|_| IggyError::CannotReadFile)?;
-        let fd = file.as_raw_fd();
 
         // posix_fadvise() doesn't exist on MacOS
         #[cfg(not(target_os = "macos"))]
-        let _ = nix::fcntl::posix_fadvise(
-            fd,
-            0,
-            0,
-            nix::fcntl::PosixFadviseAdvice::POSIX_FADV_SEQUENTIAL,
-        )
-        .with_info_context(|e| {
-            format!("Failed to set sequential access pattern on log file: {file_path}, error: {e}")
-        });
+        {
+            let fd = file.as_raw_fd();
+            let _ = nix::fcntl::posix_fadvise(
+                fd,
+                0,
+                0,
+                nix::fcntl::PosixFadviseAdvice::POSIX_FADV_SEQUENTIAL,
+            )
+            .with_info_context(|e| {
+                format!(
+                    "Failed to set sequential access pattern on log file: {file_path}, error: {e}"
+                )
+            });
+        }
 
         let actual_log_size = file
             .metadata()

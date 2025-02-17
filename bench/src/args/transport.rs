@@ -42,6 +42,10 @@ impl BenchmarkTransportProps for BenchmarkTransportCommand {
         self.inner().client_address()
     }
 
+    fn nodelay(&self) -> bool {
+        self.inner().nodelay()
+    }
+
     fn inner(&self) -> &dyn BenchmarkTransportProps {
         match self {
             BenchmarkTransportCommand::Http(args) => args,
@@ -83,6 +87,10 @@ impl BenchmarkTransportProps for HttpArgs {
         panic!("Setting client address for HTTP transport is not supported!")
     }
 
+    fn nodelay(&self) -> bool {
+        panic!("Setting nodelay for HTTP transport is not supported!")
+    }
+
     fn output_command(&self) -> &Option<BenchmarkOutputCommand> {
         &self.output
     }
@@ -93,6 +101,10 @@ pub struct TcpArgs {
     /// Address of the TCP iggy-server
     #[arg(long, default_value_t = DEFAULT_TCP_SERVER_ADDRESS.to_owned())]
     pub server_address: String,
+
+    /// Disable Nagle's algorithm
+    #[arg(long, default_value_t = false)]
+    pub nodelay: bool,
 
     /// Optional output command, used to output results (charts, raw json data) to a directory
     #[command(subcommand)]
@@ -114,6 +126,10 @@ impl BenchmarkTransportProps for TcpArgs {
 
     fn client_address(&self) -> &str {
         panic!("Setting client address for TCP transport is not supported!")
+    }
+
+    fn nodelay(&self) -> bool {
+        self.nodelay
     }
 
     fn output_command(&self) -> &Option<BenchmarkOutputCommand> {
@@ -159,6 +175,10 @@ impl BenchmarkTransportProps for QuicArgs {
 
     fn client_address(&self) -> &str {
         &self.client_address
+    }
+
+    fn nodelay(&self) -> bool {
+        panic!("Setting nodelay for QUIC transport is not supported!")
     }
 
     fn output_command(&self) -> &Option<BenchmarkOutputCommand> {

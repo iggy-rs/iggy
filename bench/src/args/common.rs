@@ -93,6 +93,10 @@ impl IggyBenchArgs {
         self.benchmark_kind.transport_command().transport()
     }
 
+    pub fn nodelay(&self) -> bool {
+        self.benchmark_kind.transport_command().nodelay()
+    }
+
     pub fn server_address(&self) -> &str {
         self.benchmark_kind
             .inner()

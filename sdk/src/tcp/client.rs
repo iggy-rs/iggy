@@ -482,6 +482,10 @@ impl TcpClient {
             })?;
             self.client_address.lock().await.replace(client_address);
 
+            if let Err(e) = stream.set_nodelay(self.config.nodelay) {
+                error!("Failed to set the nodelay option on the client: {e}, continuing...",);
+            }
+
             if !tls_enabled {
                 connection_stream =
                     ConnectionStreamKind::Tcp(TcpConnectionStream::new(client_address, stream));

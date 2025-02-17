@@ -19,6 +19,8 @@ pub struct TcpClientConfig {
     pub reconnection: TcpClientReconnectionConfig,
     /// Interval of heartbeats sent by the client
     pub heartbeat_interval: IggyDuration,
+    /// Disable Nagle algorithm for the TCP socket.
+    pub nodelay: bool,
 }
 
 #[derive(Debug, Clone)]
@@ -39,6 +41,7 @@ impl Default for TcpClientConfig {
             heartbeat_interval: IggyDuration::from_str("5s").unwrap(),
             auto_login: AutoLogin::Disabled,
             reconnection: TcpClientReconnectionConfig::default(),
+            nodelay: false,
         }
     }
 }

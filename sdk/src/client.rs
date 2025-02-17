@@ -529,6 +529,7 @@ impl ConnectionString {
         let mut reconnection_interval = "1s".to_owned();
         let mut reestablish_after = "5s".to_owned();
         let mut heartbeat_interval = "5s".to_owned();
+        let mut nodelay = false;
 
         for option in options {
             let option_parts = option.split('=').collect::<Vec<&str>>();
@@ -553,6 +554,9 @@ impl ConnectionString {
                 }
                 "heartbeat_interval" => {
                     heartbeat_interval = option_parts[1].to_string();
+                }
+                "nodelay" => {
+                    nodelay = option_parts[1] == "true";
                 }
                 _ => {
                     return Err(IggyError::InvalidConnectionString);
@@ -579,6 +583,7 @@ impl ConnectionString {
                 reestablish_after: IggyDuration::from_str(reestablish_after.as_str())
                     .map_err(|_| IggyError::InvalidConnectionString)?,
             },
+            nodelay,
         })
     }
 }
@@ -589,6 +594,7 @@ struct ConnectionStringOptions {
     tls_domain: String,
     reconnection: TcpClientReconnectionConfig,
     heartbeat_interval: IggyDuration,
+    nodelay: bool,
 }
 
 impl Default for ConnectionStringOptions {
@@ -598,6 +604,7 @@ impl Default for ConnectionStringOptions {
             tls_domain: "".to_string(),
             reconnection: Default::default(),
             heartbeat_interval: IggyDuration::from_str("5s").unwrap(),
+            nodelay: true,
         }
     }
 }
@@ -612,6 +619,7 @@ impl From<ConnectionString> for TcpClientConfig {
             tls_ca_file: None,
             reconnection: connection_string.options.reconnection,
             heartbeat_interval: connection_string.options.heartbeat_interval,
+            nodelay: connection_string.options.nodelay,
         }
     }
 }
@@ -624,7 +632,7 @@ mod tests {
     fn connection_string_without_username_should_fail() {
         let server_address = "localhost:1234";
         let value = format!("{CONNECTION_STRING_PREFIX}:secret@{server_address}");
-        let connection_string = ConnectionString::new(&value);
+        let connection_string: Result<ConnectionString, IggyError> = ConnectionString::new(&value);
         assert!(connection_string.is_err());
     }
 

@@ -607,7 +607,7 @@ dependencies = [
 
 [[package]]
 name = "bench"
-version = "0.2.1"
+version = "0.2.2"
 dependencies = [
  "async-trait",
  "atomic-time",
@@ -2437,7 +2437,7 @@ dependencies = [
 
 [[package]]
 name = "iggy"
-version = "0.6.201"
+version = "0.6.202"
 dependencies = [
  "aes-gcm",
  "ahash 0.8.11",

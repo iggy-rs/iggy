@@ -1,6 +1,6 @@
 [package]
 name = "bench"
-version = "0.2.1"
+version = "0.2.2"
 edition = "2021"
 license = "Apache-2.0"
 # Due to dependency to integration, which has a dependency to server, setting

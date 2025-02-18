@@ -101,9 +101,9 @@ impl Segment {
             self.partition_id
         );
 
-        let (has_remainder, batch) = batch_accumulator.materialize_batch_and_maybe_update_state();
+        let batch = batch_accumulator.materialize_batch_and_update_state();
         let batch_size = batch.get_size_bytes();
-        if has_remainder {
+        if batch_size > 0 {
             self.unsaved_messages = Some(batch_accumulator);
         }
         let confirmation = match confirmation {

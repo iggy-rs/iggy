@@ -12,6 +12,8 @@ pub struct Index {
 impl PartialEq<Self> for Index {
     fn eq(&self, other: &Self) -> bool {
         self.offset == other.offset
+            && self.position == other.position
+            && self.timestamp == other.timestamp
     }
 }
 

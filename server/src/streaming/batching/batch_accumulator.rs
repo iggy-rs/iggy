@@ -1,5 +1,4 @@
 use super::message_batch::{RetainedMessageBatch, RETAINED_BATCH_HEADER_LEN};
-use crate::streaming::local_sizeable::LocalSizeable;
 use crate::streaming::models::messages::RetainedMessage;
 use bytes::BytesMut;
 use iggy::utils::byte_size::IggyByteSize;
@@ -12,7 +11,6 @@ pub struct BatchAccumulator {
     current_size: IggyByteSize,
     current_offset: u64,
     current_timestamp: u64,
-    capacity: u64,
     messages: Vec<Arc<RetainedMessage>>,
 }
 
@@ -23,7 +21,6 @@ impl BatchAccumulator {
             current_size: IggyByteSize::from(0),
             current_offset: 0,
             current_timestamp: 0,
-            capacity: capacity as u64,
             messages: Vec::with_capacity(capacity),
         }
     }
@@ -41,11 +38,13 @@ impl BatchAccumulator {
         start_offset: u64,
         end_offset: u64,
     ) -> Vec<Arc<RetainedMessage>> {
-        self.messages
-            .iter()
-            .filter(|msg| msg.offset >= start_offset && msg.offset <= end_offset)
-            .cloned()
-            .collect()
+        let start_idx = self
+            .messages
+            .partition_point(|msg| msg.offset < start_offset);
+        let end_idx = self
+            .messages
+            .partition_point(|msg| msg.offset <= end_offset);
+        self.messages[start_idx..end_idx].to_vec()
     }
 
     pub fn is_empty(&self) -> bool {
@@ -68,42 +67,37 @@ impl BatchAccumulator {
         self.base_offset
     }
 
-    pub fn materialize_batch_and_maybe_update_state(&mut self) -> (bool, RetainedMessageBatch) {
+    pub fn materialize_batch_and_update_state(&mut self) -> RetainedMessageBatch {
         let batch_base_offset = self.base_offset;
         let batch_last_offset_delta = (self.current_offset - self.base_offset) as u32;
-        let split_point = std::cmp::min(self.capacity as usize, self.messages.len());
 
+        let num_messages = self.messages.len();
+        let last_batch_timestamp = if num_messages > 0 {
+            self.messages[num_messages - 1].timestamp
+        } else {
+            0
+        };
+
+        let messages = std::mem::take(&mut self.messages);
         let mut bytes = BytesMut::with_capacity(self.current_size.as_bytes_u64() as usize);
-        let last_batch_timestamp = self
-            .messages
-            .get(split_point - 1)
-            .map_or(0, |msg| msg.timestamp);
-        for message in self.messages.drain(..split_point) {
+        for message in messages {
             message.extend(&mut bytes);
         }
 
-        let has_remainder = !self.messages.is_empty();
-        if has_remainder {
-            self.base_offset = self.messages.first().unwrap().offset;
-            self.current_size = self
-                .messages
-                .iter()
-                .map(|msg| msg.get_size_bytes())
-                .sum::<IggyByteSize>();
-            self.current_offset = self.messages.last().unwrap().offset;
-            self.current_timestamp = self.messages.last().unwrap().timestamp;
-        }
+        self.base_offset = 0;
+        self.current_size = IggyByteSize::from(0);
+        self.current_offset = 0;
+        self.current_timestamp = 0;
 
         let batch_payload = bytes.freeze();
         let batch_payload_len = IggyByteSize::from(batch_payload.len() as u64);
-        let batch = RetainedMessageBatch::new(
+        RetainedMessageBatch::new(
             batch_base_offset,
             batch_last_offset_delta,
             last_batch_timestamp,
             batch_payload_len,
             batch_payload,
-        );
-        (has_remainder, batch)
+        )
     }
 }
 

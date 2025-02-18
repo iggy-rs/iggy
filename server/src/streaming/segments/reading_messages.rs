@@ -299,7 +299,7 @@ impl Segment {
             start_offset,
             end_offset
         );
-        let messages_count = (start_offset + end_offset) as usize;
+        let messages_count = (start_offset + end_offset + 1) as usize;
         let messages = self
             .load_batches_by_range(index_range)
             .await

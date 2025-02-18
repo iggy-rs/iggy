@@ -14,7 +14,7 @@ use std::{
     },
 };
 use tokio::task::spawn_blocking;
-use tracing::{error, trace, warn};
+use tracing::{error, trace};
 
 /// A dedicated struct for reading from the index file.
 #[derive(Debug)]
@@ -127,6 +127,7 @@ impl SegmentIndexReader {
                 return Err(IggyError::CannotReadFile);
             }
         };
+        let mut last_index = Index::default();
         for chunk in buf.chunks_exact(INDEX_SIZE as usize) {
             let current_index = parse_index(chunk)
                 .with_error_context(|e| format!("Failed to parse index {}: {e}", self.file_path))?;
@@ -139,9 +140,10 @@ impl SegmentIndexReader {
                 index_range.end = current_index;
                 break;
             }
+            last_index = current_index;
         }
-        if index_range.start == Index::default() {
-            warn!("Failed to find index >= {}", relative_start_offset);
+        if index_range.end == Index::default() {
+            index_range.end = last_index;
         }
         Ok(Some(index_range))
     }

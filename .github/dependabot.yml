@@ -5,9 +5,23 @@ updates:
     schedule:
       interval: "weekly"
     rebase-strategy: "disabled"
+    commit-message:
+      prefix: "chore(ci): "
+    labels:
+      - "ci-cd"
+    assignees:
+      - "iggy-rs/maintainers"
+    reviewers:
+      - "iggy-rs/maintainers"
 
   - package-ecosystem: "cargo"
     directory: "/"
     schedule:
       interval: "daily"
     rebase-strategy: "disabled"
+    commit-message:
+      prefix: "chore(deps): "
+    assignees:
+      - "iggy-rs/maintainers"
+    reviewers:
+      - "iggy-rs/maintainers"

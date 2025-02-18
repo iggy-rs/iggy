@@ -10,7 +10,7 @@ use error_set::ErrContext;
 use iggy::{error::IggyError, utils::byte_size::IggyByteSize};
 use std::{
     fs::{File, OpenOptions},
-    os::{fd::AsRawFd, unix::prelude::FileExt},
+    os::unix::prelude::FileExt,
 };
 use std::{
     io::ErrorKind,
@@ -42,6 +42,7 @@ impl SegmentLogReader {
         // posix_fadvise() doesn't exist on MacOS
         #[cfg(not(target_os = "macos"))]
         {
+            use std::os::unix::io::AsRawFd;
             let fd = file.as_raw_fd();
             let _ = nix::fcntl::posix_fadvise(
                 fd,

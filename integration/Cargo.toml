@@ -10,7 +10,7 @@ assert_cmd = "2.0.16"
 async-trait = "0.1.86"
 bytes = "1.10.0"
 chrono = "0.4.39"
-ctor = "0.3.3"
+ctor = "0.3.4"
 derive_more = "2.0.1"
 env_logger = "0.11.6"
 futures = "0.3.31"
@@ -24,11 +24,11 @@ predicates = "3.1.3"
 regex = "1.11.1"
 serial_test = "3.2.0"
 server = { path = "../server" }
-tempfile = "3.16.0"
+tempfile = "3.17.1"
 tokio = { version = "1.43.0", features = ["full"] }
 tracing-subscriber = { version = "0.3.19", features = ["fmt", "env-filter"] }
 twox-hash = { version = "2.1.0", features = ["xxhash32"] }
-uuid = { version = "1.13.1", features = ["v7", "fast-rng", "zerocopy"] }
+uuid = { version = "1.13.2", features = ["v7", "fast-rng", "zerocopy"] }
 zip = "2.2.2"
 
 # Some tests are failing in CI due to lack of IPv6 interfaces

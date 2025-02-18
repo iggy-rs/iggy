@@ -215,6 +215,7 @@ impl IggyCmdTest {
         test_case.verify_command(assert);
     }
 
+    #[cfg(not(target_os = "macos"))]
     pub(crate) fn get_tcp_server_address(&self) -> Option<String> {
         self.server.get_raw_tcp_addr()
     }

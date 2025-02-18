@@ -12,7 +12,7 @@ atomic-time = "0.1.5"
 bytes = "1.10.0"
 charming = "0.4.0"
 chrono = "0.4.39"
-clap = { version = "4.5.29", features = ["derive"] }
+clap = { version = "4.5.30", features = ["derive"] }
 figlet-rs = "0.1.5"
 futures = "0.3.31"
 hostname = "0.4.0"
@@ -28,7 +28,7 @@ toml = "0.8.20"
 tracing = { version = "0.1.41" }
 tracing-appender = "0.2.3"
 tracing-subscriber = { version = "0.3.19", features = ["fmt", "env-filter"] }
-uuid = { version = "1.13.1", features = ["serde"] }
+uuid = { version = "1.13.2", features = ["serde"] }
 
 [[bin]]
 name = "iggy-bench"

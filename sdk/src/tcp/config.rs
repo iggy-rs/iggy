@@ -122,6 +122,12 @@ impl TcpClientConfigBuilder {
         self
     }
 
+    /// Sets the nodelay option for the TCP socket.
+    pub fn with_no_delay(mut self) -> Self {
+        self.config.nodelay = true;
+        self
+    }
+
     /// Builds the TCP client configuration.
     pub fn build(self) -> TcpClientConfig {
         self.config

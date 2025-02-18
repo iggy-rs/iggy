@@ -76,6 +76,7 @@ impl IggyCmdCommand {
         self.env.clone()
     }
 
+    #[cfg(not(target_os = "macos"))]
     pub(crate) fn disable_backtrace(self) -> Self {
         self.env("RUST_BACKTRACE", "0")
     }

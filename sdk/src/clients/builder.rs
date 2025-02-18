@@ -145,8 +145,15 @@ impl TcpClientBuilder {
         self
     }
 
+    /// Sets the path to the CA file for TLS.
     pub fn with_tls_ca_file(mut self, tls_ca_file: String) -> Self {
         self.config = self.config.with_tls_ca_file(tls_ca_file);
+        self
+    }
+
+    /// Sets the nodelay option for the TCP socket.
+    pub fn with_no_delay(mut self) -> Self {
+        self.config = self.config.with_no_delay();
         self
     }
 

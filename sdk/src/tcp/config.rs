@@ -19,6 +19,8 @@ pub struct TcpClientConfig {
     pub reconnection: TcpClientReconnectionConfig,
     /// Interval of heartbeats sent by the client
     pub heartbeat_interval: IggyDuration,
+    /// Disable Nagle algorithm for the TCP socket.
+    pub nodelay: bool,
 }
 
 #[derive(Debug, Clone)]
@@ -39,6 +41,7 @@ impl Default for TcpClientConfig {
             heartbeat_interval: IggyDuration::from_str("5s").unwrap(),
             auto_login: AutoLogin::Disabled,
             reconnection: TcpClientReconnectionConfig::default(),
+            nodelay: false,
         }
     }
 }
@@ -116,6 +119,12 @@ impl TcpClientConfigBuilder {
     /// Sets the path to the CA file for TLS.
     pub fn with_tls_ca_file(mut self, tls_ca_file: String) -> Self {
         self.config.tls_ca_file = Some(tls_ca_file);
+        self
+    }
+
+    /// Sets the nodelay option for the TCP socket.
+    pub fn with_no_delay(mut self) -> Self {
+        self.config.nodelay = true;
         self
     }
 

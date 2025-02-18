@@ -1,6 +1,6 @@
 [package]
 name = "bench"
-version = "0.2.1"
+version = "0.2.2"
 edition = "2021"
 license = "Apache-2.0"
 # Due to dependency to integration, which has a dependency to server, setting
@@ -28,7 +28,7 @@ toml = "0.8.20"
 tracing = { version = "0.1.41" }
 tracing-appender = "0.2.3"
 tracing-subscriber = { version = "0.3.19", features = ["fmt", "env-filter"] }
-uuid = { version = "1.13.1", features = ["serde"] }
+uuid = { version = "1.13.2", features = ["serde"] }
 
 [[bin]]
 name = "iggy-bench"

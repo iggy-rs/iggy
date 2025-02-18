@@ -5,9 +5,10 @@ use iggy::tcp::client::TcpClient;
 use iggy::tcp::config::TcpClientConfig;
 use std::sync::Arc;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct TcpClientFactory {
     pub server_addr: String,
+    pub nodelay: bool,
 }
 
 #[async_trait]
@@ -15,6 +16,7 @@ impl ClientFactory for TcpClientFactory {
     async fn create_client(&self) -> Box<dyn Client> {
         let config = TcpClientConfig {
             server_address: self.server_addr.clone(),
+            nodelay: self.nodelay,
             ..TcpClientConfig::default()
         };
         let client = TcpClient::create(Arc::new(config)).unwrap_or_else(|e| {

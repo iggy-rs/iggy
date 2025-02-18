@@ -252,6 +252,7 @@ for (( i=0; i<${#DOUBLE_SUITES[@]} ; i+=2 )) ; do
     # Gracefully stop the server
     echo "Stopping iggy-server..."
     send_signal "iggy-server" "TERM"
+    wait_for_process "iggy-server" 5
 done
 
 exit 0

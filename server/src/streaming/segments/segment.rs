@@ -124,35 +124,33 @@ impl Segment {
         self.size_bytes = IggyByteSize::from(log_size_bytes);
         self.last_index_position = log_size_bytes as _;
 
-        if self.config.segment.cache_indexes {
-            self.indexes = Some(
-                self.index_reader
-                    .as_ref()
-                    .unwrap()
-                    .load_all_indexes_impl()
-                    .await
-                    .with_error_context(|e| {
-                        format!("Failed to load indexes, error: {e} for {}", self)
-                    })
-                    .map_err(|_| IggyError::CannotReadFile)?,
-            );
+        self.indexes = Some(
+            self.index_reader
+                .as_ref()
+                .unwrap()
+                .load_all_indexes_impl()
+                .await
+                .with_error_context(|e| format!("Failed to load indexes, error: {e} for {}", self))
+                .map_err(|_| IggyError::CannotReadFile)?,
+        );
 
-            let last_index_offset = if self.indexes.as_ref().unwrap().is_empty() {
-                0_u64
-            } else {
-                self.indexes.as_ref().unwrap().last().unwrap().offset as u64
-            };
+        let last_index_offset = if self.indexes.as_ref().unwrap().is_empty() {
+            0_u64
+        } else {
+            self.indexes.as_ref().unwrap().last().unwrap().offset as u64
+        };
 
-            self.current_offset = self.start_offset + last_index_offset;
+        self.current_offset = self.start_offset + last_index_offset;
 
-            info!(
-                "Loaded {} indexes for segment with start offset: {} and partition with ID: {} for topic with ID: {} and stream with ID: {}.",
-                self.indexes.as_ref().unwrap().len(),
-                self.start_offset,
-                self.partition_id,
-                self.topic_id,
-                self.stream_id
-            );
+        info!("Loaded {} indexes for segment with start offset: {} and partition with ID: {} for topic with ID: {} and stream with ID: {}.",
+              self.indexes.as_ref().unwrap().len(),
+              self.start_offset,
+              self.partition_id,
+              self.topic_id,
+              self.stream_id);
+
+        if !self.config.segment.cache_indexes {
+            self.indexes = None;
         }
 
         if self.is_full().await {

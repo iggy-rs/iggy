@@ -134,26 +134,50 @@ async fn should_persist_messages_and_then_load_them_by_timestamp() {
         .await
         .unwrap();
 
-    // TODO(hubcio): This is a bit of a hack: sometimes messages count is equal to 99, sometimes 100
-    let loaded_messages_count_ok = (loaded_messages.len() == messages_count as usize)
-        || (loaded_messages.len() == messages_count as usize - 1);
-
-    assert!(loaded_messages_count_ok);
+    assert_eq!(
+        loaded_messages.len(),
+        messages_count as usize,
+        "Expected loaded messages count to be {}, but got {}",
+        messages_count,
+        loaded_messages.len()
+    );
     for i in 0..loaded_messages.len() {
         let loaded_message = &loaded_messages[i];
         let appended_message = &appended_messages[i];
-        assert_eq!(loaded_message.id, appended_message.id);
-        assert_eq!(loaded_message.payload, appended_message.payload);
-        assert!(loaded_message.timestamp >= test_timestamp.as_micros());
+        assert_eq!(
+            loaded_message.id, appended_message.id,
+            "Message ID mismatch at position {}: expected {}, got {}",
+            i, appended_message.id, loaded_message.id
+        );
+        assert_eq!(
+            loaded_message.payload, appended_message.payload,
+            "Payload mismatch at position {}: expected {:?}, got {:?}",
+            i, appended_message.payload, loaded_message.payload
+        );
+        assert!(
+            loaded_message.timestamp >= test_timestamp.as_micros(),
+            "Message timestamp {} at position {} is less than test timestamp {}",
+            loaded_message.timestamp,
+            i,
+            test_timestamp.as_micros()
+        );
         assert_eq!(
             loaded_message
                 .headers
                 .as_ref()
                 .map(|bytes| HashMap::from_bytes(bytes.clone()).unwrap()),
-            appended_message.headers
+            appended_message.headers,
+            "Headers mismatch at position {}: expected {:?}, got {:?}",
+            i,
+            appended_message.headers,
+            loaded_message
+                .headers
+                .as_ref()
+                .map(|bytes| HashMap::from_bytes(bytes.clone()).unwrap())
         );
     }
 }
+
 #[tokio::test]
 async fn should_persist_messages_and_then_load_them_from_disk() {
     let setup = TestSetup::init().await;
@@ -234,7 +258,11 @@ async fn should_persist_messages_and_then_load_them_from_disk() {
         .append_messages(appendable_batch_info, messages, None)
         .await
         .unwrap();
-    assert_eq!(partition.unsaved_messages_count, 0);
+    assert_eq!(
+        partition.unsaved_messages_count, 0,
+        "Expected unsaved messages count to be 0, but got {}",
+        partition.unsaved_messages_count
+    );
 
     let now = IggyTimestamp::now();
     let mut loaded_partition = Partition::create(
@@ -262,19 +290,40 @@ async fn should_persist_messages_and_then_load_them_from_disk() {
         .get_messages_by_offset(0, messages_count)
         .await
         .unwrap();
-    assert_eq!(loaded_messages.len(), messages_count as usize);
+    assert_eq!(
+        loaded_messages.len(),
+        messages_count as usize,
+        "Expected loaded messages count to be {}, but got {}",
+        messages_count,
+        loaded_messages.len()
+    );
     for i in 1..=messages_count {
         let index = i as usize - 1;
         let loaded_message = &loaded_messages[index];
         let appended_message = &appended_messages[index];
-        assert_eq!(loaded_message.id, appended_message.id);
-        assert_eq!(loaded_message.payload, appended_message.payload);
+        assert_eq!(
+            loaded_message.id, appended_message.id,
+            "Message ID mismatch at position {}: expected {}, got {}",
+            i, appended_message.id, loaded_message.id
+        );
+        assert_eq!(
+            loaded_message.payload, appended_message.payload,
+            "Payload mismatch at position {}: expected {:?}, got {:?}",
+            i, appended_message.payload, loaded_message.payload
+        );
         assert_eq!(
             loaded_message
                 .headers
                 .as_ref()
                 .map(|bytes| HashMap::from_bytes(bytes.clone()).unwrap()),
-            appended_message.headers
+            appended_message.headers,
+            "Headers mismatch at position {}: expected {:?}, got {:?}",
+            i,
+            appended_message.headers,
+            loaded_message
+                .headers
+                .as_ref()
+                .map(|bytes| HashMap::from_bytes(bytes.clone()).unwrap())
         );
     }
 }

@@ -4,6 +4,7 @@ mod reading_messages;
 mod segment;
 mod writing_messages;
 
+pub use indexes::Index;
 pub use segment::Segment;
 
 pub const LOG_EXTENSION: &str = "log";

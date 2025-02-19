@@ -7,21 +7,16 @@ use crate::streaming::polling_consumer::PollingConsumer;
 use crate::streaming::segments::*;
 use error_set::ErrContext;
 use iggy::confirmation::Confirmation;
+use iggy::error::IggyError;
 use iggy::messages::send_messages::Message;
 use iggy::models::messages::POLLED_MESSAGE_METADATA;
 use iggy::utils::timestamp::IggyTimestamp;
-use iggy::{error::IggyError, utils::duration::IggyDuration};
 use std::sync::{atomic::Ordering, Arc};
-use std::time::Duration;
 use tracing::{trace, warn};
 
 const EMPTY_MESSAGES: Vec<RetainedMessage> = vec![];
 
 impl Partition {
-    pub fn get_messages_count(&self) -> u64 {
-        self.messages_count.load(Ordering::SeqCst)
-    }
-
     pub async fn get_messages_by_timestamp(
         &self,
         timestamp: IggyTimestamp,
@@ -32,104 +27,75 @@ impl Partition {
             timestamp,
             self.partition_id
         );
+
         if self.segments.is_empty() {
-            return Ok(EMPTY_MESSAGES.into_iter().map(Arc::new).collect());
+            return Ok(Vec::new());
         }
 
-        let timestamp = timestamp.as_micros();
-        let mut found_index = None;
-        let mut start_offset = self.segments.last().unwrap().start_offset;
-        // Since index cache is configurable globally, not per segment we can handle it this way.
-        if !self.config.segment.cache_indexes {
-            for segment in self.segments.iter() {
-                let index = segment
-                    .load_index_for_timestamp(timestamp)
+        let query_ts = timestamp.as_micros();
+        let mut all_messages = Vec::new();
+        let mut remaining = count;
+        let mut start_segment_index = None;
+
+        for (i, segment) in self.segments.iter().enumerate() {
+            let indexes = if self.config.segment.cache_indexes {
+                segment
+                    .indexes
+                    .clone()
+                    .filter(|index| !index.is_empty())
+                    .map(|index| index[0])
+            } else {
+                segment
+                    .load_index_for_timestamp(query_ts)
                     .await
-                    .with_error_context(|_| format!(
-                        "{COMPONENT} - failed to load index for timestamp, partition: {}, segment start offset: {}, timestamp: {}",
-                        self, segment.start_offset, timestamp,
-                    ))?;
-                if index.is_none() {
-                    continue;
-                } else {
-                    found_index = index;
-                    start_offset = segment.start_offset + found_index.unwrap().offset as u64;
-                    break;
-                }
-            }
-        } else {
-            start_offset = self.segments.first().unwrap().start_offset;
-            for segment in self.segments.iter().rev() {
-                let indexes = segment.indexes.as_ref().unwrap();
-                let index = indexes
-                    .iter()
-                    .rposition(|time_index| time_index.timestamp <= timestamp)
-                    .map(|idx| indexes[idx]);
-                if index.is_none() {
-                    continue;
-                } else {
-                    found_index = index;
-                    start_offset = segment.start_offset + found_index.unwrap().offset as u64;
-                    break;
-                }
+                    .with_error_context(|e| {
+                        format!(
+                            "{COMPONENT} - failed to load index for timestamp, partition: {}, \
+                             segment start offset: {}, timestamp: {}, error: {e}",
+                            self, segment.start_offset, query_ts
+                        )
+                    })?
+            };
+            if indexes.is_some() {
+                start_segment_index = Some(i);
+                break;
             }
         }
 
-        let found_index = found_index.unwrap_or_default();
-        trace!(
-            "Found start offset: {} for timestamp: {}.",
-            start_offset,
-            timestamp
-        );
-        if found_index.timestamp == timestamp {
-            return Ok(self
-                .get_messages_by_offset(start_offset, count)
-                .await
-                .with_error_context(|_| format!(
-                    "{COMPONENT} - failed to get messages by offset, partition: {}, timestamp: {}, start offset: {}, count: {}",
-                    self, timestamp, start_offset, count,
-                ))?
-                .into_iter()
-                .filter(|msg| msg.timestamp >= timestamp)
-                .take(count as usize)
-                .collect());
+        if let Some(segment_index) = start_segment_index {
+            for segment in &self.segments[segment_index..] {
+                if remaining == 0 {
+                    break;
+                }
+                let messages = self
+                    .get_messages_by_offset(
+                        segment.start_offset,
+                        segment.get_messages_count() as u32,
+                    )
+                    .await
+                    .with_error_context(|e| {
+                        format!(
+                            "{COMPONENT} - failed to get messages by offset, partition: {}, \
+                             timestamp: {}, start offset: {}, error: {e}",
+                            self, query_ts, segment.start_offset
+                        )
+                    })?;
+
+                let filtered: Vec<_> = messages
+                    .into_iter()
+                    .filter(|msg| msg.timestamp >= query_ts)
+                    .take(remaining as usize)
+                    .collect();
+
+                remaining = remaining.saturating_sub(filtered.len() as u32);
+                all_messages.extend(filtered);
+            }
         }
 
-        let adjusted_count = self.calculate_adjusted_timestamp_message_count(
-            count,
-            timestamp,
-            found_index.timestamp,
-        );
-        Ok(self
-            .get_messages_by_offset(start_offset, adjusted_count)
-            .await
-            .with_error_context(|_| format!(
-                "{COMPONENT} - failed to get messages by offset, partition: {}, timestamp: {}, start offset: {}",
-                self, timestamp, start_offset,
-            ))?
-            .into_iter()
-            .filter(|msg| msg.timestamp >= timestamp)
-            .take(count as usize)
-            .collect())
+        Ok(all_messages)
     }
 
-    fn calculate_adjusted_timestamp_message_count(
-        &self,
-        count: u32,
-        timestamp: u64,
-        timestamp_from_index: u64,
-    ) -> u32 {
-        if self.avg_timestamp_delta.as_micros() == 0 {
-            return count;
-        }
-        let timestamp_diff = timestamp - timestamp_from_index;
-        // This approximation is not exact, but it's good enough for the usage of this function
-        let overfetch_value =
-            ((timestamp_diff as f64 / self.avg_timestamp_delta.as_micros() as f64) * 1.35).ceil()
-                as u32;
-        count + overfetch_value
-    }
-
+    // Retrieves messages by offset (up to a specified count).
     pub async fn get_messages_by_offset(
         &self,
         start_offset: u64,
@@ -140,29 +106,24 @@ impl Partition {
             self.partition_id,
             self.current_offset
         );
-        if self.segments.is_empty() {
-            return Ok(EMPTY_MESSAGES.into_iter().map(Arc::new).collect());
-        }
-
-        if start_offset > self.current_offset {
-            return Ok(EMPTY_MESSAGES.into_iter().map(Arc::new).collect());
+        if self.segments.is_empty() || start_offset > self.current_offset {
+            return Ok(Vec::new());
         }
 
         let end_offset = self.get_end_offset(start_offset, count);
-
-        let messages = self.try_get_messages_from_cache(start_offset, end_offset);
-        if let Some(messages) = messages {
-            return Ok(messages);
+        if let Some(cached) = self.try_get_messages_from_cache(start_offset, end_offset) {
+            return Ok(cached);
         }
 
         let segments = self.filter_segments_by_offsets(start_offset, end_offset);
         match segments.len() {
-            0 => Ok(EMPTY_MESSAGES.into_iter().map(Arc::new).collect()),
+            0 => Ok(Vec::new()),
             1 => segments[0].get_messages(start_offset, count).await,
             _ => Self::get_messages_from_segments(segments, start_offset, count).await,
         }
     }
 
+    // Retrieves the first messages (up to a specified count).
     pub async fn get_first_messages(
         &self,
         count: u32,
@@ -170,20 +131,21 @@ impl Partition {
         self.get_messages_by_offset(0, count).await
     }
 
+    // Retrieves the last messages (up to a specified count).
     pub async fn get_last_messages(
         &self,
         count: u32,
     ) -> Result<Vec<Arc<RetainedMessage>>, IggyError> {
-        let mut count = count as u64;
-        if count > self.current_offset + 1 {
-            count = self.current_offset + 1
+        let mut requested_count = count as u64;
+        if requested_count > self.current_offset + 1 {
+            requested_count = self.current_offset + 1
         }
-
-        let start_offset = 1 + self.current_offset - count;
-        self.get_messages_by_offset(start_offset, count as u32)
+        let start_offset = 1 + self.current_offset - requested_count;
+        self.get_messages_by_offset(start_offset, requested_count as u32)
             .await
     }
 
+    // Retrieves the next messages for a polling consumer (up to a specified count).
     pub async fn get_next_messages(
         &self,
         consumer: PollingConsumer,
@@ -212,7 +174,7 @@ impl Partition {
                 consumer_offset.offset,
                 self.partition_id
             );
-            return Ok(EMPTY_MESSAGES.into_iter().map(Arc::new).collect());
+            return Ok(Vec::new());
         }
 
         let offset = consumer_offset.offset + 1;
@@ -225,7 +187,6 @@ impl Partition {
 
         self.get_messages_by_offset(offset, count).await
     }
-
     fn get_end_offset(&self, offset: u64, count: u32) -> u64 {
         let mut end_offset = offset + (count - 1) as u64;
         let segment = self.segments.last().unwrap();
@@ -250,25 +211,36 @@ impl Partition {
             .collect()
     }
 
+    // Retrieves messages from multiple segments.
     async fn get_messages_from_segments(
         segments: Vec<&Segment>,
         offset: u64,
         count: u32,
     ) -> Result<Vec<Arc<RetainedMessage>>, IggyError> {
-        let mut messages = Vec::with_capacity(segments.len());
-        for segment in segments {
-            let segment_messages = segment.get_messages(offset, count).await.with_error_context(|_| format!(
-                "{COMPONENT} - failed to get messages from segment, segment: {}, offset: {}, count: {}",
-                segment, offset, count,
-            ))?;
-            for message in segment_messages {
-                messages.push(message);
-            }
-        }
+        let mut messages = Vec::with_capacity(count as usize);
+        let mut remaining_count = count;
 
+        for segment in segments {
+            if remaining_count == 0 {
+                break;
+            }
+            let segment_messages = segment
+                .get_messages(offset, remaining_count)
+                .await
+                .with_error_context(|e| {
+                    format!(
+                        "{COMPONENT} - failed to get messages from segment, segment: {}, \
+                         offset: {}, count: {}, error: {e}",
+                        segment, offset, remaining_count
+                    )
+                })?;
+            remaining_count = remaining_count.saturating_sub(segment_messages.len() as u32);
+            messages.extend(segment_messages);
+        }
         Ok(messages)
     }
 
+    // Tries to retrieve messages from the in-memory cache.
     fn try_get_messages_from_cache(
         &self,
         start_offset: u64,
@@ -320,8 +292,8 @@ impl Partition {
                 let partial_batches = segment
                     .get_newest_batches_by_size(remaining_size)
                     .await
-                    .with_error_context(|_| format!(
-                        "{COMPONENT} - failed to get newest batches by size, segment: {}, remaining size: {}",
+                    .with_error_context(|e| format!(
+                        "{COMPONENT} - failed to get newest batches by size, segment: {}, remaining size: {}, error: {e}",
                         segment, remaining_size,
                     ))?
                     .into_iter()
@@ -334,8 +306,8 @@ impl Partition {
             let segment_batches = segment
                 .get_all_batches()
                 .await
-                .with_error_context(|_| {
-                    format!("{COMPONENT} - failed to retrieve all batches from segment: {segment}",)
+                .with_error_context(|e| {
+                    format!("{COMPONENT} - failed to retrieve all batches from segment: {segment}, error: {e}",)
                 })?
                 .into_iter()
                 .map(Arc::new);
@@ -416,8 +388,8 @@ impl Partition {
                     "Current segment is closed, creating new segment with start offset: {} for partition with ID: {}...",
                     start_offset, self.partition_id
                 );
-                self.add_persisted_segment(start_offset).await.with_error_context(|_| format!(
-                    "{COMPONENT} - failed to add persisted segment, partition: {}, start offset: {}",
+                self.add_persisted_segment(start_offset).await.with_error_context(|e| format!(
+                    "{COMPONENT} - failed to add persisted segment, partition: {}, start offset: {}, error: {e}",
                     self, start_offset,
                 ))?;
             }
@@ -432,10 +404,6 @@ impl Partition {
         };
 
         let mut messages_count = 0u32;
-        // assume that messages have monotonic timestamps
-        let mut max_timestamp = 0;
-        let mut min_timestamp = 0;
-
         let mut retained_messages = Vec::with_capacity(messages.len());
         if let Some(message_deduplicator) = &self.message_deduplicator {
             for message in messages {
@@ -446,27 +414,17 @@ impl Partition {
                     );
                     continue;
                 }
-                max_timestamp = IggyTimestamp::now().as_micros();
-
-                if messages_count == 0 {
-                    min_timestamp = max_timestamp;
-                }
+                let now = IggyTimestamp::now().as_micros();
                 let message_offset = base_offset + messages_count as u64;
-                let message =
-                    Arc::new(RetainedMessage::new(message_offset, max_timestamp, message));
+                let message = Arc::new(RetainedMessage::new(message_offset, now, message));
                 retained_messages.push(message.clone());
                 messages_count += 1;
             }
         } else {
             for message in messages {
-                max_timestamp = IggyTimestamp::now().as_micros();
-
-                if messages_count == 0 {
-                    min_timestamp = max_timestamp;
-                }
+                let now = IggyTimestamp::now().as_micros();
                 let message_offset = base_offset + messages_count as u64;
-                let message =
-                    Arc::new(RetainedMessage::new(message_offset, max_timestamp, message));
+                let message = Arc::new(RetainedMessage::new(message_offset, now, message));
                 retained_messages.push(message.clone());
                 messages_count += 1;
             }
@@ -474,14 +432,6 @@ impl Partition {
         if messages_count == 0 {
             return Ok(());
         }
-
-        let avg_timestamp_delta =
-            Duration::from_micros((max_timestamp - min_timestamp) / messages_count as u64).into();
-
-        let min_alpha: f64 = 0.3;
-        let max_alpha: f64 = 0.7;
-        let dynamic_range = 10.00;
-        self.update_avg_timestamp_delta(avg_timestamp_delta, min_alpha, max_alpha, dynamic_range);
 
         let last_offset = base_offset + (messages_count - 1) as u64;
         if self.should_increment_offset {
@@ -496,9 +446,9 @@ impl Partition {
             last_segment
                 .append_batch(batch_size, messages_count, &retained_messages)
                 .await
-                .with_error_context(|_| {
+                .with_error_context(|e| {
                     format!(
-                        "{COMPONENT} - failed to append batch into last segment: {last_segment}",
+                        "{COMPONENT} - failed to append batch into last segment: {last_segment}, error: {e}",
                     )
                 })?;
         }
@@ -527,6 +477,10 @@ impl Partition {
         Ok(())
     }
 
+    pub fn get_messages_count(&self) -> u64 {
+        self.messages_count.load(Ordering::SeqCst)
+    }
+
     pub async fn flush_unsaved_buffer(&mut self, fsync: bool) -> Result<(), IggyError> {
         let _fsync = fsync;
         if self.unsaved_messages_count == 0 {
@@ -547,25 +501,6 @@ impl Partition {
         }
         self.unsaved_messages_count = 0;
         Ok(())
-    }
-
-    fn update_avg_timestamp_delta(
-        &mut self,
-        avg_timestamp_delta: IggyDuration,
-        min_alpha: f64,
-        max_alpha: f64,
-        dynamic_range: f64,
-    ) {
-        let diff = self
-            .avg_timestamp_delta
-            .abs_diff(avg_timestamp_delta)
-            .as_micros();
-
-        let alpha = max_alpha.min(min_alpha.max(1.0 - (diff as f64 / dynamic_range)));
-        let avg_timestamp_diff = (alpha * avg_timestamp_delta.as_micros() as f64
-            + (1.0f64 - alpha) * self.avg_timestamp_delta.as_micros() as f64)
-            as u64;
-        self.avg_timestamp_delta = avg_timestamp_diff.into();
     }
 }
 

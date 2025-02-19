@@ -56,7 +56,7 @@ pub enum BenchmarkKindCommand {
 
     #[command(
         about = "N producers sending to M partitions in K streams, L consumers polling from P consumer groups",
-        visible_alias = "bpc",
+        visible_alias = "bpcg",
         verbatim_doc_comment
     )]
     BalancedProducerAndConsumerGroup(BalancedProducerAndConsumerGroupArgs),

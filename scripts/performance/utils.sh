@@ -8,12 +8,12 @@ function get_git_iggy_server_tag_or_sha1() {
     local dir="$1"
 
     if [ -d "$dir" ]; then
-        pushd "$dir" > /dev/null || {
+        pushd "$dir" >/dev/null || {
             echo "Error: Failed to enter directory '$dir'." >&2
             exit 1
         }
 
-        if git rev-parse --git-dir > /dev/null 2>&1; then
+        if git rev-parse --git-dir >/dev/null 2>&1; then
             # Get the short commit hash
             local commit_hash
             commit_hash=$(git rev-parse --short HEAD)
@@ -22,7 +22,7 @@ function get_git_iggy_server_tag_or_sha1() {
             local matching_tags
             matching_tags=$(git tag --points-at HEAD | grep -i "server" || true)
 
-            popd > /dev/null || {
+            popd >/dev/null || {
                 echo "Error: Failed to return from directory '$dir'." >&2
                 exit 1
             }
@@ -39,7 +39,7 @@ function get_git_iggy_server_tag_or_sha1() {
             fi
         else
             echo "Error: Directory '$dir' is not a git repository." >&2
-            popd > /dev/null || exit 1
+            popd >/dev/null || exit 1
             return 1
         fi
     else
@@ -53,17 +53,17 @@ function get_git_commit_date() {
     local dir="$1"
 
     if [ -d "$dir" ]; then
-        pushd "$dir" > /dev/null || {
+        pushd "$dir" >/dev/null || {
             echo "Error: Failed to enter directory '$dir'." >&2
             exit 1
         }
 
-        if git rev-parse --git-dir > /dev/null 2>&1; then
+        if git rev-parse --git-dir >/dev/null 2>&1; then
             # Get the committer date (last modified) in ISO 8601 format
             local commit_date
             commit_date=$(git show -s --format=%cI HEAD 2>/dev/null || echo "")
 
-            popd > /dev/null || {
+            popd >/dev/null || {
                 echo "Error: Failed to return from directory '$dir'." >&2
                 exit 1
             }
@@ -76,7 +76,7 @@ function get_git_commit_date() {
             fi
         else
             echo "Error: Directory '$dir' is not a git repository." >&2
-            popd > /dev/null || exit 1
+            popd >/dev/null || exit 1
             return 1
         fi
     else
@@ -87,55 +87,61 @@ function get_git_commit_date() {
 
 # Function to construct a bench command
 function construct_bench_command() {
-    local bench_command=$1
-    local benchmark_mode=$2
-    local streams=$3
-    local actors=$4
-    local message_size=$5
-    local messages_per_batch=$6
-    local message_batches=$7
-    local protocol=$8
-    local remark=${9:-""}
-    local identifier=${10:-$(hostname)}
-    local rate_limit=${11:-""}
+    readonly bench_command=$1
+    readonly benchmark_mode=$2
+    readonly streams=$3
+    readonly actors=$4
+    readonly message_size=$5
+    readonly messages_per_batch=$6
+    readonly message_batches=$7
+    readonly protocol=$8
+    readonly remark=${9:-""}
+    readonly identifier=${10:-$(hostname)}
+    readonly rate_limit=${11:-""}
 
     # Set variables based on benchmark mode
     local actor_args=""
     case "$benchmark_mode" in
-        "pinned-producer")
-            actor_args="--producers ${actors}"
-            ;;
-        "pinned-consumer")
-            actor_args="--consumers ${actors}"
-            ;;
-        "pinned-producer-and-consumer")
-            actor_args="--producers ${actors} --consumers ${actors}"
-            ;;
-        "balanced-producer")
-            actor_args="--producers ${actors}"
-            ;;
-        "balanced-consumer-group")
-            actor_args="--consumers ${actors}"
-            ;;
-        "balanced-producer-and-consumer-group")
-            actor_args="--producers ${actors} --consumers ${actors}"
-            ;;
-        "end-to-end-producing-consumer")
-            actor_args="--producers ${actors}"
-            ;;
-        "end-to-end-producing-consumer-group")
-            actor_args="--producers ${actors}"
-            ;;
-        *)
-            echo "Error: Invalid benchmark mode '$benchmark_mode'." >&2
-            return 1
-            ;;
+    "pinned-producer")
+        actor_args="--producers ${actors}"
+        ;;
+    "pinned-consumer")
+        actor_args="--consumers ${actors}"
+        ;;
+    "pinned-producer-and-consumer")
+        actor_args="--producers ${actors} --consumers ${actors}"
+        ;;
+    "balanced-producer")
+        actor_args="--producers ${actors}"
+        ;;
+    "balanced-consumer-group")
+        actor_args="--consumers ${actors}"
+        ;;
+    "balanced-producer-and-consumer-group")
+        actor_args="--producers ${actors} --consumers ${actors}"
+        ;;
+    "end-to-end-producing-consumer")
+        actor_args="--producers ${actors}"
+        ;;
+    "end-to-end-producing-consumer-group")
+        actor_args="--producers ${actors}"
+        ;;
+    *)
+        echo "Error: Invalid benchmark mode '$benchmark_mode'." >&2
+        return 1
+        ;;
     esac
 
     local commit_hash
-    commit_hash=$(get_git_iggy_server_tag_or_sha1 .) || { echo "Failed to get git commit or tag."; exit 1; }
+    commit_hash=$(get_git_iggy_server_tag_or_sha1 .) || {
+        echo "Failed to get git commit or tag."
+        exit 1
+    }
     local commit_date
-    commit_date=$(get_git_commit_date .) || { echo "Failed to get git commit date."; exit 1; }
+    commit_date=$(get_git_commit_date .) || {
+        echo "Failed to get git commit date."
+        exit 1
+    }
 
     echo "$bench_command ${rate_limit:+ --rate-limit ${rate_limit}} \
 --message-size ${message_size} \

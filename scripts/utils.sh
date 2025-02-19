@@ -10,30 +10,30 @@ function get_git_info() {
 }
 
 # OS detection
-OS="$(uname -s)"
+OS=$(uname -s)
 
 # Function to check if process exists - OS specific implementations
 function process_exists() {
-    local pid=$1
+    local check_pid=$1
     if [ "$OS" = "Darwin" ]; then
-        ps -p "${pid}" > /dev/null
+        ps -p "${check_pid}" >/dev/null
     else
-        [[ -e /proc/${pid} ]]
+        [[ -e /proc/${check_pid} ]]
     fi
 }
 
 # Function to send signal to process - OS specific implementations
 function send_signal_to_pid() {
-    local pid=$1
+    local target_pid=$1
     local signal=$2
     if [ "$OS" = "Darwin" ]; then
-        kill "-${signal}" "${pid}"
+        kill "-${signal}" "${target_pid}"
     else
-        kill -s "${signal}" "${pid}"
+        kill -s "${signal}" "${target_pid}"
     fi
 }
 
-# Function to wait for a process to exit
+# Function to wait for a process with specific name to exit
 function wait_for_process() {
     local process_name=$1
     local timeout=$2
@@ -44,17 +44,15 @@ function wait_for_process() {
 
     while [[ $(date +%s) -lt ${end_time} ]]; do
         continue_outer_loop=false
-        pids=$(pgrep "${process_name}") || true
-        if [[ -n "${pids}" ]]; then
-            for pid in ${pids}; do
-                if process_exists "${pid}"; then
-                    sleep 0.1
-                    continue_outer_loop=true
-                    break
-                fi
-            done
-            [[ $continue_outer_loop == true ]] && continue
-        fi
+        local proc_pid
+        for proc_pid in $(pgrep -x "${process_name}"); do
+            if process_exists "${proc_pid}"; then
+                sleep 0.1
+                continue_outer_loop=true
+                break
+            fi
+        done
+        [[ $continue_outer_loop == true ]] && continue
         return 0
     done
 
@@ -62,17 +60,37 @@ function wait_for_process() {
     return 1
 }
 
+# Function to wait for a process with specific PID to exit
+function wait_for_process_pid() {
+    local wait_pid=$1
+    local timeout=$2
+    local start_time
+    start_time=$(date +%s)
+    local end_time=$((start_time + timeout))
+
+    while [[ $(date +%s) -lt ${end_time} ]]; do
+        if ! process_exists "${wait_pid}"; then
+            return 0
+        fi
+        sleep 0.1
+    done
+
+    echo "Timeout waiting for process with PID ${wait_pid} to exit."
+    return 1
+}
+
 # Function to send a signal to a process
 function send_signal() {
     local process_name=$1
     local pids
-    pids=$(pgrep "${process_name}") || true
+    pids=$(pgrep -x "${process_name}") || true
     local signal=$2
 
     if [[ -n "${pids}" ]]; then
-        for pid in ${pids}; do
-            if process_exists "${pid}"; then
-                send_signal_to_pid "${pid}" "${signal}"
+        local proc_pid
+        for proc_pid in ${pids}; do
+            if process_exists "${proc_pid}"; then
+                send_signal_to_pid "${proc_pid}" "${signal}"
             fi
         done
     fi
@@ -80,12 +98,14 @@ function send_signal() {
 
 # Function to exit with error if a process with the given PID is running
 exit_if_process_is_not_running() {
-    local pid="$1"
+    local check_pid="$1"
 
-    if kill -0 "$pid" 2>/dev/null; then
-        return 0  # Process is running
+    if kill -0 "$check_pid" 2>/dev/null; then
+        echo "Process with PID $check_pid is running."
+        return 0
     else
-        exit 1  # Process is not running
+        echo "Error: Process with PID $check_pid is not running."
+        exit 1
     fi
 }
 
@@ -101,5 +121,14 @@ function on_exit_profile() {
 # Exit hook for run-benches.sh
 function on_exit_bench() {
     send_signal "iggy-server" "KILL"
-    send_signal "iggy-bench" "KILL"
+    # Use exact match for iggy-bench to avoid killing iggy-bench-dashboard
+    pids=$(pgrep -x "iggy-bench") || true
+    if [[ -n "${pids}" ]]; then
+        local bench_pid
+        for bench_pid in ${pids}; do
+            if process_exists "${bench_pid}"; then
+                send_signal_to_pid "${bench_pid}" "KILL"
+            fi
+        done
+    fi
 }

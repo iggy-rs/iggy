@@ -5,16 +5,12 @@ use crate::identifier::Identifier;
 use crate::models::batch::IggyBatch;
 use crate::models::header;
 use crate::models::header::{HeaderKey, HeaderValue};
-use crate::models::messages::{ArchivedIggyMessage, IggyMessage};
+use crate::models::messages::IggyMessage;
 use crate::utils::byte_size::IggyByteSize;
 use crate::utils::sizeable::Sizeable;
 use crate::utils::val_align_up;
 use crate::validatable::Validatable;
 use bytes::{BufMut, Bytes, BytesMut};
-use rkyv::ser::allocator::Arena;
-use rkyv::ser::sharing::Share;
-use rkyv::ser::Serializer;
-use rkyv::util::AlignedVec;
 use serde::{Deserialize, Serialize};
 use serde_with::base64::Base64;
 use serde_with::serde_as;
@@ -434,17 +430,37 @@ pub fn as_bytes(
     result.extend_from_slice(&stream_id_bytes);
     result.extend_from_slice(&topic_id_bytes);
     for message in messages {
-        let headers_size = header::get_headers_size_bytes(&message.headers).as_bytes_u64();
-        let size = message.length + 16 + headers_size;
+        let header_bytes = to_bytes(message.headers);
+        let size = message.payload.len() as u64 + 16 + header_bytes.len() as u64;
         result.extend_from_slice(&[0,0,0,0]);
         result.extend_from_slice(&[0,0,0,0]);
         result.extend_from_slice(&size.to_le_bytes());
         result.extend_from_slice(&message.id.to_le_bytes());
         result.extend_from_slice(&message.payload);
-        result.extend_from_slice(&message.headers);
+        result.extend_from_slice(&header_bytes);
     }
     result
 }
+
+fn to_bytes(headers: Option<HashMap<HeaderKey, HeaderValue>>) -> Bytes {
+        if headers.is_none() {
+            return Bytes::new();
+        }
+        let headers = headers.unwrap();
+
+        let mut bytes = BytesMut::new();
+        for (key, value) in headers {
+            #[allow(clippy::cast_possible_truncation)]
+            bytes.put_u32_le(key.0.len() as u32);
+            bytes.put_slice(key.0.as_bytes());
+            bytes.put_u8(value.kind.as_code());
+            #[allow(clippy::cast_possible_truncation)]
+            bytes.put_u32_le(value.value.len() as u32);
+            bytes.put_slice(&value.value);
+        }
+
+        bytes.freeze()
+    }
 
 impl FromStr for Message {
     type Err = IggyError;
@@ -466,7 +482,7 @@ impl FromStr for Message {
 }
 
 impl SendMessages {
-    fn _to_bytes(&self) -> AlignedVec {
+    fn _to_bytes(&self) -> Vec<u8> {
         todo!();
     }
 

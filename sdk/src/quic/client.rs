@@ -12,7 +12,6 @@ use async_trait::async_trait;
 use bytes::Bytes;
 use quinn::crypto::rustls::QuicClientConfig as QuinnQuicClientConfig;
 use quinn::{ClientConfig, Connection, Endpoint, IdleTimeout, RecvStream, VarInt};
-use rkyv::util::AlignedVec;
 use rustls::client::danger::{HandshakeSignatureValid, ServerCertVerified, ServerCertVerifier};
 use rustls::crypto::CryptoProvider;
 use rustls::pki_types::{CertificateDer, ServerName, UnixTime};
@@ -123,7 +122,7 @@ impl BinaryTransport for QuicClient {
     async fn send_rkyv_with_response(
         &self,
         code: u32,
-        payload: AlignedVec,
+        payload: Vec<u8>,
     ) -> Result<Bytes, IggyError> {
         todo!();
     }

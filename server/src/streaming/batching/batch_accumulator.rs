@@ -3,14 +3,9 @@ use crate::streaming::local_sizeable::LocalSizeable;
 use crate::streaming::models::messages::RetainedMessage;
 use bytes::BytesMut;
 use iggy::models::batch::IggyBatch;
-use iggy::models::messages::{ArchivedIggyMessage, IggyMessage};
+use iggy::models::messages::IggyMessage;
 use iggy::utils::byte_size::IggyByteSize;
 use iggy::utils::sizeable::Sizeable;
-use rkyv::de::Pool;
-use rkyv::rancor::{Fallible, Strategy};
-use rkyv::util::{Align, AlignedVec};
-use rkyv::vec::ArchivedVec;
-use rkyv::{access, Deserialize};
 use std::sync::Arc;
 use tracing::error;
 

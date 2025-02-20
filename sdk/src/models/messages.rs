@@ -21,11 +21,7 @@ pub const IGGY_MESSAGE_METADATA: u32 = 8 + 1 + 8 + 4;
     Debug,
     serde::Serialize,
     serde::Deserialize,
-    rkyv::Serialize,
-    rkyv::Deserialize,
-    rkyv::Archive,
 )]
-#[rkyv(derive(Debug))]
 pub struct IggyMessage {
     /// The binary payload of the message.
     #[serde_as(as = "Base64")]

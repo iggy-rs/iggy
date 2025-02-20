@@ -12,7 +12,6 @@ use crate::utils::timestamp::IggyTimestamp;
 use async_broadcast::{broadcast, Receiver, Sender};
 use async_trait::async_trait;
 use bytes::{BufMut, Bytes, BytesMut};
-use rkyv::util::AlignedVec;
 use rustls::pki_types::{pem::PemObject, CertificateDer, ServerName};
 use std::fmt::Debug;
 use std::net::SocketAddr;
@@ -267,7 +266,7 @@ impl BinaryTransport for TcpClient {
     async fn send_rkyv_with_response(
         &self,
         code: u32,
-        payload: AlignedVec,
+        payload: Vec<u8>,
     ) -> Result<Bytes, IggyError> {
         let result = self.send_raw(code, &payload).await;
         result

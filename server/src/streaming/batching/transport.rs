@@ -4,24 +4,23 @@ use iggy::{
     models::batch::{IggyHeader, IGGY_BATCH_OVERHEAD},
     utils::byte_size::IggyByteSize,
 };
-use rkyv::util::AlignedVec;
 
 use crate::streaming::local_sizeable::LocalSizeable;
 
 #[derive(Default)]
 pub struct IggyBatchSlice {
     pub range: Range<usize>,
-    pub bytes: Arc<AlignedVec>,
+    pub bytes: Arc<Vec<u8>>,
 }
 
 #[derive(Debug)]
 pub struct IggyBatchCachePhantom {
     pub header: IggyHeader,
-    pub bytes: Arc<AlignedVec>,
+    pub bytes: Arc<Vec<u8>>,
 }
 
 impl IggyBatchCachePhantom {
-    pub fn new(header: IggyHeader, bytes: Arc<AlignedVec>) -> Self {
+    pub fn new(header: IggyHeader, bytes: Arc<Vec<u8>>) -> Self {
         Self { header, bytes }
     }
 }
@@ -33,7 +32,7 @@ impl LocalSizeable for IggyBatchCachePhantom {
 }
 
 impl IggyBatchSlice {
-    pub fn new(range: Range<usize>, bytes: Arc<AlignedVec>) -> Self {
+    pub fn new(range: Range<usize>, bytes: Arc<Vec<u8>>) -> Self {
         Self { range, bytes }
     }
 }

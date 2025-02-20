@@ -1,12 +1,10 @@
 use std::{io::Write, sync::Arc};
 
-use rkyv::util::AlignedVec;
 use serde_with::serde_as;
 use tokio::{
     fs::File,
     io::{AsyncReadExt, AsyncWriteExt, BufReader},
 };
-use tracing::warn;
 
 use crate::utils::{byte_size::IggyByteSize, sizeable::Sizeable};
 
@@ -202,11 +200,11 @@ impl<const N: usize> std::io::Write for HeaderWriter<N> {
 pub struct IggyBatch {
     pub header: IggyHeader,
     //TODO: This can be Arc<Vec<u8>>.
-    pub messages: Arc<AlignedVec>,
+    pub messages: Arc<Vec<u8>>,
 }
 
 impl IggyBatch {
-    pub fn new(messages: AlignedVec) -> Self {
+    pub fn new(messages: Vec<u8>) -> Self {
         let messages = Arc::new(messages);
         let header = Default::default();
         Self { header, messages }

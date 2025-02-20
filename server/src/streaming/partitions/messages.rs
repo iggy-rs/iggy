@@ -11,12 +11,8 @@ use crate::streaming::segments::segment::Segment;
 use error_set::ErrContext;
 use iggy::confirmation::Confirmation;
 use iggy::models::batch::IggyBatch;
-use iggy::models::messages::ArchivedIggyMessage;
 use iggy::utils::timestamp::IggyTimestamp;
 use iggy::{error::IggyError, utils::duration::IggyDuration};
-use rkyv::rend::unaligned::u32_ule;
-use rkyv::rend::{u32_le, u64_le};
-use rkyv::util::AlignedVec;
 use std::ops::Range;
 use std::sync::{atomic::Ordering, Arc};
 use std::time::Duration;
@@ -500,17 +496,11 @@ impl Partition {
             let timestamp_delta = (max_timestamp - batch_base_timestamp) as u32;
             let offset_delta = messages_count;
             let length =
-                u64::from_le_bytes(batch_payload[position..position + 8].try_into().unwrap());
+                u64::from_le_bytes(batch_payload[position + 8..position + 16].try_into().unwrap());
             let length = length as usize;
-            position += 8;
-            let message = unsafe {
-                rkyv::access_unchecked_mut::<ArchivedIggyMessage>(
-                    &mut batch_payload[position..length + position],
-                )
-            };
-            let message = unsafe { message.unseal_unchecked() };
-            message.offset_delta = u32_ule::from(offset_delta);
-            message.timestamp_delta = u32_ule::from(timestamp_delta);
+            batch_payload[position..position + 4].copy_from_slice(&offset_delta.to_le_bytes());
+            batch_payload[position + 4..position + 8].copy_from_slice(&timestamp_delta.to_le_bytes());
+            position += 16;
             position += length;
             messages_count += 1;
         }

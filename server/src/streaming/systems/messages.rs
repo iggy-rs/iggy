@@ -16,7 +16,6 @@ use iggy::models::batch::IGGY_BATCH_OVERHEAD;
 use iggy::utils::byte_size::IggyByteSize;
 use iggy::utils::sizeable::Sizeable;
 use iggy::{error::IggyError, identifier::Identifier};
-use rkyv::util::AlignedVec;
 use tracing::{error, trace};
 
 impl System {
@@ -106,7 +105,7 @@ impl System {
         stream_id: Identifier,
         topic_id: Identifier,
         partitioning: Partitioning,
-        bytes: AlignedVec,
+        bytes: Vec<u8>,
         confirmation: Option<Confirmation>,
     ) -> Result<(), IggyError> {
         self.ensure_authenticated(session)?;

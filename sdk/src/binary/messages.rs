@@ -13,7 +13,7 @@ use crate::messages::poll_messages::PollingStrategy;
 use crate::messages::send_messages::{Message, Partitioning};
 use crate::messages::{poll_messages, send_messages};
 use crate::models::batch::{IggyBatch, IggyHeader, IGGY_BATCH_OVERHEAD};
-use crate::models::messages::{ArchivedIggyMessage, IggyMessage};
+use crate::models::messages::IggyMessage;
 
 #[async_trait::async_trait]
 impl<B: BinaryClient> MessageClient for B {
@@ -46,31 +46,12 @@ impl<B: BinaryClient> MessageClient for B {
         let start = Instant::now();
         let header = IggyHeader::from_bytes(&response[..IGGY_BATCH_OVERHEAD as usize]);
         let msg_count = header.last_offset_delta as usize + 1;
-        let mut messages = Vec::with_capacity(msg_count);
         let batch_payload = &response[IGGY_BATCH_OVERHEAD as usize..];
         let mut position = 0;
         let mut count = 0;
         while position < batch_payload.len() {
-            let length =
-                u64::from_le_bytes(batch_payload[position..position + 8].try_into().unwrap());
-            let length = length as usize;
-            position += 8;
-            let message = unsafe {
-                rkyv::access_unchecked::<ArchivedIggyMessage>(
-                    &batch_payload[position..length + position],
-                )
-            };
-            let message = rkyv::deserialize::<IggyMessage, rkyv::rancor::Error>(message).unwrap();
-            messages.push(message);
-            position += length;
-            count += 1;
         }
-        let elapsed = start.elapsed().as_micros();
-        error!(
-            "deserializing batch of {} messages took: {} us",
-            count, elapsed
-        );
-        Ok(messages)
+        todo!();
     }
 
     async fn send_messages(

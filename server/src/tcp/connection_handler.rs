@@ -10,7 +10,6 @@ use iggy::identifier::Identifier;
 use iggy::messages::send_messages::Partitioning;
 use iggy::validatable::Validatable;
 use iggy::{bytes_serializable::BytesSerializable, command::SEND_MESSAGES_CODE};
-use rkyv::util::AlignedVec;
 use std::io::ErrorKind;
 use std::sync::Arc;
 use tracing::{debug, error, info, warn};
@@ -61,7 +60,7 @@ pub(crate) async fn handle_connection(
             let (_, topic_id) = Identifier::from_bytes_new(&metadata_buf[position..]).unwrap();
 
             let messages_len = length - metadata_len as u32 - 8;
-            let mut batch = AlignedVec::with_capacity(messages_len as _);
+            let mut batch = Vec::with_capacity(messages_len as _);
             unsafe {
                 batch.set_len(messages_len as _);
             }

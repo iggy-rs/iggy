@@ -17,7 +17,6 @@ use iggy::utils::byte_size::IggyByteSize;
 use iggy::utils::expiry::IggyExpiry;
 use iggy::utils::sizeable::Sizeable;
 use iggy::utils::timestamp::IggyTimestamp;
-use rkyv::util::AlignedVec;
 use std::collections::HashMap;
 use std::sync::atomic::Ordering;
 use std::sync::Arc;

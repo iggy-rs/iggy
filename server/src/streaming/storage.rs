@@ -20,7 +20,6 @@ use iggy::confirmation::Confirmation;
 use iggy::consumer::ConsumerKind;
 use iggy::error::IggyError;
 use iggy::utils::byte_size::IggyByteSize;
-use rkyv::util::AlignedVec;
 use std::fmt::{Debug, Formatter};
 use std::sync::Arc;
 

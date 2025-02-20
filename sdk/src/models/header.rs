@@ -15,12 +15,8 @@ use std::str::FromStr;
     PartialEq,
     serde::Serialize,
     serde::Deserialize,
-    rkyv::Serialize,
-    rkyv::Deserialize,
-    rkyv::Archive,
 )]
-#[rkyv(derive(Debug, Eq, PartialEq), compare(PartialEq))]
-pub struct HeaderKey(String);
+pub struct HeaderKey(pub String);
 
 impl HeaderKey {
     pub fn new(key: &str) -> Result<Self, IggyError> {
@@ -39,12 +35,6 @@ impl HeaderKey {
 impl Display for HeaderKey {
     fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
         write!(f, "{}", self.as_str())
-    }
-}
-
-impl Hash for ArchivedHeaderKey {
-    fn hash<H: Hasher>(&self, state: &mut H) {
-        self.0.hash(state);
     }
 }
 
@@ -80,11 +70,7 @@ impl TryFrom<&str> for HeaderKey {
     Eq,
     serde::Serialize,
     serde::Deserialize,
-    rkyv::Serialize,
-    rkyv::Deserialize,
-    rkyv::Archive,
 )]
-#[rkyv(derive(Debug, Hash, Eq, PartialEq), compare(PartialEq))]
 pub struct HeaderValue {
     /// The kind of the header value.
     pub kind: HeaderKind,
@@ -102,11 +88,7 @@ pub struct HeaderValue {
     PartialEq,
     serde::Serialize,
     serde::Deserialize,
-    rkyv::Serialize,
-    rkyv::Deserialize,
-    rkyv::Archive,
 )]
-#[rkyv(derive(Debug, Hash, Eq, PartialEq), compare(PartialEq))]
 #[serde(rename_all = "snake_case")]
 pub enum HeaderKind {
     Raw,

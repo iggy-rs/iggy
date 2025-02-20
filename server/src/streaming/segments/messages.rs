@@ -11,7 +11,6 @@ use iggy::error::IggyError;
 use iggy::models::batch::IggyBatch;
 use iggy::utils::byte_size::IggyByteSize;
 use iggy::utils::sizeable::Sizeable;
-use rkyv::util::AlignedVec;
 use std::sync::atomic::Ordering;
 use std::sync::Arc;
 use tracing::{error, info, trace, warn};

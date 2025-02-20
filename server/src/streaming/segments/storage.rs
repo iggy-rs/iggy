@@ -16,12 +16,9 @@ use error_set::ErrContext;
 use iggy::confirmation::Confirmation;
 use iggy::error::IggyError;
 use iggy::models::batch::{HeaderWriter, IggyBatch, IGGY_BATCH_OVERHEAD};
-use iggy::models::messages::ArchivedIggyMessage;
 use iggy::utils::byte_size::IggyByteSize;
 use iggy::utils::checksum;
 use iggy::utils::sizeable::Sizeable;
-use rkyv::rend::unaligned::u32_ule;
-use rkyv::util::AlignedVec;
 use std::io::{SeekFrom, Write};
 use std::path::Path;
 use std::rc::Rc;
@@ -59,7 +56,6 @@ impl FileSegmentStorage {
 
         //TODO: Use write_vectored, instead of looping like this.
         for (iter, batch) in batch_accumulator.batches.into_iter().enumerate() {
-            /*
             if iter > 0 {
                 let base_offset_diff = batch.header.base_offset - base_offset;
                 let base_timestamp_diff = batch.header.base_timestamp - base_timestamp;
@@ -76,11 +72,6 @@ impl FileSegmentStorage {
                     );
                     let length = length as usize;
                     position += 8;
-                    let message = unsafe {
-                        rkyv::access_unchecked::<ArchivedIggyMessage>(
-                            &batch_payload[position..length + position],
-                        )
-                    };
                     position += length;
                     //let message = unsafe { message.unseal_unchecked() };
                     let offset_delta = message.offset_delta;
@@ -90,7 +81,6 @@ impl FileSegmentStorage {
                     //message.timestamp_delta = (timestamp_delta + base_timestamp_diff).into();
                 }
             }
-            */
             batch.write_messages(&mut file).await;
         }
 

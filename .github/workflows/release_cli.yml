@@ -67,7 +67,7 @@ jobs:
           command: "build"
           target: ${{ matrix.platform.target }}
           toolchain: stable
-          args: "--verbose --release -p iggy"
+          args: "--verbose --release --bin iggy"
 
       - name: Collect ${{ matrix.platform.target }} executable
         run: |

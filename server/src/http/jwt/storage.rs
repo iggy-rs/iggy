@@ -43,9 +43,9 @@ impl TokenStorage {
         let file_size = file
             .metadata()
             .await
-            .with_error_context(|_| {
+            .with_error_context(|error| {
                 format!(
-                    "{COMPONENT} - failed to read file metadata, path: {}",
+                    "{COMPONENT} (error: {error}) - failed to read file metadata, path: {}",
                     self.path
                 )
             })
@@ -55,9 +55,9 @@ impl TokenStorage {
         buffer.put_bytes(0, file_size);
         file.read_exact(&mut buffer)
             .await
-            .with_error_context(|_| {
+            .with_error_context(|error| {
                 format!(
-                    "{COMPONENT} - failed to read file into buffer, path: {}",
+                    "{COMPONENT} (error: {error}) - failed to read file into buffer, path: {}",
                     self.path
                 )
             })
@@ -92,9 +92,9 @@ impl TokenStorage {
         self.persister
             .overwrite(&self.path, &bytes)
             .await
-            .with_error_context(|_| {
+            .with_error_context(|error| {
                 format!(
-                    "{COMPONENT} - failed to overwrite file, path: {}",
+                    "{COMPONENT} (error: {error}) - failed to overwrite file, path: {}",
                     self.path
                 )
             })?;
@@ -105,8 +105,8 @@ impl TokenStorage {
         let tokens = self
             .load_all_revoked_access_tokens()
             .await
-            .with_error_context(|_| {
-                format!("{COMPONENT} - failed to load revoked access tokens")
+            .with_error_context(|error| {
+                format!("{COMPONENT} (error: {error}) - failed to load revoked access tokens")
             })?;
         if tokens.is_empty() {
             return Ok(());
@@ -126,9 +126,9 @@ impl TokenStorage {
         self.persister
             .overwrite(&self.path, &bytes)
             .await
-            .with_error_context(|_| {
+            .with_error_context(|error| {
                 format!(
-                    "{COMPONENT} - failed to overwrite file, path: {}",
+                    "{COMPONENT} (error: {error}) - failed to overwrite file, path: {}",
                     self.path
                 )
             })?;

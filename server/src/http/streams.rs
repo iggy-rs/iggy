@@ -39,15 +39,17 @@ async fn get_stream(
 ) -> Result<Json<StreamDetails>, CustomError> {
     let system = state.system.read().await;
     let stream_id = Identifier::from_str_value(&stream_id)?;
-    let stream = system.find_stream(
+    let Ok(stream) = system.try_find_stream(
         &Session::stateless(identity.user_id, identity.ip_address),
         &stream_id,
-    );
-    if stream.is_err() {
+    ) else {
         return Err(CustomError::ResourceNotFound);
-    }
+    };
+    let Some(stream) = stream else {
+        return Err(CustomError::ResourceNotFound);
+    };
 
-    let stream = mapper::map_stream(stream?);
+    let stream = mapper::map_stream(stream);
     Ok(Json(stream))
 }
 
@@ -58,9 +60,9 @@ async fn get_streams(
     let system = state.system.read().await;
     let streams = system
         .find_streams(&Session::stateless(identity.user_id, identity.ip_address))
-        .with_error_context(|_| {
+        .with_error_context(|error| {
             format!(
-                "{COMPONENT} - failed to find streams, user ID: {}",
+                "{COMPONENT} (error: {error}) - failed to find streams, user ID: {}",
                 identity.user_id
             )
         })?;
@@ -85,9 +87,9 @@ async fn create_stream(
                 &command.name,
             )
             .await
-            .with_error_context(|_| {
+            .with_error_context(|error| {
                 format!(
-                    "{COMPONENT} - failed to create stream, stream ID: {:?}",
+                    "{COMPONENT} (error: {error}) - failed to create stream, stream ID: {:?}",
                     command.stream_id
                 )
             })?;
@@ -100,9 +102,9 @@ async fn create_stream(
         .state
         .apply(identity.user_id, EntryCommand::CreateStream(command))
         .await
-        .with_error_context(|_| {
+        .with_error_context(|error| {
             format!(
-                "{COMPONENT} - failed to apply create stream, stream ID: {:?}",
+                "{COMPONENT} (error: {error}) - failed to apply create stream, stream ID: {:?}",
                 stream_id
             )
         })?;
@@ -127,9 +129,9 @@ async fn update_stream(
                 &command.name,
             )
             .await
-            .with_error_context(|_| {
+            .with_error_context(|error| {
                 format!(
-                    "{COMPONENT} - failed to update stream, stream ID: {}",
+                    "{COMPONENT} (error: {error}) - failed to update stream, stream ID: {}",
                     stream_id
                 )
             })?;
@@ -140,9 +142,9 @@ async fn update_stream(
         .state
         .apply(identity.user_id, EntryCommand::UpdateStream(command))
         .await
-        .with_error_context(|_| {
+        .with_error_context(|error| {
             format!(
-                "{COMPONENT} - failed to apply update stream, stream ID: {}",
+                "{COMPONENT} (error: {error}) - failed to apply update stream, stream ID: {}",
                 stream_id
             )
         })?;
@@ -164,10 +166,9 @@ async fn delete_stream(
                 &identifier_stream_id,
             )
             .await
-            .with_error_context(|_| {
+            .with_error_context(|error| {
                 format!(
-                    "{COMPONENT} - failed to delete stream, stream ID: {}",
-                    stream_id
+                    "{COMPONENT} (error: {error}) - failed to delete stream with ID: {stream_id}",
                 )
             })?;
     }
@@ -182,10 +183,9 @@ async fn delete_stream(
             }),
         )
         .await
-        .with_error_context(|_| {
+        .with_error_context(|error| {
             format!(
-                "{COMPONENT} - failed to apply delete stream, stream ID: {}",
-                stream_id
+                "{COMPONENT} (error: {error}) - failed to apply delete stream with ID: {stream_id}",
             )
         })?;
     Ok(StatusCode::NO_CONTENT)
@@ -205,9 +205,9 @@ async fn purge_stream(
             &identifier_stream_id,
         )
         .await
-        .with_error_context(|_| {
+        .with_error_context(|error| {
             format!(
-                "{COMPONENT} - failed to purge stream, stream ID: {}",
+                "{COMPONENT} (error: {error}) - failed to purge stream, stream ID: {}",
                 stream_id
             )
         })?;
@@ -220,9 +220,9 @@ async fn purge_stream(
             }),
         )
         .await
-        .with_error_context(|_| {
+        .with_error_context(|error| {
             format!(
-                "{COMPONENT} - failed to apply purge stream, stream ID: {}",
+                "{COMPONENT} (error: {error}) - failed to apply purge stream, stream ID: {}",
                 stream_id
             )
         })?;

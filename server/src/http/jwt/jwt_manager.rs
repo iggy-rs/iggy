@@ -74,18 +74,18 @@ impl JwtManager {
             audience: config.audience.clone(),
             access_token_expiry: config.access_token_expiry,
             not_before: config.not_before,
-            key: config
-                .get_encoding_key()
-                .with_error_context(|_| format!("{COMPONENT} - failed to get encoding key"))?,
+            key: config.get_encoding_key().with_error_context(|error| {
+                format!("{COMPONENT} (error: {error}) - failed to get encoding key")
+            })?,
             algorithm,
         };
         let validator = ValidatorOptions {
             valid_audiences: config.valid_audiences.clone(),
             valid_issuers: config.valid_issuers.clone(),
             clock_skew: config.clock_skew,
-            key: config
-                .get_decoding_key()
-                .with_error_context(|_| format!("{COMPONENT} - failed to get decoding key"))?,
+            key: config.get_decoding_key().with_error_context(|error| {
+                format!("{COMPONENT} (error: {error}) - failed to get decoding key")
+            })?,
         };
         JwtManager::new(persister, path, issuer, validator)
     }
@@ -137,9 +137,9 @@ impl JwtManager {
         self.tokens_storage
             .delete_revoked_access_tokens(&tokens_to_delete)
             .await
-            .with_error_context(|_| {
+            .with_error_context(|error| {
                 format!(
-                    "{COMPONENT} - failed to delete revoked access tokens, IDs {:?}",
+                    "{COMPONENT} (error: {error}) - failed to delete revoked access tokens, IDs {:?}",
                     tokens_to_delete
                 )
             })?;
@@ -212,8 +212,8 @@ impl JwtManager {
                 expiry,
             })
             .await
-            .with_error_context(|_| {
-                format!("{COMPONENT} - failed to save revoked access token: {id}")
+            .with_error_context(|error| {
+                format!("{COMPONENT} (error: {error}) - failed to save revoked access token: {id}")
             })?;
         self.generate(jwt_claims.claims.sub)
     }
@@ -259,9 +259,9 @@ impl JwtManager {
                 expiry,
             })
             .await
-            .with_error_context(|_| {
+            .with_error_context(|error| {
                 format!(
-                    "{COMPONENT} - failed to save revoked access token: {}",
+                    "{COMPONENT} (error: {error}) - failed to save revoked access token: {}",
                     token_id
                 )
             })?;

@@ -14,13 +14,16 @@ pub async fn handle(
 ) -> Result<(), IggyError> {
     debug!("session: {session}, command: {command}");
     let system = system.read().await;
-    let user = system.find_user(session, &command.user_id);
-    if user.is_err() {
+    let Ok(user) = system.find_user(session, &command.user_id) else {
         sender.send_empty_ok_response().await?;
         return Ok(());
-    }
+    };
+    let Some(user) = user else {
+        sender.send_empty_ok_response().await?;
+        return Ok(());
+    };
 
-    let bytes = mapper::map_user(user?);
+    let bytes = mapper::map_user(user);
     sender.send_ok_response(&bytes).await?;
     Ok(())
 }

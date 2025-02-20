@@ -19,10 +19,10 @@ impl Topic {
     pub async fn delete(&self) -> Result<(), IggyError> {
         for partition in self.get_partitions() {
             let mut partition = partition.write().await;
-            partition.delete().await.with_error_context(|_| {
+            partition.delete().await.with_error_context(|error| {
                 format!(
-                    "{COMPONENT} - failed to delete partition with id: {}",
-                    partition.partition_id
+                    "{COMPONENT} (error: {error}) - failed to delete partition with ID: {} in topic with ID: {}",
+                    partition.partition_id, self.topic_id
                 )
             })?;
         }
@@ -36,7 +36,7 @@ impl Topic {
             let mut partition = partition.write().await;
             let partition_id = partition.partition_id;
             for segment in partition.get_segments_mut() {
-                saved_messages_number += segment.persist_messages(None).await.with_error_context(|_| format!("{COMPONENT} - failed to persist messages in segment, partition ID: {partition_id}"))?;
+                saved_messages_number += segment.persist_messages(None).await.with_error_context(|error| format!("{COMPONENT} (error: {error}) - failed to persist messages in segment, partition ID: {partition_id}"))?;
             }
         }
 

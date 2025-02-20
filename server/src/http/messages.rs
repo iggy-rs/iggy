@@ -54,9 +54,9 @@ async fn poll_messages(
             PollingArgs::new(query.0.strategy, query.0.count, query.0.auto_commit),
         )
         .await
-        .with_error_context(|_| {
+        .with_error_context(|error| {
             format!(
-                "{COMPONENT} - failed to poll messages, stream ID: {}, topic ID: {}, partition ID: {:?}",
+                "{COMPONENT} (error: {error}) - failed to poll messages, stream ID: {}, topic ID: {}, partition ID: {:?}",
                 stream_id, topic_id, query.0.partition_id
             )
         })?;
@@ -95,9 +95,9 @@ async fn send_messages(
             None,
         )
         .await
-        .with_error_context(|_| {
+        .with_error_context(|error| {
             format!(
-                "{COMPONENT} - failed to append messages, stream ID: {}, topic ID: {}",
+                "{COMPONENT} (error: {error}) - failed to append messages, stream ID: {}, topic ID: {}",
                 stream_id, topic_id
             )
         })?;

@@ -36,7 +36,7 @@ impl SegmentLogReader {
         let file = OpenOptions::new()
             .read(true)
             .open(file_path)
-            .with_error_context(|e| format!("Failed to open log file: {file_path}, error: {e}"))
+            .with_error_context(|error| format!("Failed to open log file: {file_path}. {error}"))
             .map_err(|_| IggyError::CannotReadFile)?;
 
         // posix_fadvise() doesn't exist on MacOS
@@ -50,17 +50,15 @@ impl SegmentLogReader {
                 0,
                 nix::fcntl::PosixFadviseAdvice::POSIX_FADV_SEQUENTIAL,
             )
-            .with_info_context(|e| {
-                format!(
-                    "Failed to set sequential access pattern on log file: {file_path}, error: {e}"
-                )
+            .with_info_context(|error| {
+                format!("Failed to set sequential access pattern on log file: {file_path}. {error}")
             });
         }
 
         let actual_log_size = file
             .metadata()
-            .with_error_context(|e| {
-                format!("Failed to get metadata of log file: {file_path}, error: {e}")
+            .with_error_context(|error| {
+                format!("Failed to get metadata of log file: {file_path}. {error}")
             })
             .map_err(|_| IggyError::CannotReadFileMetadata)?
             .len();
@@ -230,10 +228,10 @@ impl SegmentLogReader {
 
         let header_buf = match self.read_at(offset, batch_header_size).await {
             Ok(buf) => buf,
-            Err(e) if e.kind() == ErrorKind::UnexpectedEof => return Ok(None),
-            Err(e) => {
+            Err(error) if error.kind() == ErrorKind::UnexpectedEof => return Ok(None),
+            Err(error) => {
                 error!(
-                    "Error reading batch header at offset {} in file {}: {e}",
+                    "Error reading batch header at offset {} in file {}: {error}",
                     offset, self.file_path
                 );
                 return Err(IggyError::CannotReadBatchBaseOffset);
@@ -250,9 +248,9 @@ impl SegmentLogReader {
         let batch_base_offset = u64::from_le_bytes(
             header_buf[0..8]
                 .try_into()
-                .with_error_context(|e| {
+                .with_error_context(|error| {
                     format!(
-                        "Failed to parse batch base offset at offset {offset} in file {}: {e}",
+                        "Failed to parse batch base offset at offset {offset} in file {}: {error}",
                         self.file_path
                     )
                 })
@@ -261,9 +259,9 @@ impl SegmentLogReader {
         let batch_length = u32::from_le_bytes(
             header_buf[8..12]
                 .try_into()
-                .with_error_context(|e| {
+                .with_error_context(|error| {
                     format!(
-                        "Failed to parse batch length at offset {offset} in file {}: {e}",
+                        "Failed to parse batch length at offset {offset} in file {}: {error}",
                         self.file_path
                     )
                 })
@@ -272,9 +270,9 @@ impl SegmentLogReader {
         let last_offset_delta = u32::from_le_bytes(
             header_buf[12..16]
                 .try_into()
-                .with_error_context(|e| {
+                .with_error_context(|error| {
                     format!(
-                        "Failed to parse last offset delta at offset {offset} in file {}: {e}",
+                        "Failed to parse last offset delta at offset {offset} in file {}: {error}",
                         self.file_path
                     )
                 })
@@ -283,9 +281,9 @@ impl SegmentLogReader {
         let max_timestamp = u64::from_le_bytes(
             header_buf[16..24]
                 .try_into()
-                .with_error_context(|e| {
+                .with_error_context(|error| {
                     format!(
-                        "Failed to parse max timestamp at offset {offset} in file {}: {e}",
+                        "Failed to parse max timestamp at offset {offset} in file {}: {error}",
                         self.file_path
                     )
                 })
@@ -304,10 +302,10 @@ impl SegmentLogReader {
 
         let payload_buf = match self.read_at(payload_offset, payload_len as u64).await {
             Ok(buf) => buf,
-            Err(e) if e.kind() == ErrorKind::UnexpectedEof => return Ok(None),
-            Err(e) => {
+            Err(error) if error.kind() == ErrorKind::UnexpectedEof => return Ok(None),
+            Err(error) => {
                 error!(
-                    "Error reading batch payload at offset {} in file {}: {e}",
+                    "Error reading batch payload at offset {} in file {}: {error}",
                     payload_offset, self.file_path
                 );
                 return Err(IggyError::CannotReadBatchPayload);

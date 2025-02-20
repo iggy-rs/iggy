@@ -30,9 +30,9 @@ pub async fn handle(
                 command.permissions.clone(),
             )
             .await
-            .with_error_context(|_| {
+            .with_error_context(|error| {
                 format!(
-                    "{COMPONENT} - failed to create user with name: {}, session: {session}",
+                    "{COMPONENT} (error: {error}) - failed to create user with name: {}, session: {session}",
                     command.username
                 )
             })?;
@@ -53,9 +53,9 @@ pub async fn handle(
             }),
         )
         .await
-        .with_error_context(|_| {
+        .with_error_context(|error| {
             format!(
-                "{COMPONENT} - failed to apply create user with name: {}, session: {session}",
+                "{COMPONENT} (error: {error}) - failed to apply create user with name: {}, session: {session}",
                 command.username
             )
         })?;

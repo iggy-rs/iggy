@@ -16,9 +16,12 @@ pub async fn handle(
 ) -> Result<(), IggyError> {
     debug!("session: {session}, command: {command}");
     let system = system.read().await;
-    let clients = system.get_clients(session).await.with_error_context(|_| {
-        format!("{COMPONENT} - failed to get clients, session: {session}")
-    })?;
+    let clients = system
+        .get_clients(session)
+        .await
+        .with_error_context(|error| {
+            format!("{COMPONENT} (error: {error}) - failed to get clients, session: {session}")
+        })?;
     let clients = mapper::map_clients(&clients).await;
     sender.send_ok_response(&clients).await?;
     Ok(())

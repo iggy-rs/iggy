@@ -48,8 +48,8 @@ impl BytesSerializable for CreatePersonalAccessTokenWithHash {
         let command_length = u32::from_le_bytes(
             bytes[position..position + 4]
                 .try_into()
-                .with_error_context(|_| {
-                    format!("{COMPONENT} - failed to parse personal access token command length")
+                .with_error_context(|error| {
+                    format!("{COMPONENT} (error: {error}) - failed to parse personal access token command length")
                 })
                 .map_err(|_| IggyError::InvalidNumberEncoding)?,
         );
@@ -57,14 +57,16 @@ impl BytesSerializable for CreatePersonalAccessTokenWithHash {
         let command_bytes = bytes.slice(position..position + command_length as usize);
         position += command_length as usize;
         let command =
-            CreatePersonalAccessToken::from_bytes(command_bytes).with_error_context(|_| {
-                format!("{COMPONENT} - failed to parse personal access token command")
+            CreatePersonalAccessToken::from_bytes(command_bytes).with_error_context(|error| {
+                format!(
+                    "{COMPONENT} (error: {error}) - failed to parse personal access token command"
+                )
             })?;
         let hash_length = u32::from_le_bytes(
             bytes[position..position + 4]
                 .try_into()
-                .with_error_context(|_| {
-                    format!("{COMPONENT} - failed to parse personal access token hash length")
+                .with_error_context(|error| {
+                    format!("{COMPONENT} (error: {error}) - failed to parse personal access token hash length")
                 })
                 .map_err(|_| IggyError::InvalidNumberEncoding)?,
         );

@@ -79,8 +79,8 @@ impl SystemState {
         let mut current_user_id = 0;
         for entry in entries {
             debug!("Processing state entry: {entry}",);
-            match entry.command().with_error_context(|_| {
-                format!("{COMPONENT} - failed to retrieve state entry command: {entry}")
+            match entry.command().with_error_context(|error| {
+                format!("{COMPONENT} (error: {error}) - failed to retrieve state entry command: {entry}")
             })? {
                 EntryCommand::CreateStream(command) => {
                     let stream_id = command.stream_id.unwrap_or_else(|| {
@@ -323,9 +323,9 @@ impl SystemState {
                     let token_hash = command.hash;
                     let user_id = find_user_id(
                         &users,
-                        &entry.user_id.try_into().with_error_context(|_| {
+                        &entry.user_id.try_into().with_error_context(|error| {
                             format!(
-                                "{COMPONENT} - failed to find user, user ID: {}",
+                                "{COMPONENT} (error: {error}) - failed to find user, user ID: {}",
                                 entry.user_id
                             )
                         })?,
@@ -356,9 +356,9 @@ impl SystemState {
                 EntryCommand::DeletePersonalAccessToken(command) => {
                     let user_id = find_user_id(
                         &users,
-                        &entry.user_id.try_into().with_error_context(|_| {
+                        &entry.user_id.try_into().with_error_context(|error| {
                             format!(
-                                "{COMPONENT} - failed to find user, user ID: {}",
+                                "{COMPONENT} (error: {error}) - failed to find user, user ID: {}",
                                 entry.user_id
                             )
                         })?,

@@ -34,9 +34,9 @@ impl SystemInfoStorage for FileSystemInfoStorage {
         let file_size = file
             .metadata()
             .await
-            .with_error_context(|_| {
+            .with_error_context(|error| {
                 format!(
-                    "{COMPONENT} - failed to retrieve metadata for file at path: {}",
+                    "{COMPONENT} (error: {error}) - failed to retrieve metadata for file at path: {}",
                     self.path
                 )
             })
@@ -46,9 +46,9 @@ impl SystemInfoStorage for FileSystemInfoStorage {
         buffer.put_bytes(0, file_size);
         file.read_exact(&mut buffer)
             .await
-            .with_error_context(|_| {
+            .with_error_context(|error| {
                 format!(
-                    "{COMPONENT} - failed to read file content from path: {}",
+                    "{COMPONENT} (error: {error}) - failed to read file content from path: {}",
                     self.path
                 )
             })
@@ -65,9 +65,9 @@ impl SystemInfoStorage for FileSystemInfoStorage {
         self.persister
             .overwrite(&self.path, &data)
             .await
-            .with_error_context(|_| {
+            .with_error_context(|error| {
                 format!(
-                    "{COMPONENT} - failed to overwrite file at path: {}",
+                    "{COMPONENT} (error: {error}) - failed to overwrite file at path: {}",
                     self.path
                 )
             })?;

@@ -48,11 +48,15 @@ impl QuicSender {
         self.send
             .write_all(&[status, &length, payload].as_slice().concat())
             .await
-            .with_error_context(|_| format!("{COMPONENT} - failed to write buffer to the stream"))
+            .with_error_context(|error| {
+                format!("{COMPONENT} (error: {error}) - failed to write buffer to the stream")
+            })
             .map_err(|_| IggyError::QuicError)?;
         self.send
             .finish()
-            .with_error_context(|_| format!("{COMPONENT} - failed to finish send stream"))
+            .with_error_context(|error| {
+                format!("{COMPONENT} (error: {error}) - failed to finish send stream")
+            })
             .map_err(|_| IggyError::QuicError)?;
         debug!("Sent response with status: {:?}", status);
         Ok(())

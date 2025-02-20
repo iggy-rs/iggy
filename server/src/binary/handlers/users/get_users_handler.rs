@@ -19,7 +19,9 @@ pub async fn handle(
     let users = system
         .get_users(session)
         .await
-        .with_error_context(|_| format!("{COMPONENT} - failed to get users, session: {session}"))?;
+        .with_error_context(|error| {
+            format!("{COMPONENT} (error: {error}) - failed to get users, session: {session}")
+        })?;
     let users = mapper::map_users(&users);
     sender.send_ok_response(&users).await?;
     Ok(())

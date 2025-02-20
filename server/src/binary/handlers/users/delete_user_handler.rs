@@ -21,9 +21,9 @@ pub async fn handle(
         system
             .delete_user(session, &command.user_id)
             .await
-            .with_error_context(|_| {
+            .with_error_context(|error| {
                 format!(
-                    "{COMPONENT} - failed to delete user with id: {}, session: {session}",
+                    "{COMPONENT} (error: {error}) - failed to delete user with ID: {}, session: {session}",
                     command.user_id
                 )
             })?;
@@ -35,10 +35,9 @@ pub async fn handle(
         .state
         .apply(session.get_user_id(), EntryCommand::DeleteUser(command))
         .await
-        .with_error_context(|_| {
+        .with_error_context(|error| {
             format!(
-                "{COMPONENT} - failed to apply delete user with id: {}, session: {session}",
-                user_id
+                "{COMPONENT} (error: {error}) - failed to apply delete user with ID: {user_id}, session: {session}",
             )
         })?;
     sender.send_empty_ok_response().await?;

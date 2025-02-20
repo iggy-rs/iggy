@@ -15,13 +15,13 @@ impl System {
     ) -> Result<(), IggyError> {
         self.ensure_authenticated(session)?;
         {
-            let topic = self.find_topic(session, stream_id, topic_id).with_error_context(|_| format!("{COMPONENT} - topic not found for stream_id: {stream_id}, topic_id: {topic_id}"))?;
+            let topic = self.find_topic(session, stream_id, topic_id).with_error_context(|error| format!("{COMPONENT} (error: {error}) - topic not found for stream_id: {stream_id}, topic_id: {topic_id}"))?;
             self.permissioner.create_partitions(
                 session.get_user_id(),
                 topic.stream_id,
                 topic.topic_id,
-            ).with_error_context(|_| format!(
-                "{COMPONENT} - permission denied to create partitions for user {} on stream_id: {}, topic_id: {}",
+            ).with_error_context(|error| format!(
+                "{COMPONENT} (error: {error}) - permission denied to create partitions for user {} on stream_id: {}, topic_id: {}",
                 session.get_user_id(),
                 topic.stream_id,
                 topic.topic_id
@@ -31,16 +31,16 @@ impl System {
         let topic = self
             .get_stream_mut(stream_id)?
             .get_topic_mut(topic_id)
-            .with_error_context(|_| {
+            .with_error_context(|error| {
                 format!(
-                    "{COMPONENT} - failed to get mutable reference to stream with id: {stream_id}"
+                    "{COMPONENT} (error: {error}) - failed to get mutable reference to stream with id: {stream_id}"
                 )
             })?;
         topic
             .add_persisted_partitions(partitions_count)
             .await
-            .with_error_context(|_| {
-                format!("{COMPONENT} - failed to add persisted partitions, topic: {topic}")
+            .with_error_context(|error| {
+                format!("{COMPONENT} (error: {error}) - failed to add persisted partitions, topic: {topic}")
             })?;
         topic.reassign_consumer_groups().await;
         self.metrics.increment_partitions(partitions_count);
@@ -57,13 +57,13 @@ impl System {
     ) -> Result<(), IggyError> {
         self.ensure_authenticated(session)?;
         {
-            let topic = self.find_topic(session, stream_id, topic_id).with_error_context(|_| format!("{COMPONENT} - topic not found for stream_id: {stream_id}, topic_id: {topic_id}"))?;
+            let topic = self.find_topic(session, stream_id, topic_id).with_error_context(|error| format!("{COMPONENT} (error: {error}) - topic not found for stream_id: {stream_id}, topic_id: {topic_id}"))?;
             self.permissioner.delete_partitions(
                 session.get_user_id(),
                 topic.stream_id,
                 topic.topic_id,
-            ).with_error_context(|_| format!(
-                "{COMPONENT} - permission denied to delete partitions for user {} on stream_id: {}, topic_id: {}",
+            ).with_error_context(|error| format!(
+                "{COMPONENT} (error: {error}) - permission denied to delete partitions for user {} on stream_id: {}, topic_id: {}",
                 session.get_user_id(),
                 topic.stream_id,
                 topic.topic_id
@@ -73,16 +73,16 @@ impl System {
         let topic = self
             .get_stream_mut(stream_id)?
             .get_topic_mut(topic_id)
-            .with_error_context(|_| {
+            .with_error_context(|error| {
                 format!(
-                    "{COMPONENT} - failed to get mutable reference to stream with id: {stream_id}"
+                    "{COMPONENT} (error: {error}) - failed to get mutable reference to stream with id: {stream_id}"
                 )
             })?;
         let partitions = topic
             .delete_persisted_partitions(partitions_count)
             .await
-            .with_error_context(|_| {
-                format!("{COMPONENT} - failed to delete persisted partitions, topic: {topic}")
+            .with_error_context(|error| {
+                format!("{COMPONENT} (error: {error}) - failed to delete persisted partitions for topic: {topic}")
             })?;
         topic.reassign_consumer_groups().await;
         if let Some(partitions) = partitions {

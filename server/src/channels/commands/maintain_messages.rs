@@ -211,8 +211,8 @@ async fn handle_expired_segments(
                 "Archiving expired segments for stream ID: {}, topic ID: {}",
                 topic.stream_id, topic.topic_id
             );
-            archive_segments(topic, &expired_segments, archiver.clone()).await.with_error_context(|_| {
-                format!("CHANNEL_COMMAND - failed to archive expired segments for stream ID: {}, topic ID: {}", topic.stream_id, topic.topic_id)
+            archive_segments(topic, &expired_segments, archiver.clone()).await.with_error_context(|error| {
+                format!("CHANNEL_COMMAND - failed to archive expired segments for stream ID: {}, topic ID: {}. {error}", topic.stream_id, topic.topic_id)
             })?;
         } else {
             error!(
@@ -321,9 +321,9 @@ async fn handle_oldest_segments(
         );
         archive_segments(topic, &segments_to_archive, archiver.clone())
             .await
-            .with_error_context(|_| {
+            .with_error_context(|error| {
                 format!(
-                    "CHANNEL_COMMAND - failed to archive segments for stream ID: {}, topic ID: {}",
+                    "CHANNEL_COMMAND - failed to archive segments for stream ID: {}, topic ID: {}. {error}",
                     topic.stream_id, topic.topic_id
                 )
             })?;
@@ -495,8 +495,8 @@ async fn delete_segments(
                 let mut partition = partition.write().await;
                 let mut last_end_offset = 0;
                 for start_offset in &segment_to_delete.start_offsets {
-                    let deleted_segment = partition.delete_segment(*start_offset).await.with_error_context(|_| {
-                        format!("CHANNEL_COMMAND - failed to delete segment for stream ID: {}, topic ID: {}", topic.stream_id, topic.topic_id)
+                    let deleted_segment = partition.delete_segment(*start_offset).await.with_error_context(|error| {
+                        format!("CHANNEL_COMMAND - failed to delete segment for stream with ID: {}, topic with ID: {}. {error}", topic.stream_id, topic.topic_id)
                     })?;
                     last_end_offset = deleted_segment.end_offset;
                     segments_count += 1;
@@ -505,15 +505,15 @@ async fn delete_segments(
 
                 if partition.get_segments().is_empty() {
                     let start_offset = last_end_offset + 1;
-                    partition.add_persisted_segment(start_offset).await.with_error_context(|_| {
-                        format!("CHANNEL_COMMAND - failed to add persisted segment for stream ID: {}, topic ID: {}", topic.stream_id, topic.topic_id)
+                    partition.add_persisted_segment(start_offset).await.with_error_context(|error| {
+                        format!("CHANNEL_COMMAND - failed to add persisted segment for stream with ID: {}, topic with ID: {}. {error}", topic.stream_id, topic.topic_id)
                     })?;
                 }
             }
             Err(error) => {
                 error!(
-                    "Partition with ID: {} not found for stream ID: {}, topic ID: {}. Error: {}",
-                    segment_to_delete.partition_id, topic.stream_id, topic.topic_id, error
+                    "Partition with ID: {} was not found for stream with ID: {}, topic with ID: {}. {error}",
+                    segment_to_delete.partition_id, topic.stream_id, topic.topic_id
                 );
                 continue;
             }

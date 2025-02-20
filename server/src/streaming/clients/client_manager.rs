@@ -83,13 +83,8 @@ impl ClientManager {
         Ok(())
     }
 
-    pub fn get_client(&self, client_id: u32) -> Result<IggySharedMut<Client>, IggyError> {
-        let client = self.clients.get(&client_id);
-        if client.is_none() {
-            return Err(IggyError::ClientNotFound(client_id));
-        }
-
-        Ok(client.unwrap().clone())
+    pub fn try_get_client(&self, client_id: u32) -> Option<IggySharedMut<Client>> {
+        self.clients.get(&client_id).cloned()
     }
 
     pub fn get_clients(&self) -> Vec<IggySharedMut<Client>> {

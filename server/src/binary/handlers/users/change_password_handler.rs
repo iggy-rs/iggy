@@ -27,9 +27,9 @@ pub async fn handle(
                 &command.new_password,
             )
             .await
-            .with_error_context(|_| {
+            .with_error_context(|error| {
                 format!(
-                    "{COMPONENT} - failed to change password for user_id: {}, session: {session}",
+                    "{COMPONENT} (error: {error}) - failed to change password for user_id: {}, session: {session}",
                     command.user_id
                 )
             })?;
@@ -48,9 +48,9 @@ pub async fn handle(
             }),
         )
         .await
-        .with_error_context(|_| {
+        .with_error_context(|error| {
             format!(
-                "{COMPONENT} - failed to apply change password for user_id: {}, session: {session}",
+                "{COMPONENT} (error: {error}) - failed to apply change password for user_id: {}, session: {session}",
                 command.user_id
             )
         })?;

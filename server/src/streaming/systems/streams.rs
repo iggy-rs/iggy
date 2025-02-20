@@ -149,9 +149,9 @@ impl System {
         self.ensure_authenticated(session)?;
         self.permissioner
             .get_streams(session.get_user_id())
-            .with_error_context(|_| {
+            .with_error_context(|error| {
                 format!(
-                    "{COMPONENT} - permission denied to get streams for user {}",
+                    "{COMPONENT} (error: {error}) - permission denied to get streams for user {}",
                     session.get_user_id(),
                 )
             })?;
@@ -168,9 +168,9 @@ impl System {
         if let Ok(stream) = stream {
             self.permissioner
                 .get_stream(session.get_user_id(), stream.stream_id)
-                .with_error_context(|_| {
+                .with_error_context(|error| {
                     format!(
-                        "{COMPONENT} - permission denied to get stream for user {}",
+                        "{COMPONENT} (error: {error}) - permission denied to get stream for user {}",
                         session.get_user_id(),
                     )
                 })?;
@@ -178,6 +178,40 @@ impl System {
         }
 
         stream
+    }
+
+    pub fn try_find_stream(
+        &self,
+        session: &Session,
+        identifier: &Identifier,
+    ) -> Result<Option<&Stream>, IggyError> {
+        self.ensure_authenticated(session)?;
+        let Some(stream) = self.try_get_stream(identifier)? else {
+            return Ok(None);
+        };
+
+        self.permissioner
+            .get_stream(session.get_user_id(), stream.stream_id)
+            .with_error_context(|error| {
+                format!(
+                    "{COMPONENT} (error: {error}) - permission denied to get stream with ID: {identifier} for user with ID: {}",
+                    session.get_user_id(),
+                )
+            })?;
+        Ok(Some(stream))
+    }
+
+    pub fn try_get_stream(&self, identifier: &Identifier) -> Result<Option<&Stream>, IggyError> {
+        match identifier.kind {
+            IdKind::Numeric => Ok(self.streams.get(&identifier.get_u32_value()?)),
+            IdKind::String => Ok(self.try_get_stream_by_name(&identifier.get_cow_str_value()?)),
+        }
+    }
+
+    fn try_get_stream_by_name(&self, name: &str) -> Option<&Stream> {
+        self.streams_ids
+            .get(name)
+            .and_then(|id| self.streams.get(id))
     }
 
     pub fn get_stream(&self, identifier: &Identifier) -> Result<&Stream, IggyError> {
@@ -286,17 +320,17 @@ impl System {
         self.ensure_authenticated(session)?;
         let stream_id;
         {
-            let stream = self.get_stream(id).with_error_context(|_| {
-                format!("{COMPONENT} - failed to get stream with id: {id}")
+            let stream = self.get_stream(id).with_error_context(|error| {
+                format!("{COMPONENT} (error: {error}) - failed to get stream with ID: {id}")
             })?;
             stream_id = stream.stream_id;
         }
 
         self.permissioner
             .update_stream(session.get_user_id(), stream_id)
-            .with_error_context(|_| {
+            .with_error_context(|error| {
                 format!(
-                    "{COMPONENT} - failed to update stream, user ID: {}, stream ID: {}",
+                    "{COMPONENT} (error: {error}) - failed to update stream, user ID: {}, stream ID: {}",
                     session.get_user_id(),
                     stream_id
                 )
@@ -312,8 +346,8 @@ impl System {
 
         let old_name;
         {
-            let stream = self.get_stream_mut(id).with_error_context(|_| {
-                format!("{COMPONENT} - failed to get mutable reference to stream with id: {id}")
+            let stream = self.get_stream_mut(id).with_error_context(|error| {
+                format!("{COMPONENT} (error: {error}) - failed to get mutable reference to stream with id: {id}")
             })?;
             old_name = stream.name.clone();
             stream.name = name.to_owned();
@@ -335,15 +369,15 @@ impl System {
         id: &Identifier,
     ) -> Result<u32, IggyError> {
         self.ensure_authenticated(session)?;
-        let stream = self
-            .get_stream(id)
-            .with_error_context(|_| format!("{COMPONENT} - failed to get stream with id: {id}"))?;
+        let stream = self.get_stream(id).with_error_context(|error| {
+            format!("{COMPONENT} (error: {error}) - failed to get stream with ID: {id}")
+        })?;
         let stream_id = stream.stream_id;
         self.permissioner
             .delete_stream(session.get_user_id(), stream_id)
-            .with_error_context(|_| {
+            .with_error_context(|error| {
                 format!(
-                    "{COMPONENT} - permission denied to delete stream for user {}, stream ID: {}",
+                    "{COMPONENT} (error: {error}) - permission denied to delete stream for user {}, stream ID: {}",
                     session.get_user_id(),
                     stream.stream_id,
                 )
@@ -378,14 +412,14 @@ impl System {
         session: &Session,
         stream_id: &Identifier,
     ) -> Result<(), IggyError> {
-        let stream = self.get_stream(stream_id).with_error_context(|_| {
-            format!("{COMPONENT} - failed to get stream with id: {stream_id}")
+        let stream = self.get_stream(stream_id).with_error_context(|error| {
+            format!("{COMPONENT} (error: {error}) - failed to get stream with ID: {stream_id}")
         })?;
         self.permissioner
             .purge_stream(session.get_user_id(), stream.stream_id)
-            .with_error_context(|_| {
+            .with_error_context(|error| {
                 format!(
-                    "{COMPONENT} - permission denied to purge stream for user {}, stream ID: {}",
+                    "{COMPONENT} (error: {error}) - permission denied to purge stream for user {}, stream ID: {}",
                     session.get_user_id(),
                     stream.stream_id,
                 )

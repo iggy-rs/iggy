@@ -29,9 +29,9 @@ pub async fn handle(
                 &command.name,
             )
             .await
-            .with_error_context(|_| {
+            .with_error_context(|error| {
                 format!(
-                    "{COMPONENT} - failed to create consumer group for stream_id: {}, topic_id: {}, group_id: {:?}, session: {:?}",
+                    "{COMPONENT} (error: {error}) - failed to create consumer group for stream_id: {}, topic_id: {}, group_id: {:?}, session: {:?}",
                     command.stream_id, command.topic_id, command.group_id, session
                 )
             })?;
@@ -51,9 +51,9 @@ pub async fn handle(
             EntryCommand::CreateConsumerGroup(command),
         )
         .await
-        .with_error_context(|_| {
+        .with_error_context(|error| {
             format!(
-                "{COMPONENT} - failed to apply create consumer group for stream_id: {}, topic_id: {}, group_id: {:?}, session: {}",
+                "{COMPONENT} (error: {error}) - failed to apply create consumer group for stream_id: {}, topic_id: {}, group_id: {:?}, session: {}",
                 stream_id, topic_id, group_id, session
             )
         })?;

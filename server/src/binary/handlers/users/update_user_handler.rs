@@ -26,9 +26,9 @@ pub async fn handle(
                 command.status,
             )
             .await
-            .with_error_context(|_| {
+            .with_error_context(|error| {
                 format!(
-                    "{COMPONENT} - failed to update user with user_id: {}, session: {session}",
+                    "{COMPONENT} (error: {error}) - failed to update user with user_id: {}, session: {session}",
                     command.user_id
                 )
             })?;
@@ -41,9 +41,9 @@ pub async fn handle(
         .state
         .apply(session.get_user_id(), EntryCommand::UpdateUser(command))
         .await
-        .with_error_context(|_| {
+        .with_error_context(|error| {
             format!(
-                "{COMPONENT} - failed to apply update user with user_id: {}, session: {session}",
+                "{COMPONENT} (error: {error}) - failed to apply update user with user_id: {}, session: {session}",
                 user_id
             )
         })?;

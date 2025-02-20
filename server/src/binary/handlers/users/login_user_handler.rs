@@ -20,9 +20,9 @@ pub async fn handle(
     let user = system
         .login_user(&command.username, &command.password, Some(session))
         .await
-        .with_error_context(|_| {
+        .with_error_context(|error| {
             format!(
-                "{COMPONENT} - failed to login user with name: {}, session: {session}",
+                "{COMPONENT} (error: {error}) - failed to login user with name: {}, session: {session}",
                 command.username
             )
         })?;

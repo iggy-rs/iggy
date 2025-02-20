@@ -17,8 +17,8 @@ pub async fn handle(
 ) -> Result<(), IggyError> {
     debug!("session: {session}, command: {command}");
     let system = system.read().await;
-    let streams = system.find_streams(session).with_error_context(|_| {
-        format!("{COMPONENT} - failed to find streams for session: {session}")
+    let streams = system.find_streams(session).with_error_context(|error| {
+        format!("{COMPONENT} (error: {error}) - failed to find streams for session: {session}")
     })?;
     let response = mapper::map_streams(&streams);
     sender.send_ok_response(&response).await?;

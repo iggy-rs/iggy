@@ -21,7 +21,7 @@ pub async fn handle(
         system
             .update_permissions(session, &command.user_id, command.permissions.clone())
             .await
-            .with_error_context(|_| format!("{COMPONENT} - failed to update permissions for user_id: {}, session: {session}",
+            .with_error_context(|error| format!("{COMPONENT} (error: {error}) - failed to update permissions for user_id: {}, session: {session}",
                 command.user_id
             ))?;
     }

@@ -28,7 +28,7 @@ impl LogPersisterTask {
             loop {
                 match receiver.recv_async().await {
                     Ok(data) => {
-                        if let Err(e) = Self::persist_with_retries(
+                        if let Err(error) = Self::persist_with_retries(
                             &path,
                             &persister,
                             data,
@@ -37,11 +37,11 @@ impl LogPersisterTask {
                         )
                         .await
                         {
-                            error!("{COMPONENT} - Final failure to persist data: {}", e);
+                            error!("{COMPONENT} (error: {error}) - Final failure to persist data.");
                         }
                     }
-                    Err(e) => {
-                        error!("{COMPONENT} - Error receiving data from channel: {}", e);
+                    Err(error) => {
+                        error!("{COMPONENT} (error: {error}) - Error receiving data from channel.");
                         return;
                     }
                 }
@@ -79,8 +79,7 @@ impl LogPersisterTask {
         }
 
         Err(format!(
-            "{COMPONENT} - failed to persist data after {} retries",
-            max_retries
+            "{COMPONENT} - failed to persist data after {max_retries} retries",
         ))
     }
 
@@ -89,8 +88,8 @@ impl LogPersisterTask {
             sender
                 .send_async(data)
                 .await
-                .with_error_context(|err| {
-                    format!("{COMPONENT} - failed to send data to async channel, err: {err}")
+                .with_error_context(|error| {
+                    format!("{COMPONENT} (error: {error}) - failed to send data to async channel")
                 })
                 .map_err(|_| IggyError::CannotSaveMessagesToSegment)
         } else {
@@ -105,10 +104,9 @@ impl Drop for LogPersisterTask {
 
         if let Some(handle) = self._task_handle.take() {
             tokio::spawn(async move {
-                if let Err(e) = handle.await {
+                if let Err(error) = handle.await {
                     error!(
-                        "{COMPONENT} - error while shutting down task in Drop: {:?}",
-                        e
+                        "{COMPONENT} (error: {error}) - error while shutting down task in Drop.",
                     );
                 }
             });

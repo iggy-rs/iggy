@@ -23,9 +23,9 @@ pub async fn handle(
     system
         .flush_unsaved_buffer(session, stream_id, topic_id, partition_id, fsync)
         .await
-        .with_error_context(|_| {
+        .with_error_context(|error| {
             format!(
-                "{COMPONENT} - failed to flush unsaved buffer for stream_id: {}, topic_id: {}, partition_id: {}, session: {}",
+                "{COMPONENT} (error: {error}) - failed to flush unsaved buffer for stream_id: {}, topic_id: {}, partition_id: {}, session: {}",
                 command.stream_id, command.topic_id, command.partition_id, session
             )
         })?;

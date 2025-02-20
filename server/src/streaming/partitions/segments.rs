@@ -70,8 +70,8 @@ impl Partition {
             self.messages_count.clone(),
         );
 
-        new_segment.persist().await.with_error_context(|_| {
-            format!("{COMPONENT} - failed to persist new segment: {new_segment}",)
+        new_segment.persist().await.with_error_context(|error| {
+            format!("{COMPONENT} (error: {error}) - failed to persist new segment: {new_segment}",)
         })?;
         self.segments.push(new_segment);
         self.segments_count_of_parent_stream
@@ -90,8 +90,8 @@ impl Partition {
             }
 
             let segment = segment.unwrap();
-            segment.delete().await.with_error_context(|_| {
-                format!("{COMPONENT} - failed to delete segment: {segment}",)
+            segment.delete().await.with_error_context(|error| {
+                format!("{COMPONENT} (error: {error}) - failed to delete segment: {segment}",)
             })?;
 
             deleted_segment = DeletedSegment {

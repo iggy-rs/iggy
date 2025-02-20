@@ -25,9 +25,9 @@ pub async fn handle(
         let stream = system
             .create_stream(session, command.stream_id, &command.name)
             .await
-            .with_error_context(|_| {
+            .with_error_context(|error| {
                 format!(
-                    "{COMPONENT} - failed to create stream with id: {:?}, session: {session}",
+                    "{COMPONENT} (error: {error}) - failed to create stream with id: {:?}, session: {session}",
                     stream_id
                 )
             })?;
@@ -39,9 +39,9 @@ pub async fn handle(
         .state
         .apply(session.get_user_id(), EntryCommand::CreateStream(command))
         .await
-        .with_error_context(|_| {
+        .with_error_context(|error| {
             format!(
-                "{COMPONENT} - failed to apply create stream for id: {:?}, session: {session}",
+                "{COMPONENT} (error: {error}) - failed to apply create stream for id: {:?}, session: {session}",
                 stream_id
             )
         })?;

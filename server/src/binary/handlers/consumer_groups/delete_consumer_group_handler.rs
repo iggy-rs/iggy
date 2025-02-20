@@ -25,9 +25,9 @@ pub async fn handle(
                 &command.topic_id,
                 &command.group_id,
             )
-            .await.with_error_context(|_| format!(
-                "{COMPONENT} - failed to delete consumer group for stream_id: {}, topic_id: {}, group_id: {:?}, session: {}",
-                command.stream_id, command.topic_id, command.group_id, session
+            .await.with_error_context(|error| format!(
+                "{COMPONENT} (error: {error}) - failed to delete consumer group with ID: {} for topic with ID: {} in stream with ID: {} for session: {}",
+                command.group_id, command.topic_id, command.stream_id, session
             ))?;
     }
 
@@ -43,9 +43,9 @@ pub async fn handle(
             EntryCommand::DeleteConsumerGroup(command),
         )
         .await
-        .with_error_context(|_| {
+        .with_error_context(|error| {
             format!(
-                "{COMPONENT} - failed to apply delete consumer group for stream_id: {}, topic_id: {}, group_id: {:?}, session: {}",
+                "{COMPONENT} (error: {error}) - failed to apply delete consumer group for stream_id: {}, topic_id: {}, group_id: {:?}, session: {}",
                 stream_id, topic_id, group_id, session
             )
         })?;

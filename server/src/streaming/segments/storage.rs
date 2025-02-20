@@ -56,6 +56,7 @@ impl FileSegmentStorage {
 
         //TODO: Use write_vectored, instead of looping like this.
         for (iter, batch) in batch_accumulator.batches.into_iter().enumerate() {
+            /*
             if iter > 0 {
                 let base_offset_diff = batch.header.base_offset - base_offset;
                 let base_timestamp_diff = batch.header.base_timestamp - base_timestamp;
@@ -81,6 +82,7 @@ impl FileSegmentStorage {
                     //message.timestamp_delta = (timestamp_delta + base_timestamp_diff).into();
                 }
             }
+            */
             batch.write_messages(&mut file).await;
         }
 
@@ -299,7 +301,6 @@ impl SegmentStorage for FileSegmentStorage {
             index_range.end.offset
         );
 
-        info!("reading from start_position: {}", index_range.start.position);
         let mut reader = BufReader::with_capacity(BUF_READER_CAPACITY_BYTES, file);
         reader
             .seek(SeekFrom::Start(index_range.start.position as u64))
@@ -328,7 +329,7 @@ impl SegmentStorage for FileSegmentStorage {
             };
             read += IGGY_BATCH_OVERHEAD as u64;
 
-            let mut buffer = AlignedVec::with_capacity(header.batch_length as usize);
+            let mut buffer = Vec::with_capacity(header.batch_length as usize);
             unsafe { buffer.set_len(header.batch_length as usize) };
             reader.read_exact(&mut buffer).await.unwrap();
             // read the messages
@@ -339,23 +340,22 @@ impl SegmentStorage for FileSegmentStorage {
             let mut end_slice_pos = 0;
             let mut start_slice_set = false;
             while position < buffer.len() {
-                let length = u64::from_le_bytes(buffer[position..position + 8].try_into().unwrap());
+                let offset_delta =
+                    u32::from_le_bytes(buffer[position..position + 4].try_into().unwrap());
+                //let timestamp_delta = u32::from_le_bytes(&buffer[position + 4..position + 8].try_into().unwrap());
+                let length =
+                    u64::from_le_bytes(buffer[position + 8..position + 16].try_into().unwrap());
                 let length = length as usize;
-                position += 8;
-                let message = unsafe {
-                    rkyv::access_unchecked::<ArchivedIggyMessage>(
-                        &buffer[position..length + position],
-                    )
-                };
-                //let message_offset = header.base_offset + message.offset_delta.to_native() as u64;
+                position += 16;
+                let message_offset = header.base_offset + offset_delta as u64;
                 // error!("reading message_offset: {}, for start_offset: {}, current_msg_count: {}/{}",
                 // message_offset, start_offset, current_msg_count, msg_count);
                 //if message_offset >= start_offset {
-                if !start_slice_set {
-                    start_slice_pos = position - 8;
-                    start_slice_set = true;
-                }
-                current_msg_count += 1;
+                    if !start_slice_set {
+                        start_slice_pos = position - 16;
+                        start_slice_set = true;
+                    }
+                    current_msg_count += 1;
                 //}
                 position += length;
                 end_slice_pos = position;

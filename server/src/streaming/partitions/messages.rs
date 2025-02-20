@@ -3,6 +3,7 @@ use crate::streaming::batching::iterator::IntoMessagesIterator;
 use crate::streaming::batching::transport::{
     IggyBatchCachePhantom, IggyBatchFetchResult, IggyBatchSlice,
 };
+use crate::streaming::local_sizeable::LocalSizeable;
 use crate::streaming::models::messages::RetainedMessage;
 use crate::streaming::partitions::partition::Partition;
 use crate::streaming::partitions::COMPONENT;
@@ -405,29 +406,26 @@ impl Partition {
                     header_set = true;
                     header = Some(batch.header);
                 }
-                let inner_header = batch.header;
                 if batch.header.base_offset >= start_offset && last_offset <= end_offset {
                     let mut position = 0;
                     let mut start_slice_pos = 0;
                     let mut end_slice_pos = 0;
                     let mut start_slice_set = false;
                     while position < buffer.len() {
-                        let length =
-                            u64::from_le_bytes(buffer[position..position + 8].try_into().unwrap());
+                        let offset_delta =
+                            u32::from_le_bytes(buffer[position..position + 4].try_into().unwrap());
+                        //let timestamp_delta = u32::from_le_bytes(&buffer[position + 4..position + 8].try_into().unwrap());
+                        let length = u64::from_le_bytes(
+                            buffer[position + 8..position + 16].try_into().unwrap(),
+                        );
                         let length = length as usize;
-                        position += 8;
-                        let message = unsafe {
-                            rkyv::access_unchecked::<ArchivedIggyMessage>(
-                                &buffer[position..length + position],
-                            )
-                        };
-                        let message_offset =
-                            inner_header.base_offset + message.offset_delta.to_native() as u64;
+                        position += 16;
+                        let message_offset = batch.header.base_offset + offset_delta as u64;
                         // error!("reading message_offset: {}, for start_offset: {}, current_msg_count: {}/{}",
                         // message_offset, start_offset, current_msg_count, msg_count);
                         if message_offset >= start_offset {
                             if !start_slice_set {
-                                start_slice_pos = position - 8;
+                                start_slice_pos = position - 16;
                                 start_slice_set = true;
                             }
                             current_msg_count += 1;
@@ -495,11 +493,15 @@ impl Partition {
             max_timestamp = IggyTimestamp::now().as_micros();
             let timestamp_delta = (max_timestamp - batch_base_timestamp) as u32;
             let offset_delta = messages_count;
-            let length =
-                u64::from_le_bytes(batch_payload[position + 8..position + 16].try_into().unwrap());
+            let length = u64::from_le_bytes(
+                batch_payload[position + 8..position + 16]
+                    .try_into()
+                    .unwrap(),
+            );
             let length = length as usize;
             batch_payload[position..position + 4].copy_from_slice(&offset_delta.to_le_bytes());
-            batch_payload[position + 4..position + 8].copy_from_slice(&timestamp_delta.to_le_bytes());
+            batch_payload[position + 4..position + 8]
+                .copy_from_slice(&timestamp_delta.to_le_bytes());
             position += 16;
             position += length;
             messages_count += 1;

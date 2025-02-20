@@ -465,7 +465,7 @@ message_expiry = "none"
 # Possible values:
 # - "wait": waits for the file operation to complete before proceeding.
 # - "no_wait": proceeds without waiting for the file operation to finish, potentially increasing performance but at the cost of durability.
-server_confirmation = "no_wait"
+server_confirmation = "wait"
 
 # Configures whether expired segments are archived (boolean) or just deleted without archiving.
 archive_expired = false

@@ -42,16 +42,39 @@ impl<B: BinaryClient> MessageClient for B {
                 ),
             )
             .await?;
-        warn!("Response len: {}", response.len());
-        let start = Instant::now();
         let header = IggyHeader::from_bytes(&response[..IGGY_BATCH_OVERHEAD as usize]);
         let msg_count = header.last_offset_delta as usize + 1;
         let batch_payload = &response[IGGY_BATCH_OVERHEAD as usize..];
+        let mut messages = Vec::with_capacity(msg_count);
         let mut position = 0;
-        let mut count = 0;
         while position < batch_payload.len() {
+            let offset_delta =
+                u32::from_le_bytes(batch_payload[position..position + 4].try_into().unwrap());
+            let timestamp_delta = u32::from_le_bytes(
+                batch_payload[position + 4..position + 8]
+                    .try_into()
+                    .unwrap(),
+            );
+            let length = u64::from_le_bytes(
+                batch_payload[position + 8..position + 16]
+                    .try_into()
+                    .unwrap(),
+            );
+            position += 16;
+            let id = u128::from_le_bytes(batch_payload[position..position + 16].try_into().unwrap());
+            let payload = batch_payload[position + 16..position + length as usize].to_vec();
+            position += length as usize;
+            let message = IggyMessage {
+                id,
+                offset_delta,
+                timestamp_delta,
+                length: payload.len() as u64,
+                payload,
+                headers: None
+            };
+            messages.push(message);
         }
-        todo!();
+        Ok(messages)
     }
 
     async fn send_messages(

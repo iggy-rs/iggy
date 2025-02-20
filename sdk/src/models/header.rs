@@ -8,14 +8,7 @@ use std::hash::{Hash, Hasher};
 use std::str::FromStr;
 
 /// Represents a header key with a unique name. The name is case-insensitive and wraps a string.
-#[derive(
-    Debug,
-    Clone,
-    Eq,
-    PartialEq,
-    serde::Serialize,
-    serde::Deserialize,
-)]
+#[derive(Debug, Clone, Eq, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct HeaderKey(pub String);
 
 impl HeaderKey {
@@ -63,14 +56,7 @@ impl TryFrom<&str> for HeaderKey {
 /// - `kind`: the kind of the header value.
 /// - `value`: the value of the header.
 #[serde_as]
-#[derive(
-    Debug,
-    Clone,
-    PartialEq,
-    Eq,
-    serde::Serialize,
-    serde::Deserialize,
-)]
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct HeaderValue {
     /// The kind of the header value.
     pub kind: HeaderKind,
@@ -80,15 +66,7 @@ pub struct HeaderValue {
 }
 
 /// Represents the kind of a header value.
-#[derive(
-    Debug,
-    Clone,
-    Hash,
-    Eq,
-    PartialEq,
-    serde::Serialize,
-    serde::Deserialize,
-)]
+#[derive(Debug, Clone, Hash, Eq, PartialEq, serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum HeaderKind {
     Raw,

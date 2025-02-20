@@ -16,12 +16,7 @@ pub const IGGY_MESSAGE_METADATA: u32 = 8 + 1 + 8 + 4;
 /// - `length`: the length of the payload.
 /// - `payload`: the binary payload of the message.
 #[serde_as]
-#[derive(
-    Default,
-    Debug,
-    serde::Serialize,
-    serde::Deserialize,
-)]
+#[derive(Default, Debug, serde::Serialize, serde::Deserialize)]
 pub struct IggyMessage {
     /// The binary payload of the message.
     #[serde_as(as = "Base64")]
@@ -88,7 +83,7 @@ impl Sizeable for IggyMessage {
             + self.payload.len() as u64
             + 16
             + 4
-            + 4 
+            + 4
             + 8;
         value.into()
     }

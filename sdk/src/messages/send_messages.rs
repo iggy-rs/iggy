@@ -432,8 +432,8 @@ pub fn as_bytes(
     for message in messages {
         let header_bytes = to_bytes(message.headers);
         let size = message.payload.len() as u64 + 16 + header_bytes.len() as u64;
-        result.extend_from_slice(&[0,0,0,0]);
-        result.extend_from_slice(&[0,0,0,0]);
+        result.extend_from_slice(&[0, 0, 0, 0]);
+        result.extend_from_slice(&[0, 0, 0, 0]);
         result.extend_from_slice(&size.to_le_bytes());
         result.extend_from_slice(&message.id.to_le_bytes());
         result.extend_from_slice(&message.payload);
@@ -443,24 +443,24 @@ pub fn as_bytes(
 }
 
 fn to_bytes(headers: Option<HashMap<HeaderKey, HeaderValue>>) -> Bytes {
-        if headers.is_none() {
-            return Bytes::new();
-        }
-        let headers = headers.unwrap();
-
-        let mut bytes = BytesMut::new();
-        for (key, value) in headers {
-            #[allow(clippy::cast_possible_truncation)]
-            bytes.put_u32_le(key.0.len() as u32);
-            bytes.put_slice(key.0.as_bytes());
-            bytes.put_u8(value.kind.as_code());
-            #[allow(clippy::cast_possible_truncation)]
-            bytes.put_u32_le(value.value.len() as u32);
-            bytes.put_slice(&value.value);
-        }
-
-        bytes.freeze()
+    if headers.is_none() {
+        return Bytes::new();
     }
+    let headers = headers.unwrap();
+
+    let mut bytes = BytesMut::new();
+    for (key, value) in headers {
+        #[allow(clippy::cast_possible_truncation)]
+        bytes.put_u32_le(key.0.len() as u32);
+        bytes.put_slice(key.0.as_bytes());
+        bytes.put_u8(value.kind.as_code());
+        #[allow(clippy::cast_possible_truncation)]
+        bytes.put_u32_le(value.value.len() as u32);
+        bytes.put_slice(&value.value);
+    }
+
+    bytes.freeze()
+}
 
 impl FromStr for Message {
     type Err = IggyError;

@@ -8,5 +8,6 @@ FROM gcr.io/distroless/cc
 COPY configs ./configs
 COPY --from=builder /build/target/release/iggy .
 COPY --from=builder /build/target/release/iggy-server .
+COPY --from=builder /usr/lib/x86_64-linux-gnu/liblzma.so.5 /usr/lib/x86_64-linux-gnu/
 
 CMD ["/iggy-server"]

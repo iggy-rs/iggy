@@ -41,7 +41,7 @@ async fn get_consumer_offset(
     query.validate()?;
     let consumer = Consumer::new(query.0.consumer.id);
     let system = state.system.read().await;
-    let offset = system
+    let Some(offset) = system
         .get_consumer_offset(
             &Session::stateless(identity.user_id, identity.ip_address),
             &consumer,
@@ -49,13 +49,8 @@ async fn get_consumer_offset(
             &query.0.topic_id,
             query.0.partition_id,
         )
-        .await
-        .with_error_context(|_| format!("{COMPONENT} - failed to get consumer offset, stream ID: {}, topic ID: {}, patition ID: {:?}", stream_id, topic_id, query.0.partition_id));
-    if offset.is_err() {
-        return Err(CustomError::ResourceNotFound);
-    }
-
-    let Some(offset) = offset? else {
+        .await?
+    else {
         return Err(CustomError::ResourceNotFound);
     };
 

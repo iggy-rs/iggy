@@ -21,8 +21,8 @@ impl Topic {
             let mut partition = partition.write().await;
             partition.delete().await.with_error_context(|_| {
                 format!(
-                    "{COMPONENT} - failed to delete partition with id: {}",
-                    partition.partition_id
+                    "{COMPONENT} - failed to delete partition with ID: {} in topic with ID: {}",
+                    partition.partition_id, self.topic_id
                 )
             })?;
         }

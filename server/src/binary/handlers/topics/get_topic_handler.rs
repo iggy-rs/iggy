@@ -15,13 +15,17 @@ pub async fn handle(
 ) -> Result<(), IggyError> {
     debug!("session: {session}, command: {command}");
     let system = system.read().await;
-    let topic = system.find_topic(session, &command.stream_id, &command.topic_id);
-    if topic.is_err() {
+    let Ok(topic) = system.try_find_topic(session, &command.stream_id, &command.topic_id) else {
         sender.send_empty_ok_response().await?;
         return Ok(());
-    }
+    };
 
-    let topic = mapper::map_topic(topic?).await;
+    let Some(topic) = topic else {
+        sender.send_empty_ok_response().await?;
+        return Ok(());
+    };
+
+    let topic = mapper::map_topic(topic).await;
     sender.send_ok_response(&topic).await?;
     Ok(())
 }

@@ -21,7 +21,7 @@ impl System {
         let stream = self
             .find_stream(session, stream_id)
             .with_error_context(|_| {
-                format!("{COMPONENT} - failed to find stream with id: {stream_id}")
+                format!("{COMPONENT} - failed to find stream with ID: {stream_id}")
             })?;
         let topic = stream.get_topic(topic_id);
         if let Ok(topic) = topic {
@@ -29,10 +29,8 @@ impl System {
                 .get_topic(session.get_user_id(), stream.stream_id, topic.topic_id)
                 .with_error_context(|_| {
                     format!(
-                        "{COMPONENT} - permission denied to get topic for user with id: {}, stream ID: {}, topic ID: {}",
+                        "{COMPONENT} - permission denied to get topic with ID: {topic_id} in stream with ID: {stream_id} for user with ID: {}",
                         session.get_user_id(),
-                        stream.stream_id,
-                        topic.topic_id,
                     )
                 })?;
             return Ok(topic);
@@ -48,18 +46,48 @@ impl System {
     ) -> Result<Vec<&Topic>, IggyError> {
         self.ensure_authenticated(session)?;
         let stream = self.get_stream(stream_id).with_error_context(|_| {
-            format!("{COMPONENT} - failed to get stream with id: {stream_id}")
+            format!("{COMPONENT} - failed to get stream with ID: {stream_id}")
         })?;
         self.permissioner
             .get_topics(session.get_user_id(), stream.stream_id)
             .with_error_context(|_| {
                 format!(
-                    "{COMPONENT} - permission denied to get topics for user with id: {}, stream ID: {}",
+                    "{COMPONENT} - permission denied to get topics in stream with ID: {stream_id} for user with ID: {}",
                     session.get_user_id(),
-                    stream.stream_id,
                 )
             })?;
         Ok(stream.get_topics())
+    }
+
+    pub fn try_find_topic(
+        &self,
+        session: &Session,
+        stream_id: &Identifier,
+        topic_id: &Identifier,
+    ) -> Result<Option<&Topic>, IggyError> {
+        self.ensure_authenticated(session)?;
+        let Some(stream) = self
+            .try_find_stream(session, stream_id)
+            .with_error_context(|_| {
+                format!("{COMPONENT} - failed to find stream with ID: {stream_id}")
+            })?
+        else {
+            return Ok(None);
+        };
+
+        let Some(topic) = stream.try_get_topic(topic_id)? else {
+            return Ok(None);
+        };
+
+        self.permissioner
+            .get_topic(session.get_user_id(), stream.stream_id, topic.topic_id)
+            .with_error_context(|_| {
+                format!(
+                    "{COMPONENT} - permission denied to get topic with ID: {topic_id} in stream with ID: {stream_id} for user with ID: {}",
+                    session.get_user_id(),
+                )
+            })?;
+        Ok(Some(topic))
     }
 
     #[allow(clippy::too_many_arguments)]
@@ -78,15 +106,14 @@ impl System {
         self.ensure_authenticated(session)?;
         {
             let stream = self.get_stream(stream_id).with_error_context(|_| {
-                format!("{COMPONENT} - failed to get stream with id: {stream_id}")
+                format!("{COMPONENT} - failed to get stream with ID: {stream_id}")
             })?;
             self.permissioner
                 .create_topic(session.get_user_id(), stream.stream_id)
                 .with_error_context(|_| {
                     format!(
-                        "{COMPONENT} - permission denied to create topic for user with id: {}, stream ID: {}",
+                        "{COMPONENT} - permission denied to create topic with name: {name} in stream with ID: {stream_id} for user with ID: {}",
                         session.get_user_id(),
-                        stream.stream_id,
                     )
                 })?;
         }
@@ -104,7 +131,7 @@ impl System {
             )
             .await
             .with_error_context(|_| {
-                format!("{COMPONENT} - failed to create topic, stream ID: {stream_id}")
+                format!("{COMPONENT} - failed to create topic with name: {name} in stream ID: {stream_id}")
             })?;
 
         self.metrics.increment_topics(1);
@@ -113,13 +140,12 @@ impl System {
 
         self.get_stream(stream_id)
             .with_error_context(|_| {
-                format!("{COMPONENT} - failed to get stream with id: {stream_id}")
+                format!("{COMPONENT} - failed to get stream with ID: {stream_id}")
             })?
             .get_topic(&created_topic_id.try_into()?)
             .with_error_context(|_| {
                 format!(
-                    "{COMPONENT} - failed to get topic with id: {}",
-                    created_topic_id
+                    "{COMPONENT} - failed to get created topic with ID: {created_topic_id} in stream with ID: {stream_id}",
                 )
             })
     }
@@ -141,7 +167,7 @@ impl System {
             let topic = self
                 .find_topic(session, stream_id, topic_id)
                 .with_error_context(|_| {
-                    format!("{COMPONENT} - failed to find topic with id: {topic_id}")
+                    format!("{COMPONENT} - failed to find topic with ID: {topic_id}")
                 })?;
             self.permissioner.update_topic(
                 session.get_user_id(),
@@ -169,8 +195,7 @@ impl System {
             .await
             .with_error_context(|_| {
                 format!(
-                    "{COMPONENT} - failed to update topic, stream ID: {}, topic ID: {}",
-                    stream_id, topic_id
+                    "{COMPONENT} - failed to update topic with ID: {topic_id} in stream with ID: {stream_id}",
                 )
             })?;
 
@@ -179,11 +204,11 @@ impl System {
         // TODO: if replication_factor is changed, we need to do `something`
         self.get_stream(stream_id)
             .with_error_context(|_| {
-                format!("{COMPONENT} - failed to get stream with id: {stream_id}")
+                format!("{COMPONENT} - failed to get stream with ID: {stream_id}")
             })?
             .get_topic(topic_id)
             .with_error_context(|_| {
-                format!("{COMPONENT} - failed to get topic with id: {topic_id}")
+                format!("{COMPONENT} - failed to get topic with ID: {topic_id} in stream with ID: {stream_id}")
             })
     }
 
@@ -199,7 +224,7 @@ impl System {
             let topic = self
                 .find_topic(session, stream_id, topic_id)
                 .with_error_context(|_| {
-                    format!("{COMPONENT} - failed to find topic with id: {topic_id}")
+                    format!("{COMPONENT} - failed to find topic with ID: {topic_id} in stream with ID: {stream_id}")
                 })?;
             self.permissioner.delete_topic(
                 session.get_user_id(),
@@ -207,10 +232,8 @@ impl System {
                 topic.topic_id,
             ).with_error_context(|_| {
                 format!(
-                    "{COMPONENT} - permission denied to delete topic for user with id: {}, stream ID: {}, topic ID: {}",
+                    "{COMPONENT} - permission denied to delete topic with ID: {topic_id} in stream with ID: {stream_id} for user with ID: {}",
                     session.get_user_id(),
-                    topic.stream_id,
-                    topic.topic_id,
                 )
             })?;
             stream_id_value = topic.stream_id;
@@ -220,7 +243,7 @@ impl System {
             .get_stream_mut(stream_id)?
             .delete_topic(topic_id)
             .await
-            .with_error_context(|_| format!("{COMPONENT} - failed to delete topic, stream ID: {stream_id}, topic ID: {topic_id}"))?;
+            .with_error_context(|_| format!("{COMPONENT} - failed to delete topic with ID: {topic_id} in stream with ID: {stream_id}"))?;
 
         self.metrics.decrement_topics(1);
         self.metrics
@@ -244,20 +267,18 @@ impl System {
         let topic = self
             .find_topic(session, stream_id, topic_id)
             .with_error_context(|_| {
-                format!("{COMPONENT} - failed to find topic with id: {topic_id}")
+                format!("{COMPONENT} - failed to find topic with ID: {topic_id} in stream with ID: {stream_id}")
             })?;
         self.permissioner
             .purge_topic(session.get_user_id(), topic.stream_id, topic.topic_id)
             .with_error_context(|_| {
                 format!(
-                    "{COMPONENT} - permission denied to purge topic for user with id: {}, stream ID: {}, topic ID: {}",
+                    "{COMPONENT} - permission denied to purge topic with ID: {topic_id} in stream with ID: {stream_id} for user with ID: {}",
                     session.get_user_id(),
-                    topic.stream_id,
-                    topic.topic_id,
                 )
             })?;
         topic.purge().await.with_error_context(|_| {
-            format!("{COMPONENT} - failed to purge topic with id: {topic_id}")
+            format!("{COMPONENT} - failed to purge topic with ID: {topic_id} in stream with ID: {stream_id}")
         })
     }
 }

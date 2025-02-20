@@ -89,7 +89,7 @@ async fn delete_partitions(
             .await
             .with_error_context(|_| {
                 format!(
-                    "{COMPONENT} - failed to delete partitions, stream ID: {}, topic ID: {}",
+                    "{COMPONENT} - failed to delete partitions for topic with ID: {} in stream with ID: {}",
                     stream_id, topic_id
                 )
             })?;

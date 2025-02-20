@@ -158,6 +158,17 @@ impl Stream {
         self.topics.values().collect()
     }
 
+    pub fn try_get_topic(&self, identifier: &Identifier) -> Result<Option<&Topic>, IggyError> {
+        match identifier.kind {
+            IdKind::Numeric => Ok(self.topics.get(&identifier.get_u32_value()?)),
+            IdKind::String => Ok(self.try_get_topic_by_name(&identifier.get_cow_str_value()?)),
+        }
+    }
+
+    fn try_get_topic_by_name(&self, name: &str) -> Option<&Topic> {
+        self.topics_ids.get(name).and_then(|id| self.topics.get(id))
+    }
+
     pub fn get_topic(&self, identifier: &Identifier) -> Result<&Topic, IggyError> {
         match identifier.kind {
             IdKind::Numeric => self.get_topic_by_id(identifier.get_u32_value()?),

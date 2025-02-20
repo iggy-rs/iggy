@@ -58,28 +58,23 @@ impl System {
         }
     }
 
-    // TODO change errir message for permissiioner
     pub async fn get_client(
         &self,
         session: &Session,
         client_id: u32,
-    ) -> Result<IggySharedMut<Client>, IggyError> {
+    ) -> Result<Option<IggySharedMut<Client>>, IggyError> {
         self.ensure_authenticated(session)?;
         self.permissioner
             .get_client(session.get_user_id())
             .with_error_context(|_| {
                 format!(
-                    "{COMPONENT} - failed to get client by user ID: {}",
+                    "{COMPONENT} - permission denied to get client with ID: {client_id} by user ID: {}",
                     session.get_user_id()
                 )
             })?;
 
         let client_manager = self.client_manager.read().await;
-        client_manager
-            .get_client(client_id)
-            .with_error_context(|_| {
-                format!("{COMPONENT} - failed to get client with ID {}", client_id)
-            })
+        Ok(client_manager.try_get_client(client_id))
     }
 
     pub async fn get_clients(

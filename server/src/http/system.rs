@@ -59,7 +59,7 @@ async fn get_client(
     Path(client_id): Path<u32>,
 ) -> Result<Json<ClientInfoDetails>, CustomError> {
     let system = state.system.read().await;
-    let client = system
+    let Some(client) = system
         .get_client(
             &Session::stateless(identity.user_id, identity.ip_address),
             client_id,
@@ -70,12 +70,11 @@ async fn get_client(
                 "{COMPONENT} - failed to get client, user ID: {}",
                 identity.user_id
             )
-        });
-    if client.is_err() {
+        })?
+    else {
         return Err(CustomError::ResourceNotFound);
-    }
+    };
 
-    let client = client?;
     let client = client.read().await;
     let client = mapper::map_client(&client);
     Ok(Json(client))

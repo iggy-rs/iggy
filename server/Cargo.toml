@@ -1,6 +1,6 @@
 [package]
 name = "server"
-version = "0.4.209"
+version = "0.4.210"
 edition = "2021"
 build = "src/build.rs"
 license = "Apache-2.0"
@@ -13,7 +13,7 @@ mimalloc = ["dep:mimalloc"]
 
 [dependencies]
 ahash = { version = "0.8.11" }
-anyhow = "1.0.95"
+anyhow = "1.0.96"
 async_zip = { version = "0.0.17", features = [
     "tokio",
     "lzma",
@@ -76,8 +76,8 @@ ring = "0.17.9"
 rust-s3 = { version = "0.35.1", features = ["default"] }
 rustls = { version = "0.23.23" }
 rustls-pemfile = "2.2.0"
-serde = { version = "1.0.217", features = ["derive", "rc"] }
-serde_json = "1.0.138"
+serde = { version = "1.0.218", features = ["derive", "rc"] }
+serde_json = "1.0.139"
 serde_with = { version = "3.12.0", features = ["base64", "macros"] }
 static-toml = "1.3.0"
 strum = { version = "0.27.1", features = ["derive"] }
@@ -106,7 +106,7 @@ mockall = "0.13.1"
 
 [build-dependencies]
 figment = { version = "0.10.19", features = ["json", "toml", "env"] }
-serde_json = "1.0.138"
+serde_json = "1.0.139"
 vergen-git2 = { version = "1.0.5", features = [
     "build",
     "cargo",

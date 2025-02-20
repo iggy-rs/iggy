@@ -48,17 +48,15 @@ async fn get_user(
 ) -> Result<Json<UserInfoDetails>, CustomError> {
     let identifier_user_id = Identifier::from_str_value(&user_id)?;
     let system = state.system.read().await;
-    let user = system
-        .find_user(
-            &Session::stateless(identity.user_id, identity.ip_address),
-            &identifier_user_id,
-        )
-        .with_error_context(|_| format!("{COMPONENT} - failed to find user, user ID: {}", user_id));
-    if user.is_err() {
+    let Some(user) = system.find_user(
+        &Session::stateless(identity.user_id, identity.ip_address),
+        &identifier_user_id,
+    )?
+    else {
         return Err(CustomError::ResourceNotFound);
-    }
+    };
 
-    let user = mapper::map_user(user?);
+    let user = mapper::map_user(user);
     Ok(Json(user))
 }
 
@@ -275,7 +273,7 @@ async fn delete_user(
             )
             .await
             .with_error_context(|_| {
-                format!("{COMPONENT} - failed to delete user, user ID: {}", user_id)
+                format!("{COMPONENT} - failed to delete user with ID: {user_id}")
             })?;
     }
 
@@ -290,10 +288,7 @@ async fn delete_user(
         )
         .await
         .with_error_context(|_| {
-            format!(
-                "{COMPONENT} - failed to apply delete user, user ID: {}",
-                user_id
-            )
+            format!("{COMPONENT} - failed to apply delete user with ID: {user_id}")
         })?;
     Ok(StatusCode::NO_CONTENT)
 }

@@ -23,7 +23,7 @@ pub async fn handle(
             .delete_stream(session, &command.stream_id)
             .await
             .with_error_context(|_| {
-                format!("{COMPONENT} - failed to delete stream with id: {stream_id}, session: {session}")
+                format!("{COMPONENT} - failed to delete stream with ID: {stream_id}, session: {session}")
             })?;
     }
 
@@ -33,7 +33,7 @@ pub async fn handle(
         .apply(session.get_user_id(), EntryCommand::DeleteStream(command))
         .await
         .with_error_context(|_| {
-            format!("{COMPONENT} - failed to apply delete stream with id: {stream_id}, session: {session}")
+            format!("{COMPONENT} - failed to apply delete stream with ID: {stream_id}, session: {session}")
         })?;
     sender.send_empty_ok_response().await?;
     Ok(())

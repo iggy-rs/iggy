@@ -94,8 +94,8 @@ impl Topic {
             messages_count += partition_messages_count;
             partition.delete().await.with_error_context(|_| {
                 format!(
-                    "{COMPONENT} - failed to delete partition with id: {}",
-                    partition.partition_id
+                    "{COMPONENT} - failed to delete partition with ID: {partition_id} in topic with ID: {}",
+                    self.topic_id
                 )
             })?;
         }

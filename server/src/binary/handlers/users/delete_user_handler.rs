@@ -23,7 +23,7 @@ pub async fn handle(
             .await
             .with_error_context(|_| {
                 format!(
-                    "{COMPONENT} - failed to delete user with id: {}, session: {session}",
+                    "{COMPONENT} - failed to delete user with ID: {}, session: {session}",
                     command.user_id
                 )
             })?;
@@ -37,8 +37,7 @@ pub async fn handle(
         .await
         .with_error_context(|_| {
             format!(
-                "{COMPONENT} - failed to apply delete user with id: {}, session: {session}",
-                user_id
+                "{COMPONENT} - failed to apply delete user with ID: {user_id}, session: {session}",
             )
         })?;
     sender.send_empty_ok_response().await?;

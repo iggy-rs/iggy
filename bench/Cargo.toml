@@ -21,7 +21,7 @@ iggy = { path = "../sdk" }
 iggy-bench-report = { path = "report" }
 integration = { path = "../integration" }
 nonzero_lit = "0.1.2"
-serde = { version = "1.0.217", features = ["derive"] }
+serde = { version = "1.0.218", features = ["derive"] }
 sysinfo = "0.33.1"
 tokio = { version = "1.43.0", features = ["full"] }
 toml = "0.8.20"

@@ -17,14 +17,12 @@ pub async fn handle(
     let bytes;
     {
         let system = system.read().await;
-        let client = system.get_client(session, command.client_id).await;
-        if client.is_err() {
+        let Some(client) = system.get_client(session, command.client_id).await? else {
             sender.send_empty_ok_response().await?;
             return Ok(());
-        }
+        };
 
         {
-            let client = client?;
             let client = client.read().await;
             bytes = mapper::map_client(&client);
         }

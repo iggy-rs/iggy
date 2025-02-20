@@ -1,9 +1,7 @@
-use crate::binary::handlers::system::COMPONENT;
 use crate::binary::sender::SenderKind;
 use crate::streaming::session::Session;
 use crate::streaming::systems::system::SharedSystem;
 use anyhow::Result;
-use error_set::ErrContext;
 use iggy::error::IggyError;
 use iggy::locking::IggySharedMutFn;
 use iggy::system::ping::Ping;
@@ -19,15 +17,13 @@ pub async fn handle(
     debug!("session: {session}, command: {command}");
     let system = system.read().await;
     let client_manager = system.client_manager.read().await;
-    let client = client_manager
-        .get_client(session.client_id)
-        .with_error_context(|_| {
-            format!("{COMPONENT} - failed to get clients, session: {session}")
-        })?;
-    let mut client = client.write().await;
-    let now = IggyTimestamp::now();
-    client.last_heartbeat = now;
-    debug!("Updated last heartbeat to: {now} for session: {session}");
+    if let Some(client) = client_manager.try_get_client(session.client_id) {
+        let mut client = client.write().await;
+        let now = IggyTimestamp::now();
+        client.last_heartbeat = now;
+        debug!("Updated last heartbeat to: {now} for session: {session}");
+    }
+
     sender.send_empty_ok_response().await?;
     Ok(())
 }

@@ -39,15 +39,17 @@ async fn get_stream(
 ) -> Result<Json<StreamDetails>, CustomError> {
     let system = state.system.read().await;
     let stream_id = Identifier::from_str_value(&stream_id)?;
-    let stream = system.find_stream(
+    let Ok(stream) = system.try_find_stream(
         &Session::stateless(identity.user_id, identity.ip_address),
         &stream_id,
-    );
-    if stream.is_err() {
+    ) else {
         return Err(CustomError::ResourceNotFound);
-    }
+    };
+    let Some(stream) = stream else {
+        return Err(CustomError::ResourceNotFound);
+    };
 
-    let stream = mapper::map_stream(stream?);
+    let stream = mapper::map_stream(stream);
     Ok(Json(stream))
 }
 
@@ -165,10 +167,7 @@ async fn delete_stream(
             )
             .await
             .with_error_context(|_| {
-                format!(
-                    "{COMPONENT} - failed to delete stream, stream ID: {}",
-                    stream_id
-                )
+                format!("{COMPONENT} - failed to delete stream with ID: {stream_id}",)
             })?;
     }
 
@@ -183,10 +182,7 @@ async fn delete_stream(
         )
         .await
         .with_error_context(|_| {
-            format!(
-                "{COMPONENT} - failed to apply delete stream, stream ID: {}",
-                stream_id
-            )
+            format!("{COMPONENT} - failed to apply delete stream with ID: {stream_id}",)
         })?;
     Ok(StatusCode::NO_CONTENT)
 }

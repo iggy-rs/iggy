@@ -82,7 +82,7 @@ impl System {
             .delete_persisted_partitions(partitions_count)
             .await
             .with_error_context(|_| {
-                format!("{COMPONENT} - failed to delete persisted partitions, topic: {topic}")
+                format!("{COMPONENT} - failed to delete persisted partitions for topic: {topic}")
             })?;
         topic.reassign_consumer_groups().await;
         if let Some(partitions) = partitions {

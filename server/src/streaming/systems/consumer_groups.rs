@@ -15,25 +15,22 @@ impl System {
         stream_id: &Identifier,
         topic_id: &Identifier,
         group_id: &Identifier,
-    ) -> Result<&RwLock<ConsumerGroup>, IggyError> {
+    ) -> Result<Option<&RwLock<ConsumerGroup>>, IggyError> {
         self.ensure_authenticated(session)?;
-        let topic = self.find_topic(session, stream_id, topic_id)
-            .with_error_context(|_| format!("{COMPONENT} - topic not found for stream_id: {stream_id}, topic_id: {topic_id}"))?;
+        let Some(topic) = self.try_find_topic(session, stream_id, topic_id)? else {
+            return Ok(None);
+        };
 
         self.permissioner
             .get_consumer_group(session.get_user_id(), topic.stream_id, topic.topic_id)
             .with_error_context(|_| {
                 format!(
-                    "{COMPONENT} - permission denied to get consumer group for user {} on stream_id: {}, topic_id: {}",
+                    "{COMPONENT} - permission denied to get consumer group with ID: {group_id} for user with ID: {} in topic with ID: {topic_id} and stream with ID: {stream_id}",
                     session.get_user_id(),
-                    topic.stream_id,
-                    topic.topic_id
                 )
             })?;
 
-        topic.get_consumer_group(group_id).with_error_context(|_| {
-            format!("{COMPONENT} - consumer group not found for group_id: {group_id}")
-        })
+        topic.try_get_consumer_group(group_id)
     }
 
     pub fn get_consumer_groups(
@@ -127,7 +124,7 @@ impl System {
 
             consumer_group = topic.delete_consumer_group(consumer_group_id)
                 .await
-                .with_error_context(|_| format!("{COMPONENT} - failed to delete consumer group for consumer_group_id: {consumer_group_id}"))?;
+                .with_error_context(|_| format!("{COMPONENT} - failed to delete consumer group with ID: {consumer_group_id}"))?
         }
 
         let client_manager = self.client_manager.read().await;
@@ -273,7 +270,7 @@ impl System {
 
         {
             let stream = self.get_stream(stream_id).with_error_context(|_| {
-                format!("{COMPONENT} - failed to get stream with id: {stream_id}")
+                format!("{COMPONENT} - failed to get stream with ID: {stream_id}")
             })?;
             let topic = stream.get_topic(topic_id)
                 .with_error_context(|_| {

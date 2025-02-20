@@ -118,38 +118,43 @@ impl System {
         User::root(&username, &password)
     }
 
-    pub fn find_user(&self, session: &Session, user_id: &Identifier) -> Result<&User, IggyError> {
+    pub fn find_user(
+        &self,
+        session: &Session,
+        user_id: &Identifier,
+    ) -> Result<Option<&User>, IggyError> {
         self.ensure_authenticated(session)?;
-        let user = self.get_user(user_id);
-        if let Ok(user) = user {
-            let session_user_id = session.get_user_id();
-            if user.id != session_user_id {
-                self.permissioner.get_user(session_user_id).with_error_context(|_| {
-                    format!(
-                        "{COMPONENT} - permission denied to get user for user with id: {session_user_id}"
-                    )
-                })?;
-            }
+        let Some(user) = self.try_get_user(user_id)? else {
+            return Ok(None);
+        };
 
-            return Ok(user);
+        let session_user_id = session.get_user_id();
+        if user.id != session_user_id {
+            self.permissioner.get_user(session_user_id).with_error_context(|_| {
+                format!(
+                    "{COMPONENT} - permission denied to get user with ID: {user_id} for current user with ID: {session_user_id}"
+                )
+            })?;
         }
 
-        user
+        Ok(Some(user))
     }
 
     pub fn get_user(&self, user_id: &Identifier) -> Result<&User, IggyError> {
+        self.try_get_user(user_id)?
+            .ok_or(IggyError::ResourceNotFound(user_id.to_string()))
+    }
+
+    pub fn try_get_user(&self, user_id: &Identifier) -> Result<Option<&User>, IggyError> {
         match user_id.kind {
-            IdKind::Numeric => self
-                .users
-                .get(&user_id.get_u32_value()?)
-                .ok_or(IggyError::ResourceNotFound(user_id.to_string())),
+            IdKind::Numeric => Ok(self.users.get(&user_id.get_u32_value()?)),
             IdKind::String => {
                 let username = user_id.get_cow_str_value()?;
-                self.users
+                Ok(self
+                    .users
                     .iter()
                     .find(|(_, user)| user.username == username)
-                    .map(|(_, user)| user)
-                    .ok_or(IggyError::ResourceNotFound(user_id.to_string()))
+                    .map(|(_, user)| user))
             }
         }
     }
@@ -266,7 +271,7 @@ impl System {
             .await
             .with_error_context(|_| {
                 format!(
-                    "{COMPONENT} - failed to delete clients for user with id: {existing_user_id}"
+                    "{COMPONENT} - failed to delete clients for user with ID: {existing_user_id}"
                 )
             })?;
         info!("Deleted user: {existing_username} with ID: {user_id}.");

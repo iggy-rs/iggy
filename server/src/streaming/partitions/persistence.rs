@@ -52,19 +52,19 @@ impl Partition {
             .delete_consumer_offsets(&self.consumer_offsets_path)
             .await
             .with_error_context(|_| {
-                format!("{COMPONENT} - failed to delete consumer offsets, partition: {self}")
+                format!("{COMPONENT} - failed to delete consumer offsets in partition: {self}")
             })?;
         self.storage
             .partition
             .delete_consumer_offsets(&self.consumer_group_offsets_path)
             .await
             .with_error_context(|_| {
-                format!("{COMPONENT} - failed to delete consumer offsets, partition: {self}")
+                format!("{COMPONENT} - failed to delete consumer offsets in partition: {self}")
             })?;
         self.add_persisted_segment(0)
             .await
             .with_error_context(|_| {
-                format!("{COMPONENT} - failed to add persisted segment, partition: {self}",)
+                format!("{COMPONENT} - failed to add persisted segment in partition: {self}",)
             })?;
 
         if !Path::new(&self.consumer_offsets_path).exists()

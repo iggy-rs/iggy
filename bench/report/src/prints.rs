@@ -91,12 +91,16 @@ impl BenchmarkGroupMetrics {
         let p9999 = format!("{:.2}", self.summary.average_p9999_latency_ms);
         let avg = format!("{:.2}", self.summary.average_latency_ms);
         let median = format!("{:.2}", self.summary.average_median_latency_ms);
+        let total_test_time = format!(
+            "{:.2}",
+            self.avg_throughput_mb_ts.points.last().unwrap().time_s
+        );
 
         format!(
             "{}: Total throughput: {} MB/s, {} messages/s, average throughput per {}: {} MB/s, \
             p50 latency: {} ms, p90 latency: {} ms, p95 latency: {} ms, \
             p99 latency: {} ms, p999 latency: {} ms, p9999 latency: {} ms, average latency: {} ms, \
-            median latency: {} ms",
+            median latency: {} ms, total time: {} s",
             prefix,
             total_mb,
             total_msg,
@@ -110,6 +114,7 @@ impl BenchmarkGroupMetrics {
             p9999,
             avg,
             median,
+            total_test_time
         )
         .color(color)
     }

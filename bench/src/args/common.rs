@@ -297,12 +297,25 @@ impl IggyBenchArgs {
             BenchmarkTransportCommand::Http(_) => "http",
         };
 
+        let actors = match &self.benchmark_kind {
+            BenchmarkKindCommand::PinnedProducer(_) => self.producers(),
+            BenchmarkKindCommand::PinnedConsumer(_) => self.consumers(),
+            BenchmarkKindCommand::PinnedProducerAndConsumer(_) => {
+                self.producers() + self.consumers()
+            }
+            BenchmarkKindCommand::BalancedProducer(_) => self.producers(),
+            BenchmarkKindCommand::BalancedConsumerGroup(_) => self.consumers(),
+            BenchmarkKindCommand::BalancedProducerAndConsumerGroup(_) => {
+                self.producers() + self.consumers()
+            }
+            BenchmarkKindCommand::EndToEndProducingConsumer(_) => self.producers(),
+            BenchmarkKindCommand::EndToEndProducingConsumerGroup(_) => self.producers(),
+            BenchmarkKindCommand::Examples => unreachable!(),
+        };
+
         let mut parts = vec![
             benchmark_kind.to_string(),
-            match benchmark_kind {
-                "send" => self.producers().to_string(),
-                _ => self.consumers().to_string(),
-            },
+            actors.to_string(),
             self.message_size().to_string(),
             self.messages_per_batch().to_string(),
             self.message_batches().to_string(),

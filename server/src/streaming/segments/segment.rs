@@ -33,16 +33,16 @@ pub struct Segment {
     pub messages_count_of_parent_topic: Arc<AtomicU64>,
     pub messages_count_of_parent_partition: Arc<AtomicU64>,
     pub is_closed: bool,
-    pub log_writer: Option<SegmentLogWriter>,
-    pub log_reader: Option<SegmentLogReader>,
-    pub index_writer: Option<SegmentIndexWriter>,
-    pub index_reader: Option<SegmentIndexReader>,
+    pub(super) log_writer: Option<SegmentLogWriter>,
+    pub(super) log_reader: Option<SegmentLogReader>,
+    pub(super) index_writer: Option<SegmentIndexWriter>,
+    pub(super) index_reader: Option<SegmentIndexReader>,
     pub message_expiry: IggyExpiry,
     pub unsaved_messages: Option<BatchAccumulator>,
     pub config: Arc<SystemConfig>,
     pub indexes: Option<Vec<Index>>,
-    pub log_size_bytes: Arc<AtomicU64>,
-    pub index_size_bytes: Arc<AtomicU64>,
+    pub(super) log_size_bytes: Arc<AtomicU64>,
+    pub(super) index_size_bytes: Arc<AtomicU64>,
 }
 
 impl Segment {

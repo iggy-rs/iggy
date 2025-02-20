@@ -173,7 +173,7 @@ impl SegmentIndexReader {
         for chunk in buf.chunks_exact(INDEX_SIZE as usize) {
             let current = parse_index(chunk)?;
             if current.timestamp >= timestamp {
-                return Ok(last_index.or(Some(current)));
+                return Ok(Some(last_index.unwrap_or_default()));
             }
             last_index = Some(current);
         }

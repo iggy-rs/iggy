@@ -3,6 +3,8 @@ use iggy::messages::send_messages::Message;
 
 mod common;
 mod consumer_offset;
+mod get_by_offset;
+mod get_by_timestamp;
 mod messages;
 mod partition;
 mod segment;

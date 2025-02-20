@@ -54,19 +54,21 @@ impl Topic {
         let Some((polling_consumer, partition_id)) = self
             .resolve_consumer_with_partition_id(consumer, client_id, partition_id, false)
             .await
-            .with_error_context(|_| format!("{COMPONENT} - failed to resolve consumer with partition id, consumer: {consumer}, client ID: {client_id}, partition ID: {:?}", partition_id))? else {
+            .with_error_context(|_| format!("{COMPONENT} - failed to resolve consumer offset for consumer: {consumer}, client ID: {client_id}, partition ID: {:#?}", partition_id))? else {
             return Ok(None);
         };
 
         let partition = self.get_partition(partition_id).with_error_context(|_| {
-            format!("{COMPONENT} - failed to get partition with id: {partition_id}")
+            format!("{COMPONENT} - failed to get partition with ID: {partition_id}")
         })?;
         let partition = partition.read().await;
         let offset = partition
             .get_consumer_offset(polling_consumer)
             .await
             .with_error_context(|_| {
-                format!("{COMPONENT} - failed to get consumer offset, consumer: {polling_consumer}")
+                format!(
+                    "{COMPONENT} - failed to get consumer offset for consumer: {polling_consumer}"
+                )
             })?;
         let Some(offset) = offset else {
             return Ok(None);
@@ -101,7 +103,8 @@ impl Topic {
             .await
             .with_error_context(|_| {
                 format!(
-                    "{COMPONENT} - failed to delete consumer offset, consumer: {polling_consumer}"
+                    "{COMPONENT} - failed to delete consumer offset for consumer: {polling_consumer}, in topic with ID: {}, partition ID: {partition_id}",
+                    self.topic_id
                 )
             })
     }

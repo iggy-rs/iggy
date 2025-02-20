@@ -18,7 +18,8 @@ impl System {
         offset: u64,
     ) -> Result<(), IggyError> {
         self.ensure_authenticated(session)?;
-        let topic = self.find_topic(session, stream_id, topic_id).with_error_context(|_| format!("{COMPONENT} - topic not found for stream_id: {stream_id}, topic_id: {topic_id}"))?;
+        let topic = self.find_topic(session, stream_id, topic_id)
+            .with_error_context(|_| format!("{COMPONENT} - topic with ID: {topic_id} was not found in stream with ID: {stream_id}"))?;
         self.permissioner.store_consumer_offset(
             session.get_user_id(),
             topic.stream_id,
@@ -39,17 +40,18 @@ impl System {
         partition_id: Option<u32>,
     ) -> Result<Option<ConsumerOffsetInfo>, IggyError> {
         self.ensure_authenticated(session)?;
-        let topic = self.find_topic(session, stream_id, topic_id).with_error_context(|_| format!("{COMPONENT} - topic not found for stream_id: {stream_id}, topic_id: {topic_id}"))?;
+        let Some(topic) = self.try_find_topic(session, stream_id, topic_id)? else {
+            return Ok(None);
+        };
+
         self.permissioner.get_consumer_offset(
             session.get_user_id(),
             topic.stream_id,
             topic.topic_id,
         ).with_error_context(|_| {
             format!(
-                "{COMPONENT} - permission denied to get consumer group for user {} on stream_id: {}, topic_id: {}",
+                "{COMPONENT} - permission denied to get consumer offset for user with ID: {}, consumer: {consumer} in topic with ID: {topic_id} and stream with ID: {stream_id}",
                 session.get_user_id(),
-                topic.stream_id,
-                topic.topic_id
             )
         })?;
 
@@ -67,12 +69,18 @@ impl System {
         partition_id: Option<u32>,
     ) -> Result<(), IggyError> {
         self.ensure_authenticated(session)?;
-        let topic = self.find_topic(session, stream_id, topic_id).with_error_context(|_| format!("{COMPONENT} - topic not found for stream_id: {stream_id}, topic_id: {topic_id}"))?;
+        let topic = self.find_topic(session, stream_id, topic_id)
+            .with_error_context(|_| format!("{COMPONENT} - topic with ID: {topic_id} was not found in stream with ID: {stream_id}"))?;
         self.permissioner.delete_consumer_offset(
             session.get_user_id(),
             topic.stream_id,
             topic.topic_id,
-        )?;
+        ).with_error_context(|_| {
+            format!(
+                "{COMPONENT} - permission denied to delete consumer offset for user with ID: {}, consumer: {consumer} in topic with ID: {topic_id} and stream with ID: {stream_id}",
+                session.get_user_id(),
+            )
+        })?;
 
         topic
             .delete_consumer_offset(consumer, partition_id, session.client_id)

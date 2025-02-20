@@ -45,23 +45,18 @@ async fn get_topic(
     let system = state.system.read().await;
     let identity_stream_id = Identifier::from_str_value(&stream_id)?;
     let identity_topic_id = Identifier::from_str_value(&topic_id)?;
-    let topic = system
-        .find_topic(
-            &Session::stateless(identity.user_id, identity.ip_address),
-            &identity_stream_id,
-            &identity_topic_id,
-        )
-        .with_error_context(|_| {
-            format!(
-                "{COMPONENT} - failed to find topic, stream ID: {}, topic ID: {}",
-                stream_id, topic_id
-            )
-        });
-    if topic.is_err() {
+    let Ok(topic) = system.try_find_topic(
+        &Session::stateless(identity.user_id, identity.ip_address),
+        &identity_stream_id,
+        &identity_topic_id,
+    ) else {
         return Err(CustomError::ResourceNotFound);
-    }
+    };
+    let Some(topic) = topic else {
+        return Err(CustomError::ResourceNotFound);
+    };
 
-    let topic = mapper::map_topic(topic?).await;
+    let topic = mapper::map_topic(topic).await;
     Ok(Json(topic))
 }
 
@@ -79,7 +74,7 @@ async fn get_topics(
         )
         .with_error_context(|_| {
             format!(
-                "{COMPONENT} - failed to find topic, stream ID: {}",
+                "{COMPONENT} - failed to find topics for stream with ID: {}",
                 stream_id
             )
         })?;
@@ -204,8 +199,7 @@ async fn delete_topic(
             .await
             .with_error_context(|_| {
                 format!(
-                    "{COMPONENT} - failed to delete topic, stream ID: {}, topic ID: {}",
-                    stream_id, topic_id
+                    "{COMPONENT} - failed to delete topic with ID: {topic_id} in stream with ID: {stream_id}",
                 )
             })?;
     }

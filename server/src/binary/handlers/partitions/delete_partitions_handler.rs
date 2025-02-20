@@ -31,8 +31,7 @@ pub async fn handle(
             .await
             .with_error_context(|_| {
                 format!(
-                    "{COMPONENT} - failed to delete partitions for stream_id: {}, topic_id: {}, session: {}",
-                    stream_id, topic_id, session
+                    "{COMPONENT} - failed to delete partitions for topic with ID: {topic_id} in stream with ID: {stream_id}, session: {session}",
                 )
             })?;
     }

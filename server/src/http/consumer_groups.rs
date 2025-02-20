@@ -40,24 +40,16 @@ async fn get_consumer_group(
     let identifier_topic_id = Identifier::from_str_value(&topic_id)?;
     let identifier_group_id = Identifier::from_str_value(&group_id)?;
     let system = state.system.read().await;
-    let consumer_group = system
-        .get_consumer_group(
-            &Session::stateless(identity.user_id, identity.ip_address),
-            &identifier_stream_id,
-            &identifier_topic_id,
-            &identifier_group_id,
-        )
-        .with_error_context(|_| {
-            format!(
-                "{COMPONENT} - failed to get consumer group, stream ID: {}, topic ID: {}, group ID: {}",
-                stream_id, topic_id, group_id,
-            )
-        });
-    if consumer_group.is_err() {
+    let Some(consumer_group) = system.get_consumer_group(
+        &Session::stateless(identity.user_id, identity.ip_address),
+        &identifier_stream_id,
+        &identifier_topic_id,
+        &identifier_group_id,
+    )?
+    else {
         return Err(CustomError::ResourceNotFound);
-    }
+    };
 
-    let consumer_group = consumer_group?;
     let consumer_group = consumer_group.read().await;
     let consumer_group = mapper::map_consumer_group(&consumer_group).await;
     Ok(Json(consumer_group))
@@ -135,7 +127,7 @@ async fn delete_consumer_group(
                 &identifier_group_id,
             )
             .await
-            .with_error_context(|_| format!("{COMPONENT} - failed to delete consumer group, stream ID: {}, topic ID: {}, group ID: {}", stream_id, topic_id, group_id))?;
+            .with_error_context(|_| format!("{COMPONENT} - failed to delete consumer group with ID: {group_id} for topic with ID: {topic_id} in stream with ID: {stream_id}"))?;
     }
 
     let system = state.system.read().await;

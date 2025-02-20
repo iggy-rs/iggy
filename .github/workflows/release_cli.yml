@@ -15,29 +15,108 @@ env:
   IGGY_CI_BUILD: true
 
 jobs:
+  build_cli:
+    runs-on: ${{ matrix.platform.os }}
+    strategy:
+      matrix:
+        platform:
+          - target: x86_64-unknown-linux-musl
+            os: ubuntu-latest
+            executable: iggy
+            file: iggy-cli-x86_64-unknown-linux-musl.tgz
+          - target: aarch64-unknown-linux-musl
+            os: ubuntu-latest
+            executable: iggy
+            file: iggy-cli-aarch64-unknown-linux-musl.tgz
+          - target: x86_64-unknown-linux-gnu
+            os: ubuntu-latest
+            executable: iggy
+            file: iggy-cli-x86_64-unknown-linux-gnu.tgz
+          - target: x86_64-pc-windows-msvc
+            os: windows-latest
+            executable: iggy.exe
+            file: iggy-cli-x86_64-pc-windows-msvc.zip
+          - target: aarch64-pc-windows-msvc
+            os: windows-latest
+            executable: iggy.exe
+            file: iggy-cli-aarch64-pc-windows-msvc.zip
+          - target: x86_64-apple-darwin
+            os: macos-latest
+            executable: iggy
+            file: iggy-cli-x86_64-apple-darwin.zip
+          - target: aarch64-apple-darwin
+            os: macos-latest
+            executable: iggy
+            file: iggy-cli-aarch64-apple-darwin.zip
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Cache cargo & target directories
+        uses: Swatinem/rust-cache@v2
+        with:
+          key: "v2"
+
+      - name: Install musl-tools on Linux
+        run: sudo apt-get update --yes && sudo apt-get install --yes musl-tools
+        if: ${{ matrix.platform.target == 'x86_64-unknown-linux-musl' }}
+
+      - name: Build ${{ matrix.platform.target }} release binary
+        uses: houseabsolute/actions-rust-cross@v0
+        with:
+          command: "build"
+          target: ${{ matrix.platform.target }}
+          toolchain: stable
+          args: "--verbose --release -p iggy"
+
+      - name: Collect ${{ matrix.platform.target }} executable
+        run: |
+          cp target/${{ matrix.platform.target }}/release/${{ matrix.platform.executable }} .
+
+      - name: Create ${{ matrix.platform.file }} artifact
+        run: |
+          tar cvfz ${{ matrix.platform.file }} ${{ matrix.platform.executable }}
+        if: ${{ matrix.platform.os == 'ubuntu-latest' }}
+
+      - name: Create ${{ matrix.platform.file }} artifact
+        uses: vimtor/action-zip@v1.2
+        with:
+          files: ${{ matrix.platform.executable }}
+          dest: ${{ matrix.platform.file }}
+        if: ${{ matrix.platform.os == 'windows-latest' || matrix.platform.os == 'macos-latest' }}
+
+      - name: Upload ${{ matrix.platform.file }} artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: artifacts-${{ matrix.platform.target }}
+          path: ${{ matrix.platform.file }}
+
+      - name: Print message
+        run: echo "::notice ::Created binary for ${{ matrix.platform.target }}"
+
+    outputs:
+      version: ${{ needs.tag.outputs.version }}
+
   release_cli:
-    name: Build and release iggy-cli binary
+    name: Create iggy-cli release
     runs-on: ubuntu-latest
+    needs: build_cli
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - name: Install musl-tools on Linux
-        run: sudo apt-get update --yes && sudo apt-get install --yes musl-tools
-
-      - name: Build iggy-cli release binary for x86_64-unknown-linux-musl
-        uses: houseabsolute/actions-rust-cross@v0
+      - name: Cache cargo & target directories
+        uses: Swatinem/rust-cache@v2
         with:
-          command: "build"
-          target: x86_64-unknown-linux-musl
-          toolchain: stable
-          args: "--verbose --release --no-default-features --bin iggy"
+          key: "v2"
 
-      - name: Prepare iggy-cli x86_64-unknown-linux-musl artifacts
-        run: |
-          tar cvfz iggy-cli-x86_64-unknown-linux-musl.tgz -C target/x86_64-unknown-linux-musl/release/ iggy
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+
+      - name: List files
+        run: find
 
       - name: Create Changelog
         uses: orhun/git-cliff-action@v4
@@ -54,25 +133,11 @@ jobs:
         with:
           body: ${{ steps.changelog.outputs.content }}
           files: |
-            iggy-cli-x86_64-unknown-linux-musl.tgz
+            artifacts-*/*.tgz
+            artifacts-*/*.zip
             CHANGELOG.md
           tag_name: ${{ inputs.tag_name }}
           draft: false
           prerelease: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-  finalize_release:
-    name: Finalize release
-    runs-on: ubuntu-latest
-    needs:
-      - release_cli
-    if: always()
-    steps:
-      - name: Everything is fine
-        if: ${{ !(contains(needs.*.result, 'failure')) }}
-        run: exit 0
-
-      - name: Some checks failed
-        if: ${{ contains(needs.*.result, 'failure') }}
-        run: exit 1

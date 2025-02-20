@@ -38,11 +38,13 @@ pub async fn jwt_auth(
         .headers()
         .get(AUTHORIZATION)
         .ok_or(UNAUTHORIZED)
-        .with_error_context(|_| {
-            format!("{COMPONENT} - missing or inaccessible Authorization header")
+        .with_error_context(|error| {
+            format!("{COMPONENT} (error: {error}) - missing or inaccessible Authorization header")
         })?
         .to_str()
-        .with_error_context(|_| format!("{COMPONENT} - invalid authorization header format"))
+        .with_error_context(|error| {
+            format!("{COMPONENT} (error: {error}) - invalid authorization header format")
+        })
         .map_err(|_| UNAUTHORIZED)?;
 
     if !bearer.starts_with(BEARER) {
@@ -51,13 +53,15 @@ pub async fn jwt_auth(
 
     let jwt_token = &bearer[BEARER.len()..];
     let token_header = jsonwebtoken::decode_header(jwt_token)
-        .with_error_context(|_| format!("{COMPONENT} - failed to decode JWT header"))
+        .with_error_context(|error| {
+            format!("{COMPONENT} (error: {error}) - failed to decode JWT header")
+        })
         .map_err(|_| UNAUTHORIZED)?;
     let jwt_claims = state
         .jwt_manager
         .decode(jwt_token, token_header.alg)
-        .with_error_context(|_| {
-            format!("{COMPONENT} - failed to decode JWT with provided algorithm")
+        .with_error_context(|error| {
+            format!("{COMPONENT} (error: {error}) - failed to decode JWT with provided algorithm")
         })
         .map_err(|_| UNAUTHORIZED)?;
     if state

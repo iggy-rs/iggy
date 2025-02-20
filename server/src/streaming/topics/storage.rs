@@ -147,8 +147,10 @@ impl TopicStorage for FileTopicStorage {
                     partition_state.created_at,
                 )
                 .await;
-                partition.persist().await.with_error_context(|_| {
-                    format!("{COMPONENT} - failed to persist partition: {partition}")
+                partition.persist().await.with_error_context(|error| {
+                    format!(
+                        "{COMPONENT} (error: {error}) - failed to persist partition: {partition}"
+                    )
                 })?;
                 partition.segments.clear();
                 unloaded_partitions.push(partition);
@@ -206,8 +208,8 @@ impl TopicStorage for FileTopicStorage {
         topic
             .load_messages_from_disk_to_cache()
             .await
-            .with_error_context(|_| {
-                format!("{COMPONENT} - failed to load messages from disk to cache, topic: {topic}")
+            .with_error_context(|error| {
+                format!("{COMPONENT} (error: {error}) - failed to load messages from disk to cache, topic: {topic}")
             })?;
         info!("Loaded topic {topic}");
 
@@ -238,8 +240,10 @@ impl TopicStorage for FileTopicStorage {
         );
         for (_, partition) in topic.partitions.iter() {
             let mut partition = partition.write().await;
-            partition.persist().await.with_error_context(|_| {
-                format!("{COMPONENT} - failed to persist partition, topic: {topic}")
+            partition.persist().await.with_error_context(|error| {
+                format!(
+                    "{COMPONENT} (error: {error}) - failed to persist partition, topic: {topic}"
+                )
             })?;
         }
 

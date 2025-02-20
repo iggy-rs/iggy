@@ -19,9 +19,9 @@ pub async fn handle(
     let system = system.read().await;
     let topics = system
         .find_topics(session, &command.stream_id)
-        .with_error_context(|_| {
+        .with_error_context(|error| {
             format!(
-                "{COMPONENT} - failed to find topics, stream_id: {}, session: {session}",
+                "{COMPONENT} (error: {error}) - failed to find topics, stream_id: {}, session: {session}",
                 command.stream_id
             )
         })?;

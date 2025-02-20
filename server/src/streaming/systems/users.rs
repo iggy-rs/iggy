@@ -37,9 +37,9 @@ impl System {
             self.state
                 .apply(0, EntryCommand::CreateUser(command))
                 .await
-                .with_error_context(|_| {
+                .with_error_context(|error| {
                     format!(
-                        "{COMPONENT} - failed to apply create user command, username: {}",
+                        "{COMPONENT} (error: {error}) - failed to apply create user command, username: {}",
                         root.username
                     )
                 })?;
@@ -130,9 +130,9 @@ impl System {
 
         let session_user_id = session.get_user_id();
         if user.id != session_user_id {
-            self.permissioner.get_user(session_user_id).with_error_context(|_| {
+            self.permissioner.get_user(session_user_id).with_error_context(|error| {
                 format!(
-                    "{COMPONENT} - permission denied to get user with ID: {user_id} for current user with ID: {session_user_id}"
+                    "{COMPONENT} (error: {error}) - permission denied to get user with ID: {user_id} for current user with ID: {session_user_id}"
                 )
             })?;
         }
@@ -180,9 +180,9 @@ impl System {
         self.ensure_authenticated(session)?;
         self.permissioner
             .get_users(session.get_user_id())
-            .with_error_context(|_| {
+            .with_error_context(|error| {
                 format!(
-                    "{COMPONENT} - permission denied to get users for user with id: {}",
+                    "{COMPONENT} (error: {error}) - permission denied to get users for user with id: {}",
                     session.get_user_id()
                 )
             })?;
@@ -200,9 +200,9 @@ impl System {
         self.ensure_authenticated(session)?;
         self.permissioner
             .create_user(session.get_user_id())
-            .with_error_context(|_| {
+            .with_error_context(|error| {
                 format!(
-                    "{COMPONENT} - permission denied to create user for user with id: {}",
+                    "{COMPONENT} (error: {error}) - permission denied to create user for user with id: {}",
                     session.get_user_id()
                 )
             })?;
@@ -226,7 +226,9 @@ impl System {
         info!("Created user: {username} with ID: {user_id}.");
         self.metrics.increment_users(1);
         self.get_user(&user_id.try_into()?)
-            .with_error_context(|_| format!("{COMPONENT} - failed to get user with id: {user_id}"))
+            .with_error_context(|error| {
+                format!("{COMPONENT} (error: {error}) - failed to get user with id: {user_id}")
+            })
     }
 
     pub async fn delete_user(
@@ -240,14 +242,14 @@ impl System {
         {
             self.permissioner
                 .delete_user(session.get_user_id())
-                .with_error_context(|_| {
+                .with_error_context(|error| {
                     format!(
-                        "{COMPONENT} - permission denied to delete user for user with id: {}",
+                        "{COMPONENT} (error: {error}) - permission denied to delete user for user with id: {}",
                         session.get_user_id()
                     )
                 })?;
-            let user = self.get_user(user_id).with_error_context(|_| {
-                format!("{COMPONENT} - failed to get user with id: {user_id}")
+            let user = self.get_user(user_id).with_error_context(|error| {
+                format!("{COMPONENT} (error: {error}) - failed to get user with id: {user_id}")
             })?;
             if user.is_root() {
                 error!("Cannot delete the root user.");
@@ -269,9 +271,9 @@ impl System {
         client_manager
             .delete_clients_for_user(existing_user_id)
             .await
-            .with_error_context(|_| {
+            .with_error_context(|error| {
                 format!(
-                    "{COMPONENT} - failed to delete clients for user with ID: {existing_user_id}"
+                    "{COMPONENT} (error: {error}) - failed to delete clients for user with ID: {existing_user_id}"
                 )
             })?;
         info!("Deleted user: {existing_username} with ID: {user_id}.");
@@ -289,9 +291,9 @@ impl System {
         self.ensure_authenticated(session)?;
         self.permissioner
             .update_user(session.get_user_id())
-            .with_error_context(|_| {
+            .with_error_context(|error| {
                 format!(
-                    "{COMPONENT} - permission denied to update user for user with id: {}",
+                    "{COMPONENT} (error: {error}) - permission denied to update user for user with id: {}",
                     session.get_user_id()
                 )
             })?;
@@ -305,8 +307,8 @@ impl System {
             }
         }
 
-        let user = self.get_user_mut(user_id).with_error_context(|_| {
-            format!("{COMPONENT} - failed to get mutable reference to the user with id: {user_id}")
+        let user = self.get_user_mut(user_id).with_error_context(|error| {
+            format!("{COMPONENT} (error: {error}) - failed to get mutable reference to the user with id: {user_id}")
         })?;
         if let Some(username) = username {
             user.username = username;
@@ -331,13 +333,13 @@ impl System {
         {
             self.permissioner
                 .update_permissions(session.get_user_id())
-                .with_error_context(|_| {
+                .with_error_context(|error| {
                     format!(
-                        "{COMPONENT} - permission denied to update permissions for user with id: {}", session.get_user_id()
+                        "{COMPONENT} (error: {error}) - permission denied to update permissions for user with id: {}", session.get_user_id()
                     )
                 })?;
-            let user = self.get_user(user_id).with_error_context(|_| {
-                format!("{COMPONENT} - failed to get user with id: {user_id}")
+            let user = self.get_user(user_id).with_error_context(|error| {
+                format!("{COMPONENT} (error: {error}) - failed to get user with id: {user_id}")
             })?;
             if user.is_root() {
                 error!("Cannot change the root user permissions.");
@@ -349,9 +351,9 @@ impl System {
         }
 
         {
-            let user = self.get_user_mut(user_id).with_error_context(|_| {
+            let user = self.get_user_mut(user_id).with_error_context(|error| {
                 format!(
-                    "{COMPONENT} - failed to get mutable reference to the user with id: {user_id}"
+                    "{COMPONENT} (error: {error}) - failed to get mutable reference to the user with id: {user_id}"
                 )
             })?;
             user.permissions = permissions;
@@ -374,8 +376,8 @@ impl System {
         self.ensure_authenticated(session)?;
 
         {
-            let user = self.get_user(user_id).with_error_context(|_| {
-                format!("{COMPONENT} - failed to get user with id: {user_id}")
+            let user = self.get_user(user_id).with_error_context(|error| {
+                format!("{COMPONENT} (error: {error}) - failed to get user with id: {user_id}")
             })?;
             let session_user_id = session.get_user_id();
             if user.id != session_user_id {
@@ -383,8 +385,8 @@ impl System {
             }
         }
 
-        let user = self.get_user_mut(user_id).with_error_context(|_| {
-            format!("{COMPONENT} - failed to get mutable reference to the user with id: {user_id}")
+        let user = self.get_user_mut(user_id).with_error_context(|error| {
+            format!("{COMPONENT} (error: {error}) - failed to get mutable reference to the user with id: {user_id}")
         })?;
         if !crypto::verify_password(current_password, &user.password) {
             error!(
@@ -462,9 +464,9 @@ impl System {
         client_manager
             .set_user_id(session.client_id, user.id)
             .await
-            .with_error_context(|_| {
+            .with_error_context(|error| {
                 format!(
-                    "{COMPONENT} - failed to set user_id to client, client ID: {}, user ID: {}",
+                    "{COMPONENT} (error: {error}) - failed to set user_id to client, client ID: {}, user ID: {}",
                     session.client_id, user.id
                 )
             })?;
@@ -475,9 +477,9 @@ impl System {
         self.ensure_authenticated(session)?;
         let user = self
             .get_user(&Identifier::numeric(session.get_user_id())?)
-            .with_error_context(|_| {
+            .with_error_context(|error| {
                 format!(
-                    "{COMPONENT} - failed to get user with id: {}",
+                    "{COMPONENT} (error: {error}) - failed to get user with id: {}",
                     session.get_user_id()
                 )
             })?;

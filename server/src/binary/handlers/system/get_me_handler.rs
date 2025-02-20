@@ -22,8 +22,8 @@ pub async fn handle(
         let Some(client) = system
             .get_client(session, session.client_id)
             .await
-            .with_error_context(|_| {
-                format!("{COMPONENT} - failed to get current client for session: {session}")
+            .with_error_context(|error| {
+                format!("{COMPONENT} (error: {error}) - failed to get current client for session: {session}")
             })?
         else {
             return Err(IggyError::ClientNotFound(session.client_id));

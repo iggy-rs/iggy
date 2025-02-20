@@ -31,8 +31,8 @@ pub async fn handle(
                 command.replication_factor,
             )
             .await
-            .with_error_context(|_| format!(
-                "{COMPONENT} - failed to update topic with id: {}, stream_id: {}, session: {session}",
+            .with_error_context(|error| format!(
+                "{COMPONENT} (error: {error}) - failed to update topic with id: {}, stream_id: {}, session: {session}",
                 command.topic_id, command.stream_id
             ))?;
         command.message_expiry = topic.message_expiry;
@@ -47,8 +47,8 @@ pub async fn handle(
         .state
         .apply(session.get_user_id(), EntryCommand::UpdateTopic(command))
         .await
-        .with_error_context(|_| format!(
-            "{COMPONENT} - failed to apply update topic with id: {}, stream_id: {}, session: {session}",
+        .with_error_context(|error| format!(
+            "{COMPONENT} (error: {error}) - failed to apply update topic with id: {}, stream_id: {}, session: {session}",
             topic_id, stream_id
         ))?;
     sender.send_empty_ok_response().await?;

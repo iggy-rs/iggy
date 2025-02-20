@@ -17,7 +17,12 @@ pub async fn handle(
     let bytes;
     {
         let system = system.read().await;
-        let Some(client) = system.get_client(session, command.client_id).await? else {
+        let Ok(client) = system.get_client(session, command.client_id).await else {
+            sender.send_empty_ok_response().await?;
+            return Ok(());
+        };
+
+        let Some(client) = client else {
             sender.send_empty_ok_response().await?;
             return Ok(());
         };

@@ -33,18 +33,18 @@ impl SegmentIndexWriter {
             .create(true)
             .open(file_path)
             .await
-            .with_error_context(|e| format!("Failed to open index file: {file_path}, error: {e}"))
+            .with_error_context(|error| format!("Failed to open index file: {file_path}. {error}"))
             .map_err(|_| IggyError::CannotReadFile)?;
 
-        let _ = file.sync_all().await.with_error_context(|e| {
-            format!("Failed to fsync index file after creation: {file_path}, error: {e}",)
+        let _ = file.sync_all().await.with_error_context(|error| {
+            format!("Failed to fsync index file after creation: {file_path}. {error}",)
         });
 
         let actual_index_size = file
             .metadata()
             .await
-            .with_error_context(|e| {
-                format!("Failed to get metadata of index file: {file_path}, error: {e}")
+            .with_error_context(|error| {
+                format!("Failed to get metadata of index file: {file_path}. {error}")
             })
             .map_err(|_| IggyError::CannotReadFileMetadata)?
             .len();
@@ -72,11 +72,8 @@ impl SegmentIndexWriter {
             self.file
                 .write_all(&buf)
                 .await
-                .with_error_context(|e| {
-                    format!(
-                        "Failed to write index to file: {}, error: {e}",
-                        self.file_path
-                    )
+                .with_error_context(|error| {
+                    format!("Failed to write index to file: {}. {error}", self.file_path)
                 })
                 .map_err(|_| IggyError::CannotSaveIndexToSegment)?;
         }
@@ -92,8 +89,8 @@ impl SegmentIndexWriter {
         self.file
             .sync_all()
             .await
-            .with_error_context(|e| {
-                format!("Failed to fsync index file: {}, error: {e}", self.file_path)
+            .with_error_context(|error| {
+                format!("Failed to fsync index file: {}. {error}", self.file_path)
             })
             .map_err(|_| IggyError::CannotWriteToFile)?;
         Ok(())

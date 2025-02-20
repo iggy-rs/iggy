@@ -28,8 +28,8 @@ pub async fn handle(
             PollingArgs::new(command.strategy, command.count, command.auto_commit),
         )
         .await
-        .with_error_context(|e| format!(
-            "{COMPONENT} - failed to poll messages for consumer: {}, stream_id: {}, topic_id: {}, partition_id: {:?}, session: {}, error: {e}",
+        .with_error_context(|error| format!(
+            "{COMPONENT} (error: {error}) - failed to poll messages for consumer: {}, stream_id: {}, topic_id: {}, partition_id: {:?}, session: {}.",
             command.consumer, command.stream_id, command.topic_id, command.partition_id, session
         ))?;
     let messages = mapper::map_polled_messages(&messages);

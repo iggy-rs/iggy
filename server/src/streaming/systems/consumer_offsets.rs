@@ -19,7 +19,7 @@ impl System {
     ) -> Result<(), IggyError> {
         self.ensure_authenticated(session)?;
         let topic = self.find_topic(session, stream_id, topic_id)
-            .with_error_context(|_| format!("{COMPONENT} - topic with ID: {topic_id} was not found in stream with ID: {stream_id}"))?;
+            .with_error_context(|error| format!("{COMPONENT} (error: {error}) - topic with ID: {topic_id} was not found in stream with ID: {stream_id}"))?;
         self.permissioner.store_consumer_offset(
             session.get_user_id(),
             topic.stream_id,
@@ -48,9 +48,9 @@ impl System {
             session.get_user_id(),
             topic.stream_id,
             topic.topic_id,
-        ).with_error_context(|_| {
+        ).with_error_context(|error| {
             format!(
-                "{COMPONENT} - permission denied to get consumer offset for user with ID: {}, consumer: {consumer} in topic with ID: {topic_id} and stream with ID: {stream_id}",
+                "{COMPONENT} (error: {error}) - permission denied to get consumer offset for user with ID: {}, consumer: {consumer} in topic with ID: {topic_id} and stream with ID: {stream_id}",
                 session.get_user_id(),
             )
         })?;
@@ -70,14 +70,14 @@ impl System {
     ) -> Result<(), IggyError> {
         self.ensure_authenticated(session)?;
         let topic = self.find_topic(session, stream_id, topic_id)
-            .with_error_context(|_| format!("{COMPONENT} - topic with ID: {topic_id} was not found in stream with ID: {stream_id}"))?;
+            .with_error_context(|error| format!("{COMPONENT} (error: {error}) - topic with ID: {topic_id} was not found in stream with ID: {stream_id}"))?;
         self.permissioner.delete_consumer_offset(
             session.get_user_id(),
             topic.stream_id,
             topic.topic_id,
-        ).with_error_context(|_| {
+        ).with_error_context(|error| {
             format!(
-                "{COMPONENT} - permission denied to delete consumer offset for user with ID: {}, consumer: {consumer} in topic with ID: {topic_id} and stream with ID: {stream_id}",
+                "{COMPONENT} (error: {error}) - permission denied to delete consumer offset for user with ID: {}, consumer: {consumer} in topic with ID: {topic_id} and stream with ID: {stream_id}",
                 session.get_user_id(),
             )
         })?;

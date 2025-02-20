@@ -36,7 +36,7 @@ pub async fn handle(
                 command.replication_factor,
             )
             .await
-            .with_error_context(|_| format!("{COMPONENT} - failed to create topic for stream_id: {stream_id}, topic_id: {:?}",
+            .with_error_context(|error| format!("{COMPONENT} (error: {error}) - failed to create topic for stream_id: {stream_id}, topic_id: {:?}",
                 topic_id
             ))?;
         command.message_expiry = topic.message_expiry;
@@ -49,9 +49,9 @@ pub async fn handle(
         .state
         .apply(session.get_user_id(), EntryCommand::CreateTopic(command))
         .await
-        .with_error_context(|_| {
+        .with_error_context(|error| {
             format!(
-            "{COMPONENT} - failed to apply create topic for stream_id: {stream_id}, topic_id: {:?}",
+            "{COMPONENT} (error: {error}) - failed to apply create topic for stream_id: {stream_id}, topic_id: {:?}",
             topic_id
         )
         })?;

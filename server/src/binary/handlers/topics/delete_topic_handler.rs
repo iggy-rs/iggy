@@ -24,8 +24,8 @@ pub async fn handle(
         system
             .delete_topic(session, &command.stream_id, &command.topic_id)
             .await
-            .with_error_context(|_| format!(
-                "{COMPONENT} - failed to delete topic with ID: {topic_id} in stream with ID: {stream_id}, session: {session}",
+            .with_error_context(|error| format!(
+                "{COMPONENT} (error: {error}) - failed to delete topic with ID: {topic_id} in stream with ID: {stream_id}, session: {session}",
             ))?;
     }
 
@@ -34,8 +34,8 @@ pub async fn handle(
         .state
         .apply(session.get_user_id(), EntryCommand::DeleteTopic(command))
         .await
-        .with_error_context(|_| format!(
-            "{COMPONENT} - failed to apply delete topic with ID: {topic_id} in stream with ID: {stream_id}, session: {session}",
+        .with_error_context(|error| format!(
+            "{COMPONENT} (error: {error}) - failed to apply delete topic with ID: {topic_id} in stream with ID: {stream_id}, session: {session}",
         ))?;
     sender.send_empty_ok_response().await?;
     Ok(())

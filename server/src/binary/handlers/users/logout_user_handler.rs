@@ -16,9 +16,12 @@ pub async fn handle(
 ) -> Result<(), IggyError> {
     debug!("session: {session}, command: {command}");
     let system = system.read().await;
-    system.logout_user(session).await.with_error_context(|_| {
-        format!("{COMPONENT} - failed to logout user, session: {session}")
-    })?;
+    system
+        .logout_user(session)
+        .await
+        .with_error_context(|error| {
+            format!("{COMPONENT} (error: {error}) - failed to logout user, session: {session}")
+        })?;
     session.clear_user_id();
     sender.send_empty_ok_response().await?;
     Ok(())

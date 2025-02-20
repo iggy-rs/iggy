@@ -19,9 +19,9 @@ pub async fn handle(
     let system = system.read().await;
     let consumer_groups = system
         .get_consumer_groups(session, &command.stream_id, &command.topic_id)
-        .with_error_context(|_| {
+        .with_error_context(|error| {
             format!(
-                "{COMPONENT} - failed on getting consumer groups for stream_id: {}, topic_id: {}, session: {}",
+                "{COMPONENT} (error: {error}) - failed on getting consumer groups for stream_id: {}, topic_id: {}, session: {}",
                 command.stream_id, command.topic_id, session
             )
         })?;

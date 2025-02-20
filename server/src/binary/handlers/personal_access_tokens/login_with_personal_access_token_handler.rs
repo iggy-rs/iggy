@@ -20,9 +20,9 @@ pub async fn handle(
     let user = system
         .login_with_personal_access_token(&command.token, Some(session))
         .await
-        .with_error_context(|_| {
+        .with_error_context(|error| {
             format!(
-                "{COMPONENT} - failed to login with personal access token: {}, session: {session}",
+                "{COMPONENT} (error: {error}) - failed to login with personal access token: {}, session: {session}",
                 command.token
             )
         })?;

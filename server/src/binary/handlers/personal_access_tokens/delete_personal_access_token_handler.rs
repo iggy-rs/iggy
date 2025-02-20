@@ -23,8 +23,8 @@ pub async fn handle(
         system
             .delete_personal_access_token(session, &command.name)
             .await
-            .with_error_context(|_| {format!(
-                "{COMPONENT} - failed to delete personal access token with name: {token_name}, session: {session}"
+            .with_error_context(|error| {format!(
+                "{COMPONENT} (error: {error}) - failed to delete personal access token with name: {token_name}, session: {session}"
             )})?;
     }
 
@@ -36,8 +36,8 @@ pub async fn handle(
             EntryCommand::DeletePersonalAccessToken(command),
         )
         .await
-        .with_error_context(|_| {format!(
-            "{COMPONENT} - failed to apply delete personal access token with name: {token_name}, session: {session}"
+        .with_error_context(|error| {format!(
+            "{COMPONENT} (error: {error}) - failed to apply delete personal access token with name: {token_name}, session: {session}"
         )})?;
     sender.send_empty_ok_response().await?;
     Ok(())

@@ -25,7 +25,7 @@ pub async fn handle(
             command.partition_id,
         )
         .await
-        .with_error_context(|_| format!("{COMPONENT} - failed to delete consumer offset for topic with ID: {} in stream with ID: {} partition ID: {:#?}, session: {}",
+        .with_error_context(|error| format!("{COMPONENT} (error: {error}) - failed to delete consumer offset for topic with ID: {} in stream with ID: {} partition ID: {:#?}, session: {}",
             command.topic_id, command.stream_id, command.partition_id, session
         ))?;
     sender.send_empty_ok_response().await?;

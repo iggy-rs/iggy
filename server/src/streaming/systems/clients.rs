@@ -66,9 +66,9 @@ impl System {
         self.ensure_authenticated(session)?;
         self.permissioner
             .get_client(session.get_user_id())
-            .with_error_context(|_| {
+            .with_error_context(|error| {
                 format!(
-                    "{COMPONENT} - permission denied to get client with ID: {client_id} by user ID: {}",
+                    "{COMPONENT} (error: {error}) - permission denied to get client with ID: {client_id} by user ID: {}",
                     session.get_user_id()
                 )
             })?;
@@ -84,9 +84,9 @@ impl System {
         self.ensure_authenticated(session)?;
         self.permissioner
             .get_clients(session.get_user_id())
-            .with_error_context(|_| {
+            .with_error_context(|error| {
                 format!(
-                    "{COMPONENT} - failed to get clients by user ID {}",
+                    "{COMPONENT} (error: {error}) - failed to get clients by user ID {}",
                     session.get_user_id()
                 )
             })?;

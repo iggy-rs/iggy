@@ -15,7 +15,7 @@ pub async fn handle(
 ) -> Result<(), IggyError> {
     debug!("session: {session}, command: {command}");
     let system = system.read().await;
-    let Some(offset) = system
+    let Ok(offset) = system
         .get_consumer_offset(
             session,
             &command.consumer,
@@ -23,8 +23,13 @@ pub async fn handle(
             &command.topic_id,
             command.partition_id,
         )
-        .await?
+        .await
     else {
+        sender.send_empty_ok_response().await?;
+        return Ok(());
+    };
+
+    let Some(offset) = offset else {
         sender.send_empty_ok_response().await?;
         return Ok(());
     };

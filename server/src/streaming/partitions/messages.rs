@@ -48,10 +48,10 @@ impl Partition {
                 segment
                     .load_index_for_timestamp(query_ts)
                     .await
-                    .with_error_context(|e| {
+                    .with_error_context(|error| {
                         format!(
-                            "{COMPONENT} - failed to load index for timestamp, partition: {}, \
-                             segment start offset: {}, timestamp: {}, error: {e}",
+                            "{COMPONENT} (error: {error}) - failed to load index for timestamp, partition: {}, \
+                             segment start offset: {}, timestamp: {}",
                             self, segment.start_offset, query_ts
                         )
                     })?
@@ -73,10 +73,10 @@ impl Partition {
                         segment.get_messages_count() as u32,
                     )
                     .await
-                    .with_error_context(|e| {
+                    .with_error_context(|error| {
                         format!(
-                            "{COMPONENT} - failed to get messages by offset, partition: {}, \
-                             timestamp: {}, start offset: {}, error: {e}",
+                            "{COMPONENT} (error: {error}) - failed to get messages by offset, partition: {}, \
+                             timestamp: {}, start offset: {}",
                             self, query_ts, segment.start_offset
                         )
                     })?;
@@ -227,10 +227,10 @@ impl Partition {
             let segment_messages = segment
                 .get_messages(offset, remaining_count)
                 .await
-                .with_error_context(|e| {
+                .with_error_context(|error| {
                     format!(
-                        "{COMPONENT} - failed to get messages from segment, segment: {}, \
-                         offset: {}, count: {}, error: {e}",
+                        "{COMPONENT} (error: {error}) - failed to get messages from segment, segment: {}, \
+                         offset: {}, count: {}",
                         segment, offset, remaining_count
                     )
                 })?;
@@ -292,8 +292,8 @@ impl Partition {
                 let partial_batches = segment
                     .get_newest_batches_by_size(remaining_size)
                     .await
-                    .with_error_context(|e| format!(
-                        "{COMPONENT} - failed to get newest batches by size, segment: {}, remaining size: {}, error: {e}",
+                    .with_error_context(|error| format!(
+                        "{COMPONENT} (error: {error}) - failed to get newest batches by size, segment: {}, remaining size: {}",
                         segment, remaining_size,
                     ))?
                     .into_iter()
@@ -306,8 +306,8 @@ impl Partition {
             let segment_batches = segment
                 .get_all_batches()
                 .await
-                .with_error_context(|e| {
-                    format!("{COMPONENT} - failed to retrieve all batches from segment: {segment}, error: {e}",)
+                .with_error_context(|error| {
+                    format!("{COMPONENT} (error: {error}) - failed to retrieve all batches from segment: {segment}",)
                 })?
                 .into_iter()
                 .map(Arc::new);
@@ -388,8 +388,8 @@ impl Partition {
                     "Current segment is closed, creating new segment with start offset: {} for partition with ID: {}...",
                     start_offset, self.partition_id
                 );
-                self.add_persisted_segment(start_offset).await.with_error_context(|e| format!(
-                    "{COMPONENT} - failed to add persisted segment, partition: {}, start offset: {}, error: {e}",
+                self.add_persisted_segment(start_offset).await.with_error_context(|error| format!(
+                    "{COMPONENT} (error: {error}) - failed to add persisted segment, partition: {}, start offset: {}",
                     self, start_offset,
                 ))?;
             }
@@ -446,9 +446,9 @@ impl Partition {
             last_segment
                 .append_batch(batch_size, messages_count, &retained_messages)
                 .await
-                .with_error_context(|e| {
+                .with_error_context(|error| {
                     format!(
-                        "{COMPONENT} - failed to append batch into last segment: {last_segment}, error: {e}",
+                        "{COMPONENT} (error: {error}) - failed to append batch into last segment: {last_segment}",
                     )
                 })?;
         }

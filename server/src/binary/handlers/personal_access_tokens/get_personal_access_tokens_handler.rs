@@ -19,8 +19,8 @@ pub async fn handle(
     let personal_access_tokens = system
         .get_personal_access_tokens(session)
         .await
-        .with_error_context(|_| {
-            format!("{COMPONENT} - failed to get personal access tokens with session: {session}")
+        .with_error_context(|error| {
+            format!("{COMPONENT} (error: {error}) - failed to get personal access tokens with session: {session}")
         })?;
     let personal_access_tokens = mapper::map_personal_access_tokens(&personal_access_tokens);
     sender.send_ok_response(&personal_access_tokens).await?;

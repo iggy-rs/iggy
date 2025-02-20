@@ -40,13 +40,15 @@ async fn get_consumer_group(
     let identifier_topic_id = Identifier::from_str_value(&topic_id)?;
     let identifier_group_id = Identifier::from_str_value(&group_id)?;
     let system = state.system.read().await;
-    let Some(consumer_group) = system.get_consumer_group(
+    let Ok(consumer_group) = system.get_consumer_group(
         &Session::stateless(identity.user_id, identity.ip_address),
         &identifier_stream_id,
         &identifier_topic_id,
         &identifier_group_id,
-    )?
-    else {
+    ) else {
+        return Err(CustomError::ResourceNotFound);
+    };
+    let Some(consumer_group) = consumer_group else {
         return Err(CustomError::ResourceNotFound);
     };
 
@@ -94,7 +96,7 @@ async fn create_consumer_group(
                 &command.name,
             )
             .await
-            .with_error_context(|_| format!("{COMPONENT} - failed to create consumer group, stream ID: {}, topic ID: {}, group ID: {:?}", stream_id, topic_id, command.group_id))?;
+            .with_error_context(|error| format!("{COMPONENT} (error: {error}) - failed to create consumer group, stream ID: {}, topic ID: {}, group ID: {:?}", stream_id, topic_id, command.group_id))?;
         let consumer_group = consumer_group.read().await;
         consumer_group_details = mapper::map_consumer_group(&consumer_group).await;
     }
@@ -127,7 +129,7 @@ async fn delete_consumer_group(
                 &identifier_group_id,
             )
             .await
-            .with_error_context(|_| format!("{COMPONENT} - failed to delete consumer group with ID: {group_id} for topic with ID: {topic_id} in stream with ID: {stream_id}"))?;
+            .with_error_context(|error| format!("{COMPONENT} (error: {error}) - failed to delete consumer group with ID: {group_id} for topic with ID: {topic_id} in stream with ID: {stream_id}"))?;
     }
 
     let system = state.system.read().await;

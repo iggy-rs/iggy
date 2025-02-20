@@ -72,10 +72,9 @@ impl Stream {
             replication_factor,
         )
         .await?;
-        topic
-            .persist()
-            .await
-            .with_error_context(|_| format!("{COMPONENT} - failed to persist topic: {topic}"))?;
+        topic.persist().await.with_error_context(|error| {
+            format!("{COMPONENT} (error: {error}) - failed to persist topic: {topic}")
+        })?;
         info!("Created topic {}", topic);
         self.topics_ids.insert(name.to_owned(), id);
         self.topics.insert(id, topic);
@@ -95,8 +94,8 @@ impl Stream {
         let max_topic_size = Topic::get_max_topic_size(max_topic_size, &self.config)?;
         let topic_id;
         {
-            let topic = self.get_topic(id).with_error_context(|_| {
-                format!("{COMPONENT} - failed to get topic with id: {id}")
+            let topic = self.get_topic(id).with_error_context(|error| {
+                format!("{COMPONENT} (error: {error}) - failed to get topic with id: {id}")
             })?;
             topic_id = topic.topic_id;
         }
@@ -113,8 +112,8 @@ impl Stream {
         }
 
         let old_topic_name = {
-            let topic = self.get_topic(id).with_error_context(|_| {
-                format!("{COMPONENT} - failed to get topic with id: {id}")
+            let topic = self.get_topic(id).with_error_context(|error| {
+                format!("{COMPONENT} (error: {error}) - failed to get topic with id: {id}")
             })?;
             topic.name.clone()
         };
@@ -122,8 +121,8 @@ impl Stream {
         {
             self.topics_ids.remove(&old_topic_name.clone());
             self.topics_ids.insert(name.to_owned(), topic_id);
-            let topic = self.get_topic_mut(id).with_error_context(|_| {
-                format!("{COMPONENT} - failed to get mutable reference to topic with id {id}")
+            let topic = self.get_topic_mut(id).with_error_context(|error| {
+                format!("{COMPONENT} (error: {error}) - failed to get mutable reference to topic with id {id}")
             })?;
 
             topic.name = name.to_owned();
@@ -138,8 +137,8 @@ impl Stream {
             }
             topic.max_topic_size = max_topic_size;
             topic.replication_factor = replication_factor;
-            topic.persist().await.with_error_context(|_| {
-                format!("{COMPONENT} - failed to persist topic: {topic}")
+            topic.persist().await.with_error_context(|error| {
+                format!("{COMPONENT} (error: {error}) - failed to persist topic: {topic}")
             })?;
             info!("Updated topic: {topic}");
         }
@@ -233,8 +232,8 @@ impl Stream {
     }
 
     pub async fn delete_topic(&mut self, id: &Identifier) -> Result<Topic, IggyError> {
-        let topic = self.remove_topic(id).with_error_context(|_| {
-            format!("{COMPONENT} - failed to remove topic with id: {id}")
+        let topic = self.remove_topic(id).with_error_context(|error| {
+            format!("{COMPONENT} (error: {error}) - failed to remove topic with id: {id}")
         })?;
         let topic_id = topic.topic_id;
         let current_topic_id = self.current_topic_id.load(Ordering::SeqCst);
@@ -245,7 +244,9 @@ impl Stream {
         topic
             .delete()
             .await
-            .with_error_context(|_| format!("{COMPONENT} - failed to delete topic: {topic}"))
+            .with_error_context(|error| {
+                format!("{COMPONENT} (error: {error}) - failed to delete topic: {topic}")
+            })
             .map_err(|_| IggyError::CannotDeleteTopic(topic.topic_id, self.stream_id))?;
         Ok(topic)
     }

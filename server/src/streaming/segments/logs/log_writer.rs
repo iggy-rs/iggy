@@ -53,8 +53,8 @@ impl SegmentLogWriter {
             .await
             .map_err(|_| IggyError::CannotReadFile)?;
 
-        let _ = file.sync_all().await.with_error_context(|e| {
-            format!("Failed to fsync log file after creation: {file_path}, error: {e}",)
+        let _ = file.sync_all().await.with_error_context(|error| {
+            format!("Failed to fsync log file after creation: {file_path}. {error}",)
         });
 
         let actual_log_size = file
@@ -135,8 +135,8 @@ impl SegmentLogWriter {
 
             file.write_vectored(&slices)
                 .await
-                .with_error_context(|e| {
-                    format!("Failed to log to file: {}, error: {e}", self.file_path)
+                .with_error_context(|error| {
+                    format!("Failed to log to file: {}. {error}", self.file_path)
                 })
                 .map_err(|_| IggyError::CannotWriteToFile)?;
 
@@ -151,8 +151,8 @@ impl SegmentLogWriter {
         if let Some(file) = self.file.as_ref() {
             file.sync_all()
                 .await
-                .with_error_context(|e| {
-                    format!("Failed to fsync log file: {}, error: {e}", self.file_path)
+                .with_error_context(|error| {
+                    format!("Failed to fsync log file: {}. {error}", self.file_path)
                 })
                 .map_err(|_| IggyError::CannotWriteToFile)?;
         }

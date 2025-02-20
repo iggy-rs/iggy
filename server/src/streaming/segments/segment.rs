@@ -130,7 +130,7 @@ impl Segment {
                 .unwrap()
                 .load_all_indexes_impl()
                 .await
-                .with_error_context(|e| format!("Failed to load indexes, error: {e} for {}", self))
+                .with_error_context(|error| format!("Failed to load indexes for {self}. {error}"))
                 .map_err(|_| IggyError::CannotReadFile)?,
         );
 
@@ -316,15 +316,16 @@ impl Segment {
             self.shutdown_writing().await;
         }
 
-        let _ = remove_file(&self.log_path).await.with_error_context(|e| {
-            format!("Failed to delete log file: {}, error: {e}", self.log_path)
-        });
-        let _ = remove_file(&self.index_path).await.with_error_context(|e| {
-            format!(
-                "Failed to delete index file: {}, error: {e}",
-                self.index_path
-            )
-        });
+        let _ = remove_file(&self.log_path)
+            .await
+            .with_error_context(|error| {
+                format!("Failed to delete log file: {}. {error}", self.log_path)
+            });
+        let _ = remove_file(&self.index_path)
+            .await
+            .with_error_context(|error| {
+                format!("Failed to delete index file: {}. {error}", self.index_path)
+            });
 
         let segment_size_bytes = self.size_bytes.as_bytes_u64();
         self.size_of_parent_stream

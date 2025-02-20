@@ -33,7 +33,9 @@ impl Sender for TcpTlsSender {
         self.stream
             .shutdown()
             .await
-            .with_error_context(|_| format!("{COMPONENT} - failed to shutdown tcp tls stream"))
+            .with_error_context(|error| {
+                format!("{COMPONENT} (error: {error}) - failed to shutdown tcp tls stream")
+            })
             .map_err(ServerError::IoError)
     }
 }

@@ -21,28 +21,31 @@ use sysinfo::{Pid, ProcessesToUpdate, System};
 
 impl Validatable<ConfigError> for ServerConfig {
     fn validate(&self) -> Result<(), ConfigError> {
-        self.data_maintenance.validate().with_error_context(|_| {
-            format!("{COMPONENT} - failed to validate data maintenance config")
-        })?;
+        self.data_maintenance
+            .validate()
+            .with_error_context(|error| {
+                format!("{COMPONENT} (error: {error}) - failed to validate data maintenance config")
+            })?;
         self.personal_access_token
             .validate()
-            .with_error_context(|_| {
-                format!("{COMPONENT} - failed to validate personal access token config")
+            .with_error_context(|error| {
+                format!("{COMPONENT} (error: {error}) - failed to validate personal access token config")
             })?;
-        self.system
-            .segment
-            .validate()
-            .with_error_context(|_| format!("{COMPONENT} - failed to validate segment config"))?;
-        self.system
-            .cache
-            .validate()
-            .with_error_context(|_| format!("{COMPONENT} - failed to validate cache config"))?;
-        self.system.compression.validate().with_error_context(|_| {
-            format!("{COMPONENT} - failed to validate compression config")
+        self.system.segment.validate().with_error_context(|error| {
+            format!("{COMPONENT} (error: {error}) - failed to validate segment config")
         })?;
-        self.telemetry
+        self.system.cache.validate().with_error_context(|error| {
+            format!("{COMPONENT} (error: {error}) - failed to validate cache config")
+        })?;
+        self.system
+            .compression
             .validate()
-            .with_error_context(|_| format!("{COMPONENT} - failed to validate telemetry config"))?;
+            .with_error_context(|error| {
+                format!("{COMPONENT} (error: {error}) - failed to validate compression config")
+            })?;
+        self.telemetry.validate().with_error_context(|error| {
+            format!("{COMPONENT} (error: {error}) - failed to validate telemetry config")
+        })?;
 
         let topic_size = match self.system.topic.max_size {
             MaxTopicSize::Custom(size) => Ok(size.as_bytes_u64()),
@@ -169,14 +172,14 @@ impl Validatable<ConfigError> for MessageSaverConfig {
 
 impl Validatable<ConfigError> for DataMaintenanceConfig {
     fn validate(&self) -> Result<(), ConfigError> {
-        self.archiver
-            .validate()
-            .with_error_context(|_| format!("{COMPONENT} - failed to validate archiver config"))?;
-        self.messages.validate().with_error_context(|_| {
-            format!("{COMPONENT} - failed to validate messages maintenance config")
+        self.archiver.validate().with_error_context(|error| {
+            format!("{COMPONENT} (error: {error}) - failed to validate archiver config")
         })?;
-        self.state.validate().with_error_context(|_| {
-            format!("{COMPONENT} - failed to validate state maintenance config")
+        self.messages.validate().with_error_context(|error| {
+            format!("{COMPONENT} (error: {error}) - failed to validate messages maintenance config")
+        })?;
+        self.state.validate().with_error_context(|error| {
+            format!("{COMPONENT} (error: {error}) - failed to validate state maintenance config")
         })?;
         Ok(())
     }

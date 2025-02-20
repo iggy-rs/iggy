@@ -29,9 +29,9 @@ pub async fn handle(
                 command.partitions_count,
             )
             .await
-            .with_error_context(|_| {
+            .with_error_context(|error| {
                 format!(
-                    "{COMPONENT} - failed to delete partitions for topic with ID: {topic_id} in stream with ID: {stream_id}, session: {session}",
+                    "{COMPONENT} (error: {error}) - failed to delete partitions for topic with ID: {topic_id} in stream with ID: {stream_id}, session: {session}",
                 )
             })?;
     }
@@ -44,9 +44,9 @@ pub async fn handle(
             EntryCommand::DeletePartitions(command),
         )
         .await
-        .with_error_context(|_| {
+        .with_error_context(|error| {
             format!(
-                "{COMPONENT} - failed to apply delete partitions for stream_id: {}, topic_id: {}, session: {}",
+                "{COMPONENT} (error: {error}) - failed to apply delete partitions for stream_id: {}, topic_id: {}, session: {}",
                 stream_id, topic_id, session
             )
         })?;

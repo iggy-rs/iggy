@@ -26,7 +26,7 @@ pub async fn handle(
             command.offset,
         )
         .await
-        .with_error_context(|_| format!("{COMPONENT} - failed to store consumer offset for stream_id: {}, topic_id: {}, partition_id: {:?}, offset: {}, session: {}",
+        .with_error_context(|error| format!("{COMPONENT} (error: {error}) - failed to store consumer offset for stream_id: {}, topic_id: {}, partition_id: {:?}, offset: {}, session: {}",
             command.stream_id, command.topic_id, command.partition_id, command.offset, session
         ))?;
     sender.send_empty_ok_response().await?;

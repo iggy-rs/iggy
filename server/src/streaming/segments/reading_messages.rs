@@ -12,6 +12,7 @@ use std::sync::Arc;
 use tracing::{trace, warn};
 
 const EMPTY_MESSAGES: Vec<RetainedMessage> = vec![];
+const COMPONENT: &str = "STREAMING_SEGMENT";
 
 impl Segment {
     pub fn get_messages_count(&self) -> u64 {
@@ -67,9 +68,9 @@ impl Segment {
         if offset < first_buffer_offset {
             let disk_messages = self
                 .load_messages_from_disk(offset, first_buffer_offset - 1)
-                .await.with_error_context(|e| format!(
-            "STREAMING_SEGMENT - failed to load messages from disk, stream ID: {}, topic ID: {}, partition ID: {}, start offset: {}, end offset :{}, error: {}",
-            self.stream_id, self.topic_id, self.partition_id, offset, first_buffer_offset - 1, e
+                .await.with_error_context(|error| format!(
+            "{COMPONENT} (error: {error}) - failed to load messages from disk, stream ID: {}, topic ID: {}, partition ID: {}, start offset: {offset}, end offset :{}",
+            self.stream_id, self.topic_id, self.partition_id, first_buffer_offset - 1
         ))?;
             messages.extend(disk_messages);
         }
@@ -106,9 +107,9 @@ impl Segment {
                 Ok(())
             })
             .await
-            .with_error_context(|e| {
+            .with_error_context(|error| {
                 format!(
-                    "Failed to load messages by size ({size_bytes} bytes) with callback, error: {e} for {}",
+                    "Failed to load messages by size ({size_bytes} bytes) with callback for {}. {error}",
                     self
                 )
             })?;
@@ -143,9 +144,9 @@ impl Segment {
             .unwrap()
             .load_batches_by_range_impl(index_range)
             .await
-            .with_error_context(|e| {
+            .with_error_context(|error| {
                 format!(
-                    "Failed to load message batches by range {:?} from disk, error: {e} for {}",
+                    "Failed to load message batches by range {:?} from disk for {}. {error}",
                     index_range, self
                 )
             })?;
@@ -165,9 +166,9 @@ impl Segment {
             .unwrap()
             .load_index_for_timestamp_impl(timestamp)
             .await
-            .with_error_context(|e| {
+            .with_error_context(|error| {
                 format!(
-                    "Failed to load index for timestamp: {timestamp}, error: {e} for {}",
+                    "Failed to load index for timestamp: {timestamp} for {}. {error}",
                     self
                 )
             })?;
@@ -201,11 +202,8 @@ impl Segment {
                 Ok(())
             })
             .await
-            .with_error_context(|e| {
-                format!(
-                    "Failed to load batches by max range, error: {e} for {}",
-                    self
-                )
+            .with_error_context(|error| {
+                format!("Failed to load batches by max range for {}. {error}", self)
             })?;
         Ok(())
     }
@@ -219,8 +217,8 @@ impl Segment {
             .unwrap()
             .load_message_ids_impl()
             .await
-            .with_error_context(|e| {
-                format!("Failed to load message ids, error: {} for {}", e, self)
+            .with_error_context(|error| {
+                format!("Failed to load message IDs, error: {error} for {self}")
             })?;
         trace!("Loaded {} message IDs from log file.", ids.len());
         Ok(ids)
@@ -276,8 +274,8 @@ impl Segment {
             .unwrap()
             .load_index_range_impl(start_offset, end_offset, self.start_offset)
             .await
-            .with_error_context(|e| {
-                format!("Failed to load index range start offset: {start_offset}, end offset: {end_offset}, error: {e} for {}", self)
+            .with_error_context(|error| {
+                format!("Failed to load index range start offset: {start_offset}, end offset: {end_offset} for {self}. {error}")
             })? {
             Some(index_range) => {
                 self.load_messages_from_segment_file(&index_range, start_offset, end_offset)
@@ -303,9 +301,9 @@ impl Segment {
         let messages = self
             .load_batches_by_range(index_range)
             .await
-            .with_error_context(|_| format!(
-                "STREAMING_SEGMENT - failed to load message batches, stream ID: {}, topic ID: {}, partition ID: {}, start offset: {}, end offset: {}",
-                self.stream_id, self.topic_id, self.partition_id, start_offset, end_offset,
+            .with_error_context(|error| format!(
+                "{COMPONENT} (error: {error}) - failed to load message batches, stream ID: {}, topic ID: {}, partition ID: {}, start offset: {start_offset}, end offset: {end_offset}",
+                self.stream_id, self.topic_id, self.partition_id
             ))?
             .iter()
             .to_messages_with_filter(messages_count, &|msg| {

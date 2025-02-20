@@ -20,9 +20,9 @@ pub async fn handle(
     system
         .purge_topic(session, &command.stream_id, &command.topic_id)
         .await
-        .with_error_context(|_| {
+        .with_error_context(|error| {
             format!(
-                "{COMPONENT} - failed to purge topic with id: {}, stream_id: {}",
+                "{COMPONENT} (error: {error}) - failed to purge topic with id: {}, stream_id: {}",
                 command.topic_id, command.stream_id
             )
         })?;
@@ -33,9 +33,9 @@ pub async fn handle(
         .state
         .apply(session.get_user_id(), EntryCommand::PurgeTopic(command))
         .await
-        .with_error_context(|_| {
+        .with_error_context(|error| {
             format!(
-            "{COMPONENT} - failed to apply purge topic with id: {topic_id}, stream_id: {stream_id}",
+            "{COMPONENT} (error: {error}) - failed to apply purge topic with id: {topic_id}, stream_id: {stream_id}",
         )
         })?;
     sender.send_empty_ok_response().await?;

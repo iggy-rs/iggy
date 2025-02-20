@@ -47,9 +47,9 @@ async fn get_personal_access_tokens(
     let personal_access_tokens = system
         .get_personal_access_tokens(&Session::stateless(identity.user_id, identity.ip_address))
         .await
-        .with_error_context(|_| {
+        .with_error_context(|error| {
             format!(
-                "{COMPONENT} - failed to get personal access tokens, user ID: {}",
+                "{COMPONENT} (error: {error}) - failed to get personal access tokens, user ID: {}",
                 identity.user_id
             )
         })?;
@@ -74,9 +74,9 @@ async fn create_personal_access_token(
                 command.expiry,
             )
             .await
-            .with_error_context(|_| {
+            .with_error_context(|error| {
                 format!(
-                    "{COMPONENT} - failed to create personal access token, user ID: {}",
+                    "{COMPONENT} (error: {error}) - failed to create personal access token, user ID: {}",
                     identity.user_id
                 )
             })?;
@@ -94,9 +94,9 @@ async fn create_personal_access_token(
             }),
         )
         .await
-        .with_error_context(|_| {
+        .with_error_context(|error| {
             format!(
-                "{COMPONENT} - failed to apply create personal access token with hash, user ID: {}",
+                "{COMPONENT} (error: {error}) - failed to apply create personal access token with hash, user ID: {}",
                 identity.user_id
             )
         })?;
@@ -117,9 +117,9 @@ async fn delete_personal_access_token(
                 &name,
             )
             .await
-            .with_error_context(|_| {
+            .with_error_context(|error| {
                 format!(
-                    "{COMPONENT} - failed to delete personal access token, user ID: {}",
+                    "{COMPONENT} (error: {error}) - failed to delete personal access token, user ID: {}",
                     identity.user_id
                 )
             })?;
@@ -133,9 +133,9 @@ async fn delete_personal_access_token(
             EntryCommand::DeletePersonalAccessToken(DeletePersonalAccessToken { name }),
         )
         .await
-        .with_error_context(|_| {
+        .with_error_context(|error| {
             format!(
-                "{COMPONENT} - failed to apply delete personal access token, user ID: {}",
+                "{COMPONENT} (error: {error}) - failed to apply delete personal access token, user ID: {}",
                 identity.user_id
             )
         })?;
@@ -152,8 +152,8 @@ async fn login_with_personal_access_token(
     let user = system
         .login_with_personal_access_token(&command.token, None)
         .await
-        .with_error_context(|_| {
-            format!("{COMPONENT} - failed to login with personal access token")
+        .with_error_context(|error| {
+            format!("{COMPONENT} (error: {error}) - failed to login with personal access token")
         })?;
     let tokens = state.jwt_manager.generate(user.id)?;
     Ok(Json(map_generated_access_token_to_identity_info(tokens)))

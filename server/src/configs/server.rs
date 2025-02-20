@@ -154,12 +154,12 @@ impl ServerConfig {
         let server_config = config_provider
             .load_config()
             .await
-            .with_error_context(|_| {
-                format!("{COMPONENT} - failed to load config provider config")
+            .with_error_context(|error| {
+                format!("{COMPONENT} (error: {error}) - failed to load config provider config")
             })?;
-        server_config
-            .validate()
-            .with_error_context(|_| format!("{COMPONENT} - failed to validate server config"))?;
+        server_config.validate().with_error_context(|error| {
+            format!("{COMPONENT} (error: {error}) - failed to validate server config")
+        })?;
         Ok(server_config)
     }
 }

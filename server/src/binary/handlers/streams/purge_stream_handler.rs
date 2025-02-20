@@ -22,16 +22,16 @@ pub async fn handle(
     system
         .purge_stream(session, &command.stream_id)
         .await
-        .with_error_context(|_| {
-            format!("{COMPONENT} - failed to purge stream with id: {stream_id}, session: {session}")
+        .with_error_context(|error| {
+            format!("{COMPONENT} (error: {error}) - failed to purge stream with id: {stream_id}, session: {session}")
         })?;
 
     system
         .state
         .apply(session.get_user_id(), EntryCommand::PurgeStream(command))
         .await
-        .with_error_context(|_| {
-            format!("{COMPONENT} - failed to apply purge stream with id: {stream_id}, session: {session}")
+        .with_error_context(|error| {
+            format!("{COMPONENT} (error: {error}) - failed to apply purge stream with id: {stream_id}, session: {session}")
         })?;
     sender.send_empty_ok_response().await?;
     Ok(())

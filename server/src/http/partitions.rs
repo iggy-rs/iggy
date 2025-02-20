@@ -45,9 +45,9 @@ async fn create_partitions(
                 command.partitions_count,
             )
             .await
-            .with_error_context(|_| {
+            .with_error_context(|error| {
                 format!(
-                    "{COMPONENT} - failed to create partitions, stream ID: {}, topic ID: {}",
+                    "{COMPONENT} (error: {error}) - failed to create partitions, stream ID: {}, topic ID: {}",
                     stream_id, topic_id
                 )
             })?;
@@ -58,9 +58,9 @@ async fn create_partitions(
         .state
         .apply(identity.user_id, EntryCommand::CreatePartitions(command))
         .await
-        .with_error_context(|_| {
+        .with_error_context(|error| {
             format!(
-                "{COMPONENT} - failed to apply create partitions, stream ID: {}, topic ID: {}",
+                "{COMPONENT} (error: {error}) - failed to apply create partitions, stream ID: {}, topic ID: {}",
                 stream_id, topic_id
             )
         })?;
@@ -87,9 +87,9 @@ async fn delete_partitions(
                 query.partitions_count,
             )
             .await
-            .with_error_context(|_| {
+            .with_error_context(|error| {
                 format!(
-                    "{COMPONENT} - failed to delete partitions for topic with ID: {} in stream with ID: {}",
+                    "{COMPONENT} (error: {error}) - failed to delete partitions for topic with ID: {} in stream with ID: {}",
                     stream_id, topic_id
                 )
             })?;
@@ -107,9 +107,9 @@ async fn delete_partitions(
             }),
         )
         .await
-        .with_error_context(|_| {
+        .with_error_context(|error| {
             format!(
-                "{COMPONENT} - failed to apply delete partitions, stream ID: {}, topic ID: {}",
+                "{COMPONENT} (error: {error}) - failed to apply delete partitions, stream ID: {}, topic ID: {}",
                 stream_id, topic_id
             )
         })?;

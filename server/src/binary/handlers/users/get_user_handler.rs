@@ -14,7 +14,11 @@ pub async fn handle(
 ) -> Result<(), IggyError> {
     debug!("session: {session}, command: {command}");
     let system = system.read().await;
-    let Some(user) = system.find_user(session, &command.user_id)? else {
+    let Ok(user) = system.find_user(session, &command.user_id) else {
+        sender.send_empty_ok_response().await?;
+        return Ok(());
+    };
+    let Some(user) = user else {
         sender.send_empty_ok_response().await?;
         return Ok(());
     };

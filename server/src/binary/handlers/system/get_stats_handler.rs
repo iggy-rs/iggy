@@ -16,10 +16,9 @@ pub async fn handle(
 ) -> Result<(), IggyError> {
     debug!("session: {session}, command: {command}");
     let system = system.read().await;
-    let stats = system
-        .get_stats()
-        .await
-        .with_error_context(|_| format!("{COMPONENT} - failed to get stats, session: {session}"))?;
+    let stats = system.get_stats().await.with_error_context(|error| {
+        format!("{COMPONENT} (error: {error}) - failed to get stats, session: {session}")
+    })?;
     let bytes = mapper::map_stats(&stats);
     sender.send_ok_response(&bytes).await?;
     Ok(())

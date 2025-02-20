@@ -72,9 +72,9 @@ async fn get_topics(
             &Session::stateless(identity.user_id, identity.ip_address),
             &stream_id,
         )
-        .with_error_context(|_| {
+        .with_error_context(|error| {
             format!(
-                "{COMPONENT} - failed to find topics for stream with ID: {}",
+                "{COMPONENT} (error: {error}) - failed to find topics for stream with ID: {}",
                 stream_id
             )
         })?;
@@ -107,9 +107,9 @@ async fn create_topic(
                 command.replication_factor,
             )
             .await
-            .with_error_context(|_| {
+            .with_error_context(|error| {
                 format!(
-                    "{COMPONENT} - failed to create topic, stream ID: {}",
+                    "{COMPONENT} (error: {error}) - failed to create topic, stream ID: {}",
                     stream_id
                 )
             })?;
@@ -123,9 +123,9 @@ async fn create_topic(
         .state
         .apply(identity.user_id, EntryCommand::CreateTopic(command))
         .await
-        .with_error_context(|_| {
+        .with_error_context(|error| {
             format!(
-                "{COMPONENT} - failed to apply create topic, stream ID: {}",
+                "{COMPONENT} (error: {error}) - failed to apply create topic, stream ID: {}",
                 stream_id
             )
         })?;
@@ -156,9 +156,9 @@ async fn update_topic(
                 command.replication_factor,
             )
             .await
-            .with_error_context(|_| {
+            .with_error_context(|error| {
                 format!(
-                    "{COMPONENT} - failed to update topic, stream ID: {}, topic ID: {}",
+                    "{COMPONENT} (error: {error}) - failed to update topic, stream ID: {}, topic ID: {}",
                     stream_id, topic_id
                 )
             })?;
@@ -171,9 +171,9 @@ async fn update_topic(
         .state
         .apply(identity.user_id, EntryCommand::UpdateTopic(command))
         .await
-        .with_error_context(|_| {
+        .with_error_context(|error| {
             format!(
-                "{COMPONENT} - failed to apply update topic, stream ID: {}, topic ID: {}",
+                "{COMPONENT} (error: {error}) - failed to apply update topic, stream ID: {}, topic ID: {}",
                 stream_id, topic_id
             )
         })?;
@@ -197,9 +197,9 @@ async fn delete_topic(
                 &identifier_topic_id,
             )
             .await
-            .with_error_context(|_| {
+            .with_error_context(|error| {
                 format!(
-                    "{COMPONENT} - failed to delete topic with ID: {topic_id} in stream with ID: {stream_id}",
+                    "{COMPONENT} (error: {error}) - failed to delete topic with ID: {topic_id} in stream with ID: {stream_id}",
                 )
             })?;
     }
@@ -215,9 +215,9 @@ async fn delete_topic(
             }),
         )
         .await
-        .with_error_context(|_| {
+        .with_error_context(|error| {
             format!(
-                "{COMPONENT} - failed to apply delete topic, stream ID: {}, topic ID: {}",
+                "{COMPONENT} (error: {error}) - failed to apply delete topic, stream ID: {}, topic ID: {}",
                 stream_id, topic_id
             )
         })?;
@@ -240,9 +240,9 @@ async fn purge_topic(
             &identifier_topic_id,
         )
         .await
-        .with_error_context(|_| {
+        .with_error_context(|error| {
             format!(
-                "{COMPONENT} - failed to purge topic, stream ID: {}, topic ID: {}",
+                "{COMPONENT} (error: {error}) - failed to purge topic, stream ID: {}, topic ID: {}",
                 stream_id, topic_id
             )
         })?;
@@ -256,9 +256,9 @@ async fn purge_topic(
             }),
         )
         .await
-        .with_error_context(|_| {
+        .with_error_context(|error| {
             format!(
-                "{COMPONENT} - failed to apply purge topic, stream ID: {}, topic ID: {}",
+                "{COMPONENT} (error: {error}) - failed to apply purge topic, stream ID: {}, topic ID: {}",
                 stream_id, topic_id
             )
         })?;

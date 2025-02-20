@@ -30,11 +30,11 @@ impl System {
             return Err(IggyError::InvalidMessagesCount);
         }
 
-        let topic = self.find_topic(session, stream_id, topic_id).with_error_context(|_| format!("{COMPONENT} - topic not found for stream_id: {stream_id}, topic_id: {topic_id}"))?;
+        let topic = self.find_topic(session, stream_id, topic_id).with_error_context(|error| format!("{COMPONENT} (error: {error}) - topic not found for stream_id: {stream_id}, topic_id: {topic_id}"))?;
         self.permissioner
             .poll_messages(session.get_user_id(), topic.stream_id, topic.topic_id)
-            .with_error_context(|_| format!(
-                "{COMPONENT} - permission denied to poll messages for user {} on stream_id: {}, topic_id: {}",
+            .with_error_context(|error| format!(
+                "{COMPONENT} (error: {error}) - permission denied to poll messages for user {} on stream_id: {}, topic_id: {}",
                 session.get_user_id(),
                 topic.stream_id,
                 topic.topic_id
@@ -48,7 +48,7 @@ impl System {
         let Some((polling_consumer, partition_id)) = topic
             .resolve_consumer_with_partition_id(consumer, session.client_id, partition_id, true)
             .await
-            .with_error_context(|_| format!("{COMPONENT} - failed to resolve consumer with partition id, consumer: {consumer}, client ID: {}, partition ID: {:?}", session.client_id, partition_id))? else {
+            .with_error_context(|error| format!("{COMPONENT} (error: {error}) - failed to resolve consumer with partition id, consumer: {consumer}, client ID: {}, partition ID: {:?}", session.client_id, partition_id))? else {
             return Ok(PolledMessages {
                 messages: vec![],
                 partition_id: 0,
@@ -70,7 +70,7 @@ impl System {
             topic
                 .store_consumer_offset_internal(polling_consumer, offset, partition_id)
                 .await
-                .with_error_context(|_| format!("{COMPONENT} - failed to store consumer offset internal, polling consumer: {}, offset: {}, partition ID: {}", polling_consumer, offset, partition_id)) ?;
+                .with_error_context(|error| format!("{COMPONENT} (error: {error}) - failed to store consumer offset internal, polling consumer: {}, offset: {}, partition ID: {}", polling_consumer, offset, partition_id)) ?;
         }
 
         if self.encryptor.is_none() {
@@ -114,13 +114,13 @@ impl System {
         confirmation: Option<Confirmation>,
     ) -> Result<(), IggyError> {
         self.ensure_authenticated(session)?;
-        let topic = self.find_topic(session, &stream_id, &topic_id).with_error_context(|_| format!("{COMPONENT} - topic not found for stream_id: {stream_id}, topic_id: {topic_id}"))?;
+        let topic = self.find_topic(session, &stream_id, &topic_id).with_error_context(|error| format!("{COMPONENT} (error: {error}) - topic not found for stream_id: {stream_id}, topic_id: {topic_id}"))?;
         self.permissioner.append_messages(
             session.get_user_id(),
             topic.stream_id,
             topic.topic_id,
-        ).with_error_context(|_| format!(
-            "{COMPONENT} - permission denied to append messages for user {} on stream_id: {}, topic_id: {}",
+        ).with_error_context(|error| format!(
+            "{COMPONENT} (error: {error}) - permission denied to append messages for user {} on stream_id: {}, topic_id: {}",
             session.get_user_id(),
             topic.stream_id,
             topic.topic_id
@@ -172,14 +172,14 @@ impl System {
         fsync: bool,
     ) -> Result<(), IggyError> {
         self.ensure_authenticated(session)?;
-        let topic = self.find_topic(session, &stream_id, &topic_id).with_error_context(|_| format!("{COMPONENT} - topic not found for stream_id: {stream_id}, topic_id: {topic_id}"))?;
+        let topic = self.find_topic(session, &stream_id, &topic_id).with_error_context(|error| format!("{COMPONENT} (error: {error}) - topic not found for stream_id: {stream_id}, topic_id: {topic_id}"))?;
         // Reuse those permissions as if you can append messages you can flush them
         self.permissioner.append_messages(
             session.get_user_id(),
             topic.stream_id,
             topic.topic_id,
-        ).with_error_context(|_| format!(
-            "{COMPONENT} - permission denied to append messages for user {} on stream_id: {}, topic_id: {}",
+        ).with_error_context(|error| format!(
+            "{COMPONENT} (error: {error}) - permission denied to append messages for user {} on stream_id: {}, topic_id: {}",
             session.get_user_id(),
             topic.stream_id,
             topic.topic_id

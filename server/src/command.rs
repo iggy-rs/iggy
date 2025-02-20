@@ -158,7 +158,7 @@ impl BytesSerializable for ServerCommand {
         let code = u32::from_le_bytes(
             bytes[..4]
                 .try_into()
-                .with_error_context(|e| format!("failed to decode command from bytes, error: {e}"))
+                .with_error_context(|error| format!("failed to decode command from bytes. {error}"))
                 .map_err(|_| IggyError::InvalidNumberEncoding)?,
         );
         let payload = bytes.slice(4..);

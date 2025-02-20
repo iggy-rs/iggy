@@ -43,8 +43,8 @@ pub async fn handle(
                 sender
                     .send_error_response(error)
                     .await
-                    .with_error_context(|_| {
-                        format!("{COMPONENT} - failed to send error response, session: {session}")
+                    .with_error_context(|error| {
+                        format!("{COMPONENT} (error: {error}) - failed to send error response, session: {session}")
                     })?;
                 debug!("TCP error response was sent to: {session}.");
                 error!("Session: {session} will be deleted.");
@@ -53,8 +53,8 @@ pub async fn handle(
                 sender
                     .send_error_response(error)
                     .await
-                    .with_error_context(|_| {
-                        format!("{COMPONENT} - failed to send error response, session: {session}")
+                    .with_error_context(|error| {
+                        format!("{COMPONENT} (error: {error}) - failed to send error response, session: {session}")
                     })?;
                 debug!("TCP error response was sent to: {session}.");
                 Ok(())

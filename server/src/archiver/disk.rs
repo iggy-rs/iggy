@@ -23,9 +23,9 @@ impl Archiver for DiskArchiver {
             info!("Creating disk archiver directory: {}", self.config.path);
             fs::create_dir_all(&self.config.path)
                 .await
-                .with_error_context(|err| {
+                .with_error_context(|error| {
                     format!(
-                        "ARCHIVER - failed to create directory: {} with error: {err}",
+                        "ARCHIVER - failed to create directory: {}. {error}",
                         self.config.path
                     )
                 })?;
@@ -66,11 +66,11 @@ impl Archiver for DiskArchiver {
             let destination_path = destination.to_str().unwrap_or_default().to_owned();
             fs::create_dir_all(destination.parent().unwrap())
                 .await
-                .with_error_context(|err| {
-                    format!("{COMPONENT} - failed to create file: {file} at path: {destination_path} with error: {err}",)
+                .with_error_context(|error| {
+                    format!("{COMPONENT} (error: {error}) - failed to create file: {file} at path: {destination_path}",)
                 })?;
-            fs::copy(source, destination).await.with_error_context(|err| {
-                format!("{COMPONENT} - failed to copy file: {file} to destination: {destination_path} with error: {err}")
+            fs::copy(source, destination).await.with_error_context(|error| {
+                format!("{COMPONENT} (error: {error}) - failed to copy file: {file} to destination: {destination_path}")
             })?;
             debug!("Archived file: {file} at: {destination_path}");
         }

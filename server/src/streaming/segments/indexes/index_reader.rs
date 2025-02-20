@@ -30,13 +30,13 @@ impl SegmentIndexReader {
         let file = OpenOptions::new()
             .read(true)
             .open(file_path)
-            .with_error_context(|e| format!("Failed to open index file: {file_path}, error: {e}"))
+            .with_error_context(|error| format!("Failed to open index file: {file_path}. {error}"))
             .map_err(|_| IggyError::CannotReadFile)?;
 
         let actual_index_size = file
             .metadata()
-            .with_error_context(|e| {
-                format!("Failed to get metadata of index file: {file_path}, error: {e}")
+            .with_error_context(|error| {
+                format!("Failed to get metadata of index file: {file_path}. {error}")
             })
             .map_err(|_| IggyError::CannotReadFileMetadata)?
             .len();
@@ -61,10 +61,10 @@ impl SegmentIndexReader {
 
         let buf = match self.read_at(0, file_size).await {
             Ok(buf) => buf,
-            Err(e) if e.kind() == ErrorKind::UnexpectedEof => return Ok(Vec::new()),
-            Err(e) => {
+            Err(error) if error.kind() == ErrorKind::UnexpectedEof => return Ok(Vec::new()),
+            Err(error) => {
                 error!(
-                    "Error reading batch header at offset 0 in file {}: {e}",
+                    "Error reading batch header at offset 0 in file {}: {error}",
                     self.file_path
                 );
                 return Err(IggyError::CannotReadFile);
@@ -75,8 +75,11 @@ impl SegmentIndexReader {
             .chunks_exact(INDEX_SIZE as usize)
             .map(parse_index)
             .collect::<Result<Vec<_>, IggyError>>()
-            .with_error_context(|e| {
-                format!("Failed to parse indexes in file {}: {e}", self.file_path)
+            .with_error_context(|error| {
+                format!(
+                    "Failed to parse indexes in file {}: {error}",
+                    self.file_path
+                )
             })?;
         if indexes.len() as u64 != file_size / INDEX_SIZE {
             error!(
@@ -118,10 +121,10 @@ impl SegmentIndexReader {
 
         let buf = match self.read_at(0, file_size).await {
             Ok(buf) => buf,
-            Err(e) if e.kind() == ErrorKind::UnexpectedEof => return Ok(None),
-            Err(e) => {
+            Err(error) if error.kind() == ErrorKind::UnexpectedEof => return Ok(None),
+            Err(error) => {
                 error!(
-                    "Error reading batch header at offset 0 in file {}: {e}",
+                    "Error reading batch header at offset 0 in file {}: {error}",
                     self.file_path
                 );
                 return Err(IggyError::CannotReadFile);
@@ -129,8 +132,9 @@ impl SegmentIndexReader {
         };
         let mut last_index = Index::default();
         for chunk in buf.chunks_exact(INDEX_SIZE as usize) {
-            let current_index = parse_index(chunk)
-                .with_error_context(|e| format!("Failed to parse index {}: {e}", self.file_path))?;
+            let current_index = parse_index(chunk).with_error_context(|error| {
+                format!("Failed to parse index {}: {error}", self.file_path)
+            })?;
             if current_index.offset >= relative_start_offset
                 && index_range.start == Index::default()
             {
@@ -160,10 +164,10 @@ impl SegmentIndexReader {
 
         let buf = match self.read_at(0, file_size).await {
             Ok(buf) => buf,
-            Err(e) if e.kind() == ErrorKind::UnexpectedEof => return Ok(None),
-            Err(e) => {
+            Err(error) if error.kind() == ErrorKind::UnexpectedEof => return Ok(None),
+            Err(error) => {
                 error!(
-                    "Error reading batch header at offset 0 in file {}: {e}",
+                    "Error reading batch header at offset 0 in file {}: {error}",
                     self.file_path
                 );
                 return Err(IggyError::CannotReadFile);
@@ -199,19 +203,19 @@ fn parse_index(chunk: &[u8]) -> Result<Index, IggyError> {
     let offset = u32::from_le_bytes(
         chunk[0..4]
             .try_into()
-            .with_error_context(|e| format!("Failed to parse index offset: {e}"))
+            .with_error_context(|error| format!("Failed to parse index offset: {error}"))
             .map_err(|_| IggyError::CannotReadIndexOffset)?,
     );
     let position = u32::from_le_bytes(
         chunk[4..8]
             .try_into()
-            .with_error_context(|e| format!("Failed to parse index position: {e}"))
+            .with_error_context(|error| format!("Failed to parse index position: {error}"))
             .map_err(|_| IggyError::CannotReadIndexPosition)?,
     );
     let timestamp = u64::from_le_bytes(
         chunk[8..16]
             .try_into()
-            .with_error_context(|e| format!("Failed to parse index timestamp: {e}"))
+            .with_error_context(|error| format!("Failed to parse index timestamp: {error}"))
             .map_err(|_| IggyError::CannotReadIndexTimestamp)?,
     );
     Ok(Index {

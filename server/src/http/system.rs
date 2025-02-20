@@ -46,10 +46,9 @@ async fn get_metrics(State(state): State<Arc<AppState>>) -> Result<String, Custo
 
 async fn get_stats(State(state): State<Arc<AppState>>) -> Result<Json<Stats>, CustomError> {
     let system = state.system.read().await;
-    let stats = system
-        .get_stats()
-        .await
-        .with_error_context(|_| format!("{COMPONENT} - failed to get stats"))?;
+    let stats = system.get_stats().await.with_error_context(|error| {
+        format!("{COMPONENT} (error: {error}) - failed to get stats")
+    })?;
     Ok(Json(stats))
 }
 
@@ -59,19 +58,22 @@ async fn get_client(
     Path(client_id): Path<u32>,
 ) -> Result<Json<ClientInfoDetails>, CustomError> {
     let system = state.system.read().await;
-    let Some(client) = system
+    let Ok(client) = system
         .get_client(
             &Session::stateless(identity.user_id, identity.ip_address),
             client_id,
         )
         .await
-        .with_error_context(|_| {
+        .with_error_context(|error| {
             format!(
-                "{COMPONENT} - failed to get client, user ID: {}",
+                "{COMPONENT} (error: {error}) - failed to get client, user ID: {}",
                 identity.user_id
             )
-        })?
+        })
     else {
+        return Err(CustomError::ResourceNotFound);
+    };
+    let Some(client) = client else {
         return Err(CustomError::ResourceNotFound);
     };
 
@@ -88,9 +90,9 @@ async fn get_clients(
     let clients = system
         .get_clients(&Session::stateless(identity.user_id, identity.ip_address))
         .await
-        .with_error_context(|_| {
+        .with_error_context(|error| {
             format!(
-                "{COMPONENT} - failed to get clients, user ID: {}",
+                "{COMPONENT} (error: {error}) - failed to get clients, user ID: {}",
                 identity.user_id
             )
         })?;

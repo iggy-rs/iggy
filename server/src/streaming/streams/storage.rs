@@ -113,8 +113,8 @@ impl StreamStorage for FileStreamStorage {
                     stream.storage.clone(),
                 )
                 .await;
-                topic.persist().await.with_error_context(|_| {
-                    format!("{COMPONENT} - failed to persist topic: {topic}")
+                topic.persist().await.with_error_context(|error| {
+                    format!("{COMPONENT} (error: {error}) - failed to persist topic: {topic}")
                 })?;
                 unloaded_topics.push(topic);
                 info!(

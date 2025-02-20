@@ -116,11 +116,8 @@ impl Segment {
             .unwrap()
             .save_batches(batch, confirmation)
             .await
-            .with_error_context(|e| {
-                format!(
-                    "Failed to save batch of size {batch_size}, error: {e} for {}",
-                    self
-                )
+            .with_error_context(|error| {
+                format!("Failed to save batch of size {batch_size} for {self}. {error}",)
             })?;
 
         self.index_writer
@@ -128,7 +125,7 @@ impl Segment {
             .unwrap()
             .save_index(index)
             .await
-            .with_error_context(|e| format!("Failed to save index, error: {e} for {}", self))?;
+            .with_error_context(|error| format!("Failed to save index for {self}. {error}"))?;
 
         self.last_index_position += batch_size.as_bytes_u64() as u32;
         self.size_bytes += IggyByteSize::from(RETAINED_BATCH_HEADER_LEN);

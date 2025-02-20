@@ -136,8 +136,8 @@ impl Topic {
     ) -> Result<RwLock<ConsumerGroup>, IggyError> {
         let group_id;
         {
-            let consumer_group = self.get_consumer_group(id).with_error_context(|_| {
-                format!("{COMPONENT} - failed to get consumer group with id: {id}")
+            let consumer_group = self.get_consumer_group(id).with_error_context(|error| {
+                format!("{COMPONENT} (error: {error}) - failed to get consumer group with id: {id}")
             })?;
             let consumer_group = consumer_group.read().await;
             group_id = consumer_group.group_id;
@@ -182,8 +182,8 @@ impl Topic {
         group_id: &Identifier,
         member_id: u32,
     ) -> Result<(), IggyError> {
-        let consumer_group = self.get_consumer_group(group_id).with_error_context(|_| {
-            format!("{COMPONENT} - failed to get consumer group with id: {group_id}")
+        let consumer_group = self.get_consumer_group(group_id).with_error_context(|error| {
+            format!("{COMPONENT} (error: {error}) - failed to get consumer group with id: {group_id}")
         })?;
         let mut consumer_group = consumer_group.write().await;
         consumer_group.add_member(member_id).await;
@@ -199,8 +199,8 @@ impl Topic {
         group_id: &Identifier,
         member_id: u32,
     ) -> Result<(), IggyError> {
-        let consumer_group = self.get_consumer_group(group_id).with_error_context(|_| {
-            format!("{COMPONENT} - failed to get consumer group with id: {group_id}")
+        let consumer_group = self.get_consumer_group(group_id).with_error_context(|error| {
+            format!("{COMPONENT} (error: {error}) - failed to get consumer group with id: {group_id}")
         })?;
         let mut consumer_group = consumer_group.write().await;
         consumer_group.delete_member(member_id).await;

@@ -23,8 +23,8 @@ pub async fn handle(
         system
             .update_stream(session, &command.stream_id, &command.name)
             .await
-            .with_error_context(|_| {
-                format!("{COMPONENT} - failed to update stream with id: {stream_id}, session: {session}")
+            .with_error_context(|error| {
+                format!("{COMPONENT} (error: {error}) - failed to update stream with id: {stream_id}, session: {session}")
             })?;
     }
 
@@ -34,8 +34,8 @@ pub async fn handle(
         .state
         .apply(session.get_user_id(), EntryCommand::UpdateStream(command))
         .await
-        .with_error_context(|_| {
-            format!("{COMPONENT} - failed to apply update stream with id: {stream_id}, session: {session}")
+        .with_error_context(|error| {
+            format!("{COMPONENT} (error: {error}) - failed to apply update stream with id: {stream_id}, session: {session}")
         })?;
     sender.send_empty_ok_response().await?;
     Ok(())

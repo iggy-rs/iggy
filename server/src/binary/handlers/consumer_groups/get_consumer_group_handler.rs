@@ -15,13 +15,16 @@ pub async fn handle(
 ) -> Result<(), IggyError> {
     debug!("session: {session}, command: {command}");
     let system = system.read().await;
-    let Some(consumer_group) = system.get_consumer_group(
+    let Ok(consumer_group) = system.get_consumer_group(
         session,
         &command.stream_id,
         &command.topic_id,
         &command.group_id,
-    )?
-    else {
+    ) else {
+        sender.send_empty_ok_response().await?;
+        return Ok(());
+    };
+    let Some(consumer_group) = consumer_group else {
         sender.send_empty_ok_response().await?;
         return Ok(());
     };

@@ -26,9 +26,9 @@ pub async fn handle(
         let token = system
             .create_personal_access_token(session, &command.name, command.expiry)
             .await
-            .with_error_context(|_| {
+            .with_error_context(|error| {
                 format!(
-                    "{COMPONENT} - failed to create personal access token with name: {}, session: {session}",
+                    "{COMPONENT} (error: {error}) - failed to create personal access token with name: {}, session: {session}",
                     command.name
                 )
             })?;
@@ -50,9 +50,9 @@ pub async fn handle(
             }),
         )
         .await
-        .with_error_context(|_| {
+        .with_error_context(|error| {
             format!(
-                "{COMPONENT} - failed to create personal access token with name: {}, session: {session}",
+                "{COMPONENT} (error: {error}) - failed to create personal access token with name: {}, session: {session}",
                 command.name
             )
         })?;

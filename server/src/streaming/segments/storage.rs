@@ -309,6 +309,7 @@ impl SegmentStorage for FileSegmentStorage {
             index_range.end.offset
         );
 
+        info!("reading from start_position: {}", index_range.start.position);
         let mut reader = BufReader::with_capacity(BUF_READER_CAPACITY_BYTES, file);
         reader
             .seek(SeekFrom::Start(index_range.start.position as u64))

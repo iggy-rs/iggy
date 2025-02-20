@@ -410,11 +410,11 @@ pub fn as_bytes(
     topic_id: &Identifier,
     partitioning: &Partitioning,
     messages: Vec<IggyMessage>,
-) -> AlignedVec {
+) -> Vec<u8> {
     let messages_size = messages
         .iter()
         .map(IggyMessage::get_size_bytes)
-        .map(|size| size + (size_of::<ArchivedIggyMessage>() as u64).into())
+        .map(|size| size + 1024.into())
         .sum::<IggyByteSize>();
     // shit ton of small allocations, can we move it to stack ?
     let key_bytes = partitioning.to_bytes();
@@ -424,12 +424,9 @@ pub fn as_bytes(
         + key_bytes.len()
         + stream_id_bytes.len()
         + topic_id_bytes.len();
-    let mut result = AlignedVec::with_capacity(total_size);
+    let mut result = Vec::with_capacity(total_size);
 
     //TODO: init those with capacity of max message to avoid random allocations.
-    let mut arena = Arena::new();
-    let mut buffer = Vec::new();
-    let mut share = Share::new();
     let metadata_len = key_bytes.len() + stream_id_bytes.len() + topic_id_bytes.len();
 
     result.extend_from_slice(&(metadata_len as u64).to_le_bytes());
@@ -437,17 +434,14 @@ pub fn as_bytes(
     result.extend_from_slice(&stream_id_bytes);
     result.extend_from_slice(&topic_id_bytes);
     for message in messages {
-        let size = message.length as usize + size_of::<ArchivedIggyMessage>();
-        let size = val_align_up(size as _, 16);
-        buffer.reserve(size as _);
-        let mut ser = Serializer::new(&mut buffer, arena.acquire(), &mut share);
-        rkyv::api::serialize_using::<_, rkyv::rancor::Error>(&message, &mut ser).unwrap();
-        let len = buffer.len();
-        result.extend_from_slice(&(len as u64).to_le_bytes());
-        result.extend_from_slice(&buffer);
-
-        buffer.clear();
-        share.clear();
+        let headers_size = header::get_headers_size_bytes(&message.headers).as_bytes_u64();
+        let size = message.length + 16 + headers_size;
+        result.extend_from_slice(&[0,0,0,0]);
+        result.extend_from_slice(&[0,0,0,0]);
+        result.extend_from_slice(&size.to_le_bytes());
+        result.extend_from_slice(&message.id.to_le_bytes());
+        result.extend_from_slice(&message.payload);
+        result.extend_from_slice(&message.headers);
     }
     result
 }

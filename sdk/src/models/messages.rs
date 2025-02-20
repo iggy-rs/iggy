@@ -89,10 +89,10 @@ impl Sizeable for IggyMessage {
     fn get_size_bytes(&self) -> IggyByteSize {
         // id + offset_delta + timestamp_delta + length + payload + headers
         let value = header::get_headers_size_bytes(&self.headers).as_bytes_u64()
-            + self.length
+            + self.payload.len() as u64
             + 16
             + 4
-            + 4
+            + 4 
             + 8;
         value.into()
     }

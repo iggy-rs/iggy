@@ -105,7 +105,8 @@ pub trait PartitionStorage: Send {
     fn delete(&self, partition: &Partition) -> impl Future<Output = Result<(), IggyError>> + Send;
     fn save_consumer_offset(
         &self,
-        offset: &ConsumerOffset,
+        offset: u64,
+        path: &str,
     ) -> impl Future<Output = Result<(), IggyError>> + Send;
     fn load_consumer_offsets(
         &self,
@@ -177,7 +178,7 @@ impl PartitionStorageKind {
             -> Result<(), IggyError>;
         async fn save(&self, partition: &mut Partition) -> Result<(), IggyError>;
         async fn delete(&self, partition: &Partition) -> Result<(), IggyError>;
-        async fn save_consumer_offset(&self, offset: &ConsumerOffset) -> Result<(), IggyError>;
+        async fn save_consumer_offset(&self, offset: u64, path: &str) -> Result<(), IggyError>;
         async fn load_consumer_offsets(
             &self,
             kind: ConsumerKind,

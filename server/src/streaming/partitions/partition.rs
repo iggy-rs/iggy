@@ -54,7 +54,7 @@ pub struct ConsumerOffset {
     pub kind: ConsumerKind,
     pub consumer_id: u32,
     pub offset: u64,
-    pub path: String,
+    pub path: Arc<String>,
 }
 
 impl ConsumerOffset {
@@ -63,7 +63,7 @@ impl ConsumerOffset {
             kind,
             consumer_id,
             offset,
-            path: format!("{path}/{consumer_id}"),
+            path: Arc::new(format!("{path}/{consumer_id}")),
         }
     }
 }

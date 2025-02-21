@@ -335,21 +335,15 @@ impl PartitionStorage for FilePartitionStorage {
         Ok(())
     }
 
-    async fn save_consumer_offset(&self, offset: &ConsumerOffset) -> Result<(), IggyError> {
+    async fn save_consumer_offset(&self, offset: u64, path: &str) -> Result<(), IggyError> {
         self.persister
-            .overwrite(&offset.path, &offset.offset.to_le_bytes())
+            .overwrite(path, &offset.to_le_bytes())
             .await
             .with_error_context(|error| format!(
-                "{COMPONENT} (error: {error}) - failed to overwrite consumer offset with value: {}, kind: {}, consumer ID: {}, path: {}",
-                offset.offset, offset.kind, offset.consumer_id, offset.path,
+                "{COMPONENT} (error: {error}) - failed to overwrite consumer offset with value: {}, path: {}",
+                offset, path,
             ))?;
-        trace!(
-            "Stored consumer offset value: {} for {} with ID: {}, path: {}",
-            offset.offset,
-            offset.kind,
-            offset.consumer_id,
-            offset.path
-        );
+        trace!("Stored consumer offset value: {}, path: {}", offset, path);
         Ok(())
     }
 
@@ -390,7 +384,7 @@ impl PartitionStorage for FilePartitionStorage {
                 continue;
             }
 
-            let path = path.unwrap().to_string();
+            let path = Arc::new(path.unwrap().to_string());
             let consumer_id = consumer_id.unwrap();
             let mut file = file::open(&path)
                 .await

@@ -78,14 +78,15 @@ impl Partition {
         let consumer_offsets = self.get_consumer_offsets(kind);
         if let Some(mut consumer_offset) = consumer_offsets.get_mut(&consumer_id) {
             consumer_offset.offset = offset;
+            let path = consumer_offset.path.clone();
+            drop(consumer_offset);
             self.storage
                 .partition
-                .save_consumer_offset(&consumer_offset)
+                .save_consumer_offset(offset, &path)
                 .await
                 .with_error_context(|error| {
                     format!(
-                        "{COMPONENT} (error: {error}) - failed to save consumer offset, consumer ID: {}, offset: {}",
-                        consumer_id, offset
+                        "{COMPONENT} (error: {error}) - failed to save consumer offset, consumer ID: {consumer_id}, offset: {offset}, path: {path}",
                     )
                 })?;
             return Ok(());
@@ -98,7 +99,7 @@ impl Partition {
         let consumer_offset = ConsumerOffset::new(kind, consumer_id, offset, path);
         self.storage
             .partition
-            .save_consumer_offset(&consumer_offset)
+            .save_consumer_offset(offset, &consumer_offset.path)
             .await
             .with_error_context(|error| {
                 format!(

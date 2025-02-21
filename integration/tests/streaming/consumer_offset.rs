@@ -42,7 +42,10 @@ async fn assert_persisted_offset(
     consumer_offset: &ConsumerOffset,
     expected_offsets_count: u32,
 ) {
-    storage.save_consumer_offset(consumer_offset).await.unwrap();
+    storage
+        .save_consumer_offset(consumer_offset.offset, &consumer_offset.path)
+        .await
+        .unwrap();
     let consumer_offsets = storage
         .load_consumer_offsets(consumer_offset.kind, path)
         .await
@@ -51,11 +54,7 @@ async fn assert_persisted_offset(
     assert_eq!(consumer_offsets.len(), expected_offsets_count);
     let loaded_consumer_offset = consumer_offsets.get(expected_offsets_count - 1).unwrap();
 
-    // TODO(hubcio): This is a workaround: sometimes offset is 4, sometimes 5
-    let offset_ok = loaded_consumer_offset.offset == consumer_offset.offset
-        || loaded_consumer_offset.offset == consumer_offset.offset + 1
-        || loaded_consumer_offset.offset == consumer_offset.offset - 1;
-    assert!(offset_ok);
+    assert!(loaded_consumer_offset.offset == consumer_offset.offset);
 
     assert_eq!(loaded_consumer_offset.kind, consumer_offset.kind);
     assert_eq!(

@@ -64,10 +64,9 @@ async fn create_personal_access_token(
     Json(command): Json<CreatePersonalAccessToken>,
 ) -> Result<Json<RawPersonalAccessToken>, CustomError> {
     command.validate()?;
-    let token;
-    {
-        let mut system = state.system.write().await;
-        token = system
+
+    let mut system = state.system.write().await;
+    let token = system
             .create_personal_access_token(
                 &Session::stateless(identity.user_id, identity.ip_address),
                 &command.name,
@@ -80,9 +79,8 @@ async fn create_personal_access_token(
                     identity.user_id
                 )
             })?;
-    }
 
-    let system = state.system.read().await;
+    let system = system.downgrade();
     let token_hash = PersonalAccessToken::hash_token(&token);
     system
         .state
@@ -109,9 +107,8 @@ async fn delete_personal_access_token(
     Extension(identity): Extension<Identity>,
     Path(name): Path<String>,
 ) -> Result<StatusCode, CustomError> {
-    {
-        let mut system = state.system.write().await;
-        system
+    let mut system = state.system.write().await;
+    system
             .delete_personal_access_token(
                 &Session::stateless(identity.user_id, identity.ip_address),
                 &name,
@@ -123,9 +120,8 @@ async fn delete_personal_access_token(
                     identity.user_id
                 )
             })?;
-    }
 
-    let system = state.system.read().await;
+    let system = system.downgrade();
     system
         .state
         .apply(

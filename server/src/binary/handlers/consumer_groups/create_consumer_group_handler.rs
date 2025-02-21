@@ -17,10 +17,9 @@ pub async fn handle(
     system: &SharedSystem,
 ) -> Result<(), IggyError> {
     debug!("session: {session}, command: {command}");
-    let response;
-    {
-        let mut system = system.write().await;
-        let consumer_group = system
+
+    let mut system = system.write().await;
+    let consumer_group = system
             .create_consumer_group(
                 session,
                 &command.stream_id,
@@ -35,11 +34,11 @@ pub async fn handle(
                     command.stream_id, command.topic_id, command.group_id, session
                 )
             })?;
-        let consumer_group = consumer_group.read().await;
-        response = mapper::map_consumer_group(&consumer_group).await;
-    }
+    let consumer_group = consumer_group.read().await;
+    let response = mapper::map_consumer_group(&consumer_group).await;
+    drop(consumer_group);
 
-    let system = system.read().await;
+    let system = system.downgrade();
     let stream_id = command.stream_id.clone();
     let topic_id = command.topic_id.clone();
     let group_id = command.group_id;

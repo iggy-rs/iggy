@@ -16,9 +16,9 @@ pub async fn handle(
     system: &SharedSystem,
 ) -> Result<(), IggyError> {
     debug!("session: {session}, command: {command}");
-    {
-        let mut system = system.write().await;
-        system
+
+    let mut system = system.write().await;
+    system
             .delete_user(session, &command.user_id)
             .await
             .with_error_context(|error| {
@@ -27,9 +27,8 @@ pub async fn handle(
                     command.user_id
                 )
             })?;
-    }
 
-    let system = system.read().await;
+    let system = system.downgrade();
     let user_id = command.user_id.clone();
     system
         .state

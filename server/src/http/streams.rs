@@ -77,26 +77,24 @@ async fn create_stream(
     Json(command): Json<CreateStream>,
 ) -> Result<Json<StreamDetails>, CustomError> {
     command.validate()?;
-    let response;
-    {
-        let mut system = state.system.write().await;
-        let stream = system
-            .create_stream(
-                &Session::stateless(identity.user_id, identity.ip_address),
-                command.stream_id,
-                &command.name,
-            )
-            .await
-            .with_error_context(|error| {
-                format!(
-                    "{COMPONENT} (error: {error}) - failed to create stream, stream ID: {:?}",
-                    command.stream_id
-                )
-            })?;
-        response = Json(mapper::map_stream(stream));
-    }
 
-    let system = state.system.read().await;
+    let mut system = state.system.write().await;
+    let stream = system
+        .create_stream(
+            &Session::stateless(identity.user_id, identity.ip_address),
+            command.stream_id,
+            &command.name,
+        )
+        .await
+        .with_error_context(|error| {
+            format!(
+                "{COMPONENT} (error: {error}) - failed to create stream, stream ID: {:?}",
+                command.stream_id
+            )
+        })?;
+    let response = Json(mapper::map_stream(stream));
+
+    let system = system.downgrade();
     let stream_id = command.stream_id;
     system
         .state
@@ -120,24 +118,23 @@ async fn update_stream(
 ) -> Result<StatusCode, CustomError> {
     command.stream_id = Identifier::from_str_value(&stream_id)?;
     command.validate()?;
-    {
-        let mut system = state.system.write().await;
-        system
-            .update_stream(
-                &Session::stateless(identity.user_id, identity.ip_address),
-                &command.stream_id,
-                &command.name,
-            )
-            .await
-            .with_error_context(|error| {
-                format!(
-                    "{COMPONENT} (error: {error}) - failed to update stream, stream ID: {}",
-                    stream_id
-                )
-            })?;
-    }
 
-    let system = state.system.read().await;
+    let mut system = state.system.write().await;
+    system
+        .update_stream(
+            &Session::stateless(identity.user_id, identity.ip_address),
+            &command.stream_id,
+            &command.name,
+        )
+        .await
+        .with_error_context(|error| {
+            format!(
+                "{COMPONENT} (error: {error}) - failed to update stream, stream ID: {}",
+                stream_id
+            )
+        })?;
+
+    let system = system.downgrade();
     system
         .state
         .apply(identity.user_id, EntryCommand::UpdateStream(command))
@@ -158,22 +155,19 @@ async fn delete_stream(
     Path(stream_id): Path<String>,
 ) -> Result<StatusCode, CustomError> {
     let identifier_stream_id = Identifier::from_str_value(&stream_id)?;
-    {
-        let mut system = state.system.write().await;
-        system
-            .delete_stream(
-                &Session::stateless(identity.user_id, identity.ip_address),
-                &identifier_stream_id,
-            )
-            .await
-            .with_error_context(|error| {
-                format!(
-                    "{COMPONENT} (error: {error}) - failed to delete stream with ID: {stream_id}",
-                )
-            })?;
-    }
 
-    let system = state.system.read().await;
+    let mut system = state.system.write().await;
+    system
+        .delete_stream(
+            &Session::stateless(identity.user_id, identity.ip_address),
+            &identifier_stream_id,
+        )
+        .await
+        .with_error_context(|error| {
+            format!("{COMPONENT} (error: {error}) - failed to delete stream with ID: {stream_id}",)
+        })?;
+
+    let system = system.downgrade();
     system
         .state
         .apply(

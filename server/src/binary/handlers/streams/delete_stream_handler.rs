@@ -17,17 +17,16 @@ pub async fn handle(
 ) -> Result<(), IggyError> {
     debug!("session: {session}, command: {command}");
     let stream_id = command.stream_id.clone();
-    {
-        let mut system = system.write().await;
-        system
+
+    let mut system = system.write().await;
+    system
             .delete_stream(session, &command.stream_id)
             .await
             .with_error_context(|error| {
                 format!("{COMPONENT} (error: {error}) - failed to delete stream with ID: {stream_id}, session: {session}")
             })?;
-    }
 
-    let system = system.read().await;
+    let system = system.downgrade();
     system
         .state
         .apply(session.get_user_id(), EntryCommand::DeleteStream(command))

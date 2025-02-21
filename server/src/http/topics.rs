@@ -91,34 +91,32 @@ async fn create_topic(
 ) -> Result<Json<TopicDetails>, CustomError> {
     command.stream_id = Identifier::from_str_value(&stream_id)?;
     command.validate()?;
-    let response;
-    {
-        let mut system = state.system.write().await;
-        let topic = system
-            .create_topic(
-                &Session::stateless(identity.user_id, identity.ip_address),
-                &command.stream_id,
-                command.topic_id,
-                &command.name,
-                command.partitions_count,
-                command.message_expiry,
-                command.compression_algorithm,
-                command.max_topic_size,
-                command.replication_factor,
-            )
-            .await
-            .with_error_context(|error| {
-                format!(
-                    "{COMPONENT} (error: {error}) - failed to create topic, stream ID: {}",
-                    stream_id
-                )
-            })?;
-        command.message_expiry = topic.message_expiry;
-        command.max_topic_size = topic.max_topic_size;
-        response = Json(mapper::map_topic(topic).await);
-    }
 
-    let system = state.system.read().await;
+    let mut system = state.system.write().await;
+    let topic = system
+        .create_topic(
+            &Session::stateless(identity.user_id, identity.ip_address),
+            &command.stream_id,
+            command.topic_id,
+            &command.name,
+            command.partitions_count,
+            command.message_expiry,
+            command.compression_algorithm,
+            command.max_topic_size,
+            command.replication_factor,
+        )
+        .await
+        .with_error_context(|error| {
+            format!(
+                "{COMPONENT} (error: {error}) - failed to create topic, stream ID: {}",
+                stream_id
+            )
+        })?;
+    command.message_expiry = topic.message_expiry;
+    command.max_topic_size = topic.max_topic_size;
+    let response = Json(mapper::map_topic(topic).await);
+
+    let system = system.downgrade();
     system
         .state
         .apply(identity.user_id, EntryCommand::CreateTopic(command))
@@ -142,9 +140,9 @@ async fn update_topic(
     command.stream_id = Identifier::from_str_value(&stream_id)?;
     command.topic_id = Identifier::from_str_value(&topic_id)?;
     command.validate()?;
-    {
-        let mut system = state.system.write().await;
-        let topic = system
+
+    let mut system = state.system.write().await;
+    let topic = system
             .update_topic(
                 &Session::stateless(identity.user_id, identity.ip_address),
                 &command.stream_id,
@@ -162,11 +160,10 @@ async fn update_topic(
                     stream_id, topic_id
                 )
             })?;
-        command.message_expiry = topic.message_expiry;
-        command.max_topic_size = topic.max_topic_size;
-    }
+    command.message_expiry = topic.message_expiry;
+    command.max_topic_size = topic.max_topic_size;
 
-    let system = state.system.read().await;
+    let system = system.downgrade();
     system
         .state
         .apply(identity.user_id, EntryCommand::UpdateTopic(command))
@@ -188,9 +185,9 @@ async fn delete_topic(
 ) -> Result<StatusCode, CustomError> {
     let identifier_stream_id = Identifier::from_str_value(&stream_id)?;
     let identifier_topic_id = Identifier::from_str_value(&topic_id)?;
-    {
-        let mut system = state.system.write().await;
-        system
+
+    let mut system = state.system.write().await;
+    system
             .delete_topic(
                 &Session::stateless(identity.user_id, identity.ip_address),
                 &identifier_stream_id,
@@ -202,9 +199,8 @@ async fn delete_topic(
                     "{COMPONENT} (error: {error}) - failed to delete topic with ID: {topic_id} in stream with ID: {stream_id}",
                 )
             })?;
-    }
 
-    let system = state.system.read().await;
+    let system = system.downgrade();
     system
         .state
         .apply(

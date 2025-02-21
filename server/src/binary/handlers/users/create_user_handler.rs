@@ -18,10 +18,9 @@ pub async fn handle(
     system: &SharedSystem,
 ) -> Result<(), IggyError> {
     debug!("session: {session}, command: {command}");
-    let response;
-    {
-        let mut system = system.write().await;
-        let user = system
+
+    let mut system = system.write().await;
+    let user = system
             .create_user(
                 session,
                 &command.username,
@@ -36,11 +35,10 @@ pub async fn handle(
                     command.username
                 )
             })?;
-        response = mapper::map_user(user);
-    }
+    let response = mapper::map_user(user);
 
     // For the security of the system, we hash the password before storing it in metadata.
-    let system = system.read().await;
+    let system = system.downgrade();
     system
         .state
         .apply(

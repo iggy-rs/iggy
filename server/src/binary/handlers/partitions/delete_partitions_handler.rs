@@ -19,9 +19,8 @@ pub async fn handle(
     let stream_id = command.stream_id.clone();
     let topic_id = command.topic_id.clone();
 
-    {
-        let mut system = system.write().await;
-        system
+    let mut system = system.write().await;
+    system
             .delete_partitions(
                 session,
                 &command.stream_id,
@@ -34,9 +33,8 @@ pub async fn handle(
                     "{COMPONENT} (error: {error}) - failed to delete partitions for topic with ID: {topic_id} in stream with ID: {stream_id}, session: {session}",
                 )
             })?;
-    }
 
-    let system = system.read().await;
+    let system = system.downgrade();
     system
         .state
         .apply(

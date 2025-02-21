@@ -29,11 +29,15 @@ impl Segment {
             self.config.partition.messages_required_to_save as usize,
             batch.len(),
         );
+        if self.current_offset == 0 {
+            self.start_timestamp = batch.first().unwrap().timestamp;
+        }
         let batch_base_offset = batch.first().unwrap().offset;
         let batch_accumulator = self
             .unsaved_messages
             .get_or_insert_with(|| BatchAccumulator::new(batch_base_offset, messages_cap));
         batch_accumulator.append(batch_size, batch);
+        self.end_timestamp = batch_accumulator.batch_max_timestamp();
         let curr_offset = batch_accumulator.batch_max_offset();
 
         self.current_offset = curr_offset;

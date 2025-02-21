@@ -50,7 +50,7 @@ fn index_cache_disabled() -> bool {
 
 #[test_matrix(
     [msg_size(50), msg_size(1000), msg_size(20000)],
-    [msgs_req_to_save(10), msgs_req_to_save(24)],
+    [msgs_req_to_save(10), msgs_req_to_save(24), msgs_req_to_save(1000)],
     [segment_size(500), segment_size(2000), segment_size(100000)],
     [msg_cache_size(0), msg_cache_size(5000), msg_cache_size(50000), msg_cache_size(2000000)],
     [index_cache_disabled(), index_cache_enabled()])]

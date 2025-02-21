@@ -159,7 +159,7 @@ async fn should_persist_messages_and_then_load_them_by_timestamp() {
             "Message timestamp {} at position {} is less than test timestamp {}",
             loaded_message.timestamp,
             i,
-            test_timestamp.as_micros()
+            test_timestamp
         );
         assert_eq!(
             loaded_message

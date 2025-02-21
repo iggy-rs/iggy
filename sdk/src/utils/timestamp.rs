@@ -65,6 +65,12 @@ impl From<IggyTimestamp> for u64 {
     }
 }
 
+impl From<SystemTime> for IggyTimestamp {
+    fn from(timestamp: SystemTime) -> Self {
+        IggyTimestamp(timestamp)
+    }
+}
+
 impl Add<SystemTime> for IggyTimestamp {
     type Output = IggyTimestamp;
 

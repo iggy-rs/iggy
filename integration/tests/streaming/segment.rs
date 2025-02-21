@@ -102,7 +102,7 @@ async fn should_load_existing_segment_from_disk() {
             Arc::new(AtomicU64::new(0)),
         );
         loaded_segment.load_from_disk().await.unwrap();
-        let loaded_messages = loaded_segment.get_messages(0, 10).await.unwrap();
+        let loaded_messages = loaded_segment.get_messages_by_offset(0, 10).await.unwrap();
 
         assert_eq!(loaded_segment.partition_id, segment.partition_id);
         assert_eq!(loaded_segment.start_offset, segment.start_offset);
@@ -189,7 +189,7 @@ async fn should_persist_and_load_segment_with_messages() {
     );
     loaded_segment.load_from_disk().await.unwrap();
     let messages = loaded_segment
-        .get_messages(0, messages_count as u32)
+        .get_messages_by_offset(0, messages_count as u32)
         .await
         .unwrap();
     assert_eq!(messages.len(), messages_count as usize);
@@ -279,7 +279,7 @@ async fn should_persist_and_load_segment_with_messages_with_nowait_confirmation(
     );
     loaded_segment.load_from_disk().await.unwrap();
     let messages = loaded_segment
-        .get_messages(0, messages_count as u32)
+        .get_messages_by_offset(0, messages_count as u32)
         .await
         .unwrap();
     assert_eq!(messages.len(), messages_count as usize);

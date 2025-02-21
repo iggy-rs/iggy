@@ -19,7 +19,9 @@ pub struct Segment {
     pub topic_id: u32,
     pub partition_id: u32,
     pub start_offset: u64,
+    pub start_timestamp: u64, // first message timestamp
     pub end_offset: u64,
+    pub end_timestamp: u64, // last message timestamp
     pub current_offset: u64,
     pub index_path: String,
     pub log_path: String,
@@ -78,7 +80,9 @@ impl Segment {
             topic_id,
             partition_id,
             start_offset,
+            start_timestamp: IggyTimestamp::now().as_micros(),
             end_offset: 0,
+            end_timestamp: IggyTimestamp::now().as_micros(),
             current_offset: start_offset,
             log_path,
             index_path,
@@ -253,7 +257,7 @@ impl Segment {
             IggyExpiry::NeverExpire => false,
             IggyExpiry::ServerDefault => false,
             IggyExpiry::ExpireDuration(expiry) => {
-                let last_messages = self.get_messages(self.current_offset, 1).await;
+                let last_messages = self.get_messages_by_offset(self.current_offset, 1).await;
                 if last_messages.is_err() {
                     return false;
                 }

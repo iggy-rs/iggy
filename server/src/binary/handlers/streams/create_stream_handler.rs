@@ -17,12 +17,10 @@ pub async fn handle(
     system: &SharedSystem,
 ) -> Result<(), IggyError> {
     debug!("session: {session}, command: {command}");
-    let response;
     let stream_id = command.stream_id;
 
-    {
-        let mut system = system.write().await;
-        let stream = system
+    let mut system = system.write().await;
+    let stream = system
             .create_stream(session, command.stream_id, &command.name)
             .await
             .with_error_context(|error| {
@@ -31,10 +29,9 @@ pub async fn handle(
                     stream_id
                 )
             })?;
-        response = mapper::map_stream(stream);
-    }
+    let response = mapper::map_stream(stream);
 
-    let system = system.read().await;
+    let system = system.downgrade();
     system
         .state
         .apply(session.get_user_id(), EntryCommand::CreateStream(command))

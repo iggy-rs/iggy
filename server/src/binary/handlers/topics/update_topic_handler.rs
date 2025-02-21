@@ -16,10 +16,10 @@ pub async fn handle(
     system: &SharedSystem,
 ) -> Result<(), IggyError> {
     debug!("session: {session}, command: {command}");
-    {
-        let mut system = system.write().await;
 
-        let topic = system
+    let mut system = system.write().await;
+
+    let topic = system
             .update_topic(
                 session,
                 &command.stream_id,
@@ -35,13 +35,12 @@ pub async fn handle(
                 "{COMPONENT} (error: {error}) - failed to update topic with id: {}, stream_id: {}, session: {session}",
                 command.topic_id, command.stream_id
             ))?;
-        command.message_expiry = topic.message_expiry;
-        command.max_topic_size = topic.max_topic_size;
-    }
+    command.message_expiry = topic.message_expiry;
+    command.max_topic_size = topic.max_topic_size;
 
     let topic_id = command.topic_id.clone();
     let stream_id = command.stream_id.clone();
-    let system = system.read().await;
+    let system = system.downgrade();
 
     system
         .state

@@ -17,9 +17,9 @@ pub async fn handle(
     system: &SharedSystem,
 ) -> Result<(), IggyError> {
     debug!("session: {session}, command: {command}");
-    {
-        let mut system = system.write().await;
-        system
+
+    let mut system = system.write().await;
+    system
             .change_password(
                 session,
                 &command.user_id,
@@ -33,10 +33,9 @@ pub async fn handle(
                     command.user_id
                 )
             })?;
-    }
 
     // For the security of the system, we hash the password before storing it in metadata.
-    let system = system.read().await;
+    let system = system.downgrade();
     system
         .state
         .apply(

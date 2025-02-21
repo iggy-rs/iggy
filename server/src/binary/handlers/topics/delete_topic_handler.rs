@@ -19,17 +19,15 @@ pub async fn handle(
     let stream_id = command.stream_id.clone();
     let topic_id = command.topic_id.clone();
 
-    {
-        let mut system = system.write().await;
-        system
+    let mut system = system.write().await;
+    system
             .delete_topic(session, &command.stream_id, &command.topic_id)
             .await
             .with_error_context(|error| format!(
                 "{COMPONENT} (error: {error}) - failed to delete topic with ID: {topic_id} in stream with ID: {stream_id}, session: {session}",
             ))?;
-    }
 
-    let system = system.read().await;
+    let system = system.downgrade();
     system
         .state
         .apply(session.get_user_id(), EntryCommand::DeleteTopic(command))

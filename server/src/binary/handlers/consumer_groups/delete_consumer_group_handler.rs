@@ -16,9 +16,9 @@ pub async fn handle(
     system: &SharedSystem,
 ) -> Result<(), IggyError> {
     debug!("session: {session}, command: {command}");
-    {
-        let mut system = system.write().await;
-        system
+
+    let mut system = system.write().await;
+    system
             .delete_consumer_group(
                 session,
                 &command.stream_id,
@@ -29,9 +29,8 @@ pub async fn handle(
                 "{COMPONENT} (error: {error}) - failed to delete consumer group with ID: {} for topic with ID: {} in stream with ID: {} for session: {}",
                 command.group_id, command.topic_id, command.stream_id, session
             ))?;
-    }
 
-    let system = system.read().await;
+    let system = system.downgrade();
     let stream_id = command.stream_id.clone();
     let topic_id = command.topic_id.clone();
     let group_id = command.group_id.clone();

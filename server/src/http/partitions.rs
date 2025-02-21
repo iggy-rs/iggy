@@ -35,9 +35,9 @@ async fn create_partitions(
     command.stream_id = Identifier::from_str_value(&stream_id)?;
     command.topic_id = Identifier::from_str_value(&topic_id)?;
     command.validate()?;
-    {
-        let mut system = state.system.write().await;
-        system
+
+    let mut system = state.system.write().await;
+    system
             .create_partitions(
                 &Session::stateless(identity.user_id, identity.ip_address),
                 &command.stream_id,
@@ -51,9 +51,8 @@ async fn create_partitions(
                     stream_id, topic_id
                 )
             })?;
-    }
 
-    let system = state.system.read().await;
+    let system = system.downgrade();
     system
         .state
         .apply(identity.user_id, EntryCommand::CreatePartitions(command))
@@ -77,9 +76,9 @@ async fn delete_partitions(
     query.stream_id = Identifier::from_str_value(&stream_id)?;
     query.topic_id = Identifier::from_str_value(&topic_id)?;
     query.validate()?;
-    {
-        let mut system = state.system.write().await;
-        system
+
+    let mut system = state.system.write().await;
+    system
             .delete_partitions(
                 &Session::stateless(identity.user_id, identity.ip_address),
                 &query.stream_id.clone(),
@@ -93,9 +92,8 @@ async fn delete_partitions(
                     stream_id, topic_id
                 )
             })?;
-    }
 
-    let system = state.system.read().await;
+    let system = system.downgrade();
     system
         .state
         .apply(

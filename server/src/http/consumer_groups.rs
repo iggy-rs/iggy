@@ -84,10 +84,8 @@ async fn create_consumer_group(
     command.stream_id = Identifier::from_str_value(&stream_id)?;
     command.topic_id = Identifier::from_str_value(&topic_id)?;
     command.validate()?;
-    let consumer_group_details;
-    {
-        let mut system = state.system.write().await;
-        let consumer_group = system
+    let mut system = state.system.write().await;
+    let consumer_group = system
             .create_consumer_group(
                 &Session::stateless(identity.user_id, identity.ip_address),
                 &command.stream_id,
@@ -97,11 +95,11 @@ async fn create_consumer_group(
             )
             .await
             .with_error_context(|error| format!("{COMPONENT} (error: {error}) - failed to create consumer group, stream ID: {}, topic ID: {}, group ID: {:?}", stream_id, topic_id, command.group_id))?;
-        let consumer_group = consumer_group.read().await;
-        consumer_group_details = mapper::map_consumer_group(&consumer_group).await;
-    }
+    let consumer_group = consumer_group.read().await;
+    let consumer_group_details = mapper::map_consumer_group(&consumer_group).await;
+    drop(consumer_group);
 
-    let system = state.system.read().await;
+    let system = system.downgrade();
     system
         .state
         .apply(identity.user_id, EntryCommand::CreateConsumerGroup(command))
@@ -119,9 +117,9 @@ async fn delete_consumer_group(
     let identifier_stream_id = Identifier::from_str_value(&stream_id)?;
     let identifier_topic_id = Identifier::from_str_value(&topic_id)?;
     let identifier_group_id = Identifier::from_str_value(&group_id)?;
-    {
-        let mut system = state.system.write().await;
-        system
+
+    let mut system = state.system.write().await;
+    system
             .delete_consumer_group(
                 &Session::stateless(identity.user_id, identity.ip_address),
                 &identifier_stream_id,
@@ -130,9 +128,8 @@ async fn delete_consumer_group(
             )
             .await
             .with_error_context(|error| format!("{COMPONENT} (error: {error}) - failed to delete consumer group with ID: {group_id} for topic with ID: {topic_id} in stream with ID: {stream_id}"))?;
-    }
 
-    let system = state.system.read().await;
+    let system = system.downgrade();
     system
         .state
         .apply(

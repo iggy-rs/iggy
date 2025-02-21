@@ -16,9 +16,9 @@ pub async fn handle(
     system: &SharedSystem,
 ) -> Result<(), IggyError> {
     debug!("session: {session}, command: {command}");
-    {
-        let mut system = system.write().await;
-        system
+
+    let mut system = system.write().await;
+    system
             .create_partitions(
                 session,
                 &command.stream_id,
@@ -32,9 +32,8 @@ pub async fn handle(
                     command.stream_id, command.topic_id, session
                 )
             })?;
-    }
 
-    let system = system.read().await;
+    let system = system.downgrade();
     let stream_id = command.stream_id.clone();
     let topic_id = command.topic_id.clone();
 

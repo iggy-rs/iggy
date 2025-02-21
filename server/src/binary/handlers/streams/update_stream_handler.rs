@@ -18,18 +18,15 @@ pub async fn handle(
     debug!("session: {session}, command: {command}");
     let stream_id = command.stream_id.clone();
 
-    {
-        let mut system = system.write().await;
-        system
+    let mut system = system.write().await;
+    system
             .update_stream(session, &command.stream_id, &command.name)
             .await
             .with_error_context(|error| {
                 format!("{COMPONENT} (error: {error}) - failed to update stream with id: {stream_id}, session: {session}")
             })?;
-    }
 
-    let system = system.read().await;
-
+    let system = system.downgrade();
     system
         .state
         .apply(session.get_user_id(), EntryCommand::UpdateStream(command))

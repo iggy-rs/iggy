@@ -16,17 +16,16 @@ pub async fn handle(
     system: &SharedSystem,
 ) -> Result<(), IggyError> {
     debug!("session: {session}, command: {command}");
-    {
-        let mut system = system.write().await;
-        system
+
+    let mut system = system.write().await;
+    system
             .update_permissions(session, &command.user_id, command.permissions.clone())
             .await
             .with_error_context(|error| format!("{COMPONENT} (error: {error}) - failed to update permissions for user_id: {}, session: {session}",
                 command.user_id
             ))?;
-    }
 
-    let system = system.read().await;
+    let system = system.downgrade();
     system
         .state
         .apply(

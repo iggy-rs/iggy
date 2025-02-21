@@ -19,11 +19,8 @@ pub async fn handle(
     debug!("session: {session}, command: {command}");
     let stream_id = command.stream_id.clone();
     let topic_id = command.topic_id;
-
-    let response;
-    {
-        let mut system = system.write().await;
-        let topic = system
+    let mut system = system.write().await;
+    let topic = system
             .create_topic(
                 session,
                 &command.stream_id,
@@ -39,12 +36,11 @@ pub async fn handle(
             .with_error_context(|error| format!("{COMPONENT} (error: {error}) - failed to create topic for stream_id: {stream_id}, topic_id: {:?}",
                 topic_id
             ))?;
-        command.message_expiry = topic.message_expiry;
-        command.max_topic_size = topic.max_topic_size;
-        response = mapper::map_topic(topic).await;
-    }
+    command.message_expiry = topic.message_expiry;
+    command.max_topic_size = topic.max_topic_size;
+    let response = mapper::map_topic(topic).await;
 
-    let system = system.read().await;
+    let system = system.downgrade();
     system
         .state
         .apply(session.get_user_id(), EntryCommand::CreateTopic(command))

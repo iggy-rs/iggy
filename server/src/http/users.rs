@@ -87,29 +87,27 @@ async fn create_user(
     Json(command): Json<CreateUser>,
 ) -> Result<Json<UserInfoDetails>, CustomError> {
     command.validate()?;
-    let response;
-    {
-        let mut system = state.system.write().await;
-        let user = system
-            .create_user(
-                &Session::stateless(identity.user_id, identity.ip_address),
-                &command.username,
-                &command.password,
-                command.status,
-                command.permissions.clone(),
+
+    let mut system = state.system.write().await;
+    let user = system
+        .create_user(
+            &Session::stateless(identity.user_id, identity.ip_address),
+            &command.username,
+            &command.password,
+            command.status,
+            command.permissions.clone(),
+        )
+        .await
+        .with_error_context(|error| {
+            format!(
+                "{COMPONENT} (error: {error}) - failed to create user, username: {}",
+                command.username
             )
-            .await
-            .with_error_context(|error| {
-                format!(
-                    "{COMPONENT} (error: {error}) - failed to create user, username: {}",
-                    command.username
-                )
-            })?;
-        response = Json(mapper::map_user(user));
-    }
+        })?;
+    let response = Json(mapper::map_user(user));
 
     // For the security of the system, we hash the password before storing it in metadata.
-    let system = state.system.read().await;
+    let system = system.downgrade();
     system
         .state
         .apply(
@@ -141,25 +139,24 @@ async fn update_user(
 ) -> Result<StatusCode, CustomError> {
     command.user_id = Identifier::from_str_value(&user_id)?;
     command.validate()?;
-    {
-        let mut system = state.system.write().await;
-        system
-            .update_user(
-                &Session::stateless(identity.user_id, identity.ip_address),
-                &command.user_id,
-                command.username.clone(),
-                command.status,
-            )
-            .await
-            .with_error_context(|error| {
-                format!(
-                    "{COMPONENT} (error: {error}) - failed to update user, user ID: {}",
-                    user_id
-                )
-            })?;
-    }
 
-    let system = state.system.read().await;
+    let mut system = state.system.write().await;
+    system
+        .update_user(
+            &Session::stateless(identity.user_id, identity.ip_address),
+            &command.user_id,
+            command.username.clone(),
+            command.status,
+        )
+        .await
+        .with_error_context(|error| {
+            format!(
+                "{COMPONENT} (error: {error}) - failed to update user, user ID: {}",
+                user_id
+            )
+        })?;
+
+    let system = system.downgrade();
     system
         .state
         .apply(identity.user_id, EntryCommand::UpdateUser(command))
@@ -182,24 +179,23 @@ async fn update_permissions(
 ) -> Result<StatusCode, CustomError> {
     command.user_id = Identifier::from_str_value(&user_id)?;
     command.validate()?;
-    {
-        let mut system = state.system.write().await;
-        system
-            .update_permissions(
-                &Session::stateless(identity.user_id, identity.ip_address),
-                &command.user_id,
-                command.permissions.clone(),
-            )
-            .await
-            .with_error_context(|error| {
-                format!(
-                    "{COMPONENT} (error: {error}) - failed to update permissions, user ID: {}",
-                    user_id
-                )
-            })?;
-    }
 
-    let system = state.system.read().await;
+    let mut system = state.system.write().await;
+    system
+        .update_permissions(
+            &Session::stateless(identity.user_id, identity.ip_address),
+            &command.user_id,
+            command.permissions.clone(),
+        )
+        .await
+        .with_error_context(|error| {
+            format!(
+                "{COMPONENT} (error: {error}) - failed to update permissions, user ID: {}",
+                user_id
+            )
+        })?;
+
+    let system = system.downgrade();
     system
         .state
         .apply(identity.user_id, EntryCommand::UpdatePermissions(command))
@@ -222,26 +218,25 @@ async fn change_password(
 ) -> Result<StatusCode, CustomError> {
     command.user_id = Identifier::from_str_value(&user_id)?;
     command.validate()?;
-    {
-        let mut system = state.system.write().await;
-        system
-            .change_password(
-                &Session::stateless(identity.user_id, identity.ip_address),
-                &command.user_id,
-                &command.current_password,
-                &command.new_password,
+
+    let mut system = state.system.write().await;
+    system
+        .change_password(
+            &Session::stateless(identity.user_id, identity.ip_address),
+            &command.user_id,
+            &command.current_password,
+            &command.new_password,
+        )
+        .await
+        .with_error_context(|error| {
+            format!(
+                "{COMPONENT} (error: {error}) - failed to change password, user ID: {}",
+                user_id
             )
-            .await
-            .with_error_context(|error| {
-                format!(
-                    "{COMPONENT} (error: {error}) - failed to change password, user ID: {}",
-                    user_id
-                )
-            })?;
-    }
+        })?;
 
     // For the security of the system, we hash the password before storing it in metadata.
-    let system = state.system.read().await;
+    let system = system.downgrade();
     system
         .state
         .apply(
@@ -269,20 +264,19 @@ async fn delete_user(
     Path(user_id): Path<String>,
 ) -> Result<StatusCode, CustomError> {
     let identifier_user_id = Identifier::from_str_value(&user_id)?;
-    {
-        let mut system = state.system.write().await;
-        system
-            .delete_user(
-                &Session::stateless(identity.user_id, identity.ip_address),
-                &identifier_user_id,
-            )
-            .await
-            .with_error_context(|error| {
-                format!("{COMPONENT} (error: {error}) - failed to delete user with ID: {user_id}")
-            })?;
-    }
 
-    let system = state.system.read().await;
+    let mut system = state.system.write().await;
+    system
+        .delete_user(
+            &Session::stateless(identity.user_id, identity.ip_address),
+            &identifier_user_id,
+        )
+        .await
+        .with_error_context(|error| {
+            format!("{COMPONENT} (error: {error}) - failed to delete user with ID: {user_id}")
+        })?;
+
+    let system = system.downgrade();
     system
         .state
         .apply(

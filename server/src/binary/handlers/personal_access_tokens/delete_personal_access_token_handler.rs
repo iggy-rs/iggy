@@ -18,17 +18,15 @@ pub async fn handle(
     debug!("session: {session}, command: {command}");
     let token_name = command.name.clone();
 
-    {
-        let mut system = system.write().await;
-        system
+    let mut system = system.write().await;
+    system
             .delete_personal_access_token(session, &command.name)
             .await
             .with_error_context(|error| {format!(
                 "{COMPONENT} (error: {error}) - failed to delete personal access token with name: {token_name}, session: {session}"
             )})?;
-    }
 
-    let system = system.read().await;
+    let system = system.downgrade();
     system
         .state
         .apply(

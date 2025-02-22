@@ -29,7 +29,7 @@ test-case = "3.3.1"
 tokio = { version = "1.43.0", features = ["full"] }
 tracing-subscriber = { version = "0.3.19", features = ["fmt", "env-filter"] }
 twox-hash = { version = "2.1.0", features = ["xxhash32"] }
-uuid = { version = "1.13.2", features = ["v7", "fast-rng", "zerocopy"] }
+uuid = { version = "1.14.0", features = ["v7", "fast-rng", "zerocopy"] }
 zip = "2.2.2"
 
 # Some tests are failing in CI due to lack of IPv6 interfaces

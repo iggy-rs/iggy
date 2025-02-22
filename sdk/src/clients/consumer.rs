@@ -5,7 +5,7 @@ use crate::error::IggyError;
 use crate::identifier::{IdKind, Identifier};
 use crate::locking::{IggySharedMut, IggySharedMutFn};
 use crate::messages::poll_messages::{PollingKind, PollingStrategy};
-use crate::models::messages::{PolledMessage, PolledMessages};
+use crate::models::batch::IggyBatch;
 use crate::utils::byte_size::IggyByteSize;
 use crate::utils::crypto::EncryptorKind;
 use crate::utils::duration::IggyDuration;
@@ -25,10 +25,10 @@ use tokio::time;
 use tokio::time::sleep;
 use tracing::{error, info, trace, warn};
 
-const EMPTY_MESSAGES: Vec<PolledMessage> = Vec::new();
+//const EMPTY_MESSAGES: Vec<PolledMessage> = Vec::new();
 
 const ORDERING: std::sync::atomic::Ordering = std::sync::atomic::Ordering::SeqCst;
-type PollMessagesFuture = Pin<Box<dyn Future<Output = Result<PolledMessages, IggyError>>>>;
+type PollMessagesFuture = Pin<Box<dyn Future<Output = Result<IggyBatch, IggyError>>>>;
 
 /// The auto-commit configuration for storing the offset on the server.
 #[derive(Debug, PartialEq, Copy, Clone)]
@@ -102,7 +102,7 @@ pub struct IggyConsumer {
     last_consumed_offsets: Arc<DashMap<u32, AtomicU64>>,
     current_offsets: Arc<DashMap<u32, AtomicU64>>,
     poll_future: Option<PollMessagesFuture>,
-    buffered_messages: VecDeque<PolledMessage>,
+    buffered_messages: VecDeque<IggyBatch>,
     encryptor: Option<Arc<EncryptorKind>>,
     store_offset_sender: flume::Sender<(u32, u64)>,
     store_offset_after_each_message: bool,
@@ -568,7 +568,7 @@ impl IggyConsumer {
 
     fn create_poll_messages_future(
         &self,
-    ) -> impl Future<Output = Result<PolledMessages, IggyError>> {
+    ) -> impl Future<Output = Result<IggyBatch, IggyError>> {
         let stream_id = self.stream_id.clone();
         let topic_id = self.topic_id.clone();
         let partition_id = self.partition_id;
@@ -611,7 +611,10 @@ impl IggyConsumer {
                     auto_commit_after_polling,
                 )
                 .await;
+            polled_messages
 
+            //TODO: Fix me
+            /*
             if let Ok(mut polled_messages) = polled_messages {
                 if polled_messages.messages.is_empty() {
                     return Ok(polled_messages);
@@ -709,6 +712,7 @@ impl IggyConsumer {
                 sleep(retry_interval.get_duration()).await;
             }
             Err(error)
+            */
         }
     }
 
@@ -788,13 +792,13 @@ impl IggyConsumer {
 }
 
 pub struct ReceivedMessage {
-    pub message: PolledMessage,
+    pub message: IggyBatch,
     pub current_offset: u64,
     pub partition_id: u32,
 }
 
 impl ReceivedMessage {
-    pub fn new(message: PolledMessage, current_offset: u64, partition_id: u32) -> Self {
+    pub fn new(message: IggyBatch, current_offset: u64, partition_id: u32) -> Self {
         Self {
             message,
             current_offset,
@@ -809,6 +813,8 @@ impl Stream for IggyConsumer {
     fn poll_next(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
         let partition_id = self.current_partition_id.load(ORDERING);
         if let Some(message) = self.buffered_messages.pop_front() {
+            //TODO: Fix me
+            /*
             {
                 if let Some(last_consumed_offset_entry) =
                     self.last_consumed_offsets.get(&partition_id)
@@ -929,6 +935,7 @@ impl Stream for IggyConsumer {
                 }
                 Poll::Pending => return Poll::Pending,
             }
+        */
         }
 
         Poll::Pending

@@ -61,7 +61,7 @@ tokio-rustls = { version = "0.26.1" }
 toml = "0.8.20"
 tracing = { version = "0.1.41" }
 trait-variant = { version = "0.1.2" }
-uuid = { version = "1.13.2", features = ["v7", "fast-rng", "zerocopy"] }
+uuid = { version = "1.14.0", features = ["v7", "fast-rng", "zerocopy"] }
 webpki-roots = { version = "0.26.8" }
 
 [build-dependencies]

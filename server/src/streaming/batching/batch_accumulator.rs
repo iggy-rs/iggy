@@ -47,6 +47,18 @@ impl BatchAccumulator {
         self.messages[start_idx..end_idx].to_vec()
     }
 
+    pub fn get_messages_by_timestamp(
+        &self,
+        start_timestamp: u64,
+        count: usize,
+    ) -> Vec<Arc<RetainedMessage>> {
+        let start_idx = self
+            .messages
+            .partition_point(|msg| msg.timestamp < start_timestamp);
+        let end_idx = std::cmp::min(start_idx + count, self.messages.len());
+        self.messages[start_idx..end_idx].to_vec()
+    }
+
     pub fn is_empty(&self) -> bool {
         self.messages.is_empty()
     }

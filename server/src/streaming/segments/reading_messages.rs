@@ -23,7 +23,39 @@ impl Segment {
         self.current_offset - self.start_offset + 1
     }
 
-    pub async fn get_messages(
+    pub async fn get_messages_by_timestamp(
+        &self,
+        start_timestamp: u64,
+        count: usize,
+    ) -> Result<Vec<Arc<RetainedMessage>>, IggyError> {
+        if count == 0 {
+            return Ok(Vec::new());
+        }
+
+        let mut messages = Vec::with_capacity(count);
+        let mut remaining = count;
+
+        let disk_messages = self
+            .load_messages_from_disk_by_timestamp(start_timestamp, remaining)
+            .await?;
+        let disk_count = disk_messages.len();
+        messages.extend(disk_messages);
+        remaining -= disk_count;
+
+        if remaining > 0 {
+            if let Some(batch_accumulator) = &self.unsaved_messages {
+                let buffer_messages =
+                    batch_accumulator.get_messages_by_timestamp(start_timestamp, remaining);
+                messages.extend(buffer_messages);
+            }
+        }
+
+        // Ensure we return exactly requested count (truncate if buffer had more)
+        messages.truncate(count);
+        Ok(messages)
+    }
+
+    pub async fn get_messages_by_offset(
         &self,
         mut offset: u64,
         count: u32,
@@ -84,7 +116,7 @@ impl Segment {
     }
 
     pub async fn get_all_messages(&self) -> Result<Vec<Arc<RetainedMessage>>, IggyError> {
-        self.get_messages(self.start_offset, self.get_messages_count() as u32)
+        self.get_messages_by_offset(self.start_offset, self.get_messages_count() as u32)
             .await
     }
 
@@ -175,6 +207,44 @@ impl Segment {
 
         trace!("Loaded index: {:?}", index);
         Ok(index)
+    }
+
+    async fn load_messages_from_disk_by_timestamp(
+        &self,
+        start_timestamp: u64,
+        count: usize,
+    ) -> Result<Vec<Arc<RetainedMessage>>, IggyError> {
+        let index = self.load_index_for_timestamp(start_timestamp).await?;
+        let Some(index) = index else {
+            return Ok(Vec::new());
+        };
+
+        let index_range = IndexRange {
+            start: index,
+            end: Index {
+                offset: u32::MAX,
+                position: u32::MAX,
+                timestamp: u64::MAX,
+            },
+        };
+        let batches = self.load_batches_by_range(&index_range).await?;
+
+        let mut messages = Vec::with_capacity(count);
+        for batch in batches {
+            for msg in batch.into_messages_iter() {
+                if msg.timestamp >= start_timestamp {
+                    messages.push(Arc::new(msg));
+                    if messages.len() >= count {
+                        break;
+                    }
+                }
+            }
+            if messages.len() >= count {
+                break;
+            }
+        }
+
+        Ok(messages)
     }
 
     /// Loads and verifies message checksums from the log file.

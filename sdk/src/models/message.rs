@@ -6,13 +6,13 @@ use serde_with::base64::Base64;
 use serde_with::serde_as;
 use std::collections::HashMap;
 
-pub const IGGY_MESSAGE_METADATA: u64 = 16 + 4 + 4;
+pub const IGGY_MESSAGE_METADATA: u64 = 4 + 4 + 16; // offset_delta timestamp_delta + id
 
 /// The single message that is polled from the partition.
 /// It consists of the following fields:
 /// - `id`: the identifier of the message.
-/// - `offset_delta`: offset relative to the batch base offset
-/// - `timestamp_delta`: timestamp relative to batch base timestamp
+/// - `offset`: offset 
+/// - `timestamp`: timestamp 
 /// - `payload`: the binary payload of the message.
 #[serde_as]
 #[derive(Default, Debug, serde::Serialize, serde::Deserialize)]
@@ -20,14 +20,14 @@ pub struct IggyMessage {
     /// The identifier of the message.
     pub id: u128,
     /// The offset of the message.
-    pub offset_delta: u32,
+    pub offset: u64,
     /// The timestamp of the message.
-    pub timestamp_delta: u32,
-    /// The optional headers of the message.
-    pub headers: Option<HashMap<HeaderKey, HeaderValue>>,
+    pub timestamp: u64,
     /// The binary payload of the message.
     #[serde_as(as = "Base64")]
     pub payload: Vec<u8>,
+    /// The optional headers of the message.
+    pub headers: Option<HashMap<HeaderKey, HeaderValue>>,
 }
 
 impl std::fmt::Display for IggyMessage {

@@ -8,7 +8,7 @@ use crate::models::header::{HeaderKey, HeaderValue};
 use crate::utils::byte_size::IggyByteSize;
 use crate::utils::sizeable::Sizeable;
 use crate::validatable::Validatable;
-use bytes::{BufMut, Bytes, BytesMut};
+use bytes::{Buf, BufMut, Bytes, BytesMut};
 use serde::{Deserialize, Serialize};
 use serde_with::base64::Base64;
 use serde_with::serde_as;
@@ -437,6 +437,7 @@ pub(crate) fn as_bytes(
     let messages_size = messages
         .iter()
         .map(Message::get_size_bytes)
+        .map(|size| size + 16u64.into())
         .sum::<IggyByteSize>();
     let key_bytes = partitioning.to_bytes();
     let stream_id_bytes = stream_id.to_bytes();
@@ -451,7 +452,17 @@ pub(crate) fn as_bytes(
     bytes.put_slice(&topic_id_bytes);
     bytes.put_slice(&key_bytes);
     for message in messages {
-        bytes.put_slice(&message.to_bytes());
+        //TODO: create a writer method on the `Message` and in the future
+        // once the `Message` struct is dropped on the `IggyMessage`.
+        let headers_len = header::get_headers_size_bytes(&message.headers).as_bytes_u64();
+        let payload_len = message.payload.len() as u64;
+        let total_len = headers_len + payload_len;
+
+        bytes.extend_from_slice(&0u32.to_le_bytes()); // offset_delta
+        bytes.extend_from_slice(&0u32.to_le_bytes()); // timestamp_delta
+        bytes.extend_from_slice(&total_len.to_le_bytes());
+        bytes.extend_from_slice(&payload_len.to_le_bytes());
+        bytes.extend_from_slice(&message.id.to_le_bytes());
     }
 
     bytes.freeze()

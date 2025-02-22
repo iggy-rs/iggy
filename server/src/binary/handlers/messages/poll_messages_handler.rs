@@ -32,7 +32,6 @@ pub async fn handle(
             "{COMPONENT} (error: {error}) - failed to poll messages for consumer: {}, stream_id: {}, topic_id: {}, partition_id: {:?}, session: {}.",
             command.consumer, command.stream_id, command.topic_id, command.partition_id, session
         ))?;
-    let messages = mapper::map_polled_messages(&messages);
-    sender.send_ok_response(&messages).await?;
+    sender.send_ok_response(&[]).await?;
     Ok(())
 }

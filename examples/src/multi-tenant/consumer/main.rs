@@ -108,7 +108,7 @@ async fn main() -> anyhow::Result<(), Box<dyn Error>> {
     }
 
     print_info("Disconnecting root client");
-    root_client.disconnect().await?;
+    root_client.shutdown().await?;
 
     print_info("Creating clients for each tenant");
     let mut tenants = Vec::new();

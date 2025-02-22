@@ -12,6 +12,7 @@ use iggy::error::IggyError;
 use iggy::locking::IggySharedMutFn;
 use iggy::messages::poll_messages::{PollingKind, PollingStrategy};
 use iggy::messages::send_messages::{Message, Partitioning, PartitioningKind};
+use iggy::models::batch::IggyBatch;
 use iggy::models::messages::PolledMessages;
 use iggy::utils::byte_size::IggyByteSize;
 use iggy::utils::expiry::IggyExpiry;
@@ -77,7 +78,7 @@ impl Topic {
         &self,
         batch_size: IggyByteSize,
         partitioning: Partitioning,
-        messages: Vec<Message>,
+        batch: IggyBatch,
         confirmation: Option<Confirmation>,
     ) -> Result<(), IggyError> {
         if !self.has_partitions() {
@@ -90,9 +91,11 @@ impl Topic {
             return Err(IggyError::TopicFull(self.topic_id, self.stream_id));
         }
 
+        /*
         if messages.is_empty() {
             return Ok(());
         }
+        */
 
         let partition_id = match partitioning.kind {
             PartitioningKind::Balanced => self.get_next_partition_id(),
@@ -107,7 +110,7 @@ impl Topic {
         };
 
         let appendable_batch_info = AppendableBatchInfo::new(batch_size, partition_id);
-        self.append_messages_to_partition(appendable_batch_info, messages, confirmation)
+        self.append_messages_to_partition(appendable_batch_info, batch, confirmation)
             .await
     }
 
@@ -132,7 +135,7 @@ impl Topic {
     async fn append_messages_to_partition(
         &self,
         appendable_batch_info: AppendableBatchInfo,
-        messages: Vec<Message>,
+        batch: IggyBatch,
         confirmation: Option<Confirmation>,
     ) -> Result<(), IggyError> {
         let partition = self.partitions.get(&appendable_batch_info.partition_id);
@@ -146,7 +149,7 @@ impl Topic {
             })?
             .write()
             .await
-            .append_messages(appendable_batch_info, messages, confirmation)
+            .append_messages(appendable_batch_info, batch, confirmation)
             .await
             .with_error_context(|error| {
                 format!("{COMPONENT} (error: {error}) - failed to append messages")

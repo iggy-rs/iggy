@@ -1,5 +1,3 @@
-use super::message_batch::{RetainedMessageBatch, RETAINED_BATCH_HEADER_LEN};
-use crate::streaming::models::messages::RetainedMessage;
 use bytes::BytesMut;
 use iggy::utils::byte_size::IggyByteSize;
 use iggy::utils::sizeable::Sizeable;

@@ -1,7 +1,4 @@
 use super::indexes::*;
-use crate::streaming::batching::message_batch::RetainedMessageBatch;
-use crate::streaming::batching::{batch_filter::BatchItemizer, iterator::IntoMessagesIterator};
-use crate::streaming::models::messages::RetainedMessage;
 use crate::streaming::segments::segment::Segment;
 use error_set::ErrContext;
 use iggy::{
@@ -27,7 +24,9 @@ impl Segment {
         &self,
         start_timestamp: u64,
         count: usize,
-    ) -> Result<Vec<Arc<RetainedMessage>>, IggyError> {
+    ) -> Result<Vec<Arc<()>>, IggyError> {
+        //TODO: Fix me
+        /*
         if count == 0 {
             return Ok(Vec::new());
         }
@@ -53,13 +52,17 @@ impl Segment {
         // Ensure we return exactly requested count (truncate if buffer had more)
         messages.truncate(count);
         Ok(messages)
+        */
+        todo!()
     }
 
     pub async fn get_messages_by_offset(
         &self,
         mut offset: u64,
         count: u32,
-    ) -> Result<Vec<Arc<RetainedMessage>>, IggyError> {
+    ) -> Result<Vec<Arc<()>>, IggyError> {
+        //TODO: Fix me
+        /* 
         if count == 0 {
             return Ok(EMPTY_MESSAGES.into_iter().map(Arc::new).collect());
         }
@@ -113,21 +116,33 @@ impl Segment {
         messages.extend(buffer_messages);
 
         Ok(messages)
+        */
+        todo!()
     }
 
-    pub async fn get_all_messages(&self) -> Result<Vec<Arc<RetainedMessage>>, IggyError> {
+    pub async fn get_all_messages(&self) -> Result<Vec<Arc<()>>, IggyError> {
+        //TODO: Fix me
+        /*
         self.get_messages_by_offset(self.start_offset, self.get_messages_count() as u32)
             .await
+            */
+            todo!()
     }
 
-    pub async fn get_all_batches(&self) -> Result<Vec<RetainedMessageBatch>, IggyError> {
+    pub async fn get_all_batches(&self) -> Result<Vec<()>, IggyError> {
+        //TODO: Fix me
+        /* 
         self.load_batches_by_range(&IndexRange::max_range()).await
+        */
+        todo!()
     }
 
     pub async fn get_newest_batches_by_size(
         &self,
         size_bytes: u64,
-    ) -> Result<Vec<RetainedMessageBatch>, IggyError> {
+    ) -> Result<Vec<()>, IggyError> {
+        //TODO: Fix me
+        /*
         let mut batches = Vec::new();
         let mut total_size_bytes = IggyByteSize::default();
         self.log_reader
@@ -152,22 +167,30 @@ impl Segment {
             total_size_bytes.as_human_string(),
         );
         Ok(batches)
+        */
+        todo!()
     }
 
     fn load_messages_from_unsaved_buffer(
         &self,
         start_offset: u64,
         end_offset: u64,
-    ) -> Vec<Arc<RetainedMessage>> {
+    ) -> Vec<Arc<()>> {
+        //TODO: Fix me
+        /*
         let batch_accumulator = self.unsaved_messages.as_ref().unwrap();
         batch_accumulator.get_messages_by_offset(start_offset, end_offset)
+        */
+        todo!()
     }
 
     /// Load message batches given an index range.
     pub async fn load_batches_by_range(
         &self,
         index_range: &IndexRange,
-    ) -> Result<Vec<RetainedMessageBatch>, IggyError> {
+    ) -> Result<Vec<()>, IggyError> {
+        //TODO: Fix me
+        /*
         trace!("Loading message batches for index range: {:?}", index_range);
 
         let batches = self
@@ -185,6 +208,8 @@ impl Segment {
 
         trace!("Loaded {} message batches.", batches.len());
         Ok(batches)
+        */
+        todo!()
     }
 
     pub async fn load_index_for_timestamp(
@@ -213,7 +238,9 @@ impl Segment {
         &self,
         start_timestamp: u64,
         count: usize,
-    ) -> Result<Vec<Arc<RetainedMessage>>, IggyError> {
+    ) -> Result<Vec<Arc<()>>, IggyError> {
+        //TODO Fix me
+        /*
         let index = self.load_index_for_timestamp(start_timestamp).await?;
         let Some(index) = index else {
             return Ok(Vec::new());
@@ -245,6 +272,8 @@ impl Segment {
         }
 
         Ok(messages)
+        */
+        todo!()
     }
 
     /// Loads and verifies message checksums from the log file.
@@ -298,7 +327,9 @@ impl Segment {
         &self,
         start_offset: u64,
         end_offset: u64,
-    ) -> Result<Vec<Arc<RetainedMessage>>, IggyError> {
+    ) -> Result<Vec<Arc<()>>, IggyError> {
+        // TODO: Fix me
+        /*
         trace!(
             "Loading messages from disk, start offset: {}, end offset: {}, current offset: {}...",
             start_offset,
@@ -353,6 +384,8 @@ impl Segment {
             }
             None => Ok(EMPTY_MESSAGES.into_iter().map(Arc::new).collect()),
         }
+        */
+        todo!()
     }
 
     async fn load_messages_from_segment_file(
@@ -360,7 +393,9 @@ impl Segment {
         index_range: &IndexRange,
         start_offset: u64,
         end_offset: u64,
-    ) -> Result<Vec<Arc<RetainedMessage>>, IggyError> {
+    ) -> Result<Vec<Arc<()>>, IggyError> {
+        //TODO: Fix me
+        /*
         trace!(
             "Loading messages from disk, index range: {:?}, start offset: {}, end offset: {}.",
             index_range,
@@ -388,5 +423,7 @@ impl Segment {
         );
 
         Ok(messages.into_iter().map(Arc::new).collect())
+        */
+        todo!()
     }
 }

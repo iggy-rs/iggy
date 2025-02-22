@@ -5,15 +5,16 @@ use crate::streaming::systems::system::SharedSystem;
 use anyhow::Result;
 use error_set::ErrContext;
 use iggy::error::IggyError;
-use iggy::messages::send_messages::SendMessages;
 use tracing::debug;
 
 pub async fn handle(
-    command: SendMessages,
+    command: iggy::messages::send_messages_server::SendMessages,
     sender: &mut SenderKind,
     session: &Session,
     system: &SharedSystem,
 ) -> Result<(), IggyError> {
+    //TODO: Fix me
+    /*
     debug!("session: {session}, command: {command}");
     let system = system.read().await;
     let stream_id = command.stream_id.clone();
@@ -32,4 +33,6 @@ pub async fn handle(
         })?;
     sender.send_empty_ok_response().await?;
     Ok(())
+    */
+    todo!();
 }

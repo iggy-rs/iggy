@@ -1,10 +1,10 @@
+pub mod batch;
 pub mod client_info;
 pub mod consumer_group;
 pub mod consumer_offset_info;
 pub mod header;
 pub mod identity_info;
 pub mod message;
-pub mod batch;
 pub mod partition;
 pub mod permissions;
 pub mod personal_access_token;

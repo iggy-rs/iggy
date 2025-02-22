@@ -7,9 +7,8 @@ use error_set::ErrContext;
 use iggy::confirmation::Confirmation;
 use iggy::consumer::Consumer;
 use iggy::messages::poll_messages::PollingStrategy;
-use iggy::messages::send_messages::Message;
 use iggy::messages::send_messages::Partitioning;
-use iggy::models::messages::{PolledMessage, PolledMessages};
+use iggy::models::batch::IggyBatch;
 use iggy::utils::byte_size::IggyByteSize;
 use iggy::utils::sizeable::Sizeable;
 use iggy::{error::IggyError, identifier::Identifier};
@@ -24,7 +23,9 @@ impl System {
         topic_id: &Identifier,
         partition_id: Option<u32>,
         args: PollingArgs,
-    ) -> Result<PolledMessages, IggyError> {
+    ) -> Result<IggyBatch, IggyError> {
+        //TODO:: Fix me
+        /*
         self.ensure_authenticated(session)?;
         if args.count == 0 {
             return Err(IggyError::InvalidMessagesCount);
@@ -102,6 +103,8 @@ impl System {
         }
         polled_messages.messages = decrypted_messages;
         Ok(polled_messages)
+        */
+        todo!();
     }
 
     pub async fn append_messages(
@@ -110,7 +113,7 @@ impl System {
         stream_id: Identifier,
         topic_id: Identifier,
         partitioning: Partitioning,
-        messages: Vec<Message>,
+        batch: IggyBatch,
         confirmation: Option<Confirmation>,
     ) -> Result<(), IggyError> {
         self.ensure_authenticated(session)?;
@@ -126,6 +129,8 @@ impl System {
             topic.topic_id
         ))?;
 
+        //TODO: Fix me
+        /*
         let mut batch_size_bytes = IggyByteSize::default();
         let mut messages = messages;
         if let Some(encryptor) = &self.encryptor {
@@ -149,17 +154,21 @@ impl System {
                 .map(|msg| msg.get_size_bytes())
                 .sum::<IggyByteSize>();
         }
+        */
 
+        /*
         if let Some(memory_tracker) = CacheMemoryTracker::get_instance() {
             if !memory_tracker.will_fit_into_cache(batch_size_bytes) {
                 self.clean_cache(batch_size_bytes).await;
             }
         }
-        let messages_count = messages.len() as u64;
+        */
+        let batch_size_bytes = batch.get_size_bytes();
         topic
-            .append_messages(batch_size_bytes, partitioning, messages, confirmation)
+            .append_messages(batch_size_bytes, partitioning, batch, confirmation)
             .await?;
-        self.metrics.increment_messages(messages_count);
+        //TODO: Fix me
+        //self.metrics.increment_messages(messages_count);
         Ok(())
     }
 

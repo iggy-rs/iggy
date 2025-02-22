@@ -11,8 +11,8 @@ pub const IGGY_MESSAGE_METADATA: u64 = 4 + 4 + 16; // offset_delta timestamp_del
 /// The single message that is polled from the partition.
 /// It consists of the following fields:
 /// - `id`: the identifier of the message.
-/// - `offset`: offset 
-/// - `timestamp`: timestamp 
+/// - `offset`: offset
+/// - `timestamp`: timestamp
 /// - `payload`: the binary payload of the message.
 #[serde_as]
 #[derive(Default, Debug, serde::Serialize, serde::Deserialize)]

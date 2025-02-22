@@ -3,6 +3,7 @@ use crate::command::{Command, SEND_MESSAGES_CODE};
 use crate::error::IggyError;
 use crate::identifier::Identifier;
 use crate::messages::{MAX_HEADERS_SIZE, MAX_PAYLOAD_SIZE};
+use crate::models::batch::{IggyHeader, IGGY_BATCH_OVERHEAD};
 use crate::models::header;
 use crate::models::header::{HeaderKey, HeaderValue};
 use crate::utils::byte_size::IggyByteSize;
@@ -437,20 +438,28 @@ pub(crate) fn as_bytes(
     let messages_size = messages
         .iter()
         .map(Message::get_size_bytes)
-        .map(|size| size + 16u64.into())
+        .map(|size| size + 24u64.into())
         .sum::<IggyByteSize>();
     let key_bytes = partitioning.to_bytes();
     let stream_id_bytes = stream_id.to_bytes();
     let topic_id_bytes = topic_id.to_bytes();
     let mut bytes = BytesMut::with_capacity(
-        stream_id_bytes.len()
+        8 + IGGY_BATCH_OVERHEAD as usize
+            + stream_id_bytes.len()
             + topic_id_bytes.len()
             + key_bytes.len()
             + messages_size.as_bytes_usize(),
     );
+    let metadata_len = key_bytes.len() + stream_id_bytes.len() + topic_id_bytes.len();
+    let metadata_len = metadata_len as u32;
+
+    bytes.put_slice(&metadata_len.to_le_bytes());
     bytes.put_slice(&stream_id_bytes);
     bytes.put_slice(&topic_id_bytes);
     bytes.put_slice(&key_bytes);
+
+    let header = IggyHeader::default();
+    bytes.put_slice(&header.as_bytes());
     for message in messages {
         //TODO: create a writer method on the `Message` and in the future
         // once the `Message` struct is dropped on the `IggyMessage`.
@@ -463,6 +472,15 @@ pub(crate) fn as_bytes(
         bytes.extend_from_slice(&total_len.to_le_bytes());
         bytes.extend_from_slice(&payload_len.to_le_bytes());
         bytes.extend_from_slice(&message.id.to_le_bytes());
+        bytes.extend_from_slice(&message.payload);
+
+        if let Some(headers) = &message.headers {
+            let headers_bytes = headers.to_bytes();
+            bytes.put_u32_le(headers_bytes.len() as u32);
+            bytes.put_slice(&headers_bytes);
+        } else {
+            bytes.put_u32_le(0);
+        }
     }
 
     bytes.freeze()

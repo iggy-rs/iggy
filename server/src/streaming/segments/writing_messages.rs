@@ -1,15 +1,13 @@
 use super::indexes::*;
 use crate::streaming::batching::batch_accumulator::BatchAccumulator;
 use crate::streaming::batching::message_batch::RETAINED_BATCH_HEADER_LEN;
-use crate::streaming::models::messages::RetainedMessage;
 use crate::streaming::segments::segment::Segment;
 use error_set::ErrContext;
-use iggy::confirmation::Confirmation;
+use iggy::{confirmation::Confirmation, models::batch::IggyBatch};
 use iggy::error::IggyError;
 use iggy::utils::byte_size::IggyByteSize;
 use iggy::utils::sizeable::Sizeable;
 use std::sync::atomic::Ordering;
-use std::sync::Arc;
 use tracing::{info, trace};
 
 impl Segment {
@@ -17,7 +15,7 @@ impl Segment {
         &mut self,
         batch_size: IggyByteSize,
         messages_count: u32,
-        batch: &[Arc<RetainedMessage>],
+        batch: IggyBatch,
     ) -> Result<(), IggyError> {
         if self.is_closed {
             return Err(IggyError::SegmentClosed(
@@ -25,14 +23,15 @@ impl Segment {
                 self.partition_id,
             ));
         }
+        let messages_count = batch.header.last_offset_delta as usize;
         let messages_cap = std::cmp::max(
             self.config.partition.messages_required_to_save as usize,
-            batch.len(),
+            messages_count
         );
         if self.current_offset == 0 {
-            self.start_timestamp = batch.first().unwrap().timestamp;
+            self.start_timestamp = batch.header.base_timestamp;
         }
-        let batch_base_offset = batch.first().unwrap().offset;
+        let batch_base_offset = batch.header.base_offset;
         let batch_accumulator = self
             .unsaved_messages
             .get_or_insert_with(|| BatchAccumulator::new(batch_base_offset, messages_cap));

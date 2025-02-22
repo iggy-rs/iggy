@@ -12,7 +12,6 @@ use iggy::consumer_offsets::get_consumer_offset::GetConsumerOffset;
 use iggy::consumer_offsets::store_consumer_offset::StoreConsumerOffset;
 use iggy::error::IggyError;
 use iggy::messages::poll_messages::PollMessages;
-use iggy::messages::send_messages::SendMessages;
 use iggy::partitions::create_partitions::CreatePartitions;
 use iggy::partitions::delete_partitions::DeletePartitions;
 use iggy::personal_access_tokens::create_personal_access_token::CreatePersonalAccessToken;
@@ -74,7 +73,7 @@ pub enum ServerCommand {
     CreatePersonalAccessToken(CreatePersonalAccessToken),
     DeletePersonalAccessToken(DeletePersonalAccessToken),
     LoginWithPersonalAccessToken(LoginWithPersonalAccessToken),
-    SendMessages(SendMessages),
+    SendMessages(iggy::messages::send_messages_server::SendMessages),
     PollMessages(PollMessages),
     FlushUnsavedBuffer(FlushUnsavedBuffer),
     GetConsumerOffset(GetConsumerOffset),
@@ -103,8 +102,8 @@ pub enum ServerCommand {
     GetSnapshotFile(GetSnapshot),
 }
 
-impl BytesSerializable for ServerCommand {
-    fn to_bytes(&self) -> Bytes {
+impl ServerCommand {
+    pub fn to_bytes(&self) -> Bytes {
         match self {
             ServerCommand::Ping(payload) => as_bytes(payload),
             ServerCommand::GetStats(payload) => as_bytes(payload),
@@ -154,14 +153,7 @@ impl BytesSerializable for ServerCommand {
         }
     }
 
-    fn from_bytes(bytes: Bytes) -> Result<Self, IggyError> {
-        let code = u32::from_le_bytes(
-            bytes[..4]
-                .try_into()
-                .with_error_context(|error| format!("failed to decode command from bytes. {error}"))
-                .map_err(|_| IggyError::InvalidNumberEncoding)?,
-        );
-        let payload = bytes.slice(4..);
+    pub fn from_code_and_payload(code: u32, payload: Bytes) -> Result<Self, IggyError> {
         match code {
             PING_CODE => Ok(ServerCommand::Ping(Ping::from_bytes(payload)?)),
             GET_STATS_CODE => Ok(ServerCommand::GetStats(GetStats::from_bytes(payload)?)),
@@ -195,9 +187,9 @@ impl BytesSerializable for ServerCommand {
                     LoginWithPersonalAccessToken::from_bytes(payload)?,
                 ))
             }
-            SEND_MESSAGES_CODE => Ok(ServerCommand::SendMessages(SendMessages::from_bytes(
-                payload,
-            )?)),
+            SEND_MESSAGES_CODE => Ok(ServerCommand::SendMessages(
+                iggy::messages::send_messages_server::SendMessages::from_bytes(payload)?,
+            )),
             POLL_MESSAGES_CODE => Ok(ServerCommand::PollMessages(PollMessages::from_bytes(
                 payload,
             )?)),
@@ -521,11 +513,6 @@ mod tests {
             &LoginWithPersonalAccessToken::default(),
         );
         assert_serialized_as_bytes_and_deserialized_from_bytes(
-            &ServerCommand::SendMessages(SendMessages::default()),
-            SEND_MESSAGES_CODE,
-            &SendMessages::default(),
-        );
-        assert_serialized_as_bytes_and_deserialized_from_bytes(
             &ServerCommand::PollMessages(PollMessages::default()),
             POLL_MESSAGES_CODE,
             &PollMessages::default(),
@@ -674,10 +661,12 @@ mod tests {
         payload: &dyn Command,
     ) {
         let payload = payload.to_bytes();
-        let mut bytes = BytesMut::with_capacity(4 + payload.len());
-        bytes.put_u32_le(command_id);
+        let mut bytes = BytesMut::with_capacity(payload.len());
         bytes.put_slice(&payload);
         let bytes = Bytes::from(bytes);
-        assert_eq!(&ServerCommand::from_bytes(bytes).unwrap(), command);
+        assert_eq!(
+            &ServerCommand::from_code_and_payload(command_id, bytes).unwrap(),
+            command
+        );
     }
 }

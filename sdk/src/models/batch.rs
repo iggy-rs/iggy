@@ -1,13 +1,15 @@
-use std::io::Write;
 use serde_with::serde_as;
-use tokio::io::AsyncWriteExt;
+use std::io::Write;
+use tokio::io::{AsyncReadExt, AsyncWriteExt};
 
-
+use crate::utils::{byte_size::IggyByteSize, timestamp::IggyTimestamp};
 
 pub const IGGY_BATCH_OVERHEAD: u64 = 16 + 16 + 16 + 16 + 8 + 8 + 8 + 8 + 4 + 4 + 4 + 4 + 1;
 
-#[derive(Debug, Default, Copy, Clone)]
+#[derive(Debug, Default, Copy, Clone, PartialEq)]
 pub struct IggyHeader {
+    // TODO: replace timestamp with `IggyTimestamp`
+    // and maybe impl `IggyOffset` and other wrapper structs for things like checksums, attributes etc...
     payload_type: u8,
     pub last_offset_delta: u32,
     last_timestamp_delta: u32,
@@ -56,7 +58,39 @@ impl IggyHeader {
         }
     }
 
-    pub fn write_header<const N: usize>(&self, writer: &mut HeaderWriter<N>) {
+    pub async fn read_header<R: AsyncReadExt + Unpin>(reader: &mut R) -> IggyHeader {
+        let payload_type = reader.read_u8().await.unwrap();
+        let last_offset_delta = reader.read_u32_le().await.unwrap();
+        let last_timestamp_delta = reader.read_u32_le().await.unwrap();
+        let release = reader.read_u32_le().await.unwrap();
+        let attributes = reader.read_u32_le().await.unwrap();
+        let base_offset = reader.read_u64_le().await.unwrap();
+        let batch_length = reader.read_u64_le().await.unwrap();
+        let origin_timestamp = reader.read_u64_le().await.unwrap();
+        let base_timestamp = reader.read_u64_le().await.unwrap();
+        let reserved_nonce = reader.read_u128_le().await.unwrap();
+        let parent = reader.read_u128_le().await.unwrap();
+        let checksum_body = reader.read_u128_le().await.unwrap();
+        let checksum = reader.read_u128_le().await.unwrap();
+
+        IggyHeader::new(
+            payload_type,
+            last_offset_delta,
+            last_timestamp_delta,
+            release,
+            attributes,
+            base_offset,
+            batch_length,
+            origin_timestamp,
+            base_timestamp,
+            reserved_nonce,
+            parent,
+            checksum_body,
+            checksum,
+        )
+    }
+
+    fn write_header<const N: usize>(&self, writer: &mut HeaderWriter<N>) {
         writer.write_all(&self.payload_type.to_le_bytes()).unwrap();
         writer
             .write_all(&self.last_offset_delta.to_le_bytes())
@@ -192,59 +226,68 @@ impl<const N: usize> std::io::Write for HeaderWriter<N> {
 }
 
 #[serde_as]
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Debug, Default, PartialEq)]
 pub struct IggyBatch {
     pub header: IggyHeader,
-    //TODO: This can be Arc<Vec<u8>>.
-    pub payload: Vec<u8>,
+    pub batch: Vec<u8>,
 }
 
 impl IggyBatch {
-    pub fn new(payload: Vec<u8>) -> Self {
-        let header = Default::default();
-        Self { header, payload }
+    pub fn new(header: IggyHeader, batch: Vec<u8>) -> Self {
+        Self { header, batch }
+    }
+
+    pub fn update_offsets_and_timestamps(
+        &mut self,
+        base_offset: u64,
+        base_timestamp: IggyTimestamp,
+    ) {
+        let header = &mut self.header;
+        let batch = &mut self.batch;
+
+        header.base_offset = base_offset;
+        header.base_timestamp = base_timestamp.into();
+
+        // TODO: Impl iterators (mutable and non-mutable) instead of this.
+        let mut position = 0;
+        let mut messages_count = 0u32;
+        while position < batch.len() {
+            let offset_delta = messages_count.to_le_bytes();
+            write_value_at(batch, offset_delta, position);
+            position += 4;
+            let timestamp_delta = base_timestamp - IggyTimestamp::now();
+            let timestamp_delta = timestamp_delta.as_micros() as u32;
+            let timestamp_delta = timestamp_delta.to_le_bytes();
+            write_value_at(batch, timestamp_delta, position);
+
+            position += 4;
+            let msg_len = u64::from_le_bytes(batch[position..position + 8].try_into().unwrap());
+            position += 8 + msg_len as usize;
+            messages_count += 1;
+        }
+        header.last_offset_delta = messages_count;
+
+        fn write_value_at<const N: usize>(slice: &mut [u8], value: [u8; N], position: usize) {
+            let slice = &mut slice[position..position + N];
+            let ptr = slice.as_mut_ptr();
+            unsafe {
+                std::ptr::copy_nonoverlapping(value.as_ptr(), ptr, N);
+            }
+        }
     }
 
     pub fn write_header<const N: usize>(&self, writer: &mut HeaderWriter<N>) {
         self.header.write_header(writer);
     }
 
-    //TODO: rewrite this interface
-    /*
-    pub async fn read_header(reader: &mut BufReader<File>) -> IggyHeader {
-        let payload_type = reader.read_u8().await.unwrap();
-        let last_offset_delta = reader.read_u32_le().await.unwrap();
-        let last_timestamp_delta = reader.read_u32_le().await.unwrap();
-        let release = reader.read_u32_le().await.unwrap();
-        let attributes = reader.read_u32_le().await.unwrap();
-        let base_offset = reader.read_u64_le().await.unwrap();
-        let batch_length = reader.read_u64_le().await.unwrap();
-        let origin_timestamp = reader.read_u64_le().await.unwrap();
-        let base_timestamp = reader.read_u64_le().await.unwrap();
-        let reserved_nonce = reader.read_u128_le().await.unwrap();
-        let parent = reader.read_u128_le().await.unwrap();
-        let checksum_body = reader.read_u128_le().await.unwrap();
-        let checksum = reader.read_u128_le().await.unwrap();
-
-        IggyHeader::new(
-            payload_type,
-            last_offset_delta,
-            last_timestamp_delta,
-            release,
-            attributes,
-            base_offset,
-            batch_length,
-            origin_timestamp,
-            base_timestamp,
-            reserved_nonce,
-            parent,
-            checksum_body,
-            checksum,
-        )
-    }
-    */
-
     pub async fn write_messages<W: AsyncWriteExt + Unpin>(&self, writer: &mut W) {
-        writer.write_all(&self.payload).await.unwrap();
+        writer.write_all(&self.batch).await.unwrap();
+    }
+
+    pub fn get_size_bytes(&self) -> IggyByteSize {
+        let header_size = IggyByteSize::from(IGGY_BATCH_OVERHEAD);
+        let batch_size = IggyByteSize::from(self.batch.len() as u64);
+
+        header_size + batch_size
     }
 }

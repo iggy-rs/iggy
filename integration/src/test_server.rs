@@ -158,7 +158,7 @@ impl TestServer {
         self.cleanup();
         let files_path = self.local_data_path.clone();
         let mut command = if let Some(server_executable_path) = &self.server_executable_path {
-            std::process::Command::new(server_executable_path)
+            Command::new(server_executable_path)
         } else {
             Command::cargo_bin("iggy-server").unwrap()
         };

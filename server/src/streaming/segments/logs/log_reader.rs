@@ -1,10 +1,4 @@
-use crate::streaming::{
-    batching::{
-        iterator::IntoMessagesIterator,
-        message_batch::{RetainedMessageBatch, RETAINED_BATCH_HEADER_LEN},
-    },
-    segments::indexes::IndexRange,
-};
+use crate::streaming::segments::indexes::IndexRange;
 use bytes::BytesMut;
 use error_set::ErrContext;
 use iggy::{error::IggyError, utils::byte_size::IggyByteSize};
@@ -76,7 +70,9 @@ impl SegmentLogReader {
     pub async fn load_batches_by_range_impl(
         &self,
         index_range: &IndexRange,
-    ) -> Result<Vec<RetainedMessageBatch>, IggyError> {
+    ) -> Result<Vec<()>, IggyError> {
+        //TODO: Fix me
+        /*
         let mut file_size = self.file_size();
         if file_size == 0 {
             trace!("Log file {} is empty.", self.file_path);
@@ -108,6 +104,8 @@ impl SegmentLogReader {
 
         trace!("Loaded {} message batches.", batches.len());
         Ok(batches)
+        */
+        todo!()
     }
 
     /// Loads and returns all message IDs from the log file.
@@ -117,6 +115,8 @@ impl SegmentLogReader {
             trace!("Log file {} is empty.", self.file_path);
             return Ok(Vec::new());
         }
+        //TODO: Fix me
+        /*
 
         let mut offset = 0_u64;
         let mut message_ids = Vec::new();
@@ -139,6 +139,8 @@ impl SegmentLogReader {
 
         trace!("Loaded {} message IDs from the log.", message_ids.len());
         Ok(message_ids)
+        */
+        todo!()
     }
 
     /// Loads message batches given an index range and calls the provided callback for each batch.
@@ -148,8 +150,10 @@ impl SegmentLogReader {
         mut on_batch: F,
     ) -> Result<(), IggyError>
     where
-        F: FnMut(RetainedMessageBatch) -> Result<(), IggyError>,
+        F: FnMut(()) -> Result<(), IggyError>,
     {
+        //TODO: Fix me
+        /*
         let mut file_size = self.file_size();
         if file_size == 0 {
             trace!("Log file {} is empty.", self.file_path);
@@ -178,6 +182,8 @@ impl SegmentLogReader {
         }
 
         Ok(())
+        */
+        todo!()
     }
 
     /// Loads message batches up to a given size and calls the provided callback for each batch
@@ -185,8 +191,10 @@ impl SegmentLogReader {
     pub async fn load_batches_by_size_with_callback(
         &self,
         bytes_to_load: u64,
-        mut on_batch: impl FnMut(RetainedMessageBatch) -> Result<(), IggyError>,
+        mut on_batch: impl FnMut(()) -> Result<(), IggyError>,
     ) -> Result<(), IggyError> {
+        // TODO: Fix me
+        /*
         let mut file_size = self.file_size();
         if file_size == 0 {
             trace!("Log file {} is empty.", self.file_path);
@@ -214,13 +222,17 @@ impl SegmentLogReader {
         }
 
         Ok(())
+        */
+        todo!()
     }
 
     async fn read_next_batch(
         &self,
         offset: u64,
         file_size: u64,
-    ) -> Result<Option<(RetainedMessageBatch, u64)>, IggyError> {
+    ) -> Result<Option<((), u64)>, IggyError> {
+        //TODO: Fix me
+        /*
         let batch_header_size = RETAINED_BATCH_HEADER_LEN;
         if offset + batch_header_size > file_size {
             return Ok(None);
@@ -322,6 +334,8 @@ impl SegmentLogReader {
         );
 
         Ok(Some((batch, bytes_read)))
+        */
+        todo!()
     }
 
     fn file_size(&self) -> u64 {

@@ -1,12 +1,12 @@
 use super::indexes::*;
 use crate::streaming::batching::batch_accumulator::BatchAccumulator;
-use crate::streaming::batching::message_batch::RETAINED_BATCH_HEADER_LEN;
 use crate::streaming::segments::segment::Segment;
 use error_set::ErrContext;
-use iggy::{confirmation::Confirmation, models::batch::IggyBatch};
 use iggy::error::IggyError;
+use iggy::models::batch::IGGY_BATCH_OVERHEAD;
 use iggy::utils::byte_size::IggyByteSize;
 use iggy::utils::sizeable::Sizeable;
+use iggy::{confirmation::Confirmation, models::batch::IggyBatch};
 use std::sync::atomic::Ordering;
 use tracing::{info, trace};
 
@@ -23,10 +23,9 @@ impl Segment {
                 self.partition_id,
             ));
         }
-        let messages_count = batch.header.last_offset_delta as usize;
         let messages_cap = std::cmp::max(
             self.config.partition.messages_required_to_save as usize,
-            messages_count
+            messages_count as usize,
         );
         if self.current_offset == 0 {
             self.start_timestamp = batch.header.base_timestamp;
@@ -87,7 +86,7 @@ impl Segment {
             return Ok(0);
         }
 
-        let mut batch_accumulator = self.unsaved_messages.take().unwrap();
+        let batch_accumulator = self.unsaved_messages.take().unwrap();
         if batch_accumulator.is_empty() {
             return Ok(0);
         }
@@ -104,11 +103,7 @@ impl Segment {
             self.partition_id
         );
 
-        let batch = batch_accumulator.materialize_batch_and_update_state();
-        let batch_size = batch.get_size_bytes();
-        if batch_size > 0 {
-            self.unsaved_messages = Some(batch_accumulator);
-        }
+        let (header, batches) = batch_accumulator.materialize();
         let confirmation = match confirmation {
             Some(val) => val,
             None => self.config.segment.server_confirmation,
@@ -117,12 +112,13 @@ impl Segment {
             .log_writer
             .as_mut()
             .unwrap()
-            .save_batches(batch, confirmation)
+            .save_batches(header, batches, confirmation)
             .await
-            .with_error_context(|error| {
-                format!("Failed to save batch of size {batch_size} for {self}. {error}",)
-            })?;
+            .with_error_context(
+                |error| format!("Failed to save batch for seg: {self}. {error}",),
+            )?;
 
+        self.last_index_position += saved_bytes.as_bytes_u64() as u32;
         self.index_writer
             .as_mut()
             .unwrap()
@@ -130,14 +126,13 @@ impl Segment {
             .await
             .with_error_context(|error| format!("Failed to save index for {self}. {error}"))?;
 
-        self.last_index_position += batch_size.as_bytes_u64() as u32;
-        self.size_bytes += IggyByteSize::from(RETAINED_BATCH_HEADER_LEN);
+        self.size_bytes += IggyByteSize::from(IGGY_BATCH_OVERHEAD);
         self.size_of_parent_stream
-            .fetch_add(RETAINED_BATCH_HEADER_LEN, Ordering::AcqRel);
+            .fetch_add(IGGY_BATCH_OVERHEAD, Ordering::AcqRel);
         self.size_of_parent_topic
-            .fetch_add(RETAINED_BATCH_HEADER_LEN, Ordering::AcqRel);
+            .fetch_add(IGGY_BATCH_OVERHEAD, Ordering::AcqRel);
         self.size_of_parent_partition
-            .fetch_add(RETAINED_BATCH_HEADER_LEN, Ordering::AcqRel);
+            .fetch_add(IGGY_BATCH_OVERHEAD, Ordering::AcqRel);
 
         trace!(
             "Saved {} messages on disk in segment with start offset: {} for partition with ID: {}, total bytes written: {}.",

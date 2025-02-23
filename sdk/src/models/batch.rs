@@ -10,19 +10,19 @@ pub const IGGY_BATCH_OVERHEAD: u64 = 16 + 16 + 16 + 16 + 8 + 8 + 8 + 8 + 4 + 4 +
 pub struct IggyHeader {
     // TODO: replace timestamp with `IggyTimestamp`
     // and maybe impl `IggyOffset` and other wrapper structs for things like checksums, attributes etc...
-    payload_type: u8,
+    pub payload_type: u8,
     pub last_offset_delta: u32,
-    last_timestamp_delta: u32,
-    release: u32,
-    attributes: u32,
+    pub last_timestamp_delta: u32,
+    pub release: u32,
+    pub attributes: u32,
     pub base_offset: u64,
     pub batch_length: u64,
-    origin_timestamp: u64,
+    pub origin_timestamp: u64,
     pub base_timestamp: u64,
-    reserved_nonce: u128,
-    parent: u128,
-    checksum_body: u128,
-    checksum: u128,
+    pub reserved_nonce: u128,
+    pub parent: u128,
+    pub checksum_body: u128,
+    pub checksum: u128,
 }
 
 impl IggyHeader {
@@ -251,21 +251,23 @@ impl IggyBatch {
         // TODO: Impl iterators (mutable and non-mutable) instead of this.
         let mut position = 0;
         let mut messages_count = 0u32;
+        let mut timestamp_delta = 0;
         while position < batch.len() {
             let offset_delta = messages_count.to_le_bytes();
             write_value_at(batch, offset_delta, position);
             position += 4;
-            let timestamp_delta = base_timestamp - IggyTimestamp::now();
-            let timestamp_delta = timestamp_delta.as_micros() as u32;
-            let timestamp_delta = timestamp_delta.to_le_bytes();
-            write_value_at(batch, timestamp_delta, position);
+            let duration_delta = IggyTimestamp::now() - base_timestamp;
+            timestamp_delta = duration_delta.as_micros() as u32;
+            let timestamp_delta_value = timestamp_delta.to_le_bytes();
+            write_value_at(batch, timestamp_delta_value, position);
 
             position += 4;
-            let msg_len = u64::from_le_bytes(batch[position..position + 8].try_into().unwrap());
+            let msg_len = u64::from_le_bytes(batch[position..position + 8].try_into().unwrap()) + 8;
             position += 8 + msg_len as usize;
             messages_count += 1;
         }
-        header.last_offset_delta = messages_count;
+        header.last_offset_delta = messages_count - 1;
+        header.last_timestamp_delta = timestamp_delta;
 
         fn write_value_at<const N: usize>(slice: &mut [u8], value: [u8; N], position: usize) {
             let slice = &mut slice[position..position + N];
@@ -284,10 +286,14 @@ impl IggyBatch {
         writer.write_all(&self.batch).await.unwrap();
     }
 
-    pub fn get_size_bytes(&self) -> IggyByteSize {
+    pub fn get_size(&self) -> IggyByteSize {
+        let batch_size = IggyByteSize::from(self.batch.len() as u64);
+        batch_size
+    }
+
+    pub fn get_size_w_header(&self) -> IggyByteSize {
         let header_size = IggyByteSize::from(IGGY_BATCH_OVERHEAD);
         let batch_size = IggyByteSize::from(self.batch.len() as u64);
-
         header_size + batch_size
     }
 }

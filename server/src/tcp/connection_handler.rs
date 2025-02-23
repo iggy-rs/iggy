@@ -47,9 +47,9 @@ pub(crate) async fn handle_connection(
         }
 
         let length = u32::from_le_bytes(initial_buffer) - 4;
-        sender.read(&mut code_buffer);
+        sender.read(&mut code_buffer).await?;
         let code = u32::from_le_bytes(code_buffer);
-        // TODO: Refactor the way the command is structured
+        // TODO: Fix me - Refactor the way the command is structured
         // `ServerCommnad` struct should have a method that takes the `sender`
         // and uses it to construct the command, rather than eagerly reading all of the data from the network.
         if code == SEND_MESSAGES_CODE {
@@ -58,7 +58,7 @@ pub(crate) async fn handle_connection(
             let metadata_len = u32::from_le_bytes(metadata_len);
             let mut metadata_buf = BytesMut::with_capacity(metadata_len as _);
             unsafe { metadata_buf.set_len(metadata_len as _) };
-            sender.read(&mut metadata_buf);
+            sender.read(&mut metadata_buf).await?;
             let metadata_buf = metadata_buf.freeze();
 
             // TODO: This is disgusting, fuck `Bytes`.
@@ -72,7 +72,7 @@ pub(crate) async fn handle_connection(
             sender.read(&mut header_buffer).await?;
             let header = IggyHeader::from_bytes(&header_buffer);
 
-            let batch_length = metadata_len - length - 4 - IGGY_BATCH_OVERHEAD as u32;
+            let batch_length = length - metadata_len - IGGY_BATCH_OVERHEAD as u32 - 4;
             let mut batch_buffer = Vec::with_capacity(batch_length as _);
             unsafe { batch_buffer.set_len(batch_length as _) };
             sender.read(&mut batch_buffer).await?;
@@ -80,7 +80,7 @@ pub(crate) async fn handle_connection(
             let system = system.read().await;
             {
                 system
-                .append_messages(&session, stream_id, topic_id, partitioning, batch, None)
+                .append_messages(&session, &stream_id, &topic_id, &partitioning, batch, None)
                 .await
                 .with_error_context(|error| {
                     format!(
@@ -94,7 +94,9 @@ pub(crate) async fn handle_connection(
             debug!("Received a TCP request, length: {length}");
             let mut command_buffer = BytesMut::with_capacity(length as usize);
             command_buffer.put_bytes(0, length as usize);
-            sender.read(&mut command_buffer).await?;
+            if length > 0 {
+                sender.read(&mut command_buffer).await?;
+            }
             let command = ServerCommand::from_code_and_payload(code, command_buffer.freeze());
             if command.is_err() {
                 sender

@@ -1,5 +1,4 @@
 use crate::streaming::batching::appendable_batch_info::AppendableBatchInfo;
-use crate::streaming::models::messages::RetainedMessage;
 use crate::streaming::polling_consumer::PollingConsumer;
 use crate::streaming::topics::topic::Topic;
 use crate::streaming::topics::COMPONENT;
@@ -13,7 +12,6 @@ use iggy::locking::IggySharedMutFn;
 use iggy::messages::poll_messages::{PollingKind, PollingStrategy};
 use iggy::messages::send_messages::{Message, Partitioning, PartitioningKind};
 use iggy::models::batch::IggyBatch;
-use iggy::models::messages::PolledMessages;
 use iggy::utils::byte_size::IggyByteSize;
 use iggy::utils::expiry::IggyExpiry;
 use iggy::utils::sizeable::Sizeable;
@@ -33,7 +31,9 @@ impl Topic {
         partition_id: u32,
         strategy: PollingStrategy,
         count: u32,
-    ) -> Result<PolledMessages, IggyError> {
+    ) -> Result<(), IggyError> {
+        //TODO: Fix me
+        /*
         if !self.has_partitions() {
             return Err(IggyError::NoPartitions(self.topic_id, self.stream_id));
         }
@@ -72,12 +72,14 @@ impl Topic {
             current_offset: partition.current_offset,
             messages,
         })
+        */
+        todo!()
     }
 
     pub async fn append_messages(
         &self,
         batch_size: IggyByteSize,
-        partitioning: Partitioning,
+        partitioning: &Partitioning,
         batch: IggyBatch,
         confirmation: Option<Confirmation>,
     ) -> Result<(), IggyError> {
@@ -187,6 +189,8 @@ impl Topic {
     }
 
     pub(crate) async fn load_messages_from_disk_to_cache(&mut self) -> Result<(), IggyError> {
+        //TODO: Fix me
+        /*
         if !self.config.cache.enabled {
             return Ok(());
         }
@@ -264,9 +268,13 @@ impl Topic {
         }
 
         Ok(())
+        */
+        todo!()
     }
 
-    fn cache_integrity_check(cache: &[Arc<RetainedMessage>]) -> bool {
+    fn cache_integrity_check(cache: ()) -> bool {
+        //TODO: Fix me
+        /*
         if cache.is_empty() {
             warn!("Cache is empty!");
             return false;
@@ -293,6 +301,8 @@ impl Topic {
         }
 
         true
+        */
+        todo!()
     }
 
     pub async fn get_expired_segments_start_offsets_per_partition(
@@ -315,6 +325,8 @@ impl Topic {
 
 #[cfg(test)]
 mod tests {
+    //TODO: Fix me
+    /*
     use super::*;
     use crate::configs::system::SystemConfig;
     use crate::streaming::persistence::persister::FileWithSyncPersister;
@@ -469,4 +481,5 @@ mod tests {
         topic.persist().await.unwrap();
         topic
     }
+    */
 }

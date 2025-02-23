@@ -73,7 +73,7 @@ pub enum ServerCommand {
     CreatePersonalAccessToken(CreatePersonalAccessToken),
     DeletePersonalAccessToken(DeletePersonalAccessToken),
     LoginWithPersonalAccessToken(LoginWithPersonalAccessToken),
-    SendMessages(iggy::messages::send_messages_server::SendMessages),
+    SendMessages(),
     PollMessages(PollMessages),
     FlushUnsavedBuffer(FlushUnsavedBuffer),
     GetConsumerOffset(GetConsumerOffset),
@@ -123,7 +123,8 @@ impl ServerCommand {
             ServerCommand::CreatePersonalAccessToken(payload) => as_bytes(payload),
             ServerCommand::DeletePersonalAccessToken(payload) => as_bytes(payload),
             ServerCommand::LoginWithPersonalAccessToken(payload) => as_bytes(payload),
-            ServerCommand::SendMessages(payload) => as_bytes(payload),
+            //TODO: Fix me, I have no idea how XD
+            ServerCommand::SendMessages() => Bytes::new(),
             ServerCommand::PollMessages(payload) => as_bytes(payload),
             ServerCommand::StoreConsumerOffset(payload) => as_bytes(payload),
             ServerCommand::DeleteConsumerOffset(payload) => as_bytes(payload),
@@ -187,9 +188,7 @@ impl ServerCommand {
                     LoginWithPersonalAccessToken::from_bytes(payload)?,
                 ))
             }
-            SEND_MESSAGES_CODE => Ok(ServerCommand::SendMessages(
-                iggy::messages::send_messages_server::SendMessages::from_bytes(payload)?,
-            )),
+            SEND_MESSAGES_CODE => Ok(ServerCommand::SendMessages()),
             POLL_MESSAGES_CODE => Ok(ServerCommand::PollMessages(PollMessages::from_bytes(
                 payload,
             )?)),
@@ -295,7 +294,7 @@ impl Validatable<IggyError> for ServerCommand {
             ServerCommand::CreatePersonalAccessToken(command) => command.validate(),
             ServerCommand::DeletePersonalAccessToken(command) => command.validate(),
             ServerCommand::LoginWithPersonalAccessToken(command) => command.validate(),
-            ServerCommand::SendMessages(command) => command.validate(),
+            ServerCommand::SendMessages() => Ok(()),
             ServerCommand::PollMessages(command) => command.validate(),
             ServerCommand::StoreConsumerOffset(command) => command.validate(),
             ServerCommand::DeleteConsumerOffset(command) => command.validate(),
@@ -378,7 +377,7 @@ impl Display for ServerCommand {
                 write!(formatter, "{DELETE_PARTITIONS}|{payload}")
             }
             ServerCommand::PollMessages(payload) => write!(formatter, "{POLL_MESSAGES}|{payload}"),
-            ServerCommand::SendMessages(payload) => write!(formatter, "{SEND_MESSAGES}|{payload}"),
+            ServerCommand::SendMessages() => write!(formatter, "Noop"),
             ServerCommand::StoreConsumerOffset(payload) => {
                 write!(formatter, "{STORE_CONSUMER_OFFSET}|{payload}")
             }

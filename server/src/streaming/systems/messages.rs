@@ -110,9 +110,9 @@ impl System {
     pub async fn append_messages(
         &self,
         session: &Session,
-        stream_id: Identifier,
-        topic_id: Identifier,
-        partitioning: Partitioning,
+        stream_id: &Identifier,
+        topic_id: &Identifier,
+        partitioning: &Partitioning,
         batch: IggyBatch,
         confirmation: Option<Confirmation>,
     ) -> Result<(), IggyError> {
@@ -163,7 +163,7 @@ impl System {
             }
         }
         */
-        let batch_size_bytes = batch.get_size_bytes();
+        let batch_size_bytes = batch.get_size();
         topic
             .append_messages(batch_size_bytes, partitioning, batch, confirmation)
             .await?;

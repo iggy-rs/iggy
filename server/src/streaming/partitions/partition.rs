@@ -92,7 +92,7 @@ impl Partition {
         let consumer_group_offsets_path =
             config.get_consumer_group_offsets_path(stream_id, topic_id, partition_id);
         //TODO: Fix me
-            /*
+        /*
         let (cached_memory_tracker, messages) = match config.cache.enabled {
             false => (None, None),
             true => (

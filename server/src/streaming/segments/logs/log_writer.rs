@@ -1,9 +1,9 @@
 use super::PersisterTask;
-use crate::streaming::batching::message_batch::RetainedMessageBatch;
 use error_set::ErrContext;
 use iggy::{
     confirmation::Confirmation,
     error::IggyError,
+    models::batch::{IggyBatch, IggyHeader, IGGY_BATCH_OVERHEAD},
     utils::{byte_size::IggyByteSize, duration::IggyDuration, sizeable::Sizeable},
 };
 use std::{
@@ -94,15 +94,16 @@ impl SegmentLogWriter {
     /// Append a message batch to the log file.
     pub async fn save_batches(
         &mut self,
-        batch: RetainedMessageBatch,
+        header: IggyHeader,
+        batches: Vec<IggyBatch>,
         confirmation: Confirmation,
     ) -> Result<IggyByteSize, IggyError> {
-        let batch_size = batch.get_size_bytes();
+        let batch_size =
+            IGGY_BATCH_OVERHEAD + batches.iter().map(|b| b.batch.len() as u64).sum::<u64>();
         match confirmation {
             Confirmation::Wait => {
-                self.write_batch(batch).await?;
-                self.log_size_bytes
-                    .fetch_add(batch_size.as_bytes_u64(), Ordering::AcqRel);
+                self.write_batch(header, batches).await?;
+                self.log_size_bytes.fetch_add(batch_size, Ordering::AcqRel);
                 trace!(
                     "Written batch of size {batch_size} bytes to log file: {}",
                     self.file_path
@@ -113,7 +114,7 @@ impl SegmentLogWriter {
             }
             Confirmation::NoWait => {
                 if let Some(task) = &self.persister_task {
-                    task.persist(batch).await;
+                    task.persist(batch_size, header, batches).await;
                 } else {
                     panic!(
                         "Confirmation::NoWait is used, but LogPersisterTask is not set for log file: {}",
@@ -123,15 +124,23 @@ impl SegmentLogWriter {
             }
         }
 
-        Ok(batch_size)
+        Ok(batch_size.into())
     }
 
     /// Write a batch of bytes to the log file and return the new file position.
-    async fn write_batch(&mut self, batch_to_write: RetainedMessageBatch) -> Result<(), IggyError> {
+    async fn write_batch(
+        &mut self,
+        header: IggyHeader,
+        batches: Vec<IggyBatch>,
+    ) -> Result<(), IggyError> {
         if let Some(ref mut file) = self.file {
-            let header = batch_to_write.header_as_bytes();
-            let batch_bytes = batch_to_write.bytes;
-            let slices = [IoSlice::new(&header), IoSlice::new(&batch_bytes)];
+            let mut slices = Vec::new();
+
+            let header = header.as_bytes();
+            slices.push(IoSlice::new(&header));
+            batches.iter().for_each(|b| {
+                slices.push(IoSlice::new(&b.batch));
+            });
 
             file.write_vectored(&slices)
                 .await
@@ -139,7 +148,6 @@ impl SegmentLogWriter {
                     format!("Failed to log to file: {}. {error}", self.file_path)
                 })
                 .map_err(|_| IggyError::CannotWriteToFile)?;
-
             Ok(())
         } else {
             error!("File handle is not available for synchronous write.");

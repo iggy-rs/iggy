@@ -1,5 +1,4 @@
 use crate::streaming::batching::appendable_batch_info::AppendableBatchInfo;
-use crate::streaming::batching::iterator::IntoMessagesIterator;
 use crate::streaming::partitions::partition::Partition;
 use crate::streaming::partitions::COMPONENT;
 use crate::streaming::polling_consumer::PollingConsumer;
@@ -389,6 +388,7 @@ impl Partition {
             }
         }
 
+        let mut batch = batch;
         let batch_size = appendable_batch_info.batch_size;
         let base_offset = if !self.should_increment_offset {
             0
@@ -432,7 +432,7 @@ impl Partition {
 
         batch.update_offsets_and_timestamps(base_offset, base_timestamp);
         let last_offset_delta = batch.header.last_offset_delta;
-        let messages_count = last_offset_delta + 1;
+        let messages_count = last_offset_delta + 1; 
         let last_offset = base_offset + (last_offset_delta) as u64;
         if self.should_increment_offset {
             self.current_offset = last_offset;
@@ -442,17 +442,15 @@ impl Partition {
         }
 
         {
-            /*
-             let last_segment = self.segments.last_mut().ok_or(IggyError::SegmentNotFound)?;
-             last_segment
-                 .append_batch(batch_size, messages_count, &retained_messages)
+            let last_segment = self.segments.last_mut().ok_or(IggyError::SegmentNotFound)?;
+            last_segment
+                 .append_batch(batch_size, messages_count, batch)
                  .await
                  .with_error_context(|error| {
                      format!(
                          "{COMPONENT} (error: {error}) - failed to append batch into last segment: {last_segment}",
                      )
                  })?;
-            */
         }
 
         /*

@@ -8,7 +8,6 @@ use iggy::{
 use std::sync::Arc;
 use tracing::{trace, warn};
 
-const EMPTY_MESSAGES: Vec<RetainedMessage> = vec![];
 const COMPONENT: &str = "STREAMING_SEGMENT";
 
 impl Segment {
@@ -62,7 +61,7 @@ impl Segment {
         count: u32,
     ) -> Result<Vec<Arc<()>>, IggyError> {
         //TODO: Fix me
-        /* 
+        /*
         if count == 0 {
             return Ok(EMPTY_MESSAGES.into_iter().map(Arc::new).collect());
         }
@@ -126,21 +125,18 @@ impl Segment {
         self.get_messages_by_offset(self.start_offset, self.get_messages_count() as u32)
             .await
             */
-            todo!()
+        todo!()
     }
 
     pub async fn get_all_batches(&self) -> Result<Vec<()>, IggyError> {
         //TODO: Fix me
-        /* 
+        /*
         self.load_batches_by_range(&IndexRange::max_range()).await
         */
         todo!()
     }
 
-    pub async fn get_newest_batches_by_size(
-        &self,
-        size_bytes: u64,
-    ) -> Result<Vec<()>, IggyError> {
+    pub async fn get_newest_batches_by_size(&self, size_bytes: u64) -> Result<Vec<()>, IggyError> {
         //TODO: Fix me
         /*
         let mut batches = Vec::new();
@@ -278,6 +274,8 @@ impl Segment {
 
     /// Loads and verifies message checksums from the log file.
     pub async fn load_message_checksums(&self) -> Result<(), IggyError> {
+        //TODO: Fix me
+        /*
         self.log_reader
             .as_ref()
             .unwrap()
@@ -305,6 +303,8 @@ impl Segment {
                 format!("Failed to load batches by max range for {}. {error}", self)
             })?;
         Ok(())
+        */
+        todo!()
     }
 
     /// Loads and returns all message IDs from the log file.

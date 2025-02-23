@@ -9,7 +9,7 @@ use crate::models::header::{HeaderKey, HeaderValue};
 use crate::utils::byte_size::IggyByteSize;
 use crate::utils::sizeable::Sizeable;
 use crate::validatable::Validatable;
-use bytes::{Buf, BufMut, Bytes, BytesMut};
+use bytes::{BufMut, Bytes, BytesMut};
 use serde::{Deserialize, Serialize};
 use serde_with::base64::Base64;
 use serde_with::serde_as;
@@ -27,6 +27,8 @@ const EMPTY_KEY_VALUE: Vec<u8> = vec![];
 /// - `topic_id` - unique topic ID (numeric or name).
 /// - `partitioning` - to which partition the messages should be sent - either provided by the client or calculated by the server.
 /// - `messages` - collection of messages to be sent.
+// TODO: Fix me, this struct should have `batch` containing IggyBatch instead of `messages` field
+// so it's compatible with the server side deserialization
 #[derive(Debug, Serialize, Deserialize, PartialEq)]
 pub struct SendMessages {
     /// Unique stream ID (numeric or name).
@@ -458,14 +460,15 @@ pub(crate) fn as_bytes(
     bytes.put_slice(&topic_id_bytes);
     bytes.put_slice(&key_bytes);
 
-    let header = IggyHeader::default();
+    let mut header = IggyHeader::default();
+    header.attributes = 69;
     bytes.put_slice(&header.as_bytes());
     for message in messages {
-        //TODO: create a writer method on the `Message` and in the future
+        // TODO: create a writer method on the `Message` and in the future
         // once the `Message` struct is dropped on the `IggyMessage`.
         let headers_len = header::get_headers_size_bytes(&message.headers).as_bytes_u64();
-        let payload_len = message.payload.len() as u64;
-        let total_len = headers_len + payload_len;
+        let payload_len = message.payload.len() as u64 + 16; 
+        let total_len = headers_len + payload_len; 
 
         bytes.extend_from_slice(&0u32.to_le_bytes()); // offset_delta
         bytes.extend_from_slice(&0u32.to_le_bytes()); // timestamp_delta

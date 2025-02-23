@@ -21,7 +21,6 @@ To help us incorporate your changes efficiently, please adhere to the following 
 ## Commit Message Rules
 
 - **Description**: Provide a concise description of the changes.
-- **Tags**: Avoid using GitHub tags like `feat:` or `chore:`.
 - **Style**: Use an imperative style in the subject line (e.g., "Fix bug" rather than "Fixed bug" or "Fixes bug").
 - **Brevity**: Keep the subject line under 80 characters.
 - **Rationale**: Explain the 'why' and 'what' of your changes in the summary.

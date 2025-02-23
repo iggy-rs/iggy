@@ -1,4 +1,3 @@
-use std::io::ErrorKind;
 use tokio::fs::{self};
 
 /// Parse the contents of a /proc/[pid]/task/[tid]/stat file into a human-readable format
@@ -132,34 +131,37 @@ pub async fn get_proc_info() -> Result<String, std::io::Error> {
 
                 result.push_str("\n\n");
             }
-            Err(e) if e.kind() == ErrorKind::IsADirectory => {
-                if path.ends_with("/fd") {
-                    result.push_str(&format!("=== {} (directory) ===\n", path));
-                    if let Ok(mut rd) = fs::read_dir(path).await {
-                        while let Ok(Some(entry)) = rd.next_entry().await {
-                            let fd_path = entry.path();
-                            match fs::read_link(&fd_path).await {
-                                Ok(link) => {
-                                    result.push_str(&format!(
-                                        "{} -> {}\n",
-                                        fd_path.display(),
-                                        link.display()
-                                    ));
-                                }
-                                Err(_) => {
-                                    result.push_str(&format!(
-                                        "{} (unreadable symlink)\n",
-                                        fd_path.display()
-                                    ));
+            Err(e) => {
+                if let Ok(metadata) = fs::metadata(path).await {
+                    if metadata.is_dir() && path.ends_with("/fd") {
+                        result.push_str(&format!("=== {} (directory) ===\n", path));
+                        if let Ok(mut rd) = fs::read_dir(path).await {
+                            while let Ok(Some(entry)) = rd.next_entry().await {
+                                let fd_path = entry.path();
+                                match fs::read_link(&fd_path).await {
+                                    Ok(link) => {
+                                        result.push_str(&format!(
+                                            "{} -> {}\n",
+                                            fd_path.display(),
+                                            link.display()
+                                        ));
+                                    }
+                                    Err(_) => {
+                                        result.push_str(&format!(
+                                            "{} (unreadable symlink)\n",
+                                            fd_path.display()
+                                        ));
+                                    }
                                 }
                             }
                         }
+                        result.push('\n');
+                    } else {
+                        result.push_str(&format!("=== {} ERROR: {} ===\n\n", path, e));
                     }
-                    result.push('\n');
+                } else {
+                    result.push_str(&format!("=== {} ERROR: {} ===\n\n", path, e));
                 }
-            }
-            Err(e) => {
-                result.push_str(&format!("=== {} ERROR: {} ===\n\n", path, e));
             }
         }
         Ok(())

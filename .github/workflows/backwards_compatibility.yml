@@ -134,7 +134,7 @@ jobs:
           clean: false
 
       - name: Build iggy-server (PR)
-        run: IGGY_CI_BUILD=true cargo build --bin iggy-server
+        run: IGGY_CI_BUILD=true cargo build
 
       - name: Restore local_data directory (PR)
         run: cp -r ../local_data .

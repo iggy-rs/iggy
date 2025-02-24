@@ -2531,24 +2531,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "iggy_examples"
-version = "0.0.5"
-dependencies = [
- "ahash 0.8.11",
- "anyhow",
- "bytes",
- "clap",
- "futures-util",
- "iggy",
- "rand 0.9.0",
- "serde",
- "serde_json",
- "tokio",
- "tracing",
- "tracing-subscriber",
-]
-
-[[package]]
 name = "indexmap"
 version = "1.9.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"

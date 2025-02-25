@@ -255,7 +255,7 @@ impl ProducingConsumer {
                 )
                 .await?;
 
-            /* 
+            /*
             if polled_messages.messages.len() != messages_per_batch as usize {
                 let should_warn = last_warning_time
                     .map(|t| t.elapsed() >= Duration::from_secs(1))

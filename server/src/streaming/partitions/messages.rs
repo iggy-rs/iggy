@@ -430,9 +430,9 @@ impl Partition {
         }
         */
 
-        batch.update_offsets_and_timestamps(base_offset, base_timestamp);
+        batch.update_header_and_messages_offsets_and_timestamps(base_offset, base_timestamp);
         let last_offset_delta = batch.header.last_offset_delta;
-        let messages_count = last_offset_delta + 1; 
+        let messages_count = last_offset_delta + 1;
         let last_offset = base_offset + (last_offset_delta) as u64;
         if self.should_increment_offset {
             self.current_offset = last_offset;

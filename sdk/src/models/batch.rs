@@ -226,7 +226,7 @@ impl<const N: usize> std::io::Write for HeaderWriter<N> {
 }
 
 #[serde_as]
-#[derive(Clone, Debug, Default, PartialEq)]
+#[derive(Debug, Default, PartialEq)]
 pub struct IggyBatch {
     pub header: IggyHeader,
     pub batch: Vec<u8>,
@@ -237,7 +237,7 @@ impl IggyBatch {
         Self { header, batch }
     }
 
-    pub fn update_offsets_and_timestamps(
+    pub fn update_header_and_messages_offsets_and_timestamps(
         &mut self,
         base_offset: u64,
         base_timestamp: IggyTimestamp,
@@ -268,6 +268,7 @@ impl IggyBatch {
         }
         header.last_offset_delta = messages_count - 1;
         header.last_timestamp_delta = timestamp_delta;
+        header.batch_length = batch.len() as u64;
 
         fn write_value_at<const N: usize>(slice: &mut [u8], value: [u8; N], position: usize) {
             let slice = &mut slice[position..position + N];
@@ -295,5 +296,100 @@ impl IggyBatch {
         let header_size = IggyByteSize::from(IGGY_BATCH_OVERHEAD);
         let batch_size = IggyByteSize::from(self.batch.len() as u64);
         header_size + batch_size
+    }
+}
+
+#[derive(Debug, PartialEq)]
+pub struct IggyMessageView<'msg> {
+    pub id: u128,
+    pub offset: u64,
+    pub timestamp: IggyTimestamp,
+    pub payload: &'msg [u8],
+    pub headers: &'msg [u8],
+}
+
+impl<'msg> IggyMessageView<'msg> {
+    pub fn new(
+        id: u128,
+        offset: u64,
+        timestamp: IggyTimestamp,
+        payload: &'msg [u8],
+        headers: &'msg [u8],
+    ) -> Self {
+        Self {
+            id,
+            offset,
+            timestamp,
+            payload,
+            headers,
+        }
+    }
+}
+
+impl<'batch> IntoIterator for &'batch IggyBatch {
+    type Item = IggyMessageView<'batch>;
+    type IntoIter = IggyMessageIterator<'batch>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        IggyMessageIterator {
+            batch: self,
+            position: 0,
+        }
+    }
+}
+
+pub struct IggyMessageIterator<'batch> {
+    batch: &'batch IggyBatch,
+    position: usize,
+}
+
+impl<'msg> Iterator for IggyMessageIterator<'msg> {
+    type Item = IggyMessageView<'msg>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let data = &self.batch.batch;
+        let mut pos = self.position;
+
+        /*
+        let mut position = 0;
+        let mut messages_count = 0u32;
+        let mut timestamp_delta = 0;
+        while position < batch.len() {
+            let offset_delta = messages_count.to_le_bytes();
+            write_value_at(batch, offset_delta, position);
+            position += 4;
+            let duration_delta = IggyTimestamp::now() - base_timestamp;
+            timestamp_delta = duration_delta.as_micros() as u32;
+            let timestamp_delta_value = timestamp_delta.to_le_bytes();
+            write_value_at(batch, timestamp_delta_value, position);
+
+            position += 4;
+            let msg_len = u64::from_le_bytes(batch[position..position + 8].try_into().unwrap()) + 8;
+            position += 8 + msg_len as usize;
+            messages_count += 1;
+        }
+        */
+        //TODO: replace all of those oks with an Faillable iterator I guess ?
+        let offset_delta = u32::from_le_bytes(data[pos..pos + 4].try_into().ok()?);
+        pos += 4;
+        let timestamp_delta = u32::from_le_bytes(data[pos..pos + 4].try_into().ok()?);
+        pos += 4;
+        let total_length = u64::from_le_bytes(data[pos..pos + 8].try_into().ok()?);
+        pos += 8;
+        let payload_length = u64::from_le_bytes(data[pos..pos + 8].try_into().ok()?);
+        pos += 8;
+        let headers_length = total_length - payload_length;
+        let id = u128::from_le_bytes(data[pos..pos+16].try_into().ok()?);
+        pos += 16;
+
+        let payload = &data[pos..payload_length as usize];
+        pos += payload_length as usize;
+        let headers = &data[pos..headers_length as usize];
+        pos += headers_length as usize;
+        self.position += pos;
+
+        let offset = self.batch.header.base_offset + u64::from(offset_delta);
+        let timestamp = self.batch.header.base_timestamp + timestamp_delta as u64;
+        Some(IggyMessageView::new(id, offset, timestamp.into(), payload, headers))
     }
 }

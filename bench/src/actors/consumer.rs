@@ -130,39 +130,39 @@ impl Consumer {
                 );
             }
             /*
-            let warmup_end = Instant::now() + self.warmup_time.get_duration();
-            while Instant::now() < warmup_end {
-                let offset = current_iteration * messages_per_batch as u64;
-                let (strategy, auto_commit) = match self.polling_kind {
-                    PollingKind::Offset => (PollingStrategy::offset(offset), false),
-                    PollingKind::Next => (PollingStrategy::next(), true),
-                    _ => panic!(
-                        "Unsupported polling kind for benchmark: {:?}",
-                        self.polling_kind
-                    ),
-                };
-                let polled_messages = client
-                    .poll_messages(
-                        &stream_id,
-                        &topic_id,
-                        partition_id,
-                        &consumer,
-                        &strategy,
-                        messages_per_batch,
-                        auto_commit,
-                    )
-                    .await?;
+                let warmup_end = Instant::now() + self.warmup_time.get_duration();
+                while Instant::now() < warmup_end {
+                    let offset = current_iteration * messages_per_batch as u64;
+                    let (strategy, auto_commit) = match self.polling_kind {
+                        PollingKind::Offset => (PollingStrategy::offset(offset), false),
+                        PollingKind::Next => (PollingStrategy::next(), true),
+                        _ => panic!(
+                            "Unsupported polling kind for benchmark: {:?}",
+                            self.polling_kind
+                        ),
+                    };
+                    let polled_messages = client
+                        .poll_messages(
+                            &stream_id,
+                            &topic_id,
+                            partition_id,
+                            &consumer,
+                            &strategy,
+                            messages_per_batch,
+                            auto_commit,
+                        )
+                        .await?;
 
-                if polled_messages.messages.is_empty() {
-                    warn!(
-                        "Consumer: {} - Messages are empty for offset: {}, retrying...",
-                        self.consumer_id, offset
-                    );
-                    continue;
+                    if polled_messages.messages.is_empty() {
+                        warn!(
+                            "Consumer: {} - Messages are empty for offset: {}, retrying...",
+                            self.consumer_id, offset
+                        );
+                        continue;
+                    }
+                    current_iteration += 1;
                 }
-                current_iteration += 1;
-            }
-        */
+            */
         }
 
         if let Some(cg_id) = self.consumer_group_id {

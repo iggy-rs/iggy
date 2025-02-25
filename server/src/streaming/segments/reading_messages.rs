@@ -1,4 +1,4 @@
-use super::indexes::*;
+use super::{indexes::*, logs::IggyBatchFetchResult};
 use crate::streaming::segments::segment::Segment;
 use error_set::ErrContext;
 use iggy::{
@@ -59,12 +59,12 @@ impl Segment {
         &self,
         mut offset: u64,
         count: u32,
-    ) -> Result<Vec<Arc<()>>, IggyError> {
-        //TODO: Fix me
+    ) -> Result<IggyBatchFetchResult, IggyError> {
         /*
         if count == 0 {
             return Ok(EMPTY_MESSAGES.into_iter().map(Arc::new).collect());
         }
+        */
 
         if offset < self.start_offset {
             offset = self.start_offset;
@@ -82,6 +82,8 @@ impl Segment {
             return self.load_messages_from_disk(offset, end_offset).await;
         }
 
+        // TODO: Fix me
+        /*
         let first_buffer_offset = batch_accumulator.batch_base_offset();
         let last_buffer_offset = batch_accumulator.batch_max_offset();
 
@@ -89,12 +91,15 @@ impl Segment {
         if offset >= first_buffer_offset && end_offset <= last_buffer_offset {
             return Ok(self.load_messages_from_unsaved_buffer(offset, end_offset));
         }
+        */
 
         // Case 2: All messages are on disk
-        if end_offset < first_buffer_offset {
-            return self.load_messages_from_disk(offset, end_offset).await;
-        }
+        //if end_offset < first_buffer_offset {
+        return self.load_messages_from_disk(offset, end_offset).await;
+        //}
 
+        // TODO: Fix me
+        /*
         // Case 3: Messages span disk and messages_require_to_save buffer boundary
         let mut messages = Vec::new();
 
@@ -116,7 +121,6 @@ impl Segment {
 
         Ok(messages)
         */
-        todo!()
     }
 
     pub async fn get_all_messages(&self) -> Result<Vec<Arc<()>>, IggyError> {
@@ -184,16 +188,16 @@ impl Segment {
     pub async fn load_batches_by_range(
         &self,
         index_range: &IndexRange,
-    ) -> Result<Vec<()>, IggyError> {
-        //TODO: Fix me
-        /*
+        start_offset: u64,
+        end_offset: u64,
+    ) -> Result<IggyBatchFetchResult, IggyError> {
         trace!("Loading message batches for index range: {:?}", index_range);
 
         let batches = self
             .log_reader
             .as_ref()
             .unwrap()
-            .load_batches_by_range_impl(index_range)
+            .load_batches_by_range_impl(index_range, start_offset, end_offset)
             .await
             .with_error_context(|error| {
                 format!(
@@ -201,11 +205,11 @@ impl Segment {
                     index_range, self
                 )
             })?;
+        // Filter the batches
+        // Create IggyBatchFetchResult
 
         trace!("Loaded {} message batches.", batches.len());
         Ok(batches)
-        */
-        todo!()
     }
 
     pub async fn load_index_for_timestamp(
@@ -327,9 +331,7 @@ impl Segment {
         &self,
         start_offset: u64,
         end_offset: u64,
-    ) -> Result<Vec<Arc<()>>, IggyError> {
-        // TODO: Fix me
-        /*
+    ) -> Result<IggyBatchFetchResult, IggyError> {
         trace!(
             "Loading messages from disk, start offset: {}, end offset: {}, current offset: {}...",
             start_offset,
@@ -337,6 +339,8 @@ impl Segment {
             self.current_offset
         );
 
+        //TODO: Fix me
+        /*
         if start_offset > end_offset {
             warn!(
                 "Cannot load messages from disk, invalid offset range: {} - {}.",
@@ -344,6 +348,7 @@ impl Segment {
             );
             return Ok(EMPTY_MESSAGES.into_iter().map(Arc::new).collect());
         }
+        */
 
         if let Some(indices) = &self.indexes {
             let relative_start_offset = (start_offset - self.start_offset) as u32;
@@ -360,7 +365,11 @@ impl Segment {
                         start_offset,
                         end_offset
                     );
+                    panic!("todo");
+                    // TODO: Fix me
+                    /*
                     return Ok(EMPTY_MESSAGES.into_iter().map(Arc::new).collect());
+                    */
                 }
             };
 
@@ -382,10 +391,8 @@ impl Segment {
                 self.load_messages_from_segment_file(&index_range, start_offset, end_offset)
                     .await
             }
-            None => Ok(EMPTY_MESSAGES.into_iter().map(Arc::new).collect()),
+            None => panic!("todo"),
         }
-        */
-        todo!()
     }
 
     async fn load_messages_from_segment_file(
@@ -393,9 +400,7 @@ impl Segment {
         index_range: &IndexRange,
         start_offset: u64,
         end_offset: u64,
-    ) -> Result<Vec<Arc<()>>, IggyError> {
-        //TODO: Fix me
-        /*
+    ) -> Result<IggyBatchFetchResult, IggyError> {
         trace!(
             "Loading messages from disk, index range: {:?}, start offset: {}, end offset: {}.",
             index_range,
@@ -403,27 +408,24 @@ impl Segment {
             end_offset
         );
         let messages_count = (start_offset + end_offset + 1) as usize;
-        let messages = self
-            .load_batches_by_range(index_range)
+        let batches = self
+            .load_batches_by_range(index_range, start_offset, end_offset)
             .await
             .with_error_context(|error| format!(
                 "{COMPONENT} (error: {error}) - failed to load message batches, stream ID: {}, topic ID: {}, partition ID: {}, start offset: {start_offset}, end offset: {end_offset}",
                 self.stream_id, self.topic_id, self.partition_id
-            ))?
-            .iter()
-            .to_messages_with_filter(messages_count, &|msg| {
-                msg.offset >= start_offset && msg.offset <= end_offset
-            });
+            ))?;
 
+        //TODO: Fix me
+        /*
         trace!(
             "Loaded {} messages from disk, segment start offset: {}, end offset: {}.",
             messages.len(),
             self.start_offset,
             self.current_offset
         );
-
-        Ok(messages.into_iter().map(Arc::new).collect())
         */
-        todo!()
+
+        Ok(batches)
     }
 }

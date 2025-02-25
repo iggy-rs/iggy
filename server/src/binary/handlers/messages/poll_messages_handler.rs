@@ -18,7 +18,7 @@ pub async fn handle(
 ) -> Result<(), IggyError> {
     debug!("session: {session}, command: {command}");
     let system = system.read().await;
-    let messages = system
+    let result = system
         .poll_messages(
             session,
             &command.consumer,

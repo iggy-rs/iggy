@@ -21,8 +21,6 @@ use std::{
 use tokio::task::spawn_blocking;
 use tracing::{error, trace, warn};
 
-use super::{fetch_result::IggyBatchSlice, IggyBatchFetchResult};
-
 /// A dedicated struct for reading from the log file.
 #[derive(Debug)]
 pub struct SegmentLogReader {

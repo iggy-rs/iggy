@@ -69,35 +69,37 @@ impl Partition {
         &self,
         start_offset: u64,
         count: u32,
-    ) -> Result<Vec<Arc<()>>, IggyError> {
-        //TODO: Fix me
-        /*
+    ) -> Result<IggyBatchFetchResult, IggyError> {
         trace!(
             "Getting messages for start offset: {start_offset} for partition: {}, current offset: {}...",
             self.partition_id,
             self.current_offset
         );
+        //TODO: Fix me
+        /*
         if self.segments.is_empty() || start_offset > self.current_offset {
             return Ok(Vec::new());
         }
+        */
 
         let end_offset = self.get_end_offset(start_offset, count);
+        /*
         if let Some(cached) = self.try_get_messages_from_cache(start_offset, end_offset) {
             return Ok(cached);
         }
+        */
 
         let segments = self.filter_segments_by_offsets(start_offset, end_offset);
         match segments.len() {
-            0 => Ok(Vec::new()),
+            0 => panic!("TODO"),
             1 => {
                 segments[0]
                     .get_messages_by_offset(start_offset, count)
                     .await
             }
-            _ => Self::get_messages_from_segments(segments, start_offset, count).await,
+            //_ => Self::get_messages_from_segments(segments, start_offset, count).await,
+            _ => panic!("todo, the method from above is already implemented, need to flatten the results")
         }
-        */
-        todo!()
     }
 
     // Retrieves the first messages (up to a specified count).
@@ -200,17 +202,14 @@ impl Partition {
         segments: Vec<&Segment>,
         offset: u64,
         count: u32,
-    ) -> Result<Vec<Arc<()>>, IggyError> {
-        //TODO: Fix me
-        /*
-        let mut messages = Vec::with_capacity(count as usize);
+    ) -> Result<Vec<IggyBatchFetchResult>, IggyError> {
+        let mut results = Vec::new();
         let mut remaining_count = count;
-
         for segment in segments {
             if remaining_count == 0 {
                 break;
             }
-            let segment_messages = segment
+            let fetch_result = segment
                 .get_messages_by_offset(offset, remaining_count)
                 .await
                 .with_error_context(|error| {
@@ -220,12 +219,10 @@ impl Partition {
                         segment, offset, remaining_count
                     )
                 })?;
-            remaining_count = remaining_count.saturating_sub(segment_messages.len() as u32);
-            messages.extend(segment_messages);
+            remaining_count = remaining_count.saturating_sub(fetch_result.msg_count);
+            results.push(fetch_result);
         }
-        Ok(messages)
-        */
-        todo!()
+        Ok(results)
     }
 
     // Tries to retrieve messages from the in-memory cache.

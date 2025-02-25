@@ -1,11 +1,14 @@
-use super::{indexes::*, logs::IggyBatchFetchResult};
-use crate::streaming::segments::segment::Segment;
+use super::{indexes::*, IggyBatchFetchResult};
+use crate::streaming::segments::{segment::Segment, IggyBatchSlice};
 use error_set::ErrContext;
 use iggy::{
     error::IggyError,
     utils::{byte_size::IggyByteSize, checksum, sizeable::Sizeable},
 };
-use std::sync::Arc;
+use std::{
+    ops::{Range, RangeBounds},
+    sync::Arc,
+};
 use tracing::{trace, warn};
 
 const COMPONENT: &str = "STREAMING_SEGMENT";
@@ -192,7 +195,6 @@ impl Segment {
         end_offset: u64,
     ) -> Result<IggyBatchFetchResult, IggyError> {
         trace!("Loading message batches for index range: {:?}", index_range);
-
         let batches = self
             .log_reader
             .as_ref()
@@ -205,11 +207,35 @@ impl Segment {
                     index_range, self
                 )
             })?;
-        // Filter the batches
-        // Create IggyBatchFetchResult
 
-        trace!("Loaded {} message batches.", batches.len());
-        Ok(batches)
+        let mut msg_count = 0;
+        let slices = batches
+            .into_iter()
+            .map(|batch| {
+                let mut ranges = batch.into_iter().filter_map(|(range, msg)| {
+                    if msg.offset >= start_offset && msg.offset <= end_offset {
+                        msg_count += 1;
+                        Some(range)
+                    } else {
+                        None
+                    }
+                });
+                let first = ranges.next();
+                let last = ranges.last();
+                let range = match (first, last) {
+                    (Some(f), Some(l)) => f.start..l.end,
+                    (Some(single), None) => single,
+                    _ => panic!("TODO: Fix me"),
+                };
+                IggyBatchSlice::new(range, batch.header, batch.batch)
+            })
+            .collect::<Vec<_>>();
+        assert!(slices.len() > 0);
+        let header = slices[0].header;
+        let result = IggyBatchFetchResult::new(slices, msg_count, header);
+        //TODO: Fix me
+        //trace!("Loaded {} message batches.", batches.len());
+        Ok(result)
     }
 
     pub async fn load_index_for_timestamp(

@@ -1,5 +1,6 @@
 use crate::streaming::batching::appendable_batch_info::AppendableBatchInfo;
 use crate::streaming::polling_consumer::PollingConsumer;
+use crate::streaming::segments::IggyBatchFetchResult;
 use crate::streaming::topics::topic::Topic;
 use crate::streaming::topics::COMPONENT;
 use crate::streaming::utils::file::folder_size;
@@ -31,9 +32,7 @@ impl Topic {
         partition_id: u32,
         strategy: PollingStrategy,
         count: u32,
-    ) -> Result<(), IggyError> {
-        //TODO: Fix me
-        /*
+    ) -> Result<IggyBatchFetchResult, IggyError> {
         if !self.has_partitions() {
             return Err(IggyError::NoPartitions(self.topic_id, self.stream_id));
         }
@@ -50,30 +49,31 @@ impl Topic {
         let partition = partition.unwrap();
         let partition = partition.read().await;
         let value = strategy.value;
-        let messages = match strategy.kind {
+        let result = match strategy.kind {
             PollingKind::Offset => partition.get_messages_by_offset(value, count).await,
             PollingKind::Timestamp => {
+                //TODO: Fix me
+                /*
                 partition
                     .get_messages_by_timestamp(value.into(), count)
                     .await
                     .with_error_context(|error| format!("{COMPONENT} (error: {error}) - failed to get messages by timestamp: {value}, count: {count}"))
+                    */
+                    todo!()
             }
-            PollingKind::First => partition.get_first_messages(count).await,
-            PollingKind::Last => partition.get_last_messages(count).await,
-            PollingKind::Next => partition.get_next_messages(consumer, count).await,
+            PollingKind::First => todo!(), //partition.get_first_messages(count).await,
+            PollingKind::Last => todo!(), //partition.get_last_messages(count).await,
+            PollingKind::Next => todo!(), //partition.get_next_messages(consumer, count).await,
         }?;
 
-        let messages = messages
-            .into_iter()
-            .map(|msg| msg.to_polled_message())
-            .collect::<Result<Vec<_>, IggyError>>()?;
+        /*
         Ok(PolledMessages {
             partition_id,
             current_offset: partition.current_offset,
             messages,
         })
         */
-        todo!()
+        Ok(result)
     }
 
     pub async fn append_messages(

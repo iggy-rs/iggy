@@ -1,5 +1,5 @@
 use serde_with::serde_as;
-use std::io::Write;
+use std::{io::Write, ops::Range};
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 
 use crate::utils::{byte_size::IggyByteSize, timestamp::IggyTimestamp};
@@ -327,10 +327,19 @@ impl<'msg> IggyMessageView<'msg> {
 }
 
 impl<'batch> IntoIterator for &'batch IggyBatch {
-    type Item = IggyMessageView<'batch>;
+    type Item = (Range<usize>, IggyMessageView<'batch>);
     type IntoIter = IggyMessageIterator<'batch>;
 
     fn into_iter(self) -> Self::IntoIter {
+        IggyMessageIterator {
+            batch: self,
+            position: 0,
+        }
+    }
+}
+
+impl<'batch> IggyBatch {
+    pub fn iter(&self) -> IggyMessageIterator<'batch> {
         IggyMessageIterator {
             batch: self,
             position: 0,
@@ -344,10 +353,11 @@ pub struct IggyMessageIterator<'batch> {
 }
 
 impl<'msg> Iterator for IggyMessageIterator<'msg> {
-    type Item = IggyMessageView<'msg>;
+    type Item = (Range<usize>, IggyMessageView<'msg>);
 
     fn next(&mut self) -> Option<Self::Item> {
         let data = &self.batch.batch;
+        let start_pos = self.position;
         let mut pos = self.position;
 
         /*
@@ -379,7 +389,7 @@ impl<'msg> Iterator for IggyMessageIterator<'msg> {
         let payload_length = u64::from_le_bytes(data[pos..pos + 8].try_into().ok()?);
         pos += 8;
         let headers_length = total_length - payload_length;
-        let id = u128::from_le_bytes(data[pos..pos+16].try_into().ok()?);
+        let id = u128::from_le_bytes(data[pos..pos + 16].try_into().ok()?);
         pos += 16;
 
         let payload = &data[pos..payload_length as usize];
@@ -390,6 +400,8 @@ impl<'msg> Iterator for IggyMessageIterator<'msg> {
 
         let offset = self.batch.header.base_offset + u64::from(offset_delta);
         let timestamp = self.batch.header.base_timestamp + timestamp_delta as u64;
-        Some(IggyMessageView::new(id, offset, timestamp.into(), payload, headers))
+        let msg = IggyMessageView::new(id, offset, timestamp.into(), payload, headers);
+        let range = start_pos..pos;
+        Some((range, msg))
     }
 }

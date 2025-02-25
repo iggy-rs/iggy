@@ -1,4 +1,5 @@
 use crate::streaming::cache::memory_tracker::CacheMemoryTracker;
+use crate::streaming::segments::IggyBatchFetchResult;
 use crate::streaming::session::Session;
 use crate::streaming::systems::system::System;
 use crate::streaming::systems::COMPONENT;
@@ -23,9 +24,7 @@ impl System {
         topic_id: &Identifier,
         partition_id: Option<u32>,
         args: PollingArgs,
-    ) -> Result<IggyBatch, IggyError> {
-        //TODO:: Fix me
-        /*
+    ) -> Result<IggyBatchFetchResult, IggyError> {
         self.ensure_authenticated(session)?;
         if args.count == 0 {
             return Err(IggyError::InvalidMessagesCount);
@@ -46,25 +45,35 @@ impl System {
         }
 
         // There might be no partition assigned, if it's the consumer group member without any partitions.
+        // TODO: Fix me
         let Some((polling_consumer, partition_id)) = topic
             .resolve_consumer_with_partition_id(consumer, session.client_id, partition_id, true)
             .await
             .with_error_context(|error| format!("{COMPONENT} (error: {error}) - failed to resolve consumer with partition id, consumer: {consumer}, client ID: {}, partition ID: {:?}", session.client_id, partition_id))? else {
+            // TODO: Fix me
+            /*
             return Ok(PolledMessages {
                 messages: vec![],
                 partition_id: 0,
                 current_offset: 0,
             })
+            */
+            todo!()
         };
 
-        let mut polled_messages = topic
+        let result = topic
             .get_messages(polling_consumer, partition_id, args.strategy, args.count)
             .await?;
 
+        // TODO: Fix me
+         /* 
         if polled_messages.messages.is_empty() {
             return Ok(polled_messages);
         }
+        */
 
+        // TODO: Fix me
+        /*
         let offset = polled_messages.messages.last().unwrap().offset;
         if args.auto_commit {
             trace!("Last offset: {} will be automatically stored for {}, stream: {}, topic: {}, partition: {}", offset, consumer, stream_id, topic_id, partition_id);
@@ -73,11 +82,13 @@ impl System {
                 .await
                 .with_error_context(|error| format!("{COMPONENT} (error: {error}) - failed to store consumer offset internal, polling consumer: {}, offset: {}, partition ID: {}", polling_consumer, offset, partition_id)) ?;
         }
+        */
 
         if self.encryptor.is_none() {
-            return Ok(polled_messages);
-        }
-
+            return Ok(result);
+        } 
+        // TODO: Fix me
+        /*
         let encryptor = self.encryptor.as_ref().unwrap();
         let mut decrypted_messages = Vec::with_capacity(polled_messages.messages.len());
         for message in polled_messages.messages.iter() {
@@ -104,7 +115,7 @@ impl System {
         polled_messages.messages = decrypted_messages;
         Ok(polled_messages)
         */
-        todo!();
+        todo!()
     }
 
     pub async fn append_messages(

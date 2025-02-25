@@ -1,3 +1,5 @@
+use std::io::IoSlice;
+
 use iggy::error::IggyError;
 use tokio::io::{AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt};
 use tracing::debug;
@@ -49,6 +51,24 @@ pub(crate) async fn send_response<T>(
     stream: &mut T,
     status: &[u8],
     payload: &[u8],
+) -> Result<(), IggyError>
+where
+    T: AsyncRead + AsyncWrite + Unpin,
+{
+    debug!("Sending response with status: {:?}...", status);
+    let length = (payload.len() as u32).to_le_bytes();
+    stream
+        .write_all(&[status, &length, payload].as_slice().concat())
+        .await
+        .map_err(|_| IggyError::TcpError)?;
+    debug!("Sent response with status: {:?}", status);
+    Ok(())
+}
+
+pub(crate) async fn send_response_vectored<T>(
+    stream: &mut T,
+    status: &[u8],
+    slices: [IoSlice]
 ) -> Result<(), IggyError>
 where
     T: AsyncRead + AsyncWrite + Unpin,

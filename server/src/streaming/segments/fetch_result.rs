@@ -20,15 +20,13 @@ impl IggyBatchSlice {
 
 #[derive(Default)]
 pub struct IggyBatchFetchResult {
-    pub batch_slices: Vec<IggyBatchSlice>,
+    pub msg_count: u32,
+    pub slices: Vec<IggyBatchSlice>,
     pub header: IggyHeader,
 }
 
 impl IggyBatchFetchResult {
-    pub fn new(batch_slices: Vec<IggyBatchSlice>, header: IggyHeader) -> Self {
-        Self {
-            batch_slices,
-            header,
-        }
+    pub fn new(slices: Vec<IggyBatchSlice>, msg_count: u32, header: IggyHeader) -> Self {
+        Self { slices, msg_count, header }
     }
 }

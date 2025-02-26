@@ -9,7 +9,7 @@ use iggy::confirmation::Confirmation;
 use iggy::consumer::Consumer;
 use iggy::messages::poll_messages::PollingStrategy;
 use iggy::messages::send_messages::Partitioning;
-use iggy::models::batch::IggyBatch;
+use iggy::models::batch::{IggyBatch, IggyMutableBatch};
 use iggy::utils::byte_size::IggyByteSize;
 use iggy::utils::sizeable::Sizeable;
 use iggy::{error::IggyError, identifier::Identifier};
@@ -66,7 +66,7 @@ impl System {
             .await?;
 
         // TODO: Fix me
-         /* 
+        /*
         if polled_messages.messages.is_empty() {
             return Ok(polled_messages);
         }
@@ -86,7 +86,7 @@ impl System {
 
         if self.encryptor.is_none() {
             return Ok(result);
-        } 
+        }
         // TODO: Fix me
         /*
         let encryptor = self.encryptor.as_ref().unwrap();
@@ -124,7 +124,7 @@ impl System {
         stream_id: &Identifier,
         topic_id: &Identifier,
         partitioning: &Partitioning,
-        batch: IggyBatch,
+        batch: IggyMutableBatch,
         confirmation: Option<Confirmation>,
     ) -> Result<(), IggyError> {
         self.ensure_authenticated(session)?;

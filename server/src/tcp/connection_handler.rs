@@ -10,7 +10,7 @@ use iggy::command::SEND_MESSAGES_CODE;
 use iggy::error::IggyError;
 use iggy::identifier::Identifier;
 use iggy::messages::send_messages::Partitioning;
-use iggy::models::batch::{IggyBatch, IggyHeader, IGGY_BATCH_OVERHEAD};
+use iggy::models::batch::{IggyBatch, IggyHeader, IggyMutableBatch, IGGY_BATCH_OVERHEAD};
 use iggy::utils::sizeable::Sizeable;
 use iggy::validatable::Validatable;
 use std::io::ErrorKind;
@@ -73,10 +73,10 @@ pub(crate) async fn handle_connection(
             let header = IggyHeader::from_bytes(&header_buffer);
 
             let batch_length = length - metadata_len - IGGY_BATCH_OVERHEAD as u32 - 4;
-            let mut batch_buffer = Vec::with_capacity(batch_length as _);
+            let mut batch_buffer = BytesMut::with_capacity(batch_length as _);
             unsafe { batch_buffer.set_len(batch_length as _) };
             sender.read(&mut batch_buffer).await?;
-            let batch = IggyBatch::new(header, batch_buffer);
+            let batch = IggyMutableBatch::new(header, batch_buffer);
             let system = system.read().await;
             {
                 system

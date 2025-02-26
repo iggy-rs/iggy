@@ -212,7 +212,7 @@ impl Segment {
         let slices = batches
             .into_iter()
             .map(|batch| {
-                let mut ranges = batch.into_iter().filter_map(|(range, msg)| {
+                let mut ranges = batch.iter().filter_map(|(range, msg)| {
                     if msg.offset >= start_offset && msg.offset <= end_offset {
                         msg_count += 1;
                         Some(range)

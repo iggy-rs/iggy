@@ -1,5 +1,5 @@
 use crate::streaming::segments::indexes::IndexRange;
-use bytes::BytesMut;
+use bytes::{Bytes, BytesMut};
 use error_set::ErrContext;
 use iggy::{
     error::IggyError,
@@ -320,7 +320,7 @@ impl SegmentLogReader {
             return Ok((None, 0));
         }
 
-        let batch_bytes = match self.read_at(batch_position, batch_length as u64).await {
+        let batch_bytes = match self.read_bytes_at(batch_position, batch_length as u64).await {
             Ok(buf) => buf,
             Err(error) if error.kind() == ErrorKind::UnexpectedEof => return Ok((None, 0)),
             Err(error) => {
@@ -348,6 +348,17 @@ impl SegmentLogReader {
             let mut buf = vec![0u8; len as usize];
             file.read_exact_at(&mut buf, offset)?;
             Ok(buf)
+        })
+        .await?
+    }
+
+    async fn read_bytes_at(&self, offset: u64, len: u64) -> Result<Bytes, std::io::Error> {
+        let file = self.file.clone();
+        spawn_blocking(move || {
+            let mut buf = BytesMut::with_capacity(len as usize);
+            unsafe {buf.set_len(len as usize)};
+            file.read_exact_at(&mut buf, offset)?;
+            Ok(buf.freeze())
         })
         .await?
     }

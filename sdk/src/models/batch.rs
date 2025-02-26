@@ -1,3 +1,4 @@
+use bytes::{Bytes, BytesMut};
 use serde_with::serde_as;
 use std::{io::Write, ops::Range};
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
@@ -225,15 +226,25 @@ impl<const N: usize> std::io::Write for HeaderWriter<N> {
     }
 }
 
+// TODO: THIS IS SHIIIIIIIIIT, fuck Bytes
 #[serde_as]
 #[derive(Debug, Default, PartialEq)]
 pub struct IggyBatch {
     pub header: IggyHeader,
-    pub batch: Vec<u8>,
+    //TODO: Once the dependency on `Bytes` is dropped, change it to Vec<u8>.
+    pub batch: Bytes,
 }
 
-impl IggyBatch {
-    pub fn new(header: IggyHeader, batch: Vec<u8>) -> Self {
+#[serde_as]
+#[derive(Debug, Default, PartialEq)]
+pub struct IggyMutableBatch {
+    pub header: IggyHeader,
+    //TODO: Once the dependency on `Bytes` is dropped, change it to Vec<u8>.
+    pub batch: BytesMut,
+}
+
+impl IggyMutableBatch {
+    pub fn new(header: IggyHeader, batch: BytesMut) -> Self {
         Self { header, batch }
     }
 
@@ -243,7 +254,6 @@ impl IggyBatch {
         base_timestamp: IggyTimestamp,
     ) {
         let header = &mut self.header;
-        let batch = &mut self.batch;
 
         header.base_offset = base_offset;
         header.base_timestamp = base_timestamp.into();
@@ -252,23 +262,24 @@ impl IggyBatch {
         let mut position = 0;
         let mut messages_count = 0u32;
         let mut timestamp_delta = 0;
-        while position < batch.len() {
+        while position < self.batch.len() {
             let offset_delta = messages_count.to_le_bytes();
-            write_value_at(batch, offset_delta, position);
+            write_value_at(&mut self.batch, offset_delta, position);
             position += 4;
             let duration_delta = IggyTimestamp::now() - base_timestamp;
             timestamp_delta = duration_delta.as_micros() as u32;
             let timestamp_delta_value = timestamp_delta.to_le_bytes();
-            write_value_at(batch, timestamp_delta_value, position);
+            write_value_at(&mut self.batch, timestamp_delta_value, position);
 
             position += 4;
-            let msg_len = u64::from_le_bytes(batch[position..position + 8].try_into().unwrap()) + 8;
-            position += 8 + msg_len as usize;
+            let total_len = u64::from_le_bytes(self.batch[position..position + 8].try_into().unwrap()); 
+            position += 8; 
+            position += total_len as usize;
             messages_count += 1;
         }
         header.last_offset_delta = messages_count - 1;
         header.last_timestamp_delta = timestamp_delta;
-        header.batch_length = batch.len() as u64;
+        header.batch_length = self.batch.len() as u64;
 
         fn write_value_at<const N: usize>(slice: &mut [u8], value: [u8; N], position: usize) {
             let slice = &mut slice[position..position + N];
@@ -277,6 +288,31 @@ impl IggyBatch {
                 std::ptr::copy_nonoverlapping(value.as_ptr(), ptr, N);
             }
         }
+    }
+
+    pub fn write_header<const N: usize>(&self, writer: &mut HeaderWriter<N>) {
+        self.header.write_header(writer);
+    }
+
+    pub async fn write_messages<W: AsyncWriteExt + Unpin>(&self, writer: &mut W) {
+        writer.write_all(&self.batch).await.unwrap();
+    }
+
+    pub fn get_size(&self) -> IggyByteSize {
+        let batch_size = IggyByteSize::from(self.batch.len() as u64);
+        batch_size
+    }
+
+    pub fn get_size_w_header(&self) -> IggyByteSize {
+        let header_size = IggyByteSize::from(IGGY_BATCH_OVERHEAD);
+        let batch_size = IggyByteSize::from(self.batch.len() as u64);
+        header_size + batch_size
+    }
+}
+
+impl IggyBatch {
+    pub fn new(header: IggyHeader, batch: Bytes) -> Self {
+        Self { header, batch }
     }
 
     pub fn write_header<const N: usize>(&self, writer: &mut HeaderWriter<N>) {
@@ -339,7 +375,7 @@ impl<'batch> IntoIterator for &'batch IggyBatch {
 }
 
 impl<'batch> IggyBatch {
-    pub fn iter(&self) -> IggyMessageIterator<'batch> {
+    pub fn iter(&'batch self) -> IggyMessageIterator<'batch> {
         IggyMessageIterator {
             batch: self,
             position: 0,
@@ -356,47 +392,33 @@ impl<'msg> Iterator for IggyMessageIterator<'msg> {
     type Item = (Range<usize>, IggyMessageView<'msg>);
 
     fn next(&mut self) -> Option<Self::Item> {
-        let data = &self.batch.batch;
+        if self.position >= self.batch.batch.len() {
+            return None
+        }
+        let data = self.batch.batch.as_ref();
         let start_pos = self.position;
         let mut pos = self.position;
 
-        /*
-        let mut position = 0;
-        let mut messages_count = 0u32;
-        let mut timestamp_delta = 0;
-        while position < batch.len() {
-            let offset_delta = messages_count.to_le_bytes();
-            write_value_at(batch, offset_delta, position);
-            position += 4;
-            let duration_delta = IggyTimestamp::now() - base_timestamp;
-            timestamp_delta = duration_delta.as_micros() as u32;
-            let timestamp_delta_value = timestamp_delta.to_le_bytes();
-            write_value_at(batch, timestamp_delta_value, position);
-
-            position += 4;
-            let msg_len = u64::from_le_bytes(batch[position..position + 8].try_into().unwrap()) + 8;
-            position += 8 + msg_len as usize;
-            messages_count += 1;
-        }
-        */
         //TODO: replace all of those oks with an Faillable iterator I guess ?
         let offset_delta = u32::from_le_bytes(data[pos..pos + 4].try_into().ok()?);
         pos += 4;
         let timestamp_delta = u32::from_le_bytes(data[pos..pos + 4].try_into().ok()?);
         pos += 4;
         let total_length = u64::from_le_bytes(data[pos..pos + 8].try_into().ok()?);
+        // Subtract the id and payload_length field
+        let msg_len = total_length - 16 - 8;
         pos += 8;
         let payload_length = u64::from_le_bytes(data[pos..pos + 8].try_into().ok()?);
         pos += 8;
-        let headers_length = total_length - payload_length;
         let id = u128::from_le_bytes(data[pos..pos + 16].try_into().ok()?);
         pos += 16;
+        let headers_length = msg_len - payload_length;
 
-        let payload = &data[pos..payload_length as usize];
+        let payload = &data[pos..pos + payload_length as usize];
         pos += payload_length as usize;
-        let headers = &data[pos..headers_length as usize];
+        let headers = &data[pos..pos + headers_length as usize];
         pos += headers_length as usize;
-        self.position += pos;
+        self.position = pos;
 
         let offset = self.batch.header.base_offset + u64::from(offset_delta);
         let timestamp = self.batch.header.base_timestamp + timestamp_delta as u64;

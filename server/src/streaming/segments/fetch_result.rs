@@ -1,3 +1,4 @@
+use bytes::Bytes;
 use iggy::models::batch::IggyHeader;
 use std::ops::Range;
 
@@ -5,11 +6,11 @@ use std::ops::Range;
 pub struct IggyBatchSlice {
     pub range: Range<usize>,
     pub header: IggyHeader,
-    pub bytes: Vec<u8>,
+    pub bytes: Bytes,
 }
 
 impl IggyBatchSlice {
-    pub fn new(range: Range<usize>, header: IggyHeader, bytes: Vec<u8>) -> Self {
+    pub fn new(range: Range<usize>, header: IggyHeader, bytes: Bytes) -> Self {
         Self {
             range,
             header,
@@ -27,6 +28,10 @@ pub struct IggyBatchFetchResult {
 
 impl IggyBatchFetchResult {
     pub fn new(slices: Vec<IggyBatchSlice>, msg_count: u32, header: IggyHeader) -> Self {
-        Self { slices, msg_count, header }
+        Self {
+            slices,
+            msg_count,
+            header,
+        }
     }
 }

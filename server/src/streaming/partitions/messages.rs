@@ -6,6 +6,7 @@ use crate::streaming::segments::*;
 use error_set::ErrContext;
 use iggy::error::IggyError;
 use iggy::messages::send_messages::Message;
+use iggy::models::batch::IggyMutableBatch;
 use iggy::utils::timestamp::IggyTimestamp;
 use iggy::{confirmation::Confirmation, models::batch::IggyBatch};
 use std::sync::{atomic::Ordering, Arc};
@@ -98,7 +99,9 @@ impl Partition {
                     .await
             }
             //_ => Self::get_messages_from_segments(segments, start_offset, count).await,
-            _ => panic!("todo, the method from above is already implemented, need to flatten the results")
+            _ => panic!(
+                "todo, the method from above is already implemented, need to flatten the results"
+            ),
         }
     }
 
@@ -367,7 +370,7 @@ impl Partition {
     pub async fn append_messages(
         &mut self,
         appendable_batch_info: AppendableBatchInfo,
-        batch: IggyBatch,
+        batch: IggyMutableBatch,
         confirmation: Option<Confirmation>,
     ) -> Result<(), IggyError> {
         {

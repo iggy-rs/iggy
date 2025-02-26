@@ -1,4 +1,4 @@
-use iggy::models::batch::{IggyBatch, IggyHeader};
+use iggy::models::batch::{IggyBatch, IggyHeader, IggyMutableBatch};
 use iggy::utils::byte_size::IggyByteSize;
 use std::sync::Arc;
 
@@ -9,7 +9,7 @@ pub struct BatchAccumulator {
     current_offset: u64,
     current_timestamp: u64,
     leading_header: Option<IggyHeader>,
-    batches: Vec<IggyBatch>,
+    batches: Vec<IggyMutableBatch>,
 }
 
 impl BatchAccumulator {
@@ -24,7 +24,7 @@ impl BatchAccumulator {
         }
     }
 
-    pub fn append(&mut self, batch_size: IggyByteSize, batch: IggyBatch) {
+    pub fn append(&mut self, batch_size: IggyByteSize, batch: IggyMutableBatch) {
         let header = batch.header;
         if self.leading_header.is_none() {
             self.base_offset = header.base_offset;
@@ -88,7 +88,7 @@ impl BatchAccumulator {
         self.base_offset
     }
 
-    pub fn materialize(self) -> (IggyHeader, Vec<IggyBatch>) {
+    pub fn materialize(self) -> (IggyHeader, Vec<IggyMutableBatch>) {
         (
             self.leading_header
                 .expect("No leading header when materializing batch"),

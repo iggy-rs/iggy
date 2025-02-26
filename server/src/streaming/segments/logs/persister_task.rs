@@ -1,7 +1,7 @@
 use flume::{unbounded, Receiver};
 use iggy::{
     error::IggyError,
-    models::batch::{IggyBatch, IggyHeader, IGGY_BATCH_OVERHEAD},
+    models::batch::{IggyBatch, IggyHeader, IggyMutableBatch, IGGY_BATCH_OVERHEAD},
     utils::duration::IggyDuration,
 };
 use std::{
@@ -18,7 +18,7 @@ use tracing::{error, trace, warn};
 #[derive(Debug)]
 /// A command to the persister task.
 enum PersisterTaskCommand {
-    WriteRequest(u64, IggyHeader, Vec<IggyBatch>),
+    WriteRequest(u64, IggyHeader, Vec<IggyMutableBatch>),
     Shutdown,
 }
 
@@ -63,7 +63,7 @@ impl PersisterTask {
     }
 
     /// Sends the batch bytes to the persister task (fire-and-forget).
-    pub async fn persist(&self, batch_size: u64, header: IggyHeader, batches: Vec<IggyBatch>) {
+    pub async fn persist(&self, batch_size: u64, header: IggyHeader, batches: Vec<IggyMutableBatch>) {
         if let Err(e) = self
             .sender
             .send_async(PersisterTaskCommand::WriteRequest(
@@ -223,7 +223,7 @@ impl PersisterTask {
         file_path: &str,
         batch_size: u64,
         header: IggyHeader,
-        batches: Vec<IggyBatch>,
+        batches: Vec<IggyMutableBatch>,
         fsync: bool,
         max_retries: u32,
         retry_delay: IggyDuration,

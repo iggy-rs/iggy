@@ -15,6 +15,7 @@ use iggy_bench_report::actor_kind::ActorKind;
 use iggy_bench_report::benchmark_kind::BenchmarkKind;
 use iggy_bench_report::individual_metrics::BenchmarkIndividualMetrics;
 use integration::test_server::{login_root, ClientFactory};
+use std::hint::black_box;
 use std::sync::atomic::{AtomicI64, Ordering};
 use std::sync::Arc;
 use std::time::Duration;
@@ -204,7 +205,7 @@ impl Consumer {
                 ),
             };
             let before_poll = Instant::now();
-            let polled_messages = client
+            let batch = client
                 .poll_messages(
                     &stream_id,
                     &topic_id,
@@ -215,7 +216,7 @@ impl Consumer {
                     auto_commit,
                 )
                 .await;
-            if let Err(e) = polled_messages {
+            if let Err(e) = batch {
                 if matches!(e, IggyError::TopicIdNotFound(_, _)) {
                     topic_not_found_counter += 1;
                     if topic_not_found_counter > 1000 {
@@ -228,9 +229,8 @@ impl Consumer {
                 continue;
             }
 
-            /*
-            let polled_messages = polled_messages.unwrap();
-            if polled_messages.messages.is_empty() {
+            let batch = batch.unwrap();
+            if batch.batch.is_empty() {
                 // Store initial poll timestamp if this is the first attempt
                 if initial_poll_timestamp.is_none() {
                     initial_poll_timestamp = Some(before_poll);
@@ -253,6 +253,8 @@ impl Consumer {
                 continue;
             }
 
+            //TODO: Fix me
+            /*
             if polled_messages.messages.len() != messages_per_batch as usize {
                 let should_warn = last_warning_time
                     .map(|t| t.elapsed() >= Duration::from_secs(1))
@@ -289,18 +291,15 @@ impl Consumer {
 
             self.batches_left_to_receive.fetch_sub(1, Ordering::AcqRel);
 
-            /*
-            received_messages += polled_messages.messages.len() as u64;
+            received_messages += batch.iter().count() as u64;
 
             // We don't need to calculate the size whole batch every time by iterating over it - just always use the size of the first message
             if batch_user_size_bytes == 0 || batch_size_total_bytes == 0 {
                 batch_user_size_bytes =
-                    polled_messages.messages[0].payload.len() as u64 * messages_per_batch as u64;
+                    batch.batch.len() as u64;
                 batch_size_total_bytes =
-                    polled_messages.messages[0].get_size_bytes().as_bytes_u64()
-                        * messages_per_batch as u64;
+                    batch.batch.len() as u64;
             }
-            */
 
             total_user_data_bytes += IggyByteSize::from(batch_user_size_bytes);
             total_bytes += IggyByteSize::from(batch_size_total_bytes);

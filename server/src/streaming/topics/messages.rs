@@ -12,7 +12,7 @@ use iggy::error::IggyError;
 use iggy::locking::IggySharedMutFn;
 use iggy::messages::poll_messages::{PollingKind, PollingStrategy};
 use iggy::messages::send_messages::{Message, Partitioning, PartitioningKind};
-use iggy::models::batch::IggyBatch;
+use iggy::models::batch::{IggyBatch, IggyMutableBatch};
 use iggy::utils::byte_size::IggyByteSize;
 use iggy::utils::expiry::IggyExpiry;
 use iggy::utils::sizeable::Sizeable;
@@ -59,11 +59,11 @@ impl Topic {
                     .await
                     .with_error_context(|error| format!("{COMPONENT} (error: {error}) - failed to get messages by timestamp: {value}, count: {count}"))
                     */
-                    todo!()
+                todo!()
             }
             PollingKind::First => todo!(), //partition.get_first_messages(count).await,
-            PollingKind::Last => todo!(), //partition.get_last_messages(count).await,
-            PollingKind::Next => todo!(), //partition.get_next_messages(consumer, count).await,
+            PollingKind::Last => todo!(),  //partition.get_last_messages(count).await,
+            PollingKind::Next => todo!(),  //partition.get_next_messages(consumer, count).await,
         }?;
 
         /*
@@ -80,7 +80,7 @@ impl Topic {
         &self,
         batch_size: IggyByteSize,
         partitioning: &Partitioning,
-        batch: IggyBatch,
+        batch: IggyMutableBatch,
         confirmation: Option<Confirmation>,
     ) -> Result<(), IggyError> {
         if !self.has_partitions() {
@@ -137,7 +137,7 @@ impl Topic {
     async fn append_messages_to_partition(
         &self,
         appendable_batch_info: AppendableBatchInfo,
-        batch: IggyBatch,
+        batch: IggyMutableBatch,
         confirmation: Option<Confirmation>,
     ) -> Result<(), IggyError> {
         let partition = self.partitions.get(&appendable_batch_info.partition_id);

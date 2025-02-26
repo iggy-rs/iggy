@@ -9,7 +9,7 @@ use crate::messages::flush_unsaved_buffer::FlushUnsavedBuffer;
 use crate::messages::poll_messages::PollingStrategy;
 use crate::messages::send_messages::{Message, Partitioning};
 use crate::messages::{poll_messages, send_messages};
-use crate::models::batch::IggyBatch;
+use crate::models::batch::{IggyBatch, IggyHeader, IGGY_BATCH_OVERHEAD};
 
 #[async_trait::async_trait]
 impl<B: BinaryClient> MessageClient for B {
@@ -38,8 +38,12 @@ impl<B: BinaryClient> MessageClient for B {
                 ),
             )
             .await?;
-        //TODO: Fix me
-        todo!()
+        let mut position = 0;
+        let header = IggyHeader::from_bytes(&response[..IGGY_BATCH_OVERHEAD as usize]);
+        position += IGGY_BATCH_OVERHEAD as usize;
+        let bytes = response.slice(position..);
+        let batch = IggyBatch::new(header, bytes);
+        Ok(batch)
     }
 
     async fn send_messages(

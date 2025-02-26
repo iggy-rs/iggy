@@ -3,7 +3,7 @@ use error_set::ErrContext;
 use iggy::{
     confirmation::Confirmation,
     error::IggyError,
-    models::batch::{IggyBatch, IggyHeader, IGGY_BATCH_OVERHEAD},
+    models::batch::{IggyBatch, IggyHeader, IggyMutableBatch, IGGY_BATCH_OVERHEAD},
     utils::{byte_size::IggyByteSize, duration::IggyDuration, sizeable::Sizeable},
 };
 use std::{
@@ -95,7 +95,7 @@ impl SegmentLogWriter {
     pub async fn save_batches(
         &mut self,
         header: IggyHeader,
-        batches: Vec<IggyBatch>,
+        batches: Vec<IggyMutableBatch>,
         confirmation: Confirmation,
     ) -> Result<IggyByteSize, IggyError> {
         let batch_size =
@@ -131,7 +131,7 @@ impl SegmentLogWriter {
     async fn write_batch(
         &mut self,
         header: IggyHeader,
-        batches: Vec<IggyBatch>,
+        batches: Vec<IggyMutableBatch>,
     ) -> Result<(), IggyError> {
         if let Some(ref mut file) = self.file {
             let mut slices = Vec::new();

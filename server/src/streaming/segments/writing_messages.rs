@@ -3,7 +3,7 @@ use crate::streaming::batching::batch_accumulator::BatchAccumulator;
 use crate::streaming::segments::segment::Segment;
 use error_set::ErrContext;
 use iggy::error::IggyError;
-use iggy::models::batch::IGGY_BATCH_OVERHEAD;
+use iggy::models::batch::{IggyMutableBatch, IGGY_BATCH_OVERHEAD};
 use iggy::utils::byte_size::IggyByteSize;
 use iggy::utils::sizeable::Sizeable;
 use iggy::{confirmation::Confirmation, models::batch::IggyBatch};
@@ -15,7 +15,7 @@ impl Segment {
         &mut self,
         batch_size: IggyByteSize,
         messages_count: u32,
-        batch: IggyBatch,
+        batch: IggyMutableBatch,
     ) -> Result<(), IggyError> {
         if self.is_closed {
             return Err(IggyError::SegmentClosed(

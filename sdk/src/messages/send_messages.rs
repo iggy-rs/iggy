@@ -467,8 +467,9 @@ pub(crate) fn as_bytes(
         // TODO: create a writer method on the `Message` and in the future
         // once the `Message` struct is dropped on the `IggyMessage`.
         let headers_len = header::get_headers_size_bytes(&message.headers).as_bytes_u64();
-        let payload_len = message.payload.len() as u64 + 16;
-        let total_len = headers_len + payload_len;
+        let payload_len = message.payload.len() as u64; 
+        // 8 for the payload_len and 16 for the id
+        let total_len = headers_len + payload_len + 8 + 16;
 
         bytes.extend_from_slice(&0u32.to_le_bytes()); // offset_delta
         bytes.extend_from_slice(&0u32.to_le_bytes()); // timestamp_delta

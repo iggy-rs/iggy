@@ -3,7 +3,7 @@ use crate::streaming::topics::topic::Topic;
 use crate::streaming::topics::COMPONENT;
 use error_set::ErrContext;
 use iggy::error::IggyError;
-use iggy::identifier::{IdKind, Identifier};
+use iggy::identifier::Identifier;
 use iggy::locking::IggySharedMutFn;
 use std::sync::atomic::Ordering;
 use tokio::sync::RwLock;
@@ -34,9 +34,11 @@ impl Topic {
         &self,
         identifier: &Identifier,
     ) -> Result<&RwLock<ConsumerGroup>, IggyError> {
-        match identifier.kind {
-            IdKind::Numeric => self.get_consumer_group_by_id(identifier.get_u32_value().unwrap()),
-            IdKind::String => self.get_consumer_group_by_name(&identifier.get_cow_str_value()?),
+        match identifier {
+            Identifier::Numeric(id) => self.get_consumer_group_by_id(*id),
+            Identifier::String(id) => {
+                self.get_consumer_group_by_name(&String::from_utf8_lossy(id.as_bytes()))
+            }
         }
     }
 
@@ -44,10 +46,10 @@ impl Topic {
         &self,
         identifier: &Identifier,
     ) -> Result<Option<&RwLock<ConsumerGroup>>, IggyError> {
-        match identifier.kind {
-            IdKind::Numeric => Ok(self.consumer_groups.get(&identifier.get_u32_value()?)),
-            IdKind::String => {
-                Ok(self.try_get_consumer_group_by_name(&identifier.get_cow_str_value()?))
+        match identifier {
+            Identifier::Numeric(id) => Ok(self.consumer_groups.get(id)),
+            Identifier::String(id) => {
+                Ok(self.try_get_consumer_group_by_name(&String::from_utf8_lossy(id.as_bytes())))
             }
         }
     }

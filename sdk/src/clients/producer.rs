@@ -2,7 +2,7 @@ use crate::client::Client;
 use crate::compression::compression_algorithm::CompressionAlgorithm;
 use crate::diagnostic::DiagnosticEvent;
 use crate::error::IggyError;
-use crate::identifier::{IdKind, Identifier};
+use crate::identifier::Identifier;
 use crate::locking::{IggySharedMut, IggySharedMutFn};
 use crate::messages::send_messages::{Message, Partitioning};
 use crate::partitioner::Partitioner;
@@ -128,13 +128,7 @@ impl IggyProducer {
                 return Err(IggyError::StreamNameNotFound(self.stream_name.clone()));
             }
 
-            let (name, id) = match stream_id.kind {
-                IdKind::Numeric => (
-                    self.stream_name.to_owned(),
-                    Some(self.stream_id.get_u32_value()?),
-                ),
-                IdKind::String => (self.stream_id.get_string_value()?, None),
-            };
+            let (name, id) = stream_id.extract_name_id(self.stream_name.to_owned())?;
             info!("Creating stream: {name}");
             client.create_stream(&name, id).await?;
         }
@@ -148,13 +142,7 @@ impl IggyProducer {
                 ));
             }
 
-            let (name, id) = match self.topic_id.kind {
-                IdKind::Numeric => (
-                    self.topic_name.to_owned(),
-                    Some(self.topic_id.get_u32_value()?),
-                ),
-                IdKind::String => (self.topic_id.get_string_value()?, None),
-            };
+            let (name, id) = self.topic_id.extract_name_id(self.topic_name.to_owned())?;
             info!("Creating topic: {name} for stream: {}", self.stream_name);
             client
                 .create_topic(

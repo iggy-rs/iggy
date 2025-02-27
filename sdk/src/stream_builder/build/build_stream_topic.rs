@@ -2,7 +2,6 @@ use crate::client::{StreamClient, TopicClient};
 use crate::clients::client::IggyClient;
 use crate::compression::compression_algorithm::CompressionAlgorithm;
 use crate::error::IggyError;
-use crate::identifier::{IdKind, Identifier};
 use crate::stream_builder::IggyConsumerConfig;
 use crate::utils::expiry::IggyExpiry;
 use crate::utils::topic_size::MaxTopicSize;
@@ -44,7 +43,7 @@ pub(crate) async fn build_iggy_stream_topic_if_not_exists(
             return Ok(());
         }
 
-        let (name, id) = extract_name_id_from_identifier(stream_id, stream_name)?;
+        let (name, id) = stream_id.extract_name_id(stream_name.to_owned())?;
         trace!("Creating stream: {name}");
         client.create_stream(&name, id).await?;
     }
@@ -67,7 +66,7 @@ pub(crate) async fn build_iggy_stream_topic_if_not_exists(
         let topic_partitions_count = config.partitions_count();
         let topic_replication_factor = config.replication_factor();
 
-        let (name, id) = extract_name_id_from_identifier(topic_id, topic_name)?;
+        let (name, id) = topic_id.extract_name_id(topic_name.to_owned())?;
         trace!("Create topic: {name} for stream: {}", stream_name);
         client
             .create_topic(
@@ -84,15 +83,4 @@ pub(crate) async fn build_iggy_stream_topic_if_not_exists(
     }
 
     Ok(())
-}
-
-fn extract_name_id_from_identifier(
-    stream_id: &Identifier,
-    stream_name: &str,
-) -> Result<(String, Option<u32>), IggyError> {
-    let (name, id) = match stream_id.kind {
-        IdKind::Numeric => (stream_name.to_owned(), Some(stream_id.get_u32_value()?)),
-        IdKind::String => (stream_id.get_string_value()?, None),
-    };
-    Ok((name, id))
 }

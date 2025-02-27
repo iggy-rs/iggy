@@ -1,5 +1,5 @@
 use crate::streaming::utils::hash;
-use iggy::identifier::{IdKind, Identifier};
+use iggy::identifier::Identifier;
 use std::fmt::{Display, Formatter};
 
 #[derive(Debug, PartialEq, Copy, Clone)]
@@ -18,9 +18,9 @@ impl PollingConsumer {
     }
 
     pub fn resolve_consumer_id(identifier: &Identifier) -> u32 {
-        match identifier.kind {
-            IdKind::Numeric => identifier.get_u32_value().unwrap(),
-            IdKind::String => hash::calculate_32(&identifier.value),
+        match identifier {
+            Identifier::Numeric(id) => *id,
+            Identifier::String(id) => hash::calculate_32(id.as_bytes()),
         }
     }
 }

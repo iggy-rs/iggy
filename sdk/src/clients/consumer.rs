@@ -2,7 +2,7 @@ use crate::client::Client;
 use crate::consumer::{Consumer, ConsumerKind};
 use crate::diagnostic::DiagnosticEvent;
 use crate::error::IggyError;
-use crate::identifier::{IdKind, Identifier};
+use crate::identifier::Identifier;
 use crate::locking::{IggySharedMut, IggySharedMutFn};
 use crate::messages::poll_messages::{PollingKind, PollingStrategy};
 use crate::models::messages::{PolledMessage, PolledMessages};
@@ -743,10 +743,7 @@ impl IggyConsumer {
         }
 
         let client = client.read().await;
-        let (name, id) = match consumer.id.kind {
-            IdKind::Numeric => (consumer_name.to_owned(), Some(consumer.id.get_u32_value()?)),
-            IdKind::String => (consumer.id.get_string_value()?, None),
-        };
+        let (name, id) = consumer.id.extract_name_id(consumer_name.to_owned())?;
 
         let consumer_group_id = name.to_owned().try_into()?;
         trace!("Validating consumer group: {consumer_group_id} for topic: {topic_id}, stream: {stream_id}");

@@ -9,7 +9,7 @@ use crate::streaming::utils::crypto;
 use crate::{IGGY_ROOT_PASSWORD_ENV, IGGY_ROOT_USERNAME_ENV};
 use error_set::ErrContext;
 use iggy::error::IggyError;
-use iggy::identifier::{IdKind, Identifier};
+use iggy::identifier::Identifier;
 use iggy::locking::IggySharedMutFn;
 use iggy::models::permissions::Permissions;
 use iggy::models::user_status::UserStatus;
@@ -146,10 +146,10 @@ impl System {
     }
 
     pub fn try_get_user(&self, user_id: &Identifier) -> Result<Option<&User>, IggyError> {
-        match user_id.kind {
-            IdKind::Numeric => Ok(self.users.get(&user_id.get_u32_value()?)),
-            IdKind::String => {
-                let username = user_id.get_cow_str_value()?;
+        match user_id {
+            Identifier::Numeric(id) => Ok(self.users.get(id)),
+            Identifier::String(id) => {
+                let username = String::from_utf8_lossy(id.as_bytes());
                 Ok(self
                     .users
                     .iter()
@@ -160,13 +160,13 @@ impl System {
     }
 
     pub fn get_user_mut(&mut self, user_id: &Identifier) -> Result<&mut User, IggyError> {
-        match user_id.kind {
-            IdKind::Numeric => self
+        match user_id {
+            Identifier::Numeric(id) => self
                 .users
-                .get_mut(&user_id.get_u32_value()?)
+                .get_mut(id)
                 .ok_or(IggyError::ResourceNotFound(user_id.to_string())),
-            IdKind::String => {
-                let username = user_id.get_cow_str_value()?;
+            Identifier::String(id) => {
+                let username = String::from_utf8_lossy(id.as_bytes());
                 self.users
                     .iter_mut()
                     .find(|(_, user)| user.username == username)

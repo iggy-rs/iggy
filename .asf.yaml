@@ -18,7 +18,7 @@
 # All configurations could be found here: https://github.com/apache/infrastructure-asfyaml/
 
 github:
-  description: "Apache Iggy: Blazingly fast message streaming platform"
+  description: "Apache Iggy: Hyper-Efficient Message Streaming at Laser Speed"
   homepage: https://iggy.apache.org
   labels:
     - rust
@@ -41,7 +41,7 @@ github:
           - "master"
       required_pull_request_reviews:
         dismiss_stale_reviews: true
-        required_approving_review_count: 3
+        required_approving_review_count: 2
       required_conversation_resolution: true
   custom_subjects:
     new_discussion: "{title}"

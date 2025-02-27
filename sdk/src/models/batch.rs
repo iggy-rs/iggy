@@ -259,16 +259,18 @@ impl IggyMutableBatch {
         fn write_value_at<const N: usize>(slice: &mut [u8], value: [u8; N], position: usize) {
             let slice = &mut slice[position..position + N];
             let ptr = slice.as_mut_ptr();
+            // Use copy_nonoverlapping to avoid bounds checking.
             unsafe {
                 std::ptr::copy_nonoverlapping(value.as_ptr(), ptr, N);
             }
         }
 
-        // TODO: Figure out what to do with the header on the batch.
-        // What we pass to this function is leading header from the batch coalescing process.
         let base_timestamp = header.base_timestamp;
         let base_offset = header.base_offset;
         let relative_offset = (current_offset - base_offset) as u32;
+
+        self.header.base_offset = header.base_offset;
+        self.header.base_timestamp = header.base_timestamp;
         // TODO: Impl iterators (mutable and non-mutable) instead of this.
         let mut position = 0;
         let mut messages_count = 0u32;
@@ -291,9 +293,14 @@ impl IggyMutableBatch {
             messages_count += 1;
         }
 
+        let batch_size = self.get_size().as_bytes_u64();
+        self.header.last_offset_delta = last_offset_delta;
+        self.header.last_timestamp_delta = last_timestamp_delta;
+        self.header.batch_length = batch_size;
+
         header.last_offset_delta = last_offset_delta;
         header.last_timestamp_delta = last_timestamp_delta;
-        header.batch_length += self.get_size().as_bytes_u64();
+        header.batch_length += batch_size;
 
         messages_count
     }

@@ -104,18 +104,12 @@ impl Partition {
     }
 
     // Retrieves the first messages (up to a specified count).
-    pub async fn get_first_messages(&self, count: u32) -> Result<Vec<Arc<()>>, IggyError> {
-        //TODO: Fix me
-        /*
+    pub async fn get_first_messages(&self, count: u32) -> Result<IggyBatchFetchResult, IggyError> {
         self.get_messages_by_offset(0, count).await
-        */
-        todo!()
     }
 
     // Retrieves the last messages (up to a specified count).
-    pub async fn get_last_messages(&self, count: u32) -> Result<Vec<Arc<()>>, IggyError> {
-        //TODO: Fix me
-        /*
+    pub async fn get_last_messages(&self, count: u32) -> Result<IggyBatchFetchResult, IggyError> {
         let mut requested_count = count as u64;
         if requested_count > self.current_offset + 1 {
             requested_count = self.current_offset + 1
@@ -123,8 +117,6 @@ impl Partition {
         let start_offset = 1 + self.current_offset - requested_count;
         self.get_messages_by_offset(start_offset, requested_count as u32)
             .await
-            */
-        todo!()
     }
 
     // Retrieves the next messages for a polling consumer (up to a specified count).
@@ -132,9 +124,7 @@ impl Partition {
         &self,
         consumer: PollingConsumer,
         count: u32,
-    ) -> Result<Vec<Arc<()>>, IggyError> {
-        //TODO: Fix me
-        /*
+    ) -> Result<IggyBatchFetchResult, IggyError> {
         let (consumer_offsets, consumer_id) = match consumer {
             PollingConsumer::Consumer(consumer_id, _) => (&self.consumer_offsets, consumer_id),
             PollingConsumer::ConsumerGroup(group_id, _) => (&self.consumer_group_offsets, group_id),
@@ -158,7 +148,8 @@ impl Partition {
                 consumer_offset.offset,
                 self.partition_id
             );
-            return Ok(Vec::new());
+            //TODO: Fix me
+            //return Ok(Vec::new());
         }
 
         let offset = consumer_offset.offset + 1;
@@ -170,8 +161,6 @@ impl Partition {
         );
 
         self.get_messages_by_offset(offset, count).await
-        */
-        todo!()
     }
 
     fn get_end_offset(&self, offset: u64, count: u32) -> u64 {

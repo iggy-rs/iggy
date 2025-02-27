@@ -11,7 +11,8 @@ use std::{
     sync::{
         atomic::{AtomicU64, Ordering},
         Arc,
-    }, time::Duration,
+    },
+    time::Duration,
 };
 use tokio::{
     fs::{File, OpenOptions},

@@ -3,7 +3,7 @@ use crate::streaming::segments::{segment::Segment, IggyBatchSlice};
 use error_set::ErrContext;
 use iggy::{
     error::IggyError,
-    models::batch::IggyBatch,
+    models::batch::{IggyBatch, IggyMutableBatch},
     utils::{byte_size::IggyByteSize, checksum, sizeable::Sizeable},
 };
 use std::{
@@ -78,8 +78,8 @@ impl Segment {
         // TODO: Move this as a method on `IggyBatch` and make this method internal only to the segment module
         let filter_and_create_slice = |batch: IggyBatch| {
             let mut ranges = batch.iter().filter_map(|(range, msg)| {
+                //println!("looking for offsets: {} - {}, msg_offset: {}", offset, end_offset, msg.offset);
                 if msg.offset >= offset && msg.offset <= end_offset {
-                    //msg_count += 1;
                     Some(range)
                 } else {
                     None
@@ -133,8 +133,6 @@ impl Segment {
         }
 
         // Case 2: All messages are on disk
-        todo!();
-        /*
         if end_offset < first_buffer_offset {
             return self
                 .load_messages_from_disk(offset, end_offset)
@@ -145,8 +143,10 @@ impl Segment {
                         .map(filter_and_create_slice)
                         .collect::<Vec<_>>()
                 });
+        } else {
+            // TODO: Fix me
+            todo!()
         }
-        */
 
         // TODO: Fix me
         /*
@@ -226,7 +226,6 @@ impl Segment {
         start_offset: u64,
         end_offset: u64,
     ) -> Vec<IggyBatch> {
-        println!("loading messages from unsaved buffer");
         let batch_accumulator = self.unsaved_messages.as_ref().unwrap();
         batch_accumulator.get_messages_by_offset(start_offset, end_offset)
     }
@@ -449,7 +448,6 @@ impl Segment {
             start_offset,
             end_offset
         );
-        let messages_count = (start_offset + end_offset + 1) as usize;
         let batches = self
             .load_batches_by_range(index_range, start_offset, end_offset)
             .await

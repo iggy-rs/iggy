@@ -61,18 +61,11 @@ impl Topic {
                     */
                 todo!()
             }
-            PollingKind::First => todo!(), //partition.get_first_messages(count).await,
-            PollingKind::Last => todo!(),  //partition.get_last_messages(count).await,
-            PollingKind::Next => todo!(),  //partition.get_next_messages(consumer, count).await,
+            PollingKind::First => partition.get_first_messages(count).await,
+            PollingKind::Last => partition.get_last_messages(count).await,
+            PollingKind::Next => partition.get_next_messages(consumer, count).await,
         }?;
 
-        /*
-        Ok(PolledMessages {
-            partition_id,
-            current_offset: partition.current_offset,
-            messages,
-        })
-        */
         Ok(result)
     }
 

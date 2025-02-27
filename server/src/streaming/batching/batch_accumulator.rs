@@ -43,13 +43,14 @@ impl BatchAccumulator {
     }
 
     pub fn get_messages_by_offset(&self, start_offset: u64, end_offset: u64) -> Vec<IggyBatch> {
-        let start_idx = self
-            .batches
-            .partition_point(|batch| batch.header.base_offset < start_offset);
-        let end_idx = self
-            .batches
-            .partition_point(|batch| batch.header.base_offset <= end_offset);
-        println!("start_idx: {}, end_idx: {}", start_idx, end_idx);
+        let start_idx = self.batches.partition_point(|batch| {
+            let last_offset = batch.header.base_offset + batch.header.last_offset_delta as u64;
+            last_offset < start_offset
+        });
+        let end_idx = self.batches.partition_point(|batch| {
+            let last_offset = batch.header.base_offset + batch.header.last_offset_delta as u64;
+            last_offset <= end_offset
+        });
         let batches = self.batches[start_idx..end_idx]
             .iter()
             .map(|batch| IggyBatch::new(batch.header, batch.batch.clone().freeze()))

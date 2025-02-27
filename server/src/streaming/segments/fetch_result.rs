@@ -27,6 +27,9 @@ pub struct IggyBatchFetchResult {
 
 impl From<Vec<IggyBatchSlice>> for IggyBatchFetchResult {
     fn from(slices: Vec<IggyBatchSlice>) -> Self {
+        if slices.is_empty() {
+            return Default::default();
+        } 
         let header = slices[0].header;
         IggyBatchFetchResult::new(header, slices)
     }

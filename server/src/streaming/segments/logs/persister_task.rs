@@ -63,7 +63,12 @@ impl PersisterTask {
     }
 
     /// Sends the batch bytes to the persister task (fire-and-forget).
-    pub async fn persist(&self, batch_size: u64, header: IggyHeader, batches: Vec<IggyMutableBatch>) {
+    pub async fn persist(
+        &self,
+        batch_size: u64,
+        header: IggyHeader,
+        batches: Vec<IggyMutableBatch>,
+    ) {
         if let Err(e) = self
             .sender
             .send_async(PersisterTaskCommand::WriteRequest(

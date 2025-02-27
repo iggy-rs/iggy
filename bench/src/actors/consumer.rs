@@ -295,10 +295,8 @@ impl Consumer {
 
             // We don't need to calculate the size whole batch every time by iterating over it - just always use the size of the first message
             if batch_user_size_bytes == 0 || batch_size_total_bytes == 0 {
-                batch_user_size_bytes =
-                    batch.batch.len() as u64;
-                batch_size_total_bytes =
-                    batch.batch.len() as u64;
+                batch_user_size_bytes = batch.batch.len() as u64;
+                batch_size_total_bytes = batch.batch.len() as u64;
             }
 
             total_user_data_bytes += IggyByteSize::from(batch_user_size_bytes);

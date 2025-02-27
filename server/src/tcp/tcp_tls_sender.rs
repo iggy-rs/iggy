@@ -38,7 +38,7 @@ impl Sender for TcpTlsSender {
             })
             .map_err(ServerError::IoError)
     }
-    
+
     async fn send_ok_response_vectored(
         &mut self,
         length: &[u8],

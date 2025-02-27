@@ -460,14 +460,13 @@ pub(crate) fn as_bytes(
     bytes.put_slice(&topic_id_bytes);
     bytes.put_slice(&key_bytes);
 
-    let mut header = IggyHeader::default();
-    header.attributes = 69;
+    let header = IggyHeader::default();
     bytes.put_slice(&header.as_bytes());
     for message in messages {
         // TODO: create a writer method on the `Message` and in the future
         // once the `Message` struct is dropped on the `IggyMessage`.
         let headers_len = header::get_headers_size_bytes(&message.headers).as_bytes_u64();
-        let payload_len = message.payload.len() as u64; 
+        let payload_len = message.payload.len() as u64;
         // 8 for the payload_len and 16 for the id
         let total_len = headers_len + payload_len + 8 + 16;
 

@@ -29,32 +29,6 @@ pub struct SegmentLogReader {
     log_size_bytes: Arc<AtomicU64>,
 }
 
-enum BatchSkipCriteria {
-    None,
-    Offset(u64),
-    Timestamp(IggyTimestamp),
-}
-
-impl BatchSkipCriteria {
-    pub fn is_batch_skippable(&self, header: IggyHeader) -> bool {
-        match self {
-            BatchSkipCriteria::None => false,
-            BatchSkipCriteria::Offset(offset) => header.base_offset < *offset,
-            BatchSkipCriteria::Timestamp(timestamp) => todo!(),
-        }
-    }
-}
-
-impl fmt::Display for BatchSkipCriteria {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            BatchSkipCriteria::None => write!(f, "None"),
-            BatchSkipCriteria::Offset(offset) => write!(f, "offset: {}", offset),
-            BatchSkipCriteria::Timestamp(ts) => write!(f, "timestamp: {:?}", ts),
-        }
-    }
-}
-
 impl SegmentLogReader {
     /// Opens the log file in read mode.
     pub async fn new(file_path: &str, log_size_bytes: Arc<AtomicU64>) -> Result<Self, IggyError> {
@@ -118,30 +92,20 @@ impl SegmentLogReader {
         let mut batches = Vec::new();
         let mut last_batch_to_read = false;
 
-        // TODO: This can be improved, instead of reading all the batches starting from the idx start,
-        // We can skip some of the batches, based on filtering by header
         while !last_batch_to_read && position < file_size {
             file_size = self.file_size();
-            match self
-                .maybe_read_next_batch(position, file_size, BatchSkipCriteria::Offset(start_offset))
-                .await?
-            {
-                (Some(batch), bytes_read) => {
+            match self.maybe_read_next_batch(position, file_size).await? {
+                Some((batch, bytes_read)) => {
                     position += bytes_read;
                     let last_offset_in_batch =
                         batch.header.base_offset + batch.header.last_offset_delta as u64;
-                    if last_offset_in_batch >= index_range.end.offset as u64
-                        || position >= file_size
-                    {
+                    if last_offset_in_batch >= end_offset as u64 || position >= file_size {
                         last_batch_to_read = true;
                     }
                     batches.push(batch);
                 }
-                (None, bytes_read) => {
-                    if bytes_read == 0 {
-                        break;
-                    }
-                    position += bytes_read;
+                None => {
+                    break;
                 }
             }
         }
@@ -150,6 +114,7 @@ impl SegmentLogReader {
         Ok(batches)
     }
 
+    // TODO: This one is most likely not needed anymore.
     /// Loads and returns all message IDs from the log file.
     pub async fn load_message_ids_impl(&self) -> Result<Vec<u128>, IggyError> {
         let mut file_size = self.file_size();
@@ -272,16 +237,15 @@ impl SegmentLogReader {
         &self,
         position: u64,
         file_size: u64,
-        skip_criteria: BatchSkipCriteria,
-    ) -> Result<(Option<IggyBatch>, u64), IggyError> {
+    ) -> Result<Option<(IggyBatch, u64)>, IggyError> {
         let batch_header_size = IGGY_BATCH_OVERHEAD;
         if position + batch_header_size > file_size {
-            return Ok((None, 0));
+            return Ok(None);
         }
 
         let header_buf = match self.read_at(position, batch_header_size).await {
             Ok(buf) => buf,
-            Err(error) if error.kind() == ErrorKind::UnexpectedEof => return Ok((None, 0)),
+            Err(error) if error.kind() == ErrorKind::UnexpectedEof => return Ok(None),
             Err(error) => {
                 error!(
                     "Error reading batch header at position {} in file {}: {error}",
@@ -295,21 +259,9 @@ impl SegmentLogReader {
                 "Cannot read batch header at position {} in file {}. Possibly truncated.",
                 position, self.file_path
             );
-            return Ok((None, 0));
+            return Ok(None);
         }
         let header = IggyHeader::from_bytes(&header_buf);
-
-        if skip_criteria.is_batch_skippable(header) {
-            trace!(
-                "Skipping batch with base offset: {}, base timestamp: {}, desired {}",
-                header.base_offset,
-                header.base_timestamp,
-                skip_criteria
-            );
-            let bytes_read = batch_header_size + header.batch_length;
-            return Ok((None, bytes_read));
-        }
-
         let batch_length = header.batch_length as usize;
         let batch_position = position + batch_header_size;
         if batch_position + batch_length as u64 > file_size {
@@ -317,12 +269,15 @@ impl SegmentLogReader {
                 "It's not possible to read the full batch payload ({} bytes) at position {} in file {} of size {}. Possibly truncated.",
                 batch_length, batch_position, self.file_path, file_size
             );
-            return Ok((None, 0));
+            return Ok(None);
         }
 
-        let batch_bytes = match self.read_bytes_at(batch_position, batch_length as u64).await {
+        let batch_bytes = match self
+            .read_bytes_at(batch_position, batch_length as u64)
+            .await
+        {
             Ok(buf) => buf,
-            Err(error) if error.kind() == ErrorKind::UnexpectedEof => return Ok((None, 0)),
+            Err(error) if error.kind() == ErrorKind::UnexpectedEof => return Ok(None),
             Err(error) => {
                 error!(
                     "Error reading batch payload at position {} in file {}: {error}",
@@ -335,7 +290,7 @@ impl SegmentLogReader {
         let bytes_read = batch_header_size + batch_length as u64;
         let batch = IggyBatch::new(header, batch_bytes);
 
-        Ok((Some(batch), bytes_read))
+        Ok(Some((batch, bytes_read)))
     }
 
     fn file_size(&self) -> u64 {
@@ -356,7 +311,7 @@ impl SegmentLogReader {
         let file = self.file.clone();
         spawn_blocking(move || {
             let mut buf = BytesMut::with_capacity(len as usize);
-            unsafe {buf.set_len(len as usize)};
+            unsafe { buf.set_len(len as usize) };
             file.read_exact_at(&mut buf, offset)?;
             Ok(buf.freeze())
         })

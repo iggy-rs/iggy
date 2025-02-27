@@ -3,7 +3,10 @@ use serde_with::serde_as;
 use std::{io::Write, ops::Range};
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 
-use crate::utils::{byte_size::IggyByteSize, timestamp::IggyTimestamp};
+use crate::{
+    binary::messages,
+    utils::{byte_size::IggyByteSize, timestamp::IggyTimestamp},
+};
 
 pub const IGGY_BATCH_OVERHEAD: u64 = 16 + 16 + 16 + 16 + 8 + 8 + 8 + 8 + 4 + 4 + 4 + 4 + 1;
 
@@ -250,37 +253,9 @@ impl IggyMutableBatch {
 
     pub fn update_header_and_messages_offsets_and_timestamps(
         &mut self,
-        base_offset: u64,
-        base_timestamp: IggyTimestamp,
-    ) {
-        let header = &mut self.header;
-
-        header.base_offset = base_offset;
-        header.base_timestamp = base_timestamp.into();
-
-        // TODO: Impl iterators (mutable and non-mutable) instead of this.
-        let mut position = 0;
-        let mut messages_count = 0u32;
-        let mut timestamp_delta = 0;
-        while position < self.batch.len() {
-            let offset_delta = messages_count.to_le_bytes();
-            write_value_at(&mut self.batch, offset_delta, position);
-            position += 4;
-            let duration_delta = IggyTimestamp::now() - base_timestamp;
-            timestamp_delta = duration_delta.as_micros() as u32;
-            let timestamp_delta_value = timestamp_delta.to_le_bytes();
-            write_value_at(&mut self.batch, timestamp_delta_value, position);
-
-            position += 4;
-            let total_len = u64::from_le_bytes(self.batch[position..position + 8].try_into().unwrap()); 
-            position += 8; 
-            position += total_len as usize;
-            messages_count += 1;
-        }
-        header.last_offset_delta = messages_count - 1;
-        header.last_timestamp_delta = timestamp_delta;
-        header.batch_length = self.batch.len() as u64;
-
+        current_offset: u64,
+        header: &mut IggyHeader,
+    ) -> u32 {
         fn write_value_at<const N: usize>(slice: &mut [u8], value: [u8; N], position: usize) {
             let slice = &mut slice[position..position + N];
             let ptr = slice.as_mut_ptr();
@@ -288,6 +263,39 @@ impl IggyMutableBatch {
                 std::ptr::copy_nonoverlapping(value.as_ptr(), ptr, N);
             }
         }
+
+        // TODO: Figure out what to do with the header on the batch.
+        // What we pass to this function is leading header from the batch coalescing process.
+        let base_timestamp = header.base_timestamp;
+        let base_offset = header.base_offset;
+        let relative_offset = (current_offset - base_offset) as u32;
+        // TODO: Impl iterators (mutable and non-mutable) instead of this.
+        let mut position = 0;
+        let mut messages_count = 0u32;
+        let mut last_timestamp_delta = 0u32;
+        let mut last_offset_delta = 0u32;
+        while position < self.batch.len() {
+            last_offset_delta = relative_offset + messages_count;
+            let offset_delta = last_offset_delta.to_le_bytes();
+            write_value_at(&mut self.batch, offset_delta, position);
+            position += 4;
+            last_timestamp_delta = (IggyTimestamp::now().as_micros() - base_timestamp) as u32;
+            let timestamp_delta_value = last_timestamp_delta.to_le_bytes();
+            write_value_at(&mut self.batch, timestamp_delta_value, position);
+
+            position += 4;
+            let total_len =
+                u64::from_le_bytes(self.batch[position..position + 8].try_into().unwrap());
+            position += 8;
+            position += total_len as usize;
+            messages_count += 1;
+        }
+
+        header.last_offset_delta = last_offset_delta;
+        header.last_timestamp_delta = last_timestamp_delta;
+        header.batch_length += self.get_size().as_bytes_u64();
+
+        messages_count
     }
 
     pub fn write_header<const N: usize>(&self, writer: &mut HeaderWriter<N>) {
@@ -393,7 +401,7 @@ impl<'msg> Iterator for IggyMessageIterator<'msg> {
 
     fn next(&mut self) -> Option<Self::Item> {
         if self.position >= self.batch.batch.len() {
-            return None
+            return None;
         }
         let data = self.batch.batch.as_ref();
         let start_pos = self.position;

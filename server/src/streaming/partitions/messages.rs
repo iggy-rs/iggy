@@ -84,24 +84,22 @@ impl Partition {
         */
 
         let end_offset = self.get_end_offset(start_offset, count);
-        /*
-        if let Some(cached) = self.try_get_messages_from_cache(start_offset, end_offset) {
-            return Ok(cached);
-        }
-        */
-
+        // TODO: Most likely don't need to find the specific range of segments, just find the first segment containing the first offset
+        // and during reads roll to the next one, when the first is exhausted.
         let segments = self.filter_segments_by_offsets(start_offset, end_offset);
         match segments.len() {
             0 => panic!("TODO"),
             1 => {
-                segments[0]
+                let slices = segments[0]
                     .get_messages_by_offset(start_offset, count)
-                    .await
+                    .await?;
+                Ok(slices.into())
             }
-            //_ => Self::get_messages_from_segments(segments, start_offset, count).await,
-            _ => panic!(
-                "todo, the method from above is already implemented, need to flatten the results"
-            ),
+            _ => {
+                let slices =
+                    Self::get_messages_from_segments(segments, start_offset, count).await?;
+                Ok(slices.into())
+            }
         }
     }
 
@@ -205,14 +203,15 @@ impl Partition {
         segments: Vec<&Segment>,
         offset: u64,
         count: u32,
-    ) -> Result<Vec<IggyBatchFetchResult>, IggyError> {
+    ) -> Result<Vec<IggyBatchSlice>, IggyError> {
+        //TODO: Figure out how to flatten those IggyBatchFetchResults.
         let mut results = Vec::new();
         let mut remaining_count = count;
         for segment in segments {
             if remaining_count == 0 {
                 break;
             }
-            let fetch_result = segment
+            let slices = segment
                 .get_messages_by_offset(offset, remaining_count)
                 .await
                 .with_error_context(|error| {
@@ -222,8 +221,12 @@ impl Partition {
                         segment, offset, remaining_count
                     )
                 })?;
-            remaining_count = remaining_count.saturating_sub(fetch_result.msg_count);
-            results.push(fetch_result);
+            let messages_count = slices
+                .iter()
+                .map(|slice| slice.header.last_offset_delta)
+                .sum();
+            remaining_count = remaining_count.saturating_sub(messages_count);
+            results.extend(slices);
         }
         Ok(results)
     }
@@ -390,12 +393,11 @@ impl Partition {
 
         let mut batch = batch;
         let batch_size = appendable_batch_info.batch_size;
-        let base_offset = if !self.should_increment_offset {
+        let current_offset = if !self.should_increment_offset {
             0
         } else {
             self.current_offset + 1
         };
-        let base_timestamp = IggyTimestamp::now();
 
         // TODO: Fix me
         // Use a sequence number on the batch and hold a stream local collection of the last few sequence numbers.
@@ -430,29 +432,27 @@ impl Partition {
         }
         */
 
-        batch.update_header_and_messages_offsets_and_timestamps(base_offset, base_timestamp);
-        let last_offset_delta = batch.header.last_offset_delta;
-        let messages_count = last_offset_delta + 1;
-        let last_offset = base_offset + (last_offset_delta) as u64;
-        if self.should_increment_offset {
-            self.current_offset = last_offset;
-        } else {
-            self.should_increment_offset = true;
-            self.current_offset = last_offset;
-        }
-
-        {
+        // Why are we even doing it this way ? XD
+        // What are those scopes
+        let messages_count = {
             let last_segment = self.segments.last_mut().ok_or(IggyError::SegmentNotFound)?;
-            last_segment
-                 .append_batch(batch_size, messages_count, batch)
+            let messages_count = last_segment
+                 .append_batch(current_offset, batch)
                  .await
                  .with_error_context(|error| {
                      format!(
                          "{COMPONENT} (error: {error}) - failed to append batch into last segment: {last_segment}",
                      )
                  })?;
+            messages_count
+        };
+        let last_offset = current_offset + messages_count as u64 - 1;
+        if self.should_increment_offset {
+            self.current_offset = last_offset;
+        } else {
+            self.should_increment_offset = true;
+            self.current_offset = last_offset;
         }
-
         /*
         if let Some(cache) = &mut self.cache {
             cache.extend(retained_messages);

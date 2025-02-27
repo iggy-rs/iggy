@@ -11,7 +11,7 @@ use std::{
     sync::{
         atomic::{AtomicU64, Ordering},
         Arc,
-    },
+    }, time::Duration,
 };
 use tokio::{
     fs::{File, OpenOptions},
@@ -98,8 +98,7 @@ impl SegmentLogWriter {
         batches: Vec<IggyMutableBatch>,
         confirmation: Confirmation,
     ) -> Result<IggyByteSize, IggyError> {
-        let batch_size =
-            IGGY_BATCH_OVERHEAD + batches.iter().map(|b| b.batch.len() as u64).sum::<u64>();
+        let batch_size = IGGY_BATCH_OVERHEAD + header.batch_length;
         match confirmation {
             Confirmation::Wait => {
                 self.write_batch(header, batches).await?;
@@ -142,12 +141,17 @@ impl SegmentLogWriter {
                 slices.push(IoSlice::new(&b.batch));
             });
 
-            file.write_vectored(&slices)
-                .await
-                .with_error_context(|error| {
-                    format!("Failed to log to file: {}. {error}", self.file_path)
-                })
-                .map_err(|_| IggyError::CannotWriteToFile)?;
+            let slices = &mut slices.as_mut_slice();
+            while slices.len() > 0 {
+                let written = file
+                    .write_vectored(slices)
+                    .await
+                    .with_error_context(|error| {
+                        format!("Failed to log to file: {}. {error}", self.file_path)
+                    })
+                    .map_err(|_| IggyError::CannotWriteToFile)?;
+                IoSlice::advance_slices(slices, written);
+            }
             Ok(())
         } else {
             error!("File handle is not available for synchronous write.");

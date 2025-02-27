@@ -42,7 +42,7 @@ impl Sender for QuicSender {
     async fn shutdown(&mut self) -> Result<(), ServerError> {
         Ok(())
     }
-    
+
     async fn send_ok_response_vectored(
         &mut self,
         length: &[u8],

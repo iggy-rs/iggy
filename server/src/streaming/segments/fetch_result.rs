@@ -21,17 +21,19 @@ impl IggyBatchSlice {
 
 #[derive(Default)]
 pub struct IggyBatchFetchResult {
-    pub msg_count: u32,
-    pub slices: Vec<IggyBatchSlice>,
     pub header: IggyHeader,
+    pub slices: Vec<IggyBatchSlice>,
+}
+
+impl From<Vec<IggyBatchSlice>> for IggyBatchFetchResult {
+    fn from(slices: Vec<IggyBatchSlice>) -> Self {
+        let header = slices[0].header;
+        IggyBatchFetchResult::new(header, slices)
+    }
 }
 
 impl IggyBatchFetchResult {
-    pub fn new(slices: Vec<IggyBatchSlice>, msg_count: u32, header: IggyHeader) -> Self {
-        Self {
-            slices,
-            msg_count,
-            header,
-        }
+    pub fn new(header: IggyHeader, slices: Vec<IggyBatchSlice>) -> Self {
+        Self { header, slices }
     }
 }

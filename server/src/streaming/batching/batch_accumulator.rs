@@ -1,10 +1,14 @@
-use iggy::models::batch::{IggyBatch, IggyHeader, IggyMutableBatch};
+use iggy::models::batch::{IggyBatch, IggyHeader, IggyMutableBatch, IGGY_BATCH_OVERHEAD};
 use iggy::utils::byte_size::IggyByteSize;
+use iggy::utils::timestamp::IggyTimestamp;
 use std::sync::Arc;
 
-#[derive(Debug)]
+use crate::streaming::segments::IggyBatchFetchResult;
+
+#[derive(Debug, Default)]
 pub struct BatchAccumulator {
     base_offset: u64,
+    base_timestamp: u64,
     current_size: IggyByteSize,
     current_offset: u64,
     current_timestamp: u64,
@@ -13,42 +17,44 @@ pub struct BatchAccumulator {
 }
 
 impl BatchAccumulator {
-    pub fn new(base_offset: u64, capacity: usize) -> Self {
-        Self {
-            base_offset,
-            current_size: IggyByteSize::from(0),
-            current_offset: 0,
-            current_timestamp: 0,
-            leading_header: None,
-            batches: Vec::with_capacity(capacity),
-        }
-    }
+    pub fn coalesce_batch(&mut self, current_offset: u64, mut batch: IggyMutableBatch) -> u32 {
+        let header = self.leading_header.get_or_insert_with(|| {
+            let mut header = batch.header;
+            let base_timestamp = IggyTimestamp::now().as_micros();
+            self.base_offset = current_offset;
+            self.base_timestamp = base_timestamp;
+            self.current_offset = current_offset;
+            self.current_timestamp = base_timestamp;
 
-    pub fn append(&mut self, batch_size: IggyByteSize, batch: IggyMutableBatch) {
-        let header = batch.header;
-        if self.leading_header.is_none() {
-            self.base_offset = header.base_offset;
-            self.leading_header = Some(header);
-        }
-        self.current_timestamp = header.base_timestamp + header.last_timestamp_delta as u64;
-        self.current_offset = header.base_offset + header.last_offset_delta as u64;
+            header.base_offset = current_offset;
+            header.base_timestamp = base_timestamp;
+            header
+        });
+
+        let batch_size = batch.get_size();
+        let messages_count =
+            batch.update_header_and_messages_offsets_and_timestamps(current_offset, header);
         self.current_size += batch_size;
+        self.current_offset = header.base_offset + header.last_offset_delta as u64;
+        self.current_timestamp = header.base_timestamp + header.last_timestamp_delta as u64;
         self.batches.push(batch);
-        //TODO: Fix me
+
+        messages_count
     }
 
-    pub fn get_messages_by_offset(&self, start_offset: u64, end_offset: u64) -> Vec<Arc<()>> {
-        //TODO: Fix me
-        /*
+    pub fn get_messages_by_offset(&self, start_offset: u64, end_offset: u64) -> Vec<IggyBatch> {
         let start_idx = self
-            .messages
-            .partition_point(|msg| msg.offset < start_offset);
+            .batches
+            .partition_point(|batch| batch.header.base_offset < start_offset);
         let end_idx = self
-            .messages
-            .partition_point(|msg| msg.offset <= end_offset);
-        self.messages[start_idx..end_idx].to_vec()
-        */
-        todo!()
+            .batches
+            .partition_point(|batch| batch.header.base_offset <= end_offset);
+        println!("start_idx: {}, end_idx: {}", start_idx, end_idx);
+        let batches = self.batches[start_idx..end_idx]
+            .iter()
+            .map(|batch| IggyBatch::new(batch.header, batch.batch.clone().freeze()))
+            .collect();
+        batches
     }
 
     pub fn get_messages_by_timestamp(&self, start_timestamp: u64, count: usize) -> Vec<Arc<()>> {
@@ -68,7 +74,6 @@ impl BatchAccumulator {
     }
 
     pub fn unsaved_messages_count(&self) -> usize {
-        //TODO: Fix me, replace this with leading_header last_offset_delta + 1.
         self.batches
             .iter()
             .map(|b| b.header)
@@ -88,11 +93,11 @@ impl BatchAccumulator {
         self.base_offset
     }
 
+    pub fn batch_base_timestamp(&self) -> u64 {
+        self.base_timestamp
+    }
+
     pub fn materialize(self) -> (IggyHeader, Vec<IggyMutableBatch>) {
-        (
-            self.leading_header
-                .expect("No leading header when materializing batch"),
-            self.batches,
-        )
+        (self.leading_header.unwrap(), self.batches)
     }
 }

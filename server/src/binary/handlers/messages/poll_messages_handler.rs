@@ -35,7 +35,12 @@ pub async fn handle(
             "{COMPONENT} (error: {error}) - failed to poll messages for consumer: {}, stream_id: {}, topic_id: {}, partition_id: {:?}, session: {}.",
             command.consumer, command.stream_id, command.topic_id, command.partition_id, session
         ))?;
-    let length = result.slices.iter().map(|s| s.range.len() as u32).sum::<u32>() + IGGY_BATCH_OVERHEAD as u32;
+    let length = result
+        .slices
+        .iter()
+        .map(|s| s.range.len() as u32)
+        .sum::<u32>()
+        + IGGY_BATCH_OVERHEAD as u32;
     let length = length.to_le_bytes();
     // Adding 1 for the header and 2 for the prefix required by `send_ok_response`.
     let mut slices = Vec::with_capacity(1 + result.slices.len() + 2);

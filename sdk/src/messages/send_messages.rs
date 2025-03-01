@@ -8,8 +8,9 @@ use crate::models::header;
 use crate::models::header::{HeaderKey, HeaderValue};
 use crate::utils::byte_size::IggyByteSize;
 use crate::utils::sizeable::Sizeable;
+use crate::utils::varint::{encode_var, varint_size};
 use crate::validatable::Validatable;
-use bytes::{BufMut, Bytes, BytesMut};
+use bytes::{Buf, BufMut, Bytes, BytesMut};
 use serde::{Deserialize, Serialize};
 use serde_with::base64::Base64;
 use serde_with::serde_as;
@@ -468,21 +469,26 @@ pub(crate) fn as_bytes(
         let headers_len = header::get_headers_size_bytes(&message.headers).as_bytes_u64();
         let payload_len = message.payload.len() as u64;
         // 8 for the payload_len and 16 for the id
-        let total_len = headers_len + payload_len + 8 + 16;
+        //let total_len = headers_len + payload_len + 8 + 16;
 
         bytes.extend_from_slice(&0u32.to_le_bytes()); // offset_delta
         bytes.extend_from_slice(&0u32.to_le_bytes()); // timestamp_delta
-        bytes.extend_from_slice(&total_len.to_le_bytes());
-        bytes.extend_from_slice(&payload_len.to_le_bytes());
         bytes.extend_from_slice(&message.id.to_le_bytes());
+
+        let mut position = bytes.len();
+        let payload_size = varint_size(payload_len);
+        let headers_size = varint_size(headers_len);
+        unsafe {bytes.set_len(position + payload_size + headers_size)};
+
+        //TODO: Replace this with varint
+        let advanced = encode_var(payload_len, &mut bytes[position..]);
+        position += advanced;
+        encode_var(headers_len, &mut bytes[position..]);
         bytes.extend_from_slice(&message.payload);
 
         if let Some(headers) = &message.headers {
             let headers_bytes = headers.to_bytes();
-            bytes.put_u32_le(headers_bytes.len() as u32);
             bytes.put_slice(&headers_bytes);
-        } else {
-            bytes.put_u32_le(0);
         }
     }
 

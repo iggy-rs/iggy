@@ -80,7 +80,7 @@ jobs:
 
       - name: Something went wrong
         if: ${{ contains(needs.*.result, 'failure') && github.event_name == 'workflow_run' }}
-        uses: JasonEtco/create-an-issue@v2.9.2
+        uses: JasonEtco/create-an-issue@v2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITHUB_BOT_CONTEXT_STRING: "post release docker container test"

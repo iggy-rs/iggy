@@ -9,28 +9,38 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
-      - uses: clechasseur/rs-cargo@v3
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          override: true
+      - uses: actions-rs/cargo@v1
         with:
           command: check
+
   fmt:
     name: cargo fmt
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
-      - run: rustup component add rustfmt
-      - uses: clechasseur/rs-cargo@v3
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          override: true
+      - uses: actions-rs/cargo@v1
         with:
           command: fmt
           args: --all -- --check
+
   clippy:
     name: cargo clippy
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
-      - uses: clechasseur/rs-cargo@v3
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          override: true
+      - uses: actions-rs/cargo@v1
         with:
           command: clippy
           args: --all-targets --all-features -- -D warnings
@@ -40,24 +50,47 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
-      - run: cargo install cargo-sort
-      - run: cargo sort --check --workspace
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          override: true
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-sort
+      - uses: actions-rs/cargo@v1
+        with:
+          command: sort
+          args: --check --workspace
 
   doctest:
     name: cargo test docs
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
-      - run: cargo test --doc
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          override: true
+      - uses: actions-rs/cargo@v1
+        with:
+          command: test
+          args: --doc
 
   unused_dependencies:
     name: cargo machete
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: bnjbvr/cargo-machete@v0.7.0
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          override: true
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-machete
+      - uses: actions-rs/cargo@v1
+        with:
+          command: machete
 
   check-commit-message:
     name: commit messages
@@ -74,13 +107,3 @@ jobs:
           accessToken: ${{ secrets.GITHUB_TOKEN }} # needed only when checkAllCommitMessages is true
           pattern: '^.{0,80}(\n.*)*$'
           error: "Subject of all commits in the PR and PR body/title has to be shorter than 80 characters."
-
-# Uncomment this when we have a proper release - 1.0.0
-#   semver-checks:
-#     name: SemVer SDK
-#     runs-on: ubuntu-latest
-#     steps:
-#       - uses: actions/checkout@v4
-#       - uses: obi1kenobi/cargo-semver-checks-action@v2
-#         with:
-#           package: iggy

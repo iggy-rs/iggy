@@ -7,7 +7,10 @@ use opentelemetry::trace::TracerProvider;
 use opentelemetry::KeyValue;
 use opentelemetry_appender_tracing::layer::OpenTelemetryTracingBridge;
 use opentelemetry_otlp::{WithExportConfig, WithHttpConfig};
+use opentelemetry_sdk::logs::log_processor_with_async_runtime;
 use opentelemetry_sdk::propagation::TraceContextPropagator;
+use opentelemetry_sdk::runtime;
+use opentelemetry_sdk::trace::span_processor_with_async_runtime;
 use opentelemetry_sdk::Resource;
 use std::io::{self, Write};
 use std::path::PathBuf;
@@ -183,18 +186,25 @@ impl Logging {
                         .expect("Failed to initialize gRPC logger."),
                 )
                 .build(),
-            TelemetryTransport::HTTP => opentelemetry_sdk::logs::SdkLoggerProvider::builder()
-                .with_resource(resource.clone())
-                .with_batch_exporter(
-                    opentelemetry_otlp::LogExporter::builder()
-                        .with_http()
-                        .with_http_client(reqwest::Client::new())
-                        .with_endpoint(self.telemetry_config.logs.endpoint.clone())
-                        .with_protocol(opentelemetry_otlp::Protocol::HttpBinary)
-                        .build()
-                        .expect("Failed to initialize HTTP logger."),
-                )
-                .build(),
+            TelemetryTransport::HTTP => {
+                let log_exporter = opentelemetry_otlp::LogExporter::builder()
+                    .with_http()
+                    .with_http_client(reqwest::Client::new())
+                    .with_endpoint(self.telemetry_config.logs.endpoint.clone())
+                    .with_protocol(opentelemetry_otlp::Protocol::HttpBinary)
+                    .build()
+                    .expect("Failed to initialize HTTP logger.");
+                opentelemetry_sdk::logs::SdkLoggerProvider::builder()
+                    .with_resource(resource.clone())
+                    .with_log_processor(
+                        log_processor_with_async_runtime::BatchLogProcessor::builder(
+                            log_exporter,
+                            runtime::Tokio,
+                        )
+                        .build(),
+                    )
+                    .build()
+            }
         };
 
         let tracer_provider = match self.telemetry_config.traces.transport {
@@ -208,18 +218,25 @@ impl Logging {
                         .expect("Failed to initialize gRPC tracer."),
                 )
                 .build(),
-            TelemetryTransport::HTTP => opentelemetry_sdk::trace::SdkTracerProvider::builder()
-                .with_resource(resource.clone())
-                .with_batch_exporter(
-                    opentelemetry_otlp::SpanExporter::builder()
-                        .with_http()
-                        .with_http_client(reqwest::Client::new())
-                        .with_endpoint(self.telemetry_config.traces.endpoint.clone())
-                        .with_protocol(opentelemetry_otlp::Protocol::HttpBinary)
-                        .build()
-                        .expect("Failed to initialize HTTP tracer."),
-                )
-                .build(),
+            TelemetryTransport::HTTP => {
+                let trace_exporter = opentelemetry_otlp::SpanExporter::builder()
+                    .with_http()
+                    .with_http_client(reqwest::Client::new())
+                    .with_endpoint(self.telemetry_config.traces.endpoint.clone())
+                    .with_protocol(opentelemetry_otlp::Protocol::HttpBinary)
+                    .build()
+                    .expect("Failed to initialize HTTP tracer.");
+                opentelemetry_sdk::trace::SdkTracerProvider::builder()
+                    .with_resource(resource.clone())
+                    .with_span_processor(
+                        span_processor_with_async_runtime::BatchSpanProcessor::builder(
+                            trace_exporter,
+                            runtime::Tokio,
+                        )
+                        .build(),
+                    )
+                    .build()
+            }
         };
 
         let tracer = tracer_provider.tracer(service_name);

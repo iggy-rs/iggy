@@ -424,6 +424,7 @@ impl<'msg> Iterator for IggyMessageIterator<'msg> {
         pos += 4;
         let id = u128::from_le_bytes(data[pos..pos + 16].try_into().ok()?);
         pos += 16;
+        /*
         let total_length = u64::from_le_bytes(data[pos..pos + 8].try_into().ok()?);
         // Subtract the id and payload_length field
         let msg_len = total_length - 16 - 8;
@@ -431,7 +432,9 @@ impl<'msg> Iterator for IggyMessageIterator<'msg> {
         let payload_length = u64::from_le_bytes(data[pos..pos + 8].try_into().ok()?);
         pos += 8;
         let headers_length = msg_len - payload_length;
-
+        */
+        let payload_length = decode_var(&data[pos..], &mut pos);
+        let headers_length = decode_var(&data[pos..], &mut pos);
         let payload = &data[pos..pos + payload_length as usize];
         pos += payload_length as usize;
         let headers = &data[pos..pos + headers_length as usize];

@@ -50,7 +50,7 @@ use tracing::{debug, error, info};
 /// The main client struct which implements all the `Client` traits and wraps the underlying low-level client for the specific transport.
 ///
 /// It also provides the additional builders for the standalone consumer, consumer group, and producer.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 #[allow(dead_code)]
 pub struct IggyClient {
     client: IggySharedMut<Box<dyn Client>>,

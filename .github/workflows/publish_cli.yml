@@ -99,7 +99,7 @@ jobs:
         run: exit 0
       - name: Something went wrong
         if: ${{ contains(needs.*.result, 'failure') }}
-        uses: JasonEtco/create-an-issue@v2.9.2
+        uses: JasonEtco/create-an-issue@v2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITHUB_BOT_CONTEXT_STRING: "publish to crates.io"

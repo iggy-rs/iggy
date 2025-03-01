@@ -30,7 +30,9 @@ jobs:
           echo -n "test" | gnome-keyring-daemon --unlock
 
       - name: Install cargo-llvm-cov
-        uses: taiki-e/install-action@cargo-llvm-cov
+        uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-llvm-cov
 
       - name: Build
         run: source <(cargo llvm-cov show-env --export-prefix) && cargo build

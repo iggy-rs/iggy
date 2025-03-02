@@ -74,21 +74,23 @@ jobs:
           cat Cross.toml
         if: ${{ matrix.platform.cross }}
 
-      - name: Build binary
-        uses: houseabsolute/actions-rust-cross@v0
+      - name: Prepare ${{ matrix.platform.target }} toolchain
+        uses: actions-rs/toolchain@v1
         with:
-          command: "build"
+          toolchain: stable
+          override: true
           target: ${{ matrix.platform.target }}
-          toolchain: ${{ matrix.toolchain }}
-          args: " --features ci-qemu --verbose ${{ matrix.platform.profile == 'release' && '--release' || '' }}"
 
-      - name: Run tests
-        uses: houseabsolute/actions-rust-cross@v0
+      - name: Install cross
+        uses: taiki-e/install-action@v2
         with:
-          command: "test"
-          target: ${{ matrix.platform.target }}
-          toolchain: ${{ matrix.toolchain }}
-          args: " --features ci-qemu --verbose ${{ matrix.platform.profile == 'release' && '--release' || '' }}"
+          tool: cross
+
+      - name: Build binary ${{ matrix.platform.target }}
+        run: cross +stable build --features ci-qemu --verbose --target ${{ matrix.platform.target }} ${{ matrix.platform.profile == 'release' && '--release' || '' }}
+
+      - name: Run tests ${{ matrix.platform.target }}
+        run: cross +stable test --features ci-qemu --verbose --target ${{ matrix.platform.target }} ${{ matrix.platform.profile == 'release' && '--release' || '' }}
 
       - name: Check if workspace is clean
         run: git status | grep "working tree clean" || { git status ; exit 1; }

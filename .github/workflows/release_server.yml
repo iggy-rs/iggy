@@ -27,49 +27,40 @@ jobs:
       - name: Install musl-tools on Linux
         run: sudo apt-get update --yes && sudo apt-get install --yes musl-tools
 
-      - name: Build iggy-server release binary for Linux-x86_64
-        uses: houseabsolute/actions-rust-cross@v0
+      - name: Prepare x86_64-unknown-linux-musl toolchain
+        uses: actions-rs/toolchain@v1
         with:
-          command: "build"
-          target: x86_64-unknown-linux-musl
           toolchain: stable
-          args: "--verbose --release --bin iggy-server"
+          override: true
+          target: x86_64-unknown-linux-musl
 
-      - name: Build iggy-cli release binary for Linux-x86_64
-        uses: houseabsolute/actions-rust-cross@v0
+      - name: Install cross
+        uses: taiki-e/install-action@v2
         with:
-          command: "build"
-          target: x86_64-unknown-linux-musl
-          toolchain: stable
-          args: "--verbose --release --no-default-features --bin iggy"
+          tool: cross
 
-      - name: Prepare Linux-x86_64 artifacts
+      - name: Build iggy-server release binary for x86_64-unknown-linux-musl
+        run: cross +stable build --verbose --target x86_64-unknown-linux-musl --release --bin iggy-server
+
+      - name: Prepare x86_64-unknown-linux-musl artifacts
         run: |
           mkdir -p all_artifacts/Linux-x86_64
           cp target/x86_64-unknown-linux-musl/release/iggy-server all_artifacts/Linux-x86_64/
-          cp target/x86_64-unknown-linux-musl/release/iggy all_artifacts/Linux-x86_64/
 
-      - name: Build iggy-server release binary for Linux-aarch64
-        uses: houseabsolute/actions-rust-cross@v0
+      - name: Prepare aarch64-unknown-linux-musl toolchain
+        uses: actions-rs/toolchain@v1
         with:
-          command: "build"
-          target: aarch64-unknown-linux-musl
           toolchain: stable
-          args: "--verbose --release --bin iggy-server"
-
-      - name: Build iggy-cli release binary for Linux-aarch64
-        uses: houseabsolute/actions-rust-cross@v0
-        with:
-          command: "build"
+          override: true
           target: aarch64-unknown-linux-musl
-          toolchain: stable
-          args: "--verbose --release --no-default-features --bin iggy"
 
-      - name: Prepare Linux-aarch64 artifacts
+      - name: Build iggy-server release binary for aarch64-unknown-linux-musl
+        run: cross +stable build --verbose --target aarch64-unknown-linux-musl --release --bin iggy-server
+
+      - name: Prepare aarch64-unknown-linux-musl artifacts
         run: |
           mkdir -p all_artifacts/Linux-aarch64
           cp target/aarch64-unknown-linux-musl/release/iggy-server all_artifacts/Linux-aarch64/
-          cp target/aarch64-unknown-linux-musl/release/iggy all_artifacts/Linux-aarch64/
 
       - name: Zip artifacts for each platform
         run: |

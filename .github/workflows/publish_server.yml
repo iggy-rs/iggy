@@ -107,23 +107,23 @@ jobs:
         run: sudo apt-get update --yes && sudo apt-get install --yes musl-tools
         if: contains(matrix.platform.name, 'musl')
 
-      - name: Build iggy-server release binary
-        uses: houseabsolute/actions-rust-cross@v0
+      - name: Prepare ${{ matrix.platform.target }} toolchain
+        uses: actions-rs/toolchain@v1
         with:
-          command: "build"
+          toolchain: stable
+          override: true
           target: ${{ matrix.platform.target }}
-          toolchain: ${{ matrix.toolchain }}
-          args: "--verbose --release --bin iggy-server"
-        if: ${{ matrix.toolchain }} == 'stable'
 
-      - name: Build iggy-cli release binary
-        uses: houseabsolute/actions-rust-cross@v0
+      - name: Install cross
+        uses: taiki-e/install-action@v2
         with:
-          command: "build"
-          target: ${{ matrix.platform.target }}
-          toolchain: ${{ matrix.toolchain }}
-          args: "--verbose --release --no-default-features --bin iggy"
-        if: ${{ matrix.toolchain }} == 'stable'
+          tool: cross
+
+      - name: Build iggy-server ${{ matrix.platform.target }} release binary
+        run: cross +stable build --verbose --release --target ${{ matrix.platform.target }} --bin iggy-server
+
+      - name: Build iggy-cli ${{ matrix.platform.target }} release binary
+        run: cross +stable build --verbose --release --no-default-features --target ${{ matrix.platform.target }} --bin iggy
 
       - name: Prepare artifacts
         run: |
@@ -141,7 +141,7 @@ jobs:
         if: ${{ matrix.platform.cross }}
 
       - name: Set up Docker
-        uses: crazy-max/ghaction-setup-docker@v3
+        uses: crazy-max/ghaction-setup-docker@v4
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -258,7 +258,7 @@ jobs:
 
       - name: Something went wrong
         if: ${{ contains(needs.*.result, 'failure') && github.event_name != 'workflow_dispatch' }}
-        uses: JasonEtco/create-an-issue@v2.9.2
+        uses: JasonEtco/create-an-issue@v2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITHUB_BOT_CONTEXT_STRING: "build and release to dockerhub"

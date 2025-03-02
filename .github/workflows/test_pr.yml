@@ -74,21 +74,23 @@ jobs:
           rm -f $HOME/.local/share/keyrings/*
           echo -n "test" | gnome-keyring-daemon --unlock
 
-      - name: Build binary (Linux)
-        uses: houseabsolute/actions-rust-cross@v0
+      - name: Prepare x86_64-unknown-linux-musl toolchain
+        uses: actions-rs/toolchain@v1
         with:
-          command: "build"
-          target: x86_64-unknown-linux-musl
           toolchain: stable
-          args: "--verbose"
+          override: true
+          target: x86_64-unknown-linux-musl
 
-      - name: Run tests
-        uses: houseabsolute/actions-rust-cross@v0
+      - name: Install cross
+        uses: taiki-e/install-action@v2
         with:
-          command: "test"
-          target: x86_64-unknown-linux-musl
-          toolchain: stable
-          args: "--verbose"
+          tool: cross
+
+      - name: Build binary x86_64-unknown-linux-musl
+        run: cross +stable build --verbose --target x86_64-unknown-linux-musl
+
+      - name: Run tests x86_64-unknown-linux-musl
+        run: cross +stable test --verbose --target x86_64-unknown-linux-musl
 
       - name: Check CLI examples from README
         run: ./scripts/run-examples-from-readme.sh
@@ -106,7 +108,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: dtolnay/rust-toolchain@stable
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          override: true
 
       - name: Cache cargo & target directories
         uses: Swatinem/rust-cache@v2
@@ -130,7 +135,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: dtolnay/rust-toolchain@stable
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          override: true
 
       - name: Cache cargo & target directories
         uses: Swatinem/rust-cache@v2

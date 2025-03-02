@@ -61,13 +61,20 @@ jobs:
         run: sudo apt-get update --yes && sudo apt-get install --yes musl-tools
         if: ${{ matrix.platform.target == 'x86_64-unknown-linux-musl' }}
 
-      - name: Build ${{ matrix.platform.target }} release binary
-        uses: houseabsolute/actions-rust-cross@v0
+      - name: Prepare ${{ matrix.platform.target }} toolchain
+        uses: actions-rs/toolchain@v1
         with:
-          command: "build"
-          target: ${{ matrix.platform.target }}
           toolchain: stable
-          args: "--verbose --release --bin iggy"
+          override: true
+          target: ${{ matrix.platform.target }}
+
+      - name: Install cross
+        uses: taiki-e/install-action@v2
+        with:
+          tool: cross
+
+      - name: Build ${{ matrix.platform.target }} release binary
+        run: cross +stable build --verbose --release --target ${{ matrix.platform.target }}
 
       - name: Collect ${{ matrix.platform.target }} executable
         run: |
@@ -79,7 +86,7 @@ jobs:
         if: ${{ matrix.platform.os == 'ubuntu-latest' }}
 
       - name: Create ${{ matrix.platform.file }} artifact
-        uses: vimtor/action-zip@v1.2
+        uses: vimtor/action-zip@v1
         with:
           files: ${{ matrix.platform.executable }}
           dest: ${{ matrix.platform.file }}

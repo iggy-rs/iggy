@@ -10,9 +10,9 @@ updates:
     labels:
       - "ci-cd"
     assignees:
-      - "iggy-rs/maintainers"
+      - "apache/iggy-committers"
     reviewers:
-      - "iggy-rs/maintainers"
+      - "apache/iggy-committers"
 
   - package-ecosystem: "cargo"
     directory: "/"
@@ -22,6 +22,6 @@ updates:
     commit-message:
       prefix: "chore(deps): "
     assignees:
-      - "iggy-rs/maintainers"
+      - "apache/iggy-committers"
     reviewers:
-      - "iggy-rs/maintainers"
+      - "apache/iggy-committers"

@@ -5,7 +5,6 @@ use crate::{binary::sender::Sender, server_error::ServerError};
 use error_set::ErrContext;
 use iggy::error::IggyError;
 use quinn::{RecvStream, SendStream};
-use tokio::io::AsyncWriteExt;
 use tracing::{debug, error};
 
 const STATUS_OK: &[u8] = &[0; 4];

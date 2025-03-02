@@ -110,7 +110,6 @@ impl ProducingConsumer {
             messages.push(message);
         }
 
-        let xd = Partitioning::messages_key_str("test").unwrap();
         let stream_id = self.stream_id.try_into()?;
         let topic_id = topic_id.try_into()?;
         let partitioning = match self.partitions_count {

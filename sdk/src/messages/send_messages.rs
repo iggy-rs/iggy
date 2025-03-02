@@ -466,26 +466,15 @@ pub(crate) fn as_bytes(
     for message in messages {
         // TODO: create a writer method on the `Message` and in the future
         // once the `Message` struct is dropped on the `IggyMessage`.
-        let headers_len = IggyVarInt::from(header::get_headers_size_bytes(&message.headers).as_bytes_u64());
-        let payload_len = IggyVarInt::from(message.payload.len() as u64);
-        // 8 for the payload_len and 16 for the id
-        //let total_len = headers_len + payload_len + 8 + 16;
-
         bytes.extend_from_slice(&0u32.to_le_bytes()); // offset_delta
         bytes.extend_from_slice(&0u32.to_le_bytes()); // timestamp_delta
         bytes.extend_from_slice(&message.id.to_le_bytes());
 
+        let headers_len = IggyVarInt::from(header::get_headers_size_bytes(&message.headers).as_bytes_u64());
+        let payload_len = IggyVarInt::from(message.payload.len() as u64);
         payload_len.encode(&mut bytes);
         headers_len.encode(&mut bytes);
-
-        //TODO: Replace this with varint
-        /*
-        let advanced = encode_var(payload_len, &mut bytes[position..]);
-        position += advanced;
-        encode_var(headers_len, &mut bytes[position..]);
-        */
         bytes.extend_from_slice(&message.payload);
-
         if let Some(headers) = &message.headers {
             let headers_bytes = headers.to_bytes();
             bytes.put_slice(&headers_bytes);
@@ -603,6 +592,7 @@ impl Display for PartitioningKind {
 mod tests {
     use super::*;
 
+    //TODO: Fix me, fix those tests.
     #[test]
     fn should_be_serialized_as_bytes() {
         let message_1 = Message::from_str("hello 1").unwrap();

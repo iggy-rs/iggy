@@ -36,39 +36,36 @@ impl IggyVarInt {
             unreachable!("malformed VarInt")
         }
     }
-     
+
     #[inline]
     pub fn decode(r: &[u8]) -> (usize, u64) {
         let tag: u8 = r[0] >> 6;
         let first_byte = r[0] & 0b0011_1111;
 
         match tag {
-            0b00 => {
-                (1, u64::from(first_byte))
-            },
+            0b00 => (1, u64::from(first_byte)),
             0b01 => {
                 let mut buf = [0u8; 2];
                 buf[0] = first_byte;
                 buf[1] = r[1];
-                
+
                 (2, u64::from(u16::from_be_bytes(buf)))
-            },
+            }
             0b10 => {
                 let mut buf = [0u8; 4];
                 buf[0] = first_byte;
                 buf[1..4].copy_from_slice(&r[1..4]);
-                
+
                 (4, u64::from(u32::from_be_bytes(buf)))
-            },
+            }
             0b11 => {
                 let mut buf = [0u8; 8];
                 buf[0] = first_byte;
                 buf[1..8].copy_from_slice(&r[1..8]);
-                
+
                 (8, u64::from_be_bytes(buf))
-            },
+            }
             _ => unreachable!(),
         }
     }
-
 }

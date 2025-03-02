@@ -470,8 +470,9 @@ pub(crate) fn as_bytes(
         bytes.extend_from_slice(&0u32.to_le_bytes()); // timestamp_delta
         bytes.extend_from_slice(&message.id.to_le_bytes());
 
-        let headers_len = IggyVarInt::from(header::get_headers_size_bytes(&message.headers).as_bytes_u64());
-        let payload_len = IggyVarInt::from(message.payload.len() as u64);
+        let headers_len =
+            IggyVarInt::from(header::get_headers_size_bytes(&message.headers).as_bytes_u64());
+        let payload_len = IggyVarInt::from(message.length);
         payload_len.encode(&mut bytes);
         headers_len.encode(&mut bytes);
         bytes.extend_from_slice(&message.payload);

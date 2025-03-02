@@ -1,10 +1,12 @@
+use ::lending_iterator::prelude::*;
 use bytes::{Bytes, BytesMut};
 use serde_with::serde_as;
-use std::{io::Write, ops::Range};
+use std::{io::Write, marker::PhantomData, ops::Range};
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 
 use crate::{
     binary::messages,
+    system::get_stats,
     utils::{byte_size::IggyByteSize, timestamp::IggyTimestamp, varint::IggyVarInt},
 };
 
@@ -267,55 +269,34 @@ impl IggyMutableBatch {
             }
         }
 
+        self.header.base_offset = header.base_offset;
+        self.header.base_timestamp = header.base_timestamp;
+
         let base_timestamp = header.base_timestamp;
         let base_offset = header.base_offset;
         let relative_offset = (current_offset - base_offset) as u32;
 
-        self.header.base_offset = header.base_offset;
-        self.header.base_timestamp = header.base_timestamp;
-        // TODO: Impl iterators (mutable and non-mutable) instead of this.
-        let mut position = 0;
-        let mut messages_count = 0u32;
-        let mut last_timestamp_delta = 0u32;
-        let mut last_offset_delta = 0u32;
-        while position < self.batch.len() {
-            last_offset_delta = relative_offset + messages_count;
-            let offset_delta = last_offset_delta.to_le_bytes();
-            write_value_at(&mut self.batch, offset_delta, position);
-            position += 4;
-            last_timestamp_delta = (IggyTimestamp::now().as_micros() - base_timestamp) as u32;
-            let timestamp_delta_value = last_timestamp_delta.to_le_bytes();
-            write_value_at(&mut self.batch, timestamp_delta_value, position);
-            position += 4;
-            // Skip the Id
-            position += 16;
-            let (read, payload_len) = IggyVarInt::decode(&self.batch[position..]);
-            position += read;
-            let (read, headers_len) = IggyVarInt::decode(&self.batch[position..]);
-            position += read;
-            let total_len = payload_len + headers_len;
-            position += total_len as usize;
-            messages_count += 1;
-        }
+        let (messages_count, last_offset_delta, last_timestamp_delta) =
+            self.iter_mut()
+                .fold((0u32, 0u32, 0u32), |(count, _, _), msg| {
+                    let offset_delta = relative_offset + count;
+                    write_value_at(msg.view, offset_delta.to_le_bytes(), 0);
+                    let timestamp_delta =
+                        (IggyTimestamp::now().as_micros() - base_timestamp) as u32;
+                    write_value_at(msg.view, timestamp_delta.to_le_bytes(), 4);
+
+                    (count + 1, offset_delta, timestamp_delta)
+                });
 
         let batch_size = self.get_size().as_bytes_u64();
         self.header.last_offset_delta = last_offset_delta;
         self.header.last_timestamp_delta = last_timestamp_delta;
         self.header.batch_length = batch_size;
-
         header.last_offset_delta = last_offset_delta;
         header.last_timestamp_delta = last_timestamp_delta;
         header.batch_length += batch_size;
 
         messages_count
-    }
-
-    pub fn write_header<const N: usize>(&self, writer: &mut HeaderWriter<N>) {
-        self.header.write_header(writer);
-    }
-
-    pub async fn write_messages<W: AsyncWriteExt + Unpin>(&self, writer: &mut W) {
-        writer.write_all(&self.batch).await.unwrap();
     }
 
     pub fn get_size(&self) -> IggyByteSize {
@@ -330,13 +311,61 @@ impl IggyMutableBatch {
     }
 }
 
+pub struct IggyMessageViewMut<'msg> {
+    view: &'msg mut [u8],
+}
+
+impl<'msg> IggyMessageViewMut<'msg> {
+    pub fn new(view: &'msg mut [u8]) -> Self {
+        Self { view }
+    }
+}
+
+pub struct IggyMessageMutIterator<'batch> {
+    batch: &'batch mut IggyMutableBatch,
+    position: usize,
+}
+
+impl<'batch> IggyMutableBatch {
+    pub fn iter_mut(&'batch mut self) -> IggyMessageMutIterator<'batch> {
+        IggyMessageMutIterator {
+            batch: self,
+            position: 0,
+        }
+    }
+}
+
+#[gat]
+impl LendingIterator for IggyMessageMutIterator<'_> {
+    type Item<'next> = IggyMessageViewMut<'next>;
+
+    fn next(&mut self) -> Option<IggyMessageViewMut<'_>> {
+        if self.position >= self.batch.batch.len() {
+            return None;
+        }
+        let data = self.batch.batch.as_mut();
+        let start_post = self.position;
+        let mut pos = self.position;
+
+        // Offset delta + timestamp delta + id
+        pos += 4 + 4 + 16;
+        let (read, payload_length) = IggyVarInt::decode(&data[pos..]);
+        pos += read;
+        let (read, headers_length) = IggyVarInt::decode(&data[pos..]);
+        pos += read;
+        pos += payload_length as usize;
+        pos += headers_length as usize;
+        let view = &mut data[start_post..pos];
+        self.position = pos;
+
+        let msg = IggyMessageViewMut::new(view);
+        Some(msg)
+    }
+}
+
 impl IggyBatch {
     pub fn new(header: IggyHeader, batch: Bytes) -> Self {
         Self { header, batch }
-    }
-
-    pub fn write_header<const N: usize>(&self, writer: &mut HeaderWriter<N>) {
-        self.header.write_header(writer);
     }
 
     pub async fn write_messages<W: AsyncWriteExt + Unpin>(&self, writer: &mut W) {
@@ -382,24 +411,28 @@ impl<'msg> IggyMessageView<'msg> {
     }
 }
 
-impl<'batch> IntoIterator for &'batch IggyBatch {
-    type Item = (Range<usize>, IggyMessageView<'batch>);
-    type IntoIter = IggyMessageIterator<'batch>;
-
-    fn into_iter(self) -> Self::IntoIter {
-        IggyMessageIterator {
-            batch: self,
-            position: 0,
-        }
-    }
-}
-
 impl<'batch> IggyBatch {
     pub fn iter(&'batch self) -> IggyMessageIterator<'batch> {
         IggyMessageIterator {
             batch: self,
             position: 0,
         }
+    }
+
+    pub fn messages_iter(&'batch self) -> IggyMessageViewIterator<'batch> {
+        IggyMessageViewIterator { inner: self.iter() }
+    }
+}
+
+pub struct IggyMessageViewIterator<'batch> {
+    inner: IggyMessageIterator<'batch>,
+}
+
+impl<'batch> Iterator for IggyMessageViewIterator<'batch> {
+    type Item = IggyMessageView<'batch>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.inner.next().map(|(_, msg)| msg)
     }
 }
 

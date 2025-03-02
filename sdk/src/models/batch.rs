@@ -5,7 +5,7 @@ use tokio::io::{AsyncReadExt, AsyncWriteExt};
 
 use crate::{
     binary::messages,
-    utils::{byte_size::IggyByteSize, timestamp::IggyTimestamp, varint::decode_var},
+    utils::{byte_size::IggyByteSize, timestamp::IggyTimestamp, varint::IggyVarInt},
 };
 
 pub const IGGY_BATCH_OVERHEAD: u64 = 16 + 16 + 16 + 16 + 8 + 8 + 8 + 8 + 4 + 4 + 4 + 4 + 1;
@@ -14,7 +14,7 @@ pub const IGGY_BATCH_OVERHEAD: u64 = 16 + 16 + 16 + 16 + 8 + 8 + 8 + 8 + 4 + 4 +
 pub struct IggyHeader {
     // TODO: replace timestamp with `IggyTimestamp`
     // and maybe impl `IggyOffset` and other wrapper structs for things like checksums, attributes etc...
-    // TODO Fix me: Reorganize those fields, such that the most frequently accessed fields 
+    // TODO Fix me: Reorganize those fields, such that the most frequently accessed fields
     // are at the top in the same cache line.
     pub payload_type: u8,
     pub last_offset_delta: u32,
@@ -289,8 +289,10 @@ impl IggyMutableBatch {
             position += 4;
             // Skip the Id
             position += 16;
-            let payload_len = decode_var(&self.batch[position..], &mut position);
-            let headers_len = decode_var(&self.batch[position..], &mut position);
+            let (read, payload_len) = IggyVarInt::decode(&self.batch[position..]);
+            position += read;
+            let (read, headers_len) = IggyVarInt::decode(&self.batch[position..]);
+            position += read;
             let total_len = payload_len + headers_len;
             position += total_len as usize;
             messages_count += 1;
@@ -424,17 +426,10 @@ impl<'msg> Iterator for IggyMessageIterator<'msg> {
         pos += 4;
         let id = u128::from_le_bytes(data[pos..pos + 16].try_into().ok()?);
         pos += 16;
-        /*
-        let total_length = u64::from_le_bytes(data[pos..pos + 8].try_into().ok()?);
-        // Subtract the id and payload_length field
-        let msg_len = total_length - 16 - 8;
-        pos += 8;
-        let payload_length = u64::from_le_bytes(data[pos..pos + 8].try_into().ok()?);
-        pos += 8;
-        let headers_length = msg_len - payload_length;
-        */
-        let payload_length = decode_var(&data[pos..], &mut pos);
-        let headers_length = decode_var(&data[pos..], &mut pos);
+        let (read, payload_length) = IggyVarInt::decode(&data[pos..]);
+        pos += read;
+        let (read, headers_length) = IggyVarInt::decode(&data[pos..]);
+        pos += read;
         let payload = &data[pos..pos + payload_length as usize];
         pos += payload_length as usize;
         let headers = &data[pos..pos + headers_length as usize];

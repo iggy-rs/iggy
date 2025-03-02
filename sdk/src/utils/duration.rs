@@ -59,9 +59,7 @@ impl IggyDuration {
 
     pub fn abs_diff(&self, other: IggyDuration) -> IggyDuration {
         let diff = self.duration.abs_diff(other.duration);
-        IggyDuration {
-            duration: diff
-        }
+        IggyDuration { duration: diff }
     }
 }
 

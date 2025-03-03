@@ -374,7 +374,7 @@ sysinfo_print_interval = "10 s"
 # Enables or disables the system cache.
 # `true` activates caching for frequently accessed data.
 # `false` disables caching, data is always read from the source.
-enabled = true
+enabled = false
 
 # Maximum size of the cache, e.g. "4GB".
 size = "4 GB"
@@ -446,7 +446,7 @@ validate_checksum = false
 # The threshold of buffered messages before triggering a save to disk (integer).
 # Specifies how many messages accumulate before persisting to storage.
 # Adjusting this can balance between write performance and data durability.
-messages_required_to_save = 5000
+messages_required_to_save = 1000
 
 # Segment configuration
 [system.segment]
@@ -465,7 +465,7 @@ message_expiry = "none"
 # Possible values:
 # - "wait": waits for the file operation to complete before proceeding.
 # - "no_wait": proceeds without waiting for the file operation to finish, potentially increasing performance but at the cost of durability.
-server_confirmation = "no_wait"
+server_confirmation = "wait"
 
 # Configures whether expired segments are archived (boolean) or just deleted without archiving.
 archive_expired = false

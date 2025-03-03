@@ -345,7 +345,7 @@ impl BytesSerializable for Partitioning {
     where
         Self: Sized,
     {
-        if bytes.len() < 3 {
+        if bytes.len() < 2 {
             return Err(IggyError::InvalidCommand);
         }
 

@@ -1,6 +1,7 @@
 use crate::binary::mapper;
 use crate::binary::{handlers::users::COMPONENT, sender::SenderKind};
 use crate::state::command::EntryCommand;
+use crate::state::models::CreateUserWithId;
 use crate::streaming::session::Session;
 use crate::streaming::systems::system::SharedSystem;
 use crate::streaming::utils::crypto;
@@ -35,6 +36,7 @@ pub async fn handle(
                     command.username
                 )
             })?;
+    let user_id = user.id;
     let response = mapper::map_user(user);
 
     // For the security of the system, we hash the password before storing it in metadata.
@@ -43,11 +45,14 @@ pub async fn handle(
         .state
         .apply(
             session.get_user_id(),
-            EntryCommand::CreateUser(CreateUser {
-                username: command.username.to_owned(),
-                password: crypto::hash_password(&command.password),
-                status: command.status,
-                permissions: command.permissions.clone(),
+            EntryCommand::CreateUser(CreateUserWithId {
+                user_id,
+                command: CreateUser {
+                    username: command.username.to_owned(),
+                    password: crypto::hash_password(&command.password),
+                    status: command.status,
+                    permissions: command.permissions.clone(),
+                }
             }),
         )
         .await

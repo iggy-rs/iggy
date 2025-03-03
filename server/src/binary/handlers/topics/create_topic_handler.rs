@@ -1,6 +1,7 @@
 use crate::binary::mapper;
 use crate::binary::{handlers::topics::COMPONENT, sender::SenderKind};
 use crate::state::command::EntryCommand;
+use crate::state::models::CreateTopicWithId;
 use crate::streaming::session::Session;
 use crate::streaming::systems::system::SharedSystem;
 use anyhow::Result;
@@ -38,12 +39,16 @@ pub async fn handle(
             ))?;
     command.message_expiry = topic.message_expiry;
     command.max_topic_size = topic.max_topic_size;
+    let topic_id = topic.topic_id;
     let response = mapper::map_topic(topic).await;
 
     let system = system.downgrade();
     system
         .state
-        .apply(session.get_user_id(), EntryCommand::CreateTopic(command))
+        .apply(session.get_user_id(), EntryCommand::CreateTopic(CreateTopicWithId {
+            topic_id,
+            command
+        }))
         .await
         .with_error_context(|error| {
             format!(

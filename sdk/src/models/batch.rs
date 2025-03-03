@@ -260,6 +260,7 @@ impl IggyMutableBatch {
         current_offset: u64,
         header: &mut IggyHeader,
     ) -> u32 {
+        #[inline(always)]
         fn write_value_at<const N: usize>(slice: &mut [u8], value: [u8; N], position: usize) {
             let slice = &mut slice[position..position + N];
             let ptr = slice.as_mut_ptr();
@@ -469,7 +470,7 @@ impl<'msg> Iterator for IggyMessageIterator<'msg> {
         pos += headers_length as usize;
         self.position = pos;
 
-        let offset = self.batch.header.base_offset + u64::from(offset_delta);
+        let offset = self.batch.header.base_offset + offset_delta as u64;
         let timestamp = self.batch.header.base_timestamp + timestamp_delta as u64;
         let msg = IggyMessageView::new(id, offset, timestamp.into(), payload, headers);
         let range = start_pos..pos;

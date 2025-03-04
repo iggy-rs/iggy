@@ -21,7 +21,7 @@ jobs:
       - name: Cache cargo & target directories
         uses: Swatinem/rust-cache@v2
         with:
-          key: "v2"
+          key: "performance"
 
       - name: Checkout code
         uses: actions/checkout@v4

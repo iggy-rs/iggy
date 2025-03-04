@@ -54,7 +54,7 @@ jobs:
       - name: Cache cargo & target directories
         uses: Swatinem/rust-cache@v2
         with:
-          key: "v2"
+          key: "test-nightly-${{ matrix.platform.target }}"
 
       - name: Configure Git
         run: |

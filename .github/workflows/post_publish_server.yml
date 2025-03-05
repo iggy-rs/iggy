@@ -16,7 +16,7 @@ jobs:
       - name: Cache cargo & target directories
         uses: Swatinem/rust-cache@v2
         with:
-          key: "v2"
+          key: "post-publish-server"
 
       - name: Build binary
         run: cargo build

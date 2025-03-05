@@ -8,12 +8,12 @@ jobs:
     name: cargo check
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions-rs/toolchain@v1
+      - uses: actions/checkout@v4.2.2
+      - uses: actions-rs/toolchain@v1.0.6
         with:
           toolchain: stable
           override: true
-      - uses: actions-rs/cargo@v1
+      - uses: actions-rs/cargo@v1.0.1
         with:
           command: check
 
@@ -21,12 +21,12 @@ jobs:
     name: cargo fmt
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions-rs/toolchain@v1
+      - uses: actions/checkout@v4.2.2
+      - uses: actions-rs/toolchain@v1.0.6
         with:
           toolchain: stable
           override: true
-      - uses: actions-rs/cargo@v1
+      - uses: actions-rs/cargo@v1.0.1
         with:
           command: fmt
           args: --all -- --check
@@ -35,12 +35,12 @@ jobs:
     name: cargo clippy
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions-rs/toolchain@v1
+      - uses: actions/checkout@v4.2.2
+      - uses: actions-rs/toolchain@v1.0.6
         with:
           toolchain: stable
           override: true
-      - uses: actions-rs/cargo@v1
+      - uses: actions-rs/cargo@v1.0.1
         with:
           command: clippy
           args: --all-targets --all-features -- -D warnings
@@ -49,15 +49,15 @@ jobs:
     name: cargo sort
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions-rs/toolchain@v1
+      - uses: actions/checkout@v4.2.2
+      - uses: actions-rs/toolchain@v1.0.6
         with:
           toolchain: stable
           override: true
-      - uses: taiki-e/install-action@v2
+      - uses: taiki-e/install-action@v2.49.15
         with:
           tool: cargo-sort
-      - uses: actions-rs/cargo@v1
+      - uses: actions-rs/cargo@v1.0.1
         with:
           command: sort
           args: --check --workspace
@@ -66,12 +66,12 @@ jobs:
     name: cargo test docs
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions-rs/toolchain@v1
+      - uses: actions/checkout@v4.2.2
+      - uses: actions-rs/toolchain@v1.0.6
         with:
           toolchain: stable
           override: true
-      - uses: actions-rs/cargo@v1
+      - uses: actions-rs/cargo@v1.0.1
         with:
           command: test
           args: --doc
@@ -80,15 +80,15 @@ jobs:
     name: cargo machete
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions-rs/toolchain@v1
+      - uses: actions/checkout@v4.2.2
+      - uses: actions-rs/toolchain@v1.0.6
         with:
           toolchain: stable
           override: true
-      - uses: taiki-e/install-action@v2
+      - uses: taiki-e/install-action@v2.49.15
         with:
           tool: cargo-machete
-      - uses: actions-rs/cargo@v1
+      - uses: actions-rs/cargo@v1.0.1
         with:
           command: machete
 
@@ -99,7 +99,7 @@ jobs:
     if: github.event_name != 'workflow_dispatch'
     steps:
       - name: Check subject line length
-        uses: gsactions/commit-message-checker@v2
+        uses: gsactions/commit-message-checker@v2.0.0
         with:
           excludeDescription: "false" # exclude description body of a pull request
           excludeTitle: "false" # exclude the title of a pull request

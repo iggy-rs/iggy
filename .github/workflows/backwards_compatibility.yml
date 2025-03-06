@@ -13,7 +13,7 @@ jobs:
     outputs:
       should_skip: ${{ steps.check_skip.outputs.skip == 'true' }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4.2.2
         with:
           ref: ${{ github.ref }}
           fetch-depth: 0
@@ -80,7 +80,7 @@ jobs:
       - run: echo "${{ needs.check_commit_message.outputs.should_skip == 'true' }}"
 
       - name: Checkout code (origin/master)
-        uses: actions/checkout@v4
+        uses: actions/checkout@v4.2.2
         with:
           ref: master
           fetch-depth: 0
@@ -93,7 +93,7 @@ jobs:
       - name: Build iggy-server (origin/master)
         run: IGGY_CI_BUILD=true cargo build
 
-      - uses: JarvusInnovations/background-action@v1
+      - uses: JarvusInnovations/background-action@v1.0.7
         name: Run iggy-server in background (origin/master)
         with:
           run: |
@@ -126,7 +126,7 @@ jobs:
         run: cp -r local_data ..
 
       - name: Checkout code (PR)
-        uses: actions/checkout@v4
+        uses: actions/checkout@v4.2.2
         with:
           repository: ${{ github.event.pull_request.head.repo.full_name }}
           ref: ${{ github.event.pull_request.head.ref }}
@@ -139,7 +139,7 @@ jobs:
       - name: Restore local_data directory (PR)
         run: cp -r ../local_data .
 
-      - uses: JarvusInnovations/background-action@v1
+      - uses: JarvusInnovations/background-action@v1.0.7
         name: Run iggy-server in background (PR)
         with:
           run: |

@@ -15,12 +15,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v4.2.2
         with:
           fetch-depth: 0
 
       - name: Check if cli/Cargo.toml and Cargo.lock are changed
-        uses: tj-actions/changed-files@v45
+        uses: tj-actions/changed-files@v45.0.7
         id: all_changed_files
         with:
           files: |
@@ -67,9 +67,9 @@ jobs:
     if: ${{ needs.tag.outputs.tag_created == 'true' }}
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4.2.2
 
-      - uses: actions-rs/toolchain@v1
+      - uses: actions-rs/toolchain@v1.0.6
         with:
           toolchain: stable
           override: true
@@ -93,13 +93,13 @@ jobs:
       - github_release
     if: always()
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4.2.2
       - name: Everything is fine
         if: ${{ !(contains(needs.*.result, 'failure')) }}
         run: exit 0
       - name: Something went wrong
         if: ${{ contains(needs.*.result, 'failure') }}
-        uses: JasonEtco/create-an-issue@v2
+        uses: JasonEtco/create-an-issue@v2.9.2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITHUB_BOT_CONTEXT_STRING: "publish to crates.io"

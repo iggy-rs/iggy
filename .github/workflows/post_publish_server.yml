@@ -11,7 +11,7 @@ jobs:
     runs-on: ubuntu-latest
     if: ${{ github.event.workflow_run.conclusion == 'success' || github.event_name == 'workflow_dispatch'}}
     steps:
-      - uses: actions/checkout@v4.2.2
+      - uses: actions/checkout@v4
 
       - name: Cache cargo & target directories
         uses: Swatinem/rust-cache@v2
@@ -72,7 +72,7 @@ jobs:
     needs: [ post_publish_server ]
     if: always()
     steps:
-      - uses: actions/checkout@v4.2.2
+      - uses: actions/checkout@v4
 
       - name: Everything is fine
         if: ${{ !(contains(needs.*.result, 'failure')) }}
@@ -80,7 +80,7 @@ jobs:
 
       - name: Something went wrong
         if: ${{ contains(needs.*.result, 'failure') && github.event_name == 'workflow_run' }}
-        uses: JasonEtco/create-an-issue@v2.9.2
+        uses: JasonEtco/create-an-issue@v2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITHUB_BOT_CONTEXT_STRING: "post release docker container test"

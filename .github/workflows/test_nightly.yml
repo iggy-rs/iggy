@@ -49,7 +49,7 @@ jobs:
           - nightly
           - beta
     steps:
-      - uses: actions/checkout@v4.2.2
+      - uses: actions/checkout@v4
 
       - name: Cache cargo & target directories
         uses: Swatinem/rust-cache@v2
@@ -75,14 +75,14 @@ jobs:
         if: ${{ matrix.platform.cross }}
 
       - name: Prepare ${{ matrix.platform.target }} toolchain
-        uses: actions-rs/toolchain@v1.0.6
+        uses: actions-rs/toolchain@v1
         with:
           toolchain: stable
           override: true
           target: ${{ matrix.platform.target }}
 
       - name: Install cross
-        uses: taiki-e/install-action@v2.49.15
+        uses: taiki-e/install-action@v2
         with:
           tool: cross
 
@@ -100,7 +100,7 @@ jobs:
     needs: build_and_test
     if: always()
     steps:
-      - uses: actions/checkout@v4.2.2
+      - uses: actions/checkout@v4
       - name: Everything is fine
         if: ${{ !(contains(needs.*.result, 'failure')) }}
         run: exit 0

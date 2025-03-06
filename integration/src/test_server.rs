@@ -4,7 +4,7 @@ use std::fs::{File, OpenOptions};
 use std::io::{BufRead, BufReader, Write};
 use std::net::{Ipv4Addr, Ipv6Addr, SocketAddr};
 use std::path::{Path, PathBuf};
-use std::process::{Child, Command};
+use std::process::{Child, Command, Stdio};
 use std::thread::{panicking, sleep};
 use std::time::Duration;
 
@@ -158,11 +158,11 @@ impl TestServer {
         self.cleanup();
         let files_path = self.local_data_path.clone();
         let mut command = if let Some(server_executable_path) = &self.server_executable_path {
-            std::process::Command::new(server_executable_path)
+            Command::new(server_executable_path)
         } else {
             Command::cargo_bin("iggy-server").unwrap()
         };
-        command.env(SYSTEM_PATH_ENV_VAR, files_path.clone());
+        command.env(SYSTEM_PATH_ENV_VAR, files_path);
         command.envs(self.envs.clone());
 
         // By default, server all logs are redirected to files,
@@ -171,8 +171,8 @@ impl TestServer {
         if std::env::var(TEST_VERBOSITY_ENV_VAR).is_ok()
             || self.envs.contains_key(TEST_VERBOSITY_ENV_VAR)
         {
-            command.stdout(std::process::Stdio::inherit());
-            command.stderr(std::process::Stdio::inherit());
+            command.stdout(Stdio::inherit());
+            command.stderr(Stdio::inherit());
         } else {
             command.stdout(self.get_stdout_file());
             self.stdout_file_path = Some(fs::canonicalize(self.get_stdout_file_path()).unwrap());
@@ -189,6 +189,15 @@ impl TestServer {
                 let reader = BufReader::new(child_stdout);
                 for line in reader.lines() {
                     println!("{}", line.unwrap());
+                }
+            });
+        }
+        if self.child_handle.as_ref().unwrap().stderr.is_some() {
+            let child_stderr = self.child_handle.as_mut().unwrap().stderr.take().unwrap();
+            std::thread::spawn(move || {
+                let reader = BufReader::new(child_stderr);
+                for line in reader.lines() {
+                    eprintln!("{}", line.unwrap());
                 }
             });
         }

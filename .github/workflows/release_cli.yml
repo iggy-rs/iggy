@@ -50,7 +50,7 @@ jobs:
             file: iggy-cli-aarch64-apple-darwin.zip
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4.2.2
+        uses: actions/checkout@v4
 
       - name: Cache cargo & target directories
         uses: Swatinem/rust-cache@v2
@@ -62,14 +62,14 @@ jobs:
         if: ${{ matrix.platform.target == 'x86_64-unknown-linux-musl' }}
 
       - name: Prepare ${{ matrix.platform.target }} toolchain
-        uses: actions-rs/toolchain@v1.0.6
+        uses: actions-rs/toolchain@v1
         with:
           toolchain: stable
           override: true
           target: ${{ matrix.platform.target }}
 
       - name: Install cross
-        uses: taiki-e/install-action@v2.49.15
+        uses: taiki-e/install-action@v2
         with:
           tool: cross
 
@@ -86,14 +86,14 @@ jobs:
         if: ${{ matrix.platform.os == 'ubuntu-latest' }}
 
       - name: Create ${{ matrix.platform.file }} artifact
-        uses: vimtor/action-zip@v1.2
+        uses: vimtor/action-zip@v1
         with:
           files: ${{ matrix.platform.executable }}
           dest: ${{ matrix.platform.file }}
         if: ${{ matrix.platform.os == 'windows-latest' || matrix.platform.os == 'macos-latest' }}
 
       - name: Upload ${{ matrix.platform.file }} artifact
-        uses: actions/upload-artifact@v4.6.1
+        uses: actions/upload-artifact@v4
         with:
           name: artifacts-${{ matrix.platform.target }}
           path: ${{ matrix.platform.file }}
@@ -110,18 +110,18 @@ jobs:
     needs: build_cli
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4.2.2
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
       - name: Download all artifacts
-        uses: actions/download-artifact@v4.1.9
+        uses: actions/download-artifact@v4
 
       - name: List files
         run: find
 
       - name: Create Changelog
-        uses: orhun/git-cliff-action@v4.4.2
+        uses: orhun/git-cliff-action@v4
         id: changelog
         with:
           config: cliff.toml
@@ -131,7 +131,7 @@ jobs:
           GITHUB_REPO: ${{ github.repository }}
 
       - name: Create GitHub Release
-        uses: softprops/action-gh-release@v2.2.1
+        uses: softprops/action-gh-release@v2
         with:
           body: ${{ steps.changelog.outputs.content }}
           files: |

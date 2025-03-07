@@ -7,6 +7,7 @@ use iggy::models::header::{HeaderKey, HeaderValue};
 use std::str::FromStr;
 
 #[derive(Debug, Clone, Subcommand)]
+#[allow(clippy::large_enum_variant)]
 pub(crate) enum MessageAction {
     /// Send messages to given topic ID and given stream ID
     ///

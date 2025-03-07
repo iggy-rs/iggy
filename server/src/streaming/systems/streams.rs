@@ -7,7 +7,7 @@ use ahash::{AHashMap, AHashSet};
 use error_set::ErrContext;
 use futures::future::try_join_all;
 use iggy::error::IggyError;
-use iggy::identifier::{IdKind, Identifier};
+use iggy::identifier::Identifier;
 use iggy::locking::IggySharedMutFn;
 use std::cell::RefCell;
 use std::sync::atomic::{AtomicU32, Ordering};
@@ -202,9 +202,11 @@ impl System {
     }
 
     pub fn try_get_stream(&self, identifier: &Identifier) -> Result<Option<&Stream>, IggyError> {
-        match identifier.kind {
-            IdKind::Numeric => Ok(self.streams.get(&identifier.get_u32_value()?)),
-            IdKind::String => Ok(self.try_get_stream_by_name(&identifier.get_cow_str_value()?)),
+        match identifier {
+            Identifier::Numeric(id) => Ok(self.streams.get(id)),
+            Identifier::String(id) => {
+                Ok(self.try_get_stream_by_name(&String::from_utf8_lossy(id.as_bytes())))
+            }
         }
     }
 
@@ -215,16 +217,20 @@ impl System {
     }
 
     pub fn get_stream(&self, identifier: &Identifier) -> Result<&Stream, IggyError> {
-        match identifier.kind {
-            IdKind::Numeric => self.get_stream_by_id(identifier.get_u32_value()?),
-            IdKind::String => self.get_stream_by_name(&identifier.get_cow_str_value()?),
+        match identifier {
+            Identifier::Numeric(id) => self.get_stream_by_id(*id),
+            Identifier::String(id) => {
+                self.get_stream_by_name(&String::from_utf8_lossy(id.as_bytes()))
+            }
         }
     }
 
     pub fn get_stream_mut(&mut self, identifier: &Identifier) -> Result<&mut Stream, IggyError> {
-        match identifier.kind {
-            IdKind::Numeric => self.get_stream_by_id_mut(identifier.get_u32_value()?),
-            IdKind::String => self.get_stream_by_name_mut(&identifier.get_cow_str_value()?),
+        match identifier {
+            Identifier::Numeric(id) => self.get_stream_by_id_mut(*id),
+            Identifier::String(id) => {
+                self.get_stream_by_name_mut(&String::from_utf8_lossy(id.as_bytes()))
+            }
         }
     }
 

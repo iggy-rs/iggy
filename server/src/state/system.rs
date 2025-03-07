@@ -4,7 +4,7 @@ use ahash::AHashMap;
 use error_set::ErrContext;
 use iggy::compression::compression_algorithm::CompressionAlgorithm;
 use iggy::error::IggyError;
-use iggy::identifier::{IdKind, Identifier};
+use iggy::identifier::Identifier;
 use iggy::models::permissions::Permissions;
 use iggy::models::user_status::UserStatus;
 use iggy::utils::expiry::IggyExpiry;
@@ -380,14 +380,10 @@ impl SystemState {
 }
 
 fn find_stream_id(streams: &AHashMap<u32, StreamState>, stream_id: &Identifier) -> u32 {
-    match stream_id.kind {
-        IdKind::Numeric => stream_id
-            .get_u32_value()
-            .unwrap_or_else(|_| panic!("{}", format!("Invalid stream ID: {stream_id}"))),
-        IdKind::String => {
-            let name = stream_id
-                .get_cow_str_value()
-                .unwrap_or_else(|_| panic!("{}", format!("Invalid stream name: {stream_id}")));
+    match stream_id {
+        Identifier::Numeric(id) => *id,
+        Identifier::String(id) => {
+            let name = String::from_utf8_lossy(id.as_bytes());
             let stream = streams
                 .values()
                 .find(|s| s.name == name)
@@ -398,14 +394,10 @@ fn find_stream_id(streams: &AHashMap<u32, StreamState>, stream_id: &Identifier) 
 }
 
 fn find_topic_id(topics: &AHashMap<u32, TopicState>, topic_id: &Identifier) -> u32 {
-    match topic_id.kind {
-        IdKind::Numeric => topic_id
-            .get_u32_value()
-            .unwrap_or_else(|_| panic!("{}", format!("Invalid topic ID: {topic_id}"))),
-        IdKind::String => {
-            let name = topic_id
-                .get_cow_str_value()
-                .unwrap_or_else(|_| panic!("{}", format!("Invalid topic name: {topic_id}")));
+    match topic_id {
+        Identifier::Numeric(id) => *id,
+        Identifier::String(id) => {
+            let name = String::from_utf8_lossy(id.as_bytes());
             let topic = topics
                 .values()
                 .find(|s| s.name == name)
@@ -419,14 +411,10 @@ fn find_consumer_group_id(
     groups: &AHashMap<u32, ConsumerGroupState>,
     group_id: &Identifier,
 ) -> u32 {
-    match group_id.kind {
-        IdKind::Numeric => group_id
-            .get_u32_value()
-            .unwrap_or_else(|_| panic!("{}", format!("Invalid group ID: {group_id}"))),
-        IdKind::String => {
-            let name = group_id
-                .get_cow_str_value()
-                .unwrap_or_else(|_| panic!("{}", format!("Invalid group name: {group_id}")));
+    match group_id {
+        Identifier::Numeric(id) => *id,
+        Identifier::String(id) => {
+            let name = String::from_utf8_lossy(id.as_bytes());
             let group = groups
                 .values()
                 .find(|s| s.name == name)
@@ -437,14 +425,10 @@ fn find_consumer_group_id(
 }
 
 fn find_user_id(users: &AHashMap<u32, UserState>, user_id: &Identifier) -> u32 {
-    match user_id.kind {
-        IdKind::Numeric => user_id
-            .get_u32_value()
-            .unwrap_or_else(|_| panic!("{}", format!("Invalid user ID: {user_id}"))),
-        IdKind::String => {
-            let username = user_id
-                .get_cow_str_value()
-                .unwrap_or_else(|_| panic!("{}", format!("Invalid username: {user_id}")));
+    match user_id {
+        Identifier::Numeric(id) => *id,
+        Identifier::String(id) => {
+            let username = String::from_utf8_lossy(id.as_bytes());
             let user = users
                 .values()
                 .find(|s| s.username == username)

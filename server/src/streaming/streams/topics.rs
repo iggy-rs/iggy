@@ -4,7 +4,7 @@ use crate::streaming::topics::topic::Topic;
 use error_set::ErrContext;
 use iggy::compression::compression_algorithm::CompressionAlgorithm;
 use iggy::error::IggyError;
-use iggy::identifier::{IdKind, Identifier};
+use iggy::identifier::Identifier;
 use iggy::locking::IggySharedMutFn;
 use iggy::utils::expiry::IggyExpiry;
 use iggy::utils::topic_size::MaxTopicSize;
@@ -147,9 +147,11 @@ impl Stream {
     }
 
     pub fn remove_topic(&mut self, identifier: &Identifier) -> Result<Topic, IggyError> {
-        match identifier.kind {
-            IdKind::Numeric => self.remove_topic_by_id(identifier.get_u32_value()?),
-            IdKind::String => self.remove_topic_by_name(&identifier.get_cow_str_value()?),
+        match identifier {
+            Identifier::Numeric(id) => self.remove_topic_by_id(*id),
+            Identifier::String(id) => {
+                self.remove_topic_by_name(&String::from_utf8_lossy(id.as_bytes()))
+            }
         }
     }
 
@@ -158,9 +160,11 @@ impl Stream {
     }
 
     pub fn try_get_topic(&self, identifier: &Identifier) -> Result<Option<&Topic>, IggyError> {
-        match identifier.kind {
-            IdKind::Numeric => Ok(self.topics.get(&identifier.get_u32_value()?)),
-            IdKind::String => Ok(self.try_get_topic_by_name(&identifier.get_cow_str_value()?)),
+        match identifier {
+            Identifier::Numeric(id) => Ok(self.topics.get(id)),
+            Identifier::String(id) => {
+                Ok(self.try_get_topic_by_name(&String::from_utf8_lossy(id.as_bytes())))
+            }
         }
     }
 
@@ -169,16 +173,20 @@ impl Stream {
     }
 
     pub fn get_topic(&self, identifier: &Identifier) -> Result<&Topic, IggyError> {
-        match identifier.kind {
-            IdKind::Numeric => self.get_topic_by_id(identifier.get_u32_value()?),
-            IdKind::String => self.get_topic_by_name(&identifier.get_cow_str_value()?),
+        match identifier {
+            Identifier::Numeric(id) => self.get_topic_by_id(*id),
+            Identifier::String(id) => {
+                self.get_topic_by_name(&String::from_utf8_lossy(id.as_bytes()))
+            }
         }
     }
 
     pub fn get_topic_mut(&mut self, identifier: &Identifier) -> Result<&mut Topic, IggyError> {
-        match identifier.kind {
-            IdKind::Numeric => self.get_topic_by_id_mut(identifier.get_u32_value()?),
-            IdKind::String => self.get_topic_by_name_mut(&identifier.get_cow_str_value()?),
+        match identifier {
+            Identifier::Numeric(id) => self.get_topic_by_id_mut(*id),
+            Identifier::String(id) => {
+                self.get_topic_by_name_mut(&String::from_utf8_lossy(id.as_bytes()))
+            }
         }
     }
 
